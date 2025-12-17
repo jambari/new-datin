@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div style="display: flex; min-height: 100vh; background-color: #f3f4f6;">
+  {% include 'partials/_sidebar.html' %}
+  
+  <div style="flex: 1; display: flex; flex-direction: column;">
+    {% include 'partials/_topbar.html' %} 
+
+    <main style="padding: 30px; overflow-y: auto;">
+        <div style="max-width: 800px; margin: 0 auto;">
+            
+            <div style="margin-bottom: 20px;">
+                <a href="javascript:history.back()" style="text-decoration: none; color: #6b7280; display: flex; align-items: center; font-size: 14px;">
+                    <svg width="16" height="16" style="margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Kembali
+                </a>
+            </div>
+
+            <div style="background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
+                <div style="background-color: #f9fafb; padding: 15px 25px; border-bottom: 1px solid #e5e7eb;">
+                    <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #1f2937;">{{ title }}</h2>
+                </div>
+                
+                <div style="padding: 25px;">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div style="background-color: #fee2e2; border: 1px solid #f87171; color: #b91c1c; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div>
+                            {% for field in form %}
+                            <div style="margin-bottom: 15px;">
+                                <label for="{{ field.id_for_label }}" style="display: block; font-weight: 500; margin-bottom: 5px; color: #374151; font-size: 14px;">
+                                    {{ field.label }}
+                                    {% if field.field.required %}<span style="color: red;">*</span>{% endif %}
+                                </label>
+                                
+                                {{ field }}
+
+                                {% if field.help_text %}
+                                    <p style="margin-top: 2px; font-size: 12px; color: #6b7280;">{{ field.help_text }}</p>
+                                {% endif %}
+                                
+                                {% if field.errors %}
+                                    {% for error in field.errors %}
+                                        <p style="color: #dc2626; font-size: 12px; margin-top: 2px;">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <a href="javascript:history.back()" style="padding: 8px 16px; background-color: #e5e7eb; color: #374151; text-decoration: none; border-radius: 4px; font-size: 14px; border: 1px solid #d1d5db;">
+                                Batal
+                            </a>
+                            <button type="submit" style="padding: 8px 16px; background-color: #2563EB; color: white; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; display: flex; align-items: center;">
+                                <svg width="16" height="16" style="margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Simpan Data
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </main>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const sidebar = document.getElementById('sidebar');
+      const sidebarToggle = document.getElementById('sidebar-toggle');
+      if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function() {
+            if (sidebar.style.display === 'none' || sidebar.classList.contains('hidden')) {
+                sidebar.style.display = 'block';
+                sidebar.classList.remove('hidden');
+            } else {
+                sidebar.style.display = 'none';
+                sidebar.classList.add('hidden');
+            }
+        });
+      }
+    });
+</script>
+{% endblock content %}

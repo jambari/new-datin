@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+        <div class="container mx-auto">
+            
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Tiket & Laporan</h2>
+                    <p class="text-sm text-gray-600">Monitoring perbaikan alat.</p>
+                </div>
+                
+                <a href="{% url 'maintenance:issue_create' %}" 
+                   class="text-white font-bold py-2 px-4 rounded inline-flex items-center shadow"
+                   style="background-color: #DC2626; color: white;">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <span>Buat Laporan</span>
+                </a>
+            </div>
+
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alat</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Masalah</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PIC</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for issue in issues %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ issue.tanggal_lapor|date:"d/m/Y" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-bold text-gray-900">{{ issue.instrument.shelter }}</div>
+                                <div class="text-sm text-gray-500">{{ issue.instrument.nama_alat }}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">{{ issue.judul }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    {{ issue.get_kategori_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if issue.status == 'OPEN' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: #fee2e2; color: #991b1b;">Open</span>
+                                {% elif issue.status == 'PROG' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: #fef3c7; color: #92400e;">In Progress</span>
+                                {% else %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: #d1fae5; color: #065f46;">Done</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ issue.pic.username|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="{% url 'maintenance:issue_update' issue.id %}" 
+                                   class="hover:underline" 
+                                   style="color: #2563EB; margin-right: 15px;">
+                                   Edit
+                                </a>
+
+                                <a href="{% url 'maintenance:issue_delete' issue.id %}" 
+                                   class="hover:underline" 
+                                   style="color: #DC2626;">
+                                   Hapus
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
+                                Belum ada laporan kerusakan.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+<div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                   </table>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 5px; font-size: 14px;">
+                {% if issues.has_previous %}
+                    <a href="?page=1" style="padding: 8px 12px; border: 1px solid #d1d5db; background-color: white; color: #374151; text-decoration: none; border-radius: 4px;">
+                        &laquo; Awal
+                    </a>
+                    <a href="?page={{ issues.previous_page_number }}" style="padding: 8px 12px; border: 1px solid #d1d5db; background-color: white; color: #374151; text-decoration: none; border-radius: 4px;">
+                        Sebelumnya
+                    </a>
+                {% endif %}
+
+                <span style="padding: 8px 12px; color: #374151; font-weight: bold;">
+                    Halaman {{ issues.number }} dari {{ issues.paginator.num_pages }}
+                </span>
+
+                {% if issues.has_next %}
+                    <a href="?page={{ issues.next_page_number }}" style="padding: 8px 12px; border: 1px solid #d1d5db; background-color: white; color: #374151; text-decoration: none; border-radius: 4px;">
+                        Selanjutnya
+                    </a>
+                    <a href="?page={{ issues.paginator.num_pages }}" style="padding: 8px 12px; border: 1px solid #d1d5db; background-color: white; color: #374151; text-decoration: none; border-radius: 4px;">
+                        Akhir &raquo;
+                    </a>
+                {% endif %}
+            </div>
+            </div>
+    </main>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock content %}

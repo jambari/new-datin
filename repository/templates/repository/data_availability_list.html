@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load tz %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+            <div class="container mx-auto">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6">Seismo Data Availability Report</h2>
+                
+                <form method="get" class="mb-6 bg-white p-4 rounded-lg shadow-md flex items-center space-x-4">
+                    <input type="text" name="station_code" placeholder="Filter by Station" 
+                           value="{{ station_code|default:'' }}" 
+                           class="form-input rounded-md shadow-sm">
+                    <input type="date" name="start_date" 
+                           value="{{ start_date|default:'' }}" 
+                           class="form-input rounded-md shadow-sm">
+                    <input type="date" name="end_date" 
+                           value="{{ end_date|default:'' }}" 
+                           class="form-input rounded-md shadow-sm">
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Filter</button>
+                </form>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="flex justify-end mb-4">
+                        <button type="submit" name="delete_selected" 
+                                class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                            Bulk Delete
+                        </button>
+                    </div>
+
+                    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <input type="checkbox" id="select_all_records">
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Station</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for record in records %}
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <input type="checkbox" name="selected_records" value="{{ record.id }}">
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ record.station }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.channel }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.date|date:"d M Y" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.percentage }}%</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                                        No data availability records found.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+
+                <div class="pagination mt-6 flex justify-center items-center">
+                    <span class="step-links">
+                        {% if records.has_previous %}
+                            <a href="?page=1&station_code={{ station_code|default:'' }}&start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">&laquo; first</a>
+                            <a href="?page={{ records.previous_page_number }}&station_code={{ station_code|default:'' }}&start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">previous</a>
+                        {% endif %}
+
+                        <span class="current-page px-4 py-2 text-sm font-medium text-gray-700">
+                            Page {{ records.number }} of {{ records.paginator.num_pages }}.
+                        </span>
+
+                        {% if records.has_next %}
+                            <a href="?page={{ records.next_page_number }}&station_code={{ station_code|default:'' }}&start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">next</a>
+                            <a href="?page={{ records.paginator.num_pages }}&station_code={{ station_code|default:'' }}&start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">last &raquo;</a>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+
+  // Add this script inside a <script> tag in your template
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAll = document.getElementById('select_all_records');
+        const checkboxes = document.querySelectorAll('input[name="selected_records"]');
+        
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    });
+</script>
+{% endblock content %}

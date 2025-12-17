@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map {
+        height: 500px;
+        width: 100%;
+        border-radius: 0.5rem;
+    }
+</style>
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+        
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-semibold text-gray-800 dark:text-gray-100">{{ title }}</h1>
+            <a href="{% url 'precursor_list' %}" class="px-4 py-2 text-sm text-white bg-gray-600 rounded-md hover:bg-gray-700">
+                &larr; Kembali ke Daftar
+            </a>
+        </div>
+
+        <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Kolom Kiri: Detail Teks -->
+            <div class="bg-white dark:bg-gray-900 shadow-md rounded-lg p-6">
+                <dl class="space-y-4">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Waktu Anomali</dt>
+                        <dd class="mt-1 text-lg text-gray-900 dark:text-white">{{ object.anomaly_timestamp|date:"d M Y, H:i" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Rentang Prediksi</dt>
+                        <dd class="mt-1 text-lg text-gray-900 dark:text-white">{{ object.predicted_start_date|date:"d M Y" }} - {{ object.predicted_end_date|date:"d M Y" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Prediksi Magnitudo</dt>
+                        <dd class="mt-1 text-lg text-gray-900 dark:text-white">{{ object.predicted_magnitude }} ± {{ object.magnitude_tolerance }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Azimuth</dt>
+                        <dd class="mt-1 text-lg text-gray-900 dark:text-white">{{ object.azimuth|default:"-" }}°</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Deskripsi Lokasi</dt>
+                        <dd class="mt-1 text-lg text-gray-900 dark:text-white">{{ object.location_description }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
+                        <dd class="mt-1">
+                            {% if object.is_validated %}
+                                <span class="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full dark:bg-green-900 dark:text-green-300">TERBUKTI</span>
+                            {% else %}
+                                <span class="bg-red-100 text-red-800 text-sm font-medium px-3 py-1 rounded-full dark:bg-red-900 dark:text-red-300">Belum Terbukti</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                     {% if object.validating_earthquake %}
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Gempa Validasi</dt>
+                        <dd class="mt-1 text-lg text-gray-900 dark:text-white">
+                            M{{ object.validating_earthquake.magnitudo }} pada {{ object.validating_earthquake.origin_datetime|date:"d M Y, H:i" }}
+                        </dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <!-- Kolom Kanan: Peta -->
+            <div class="bg-white dark:bg-gray-900 shadow-md rounded-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Visualisasi Peta</h3>
+                <div id="map"></div>
+            </div>
+        </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Menyembunyikan data JSON di dalam template agar tidak terlihat oleh pengguna
+    const polygonGeoJSON = JSON.parse('{{ polygon_geojson|safe }}');
+    const earthquakeData = JSON.parse('{{ earthquake_data_json|safe }}');
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const map = L.map('map');
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        let bounds;
+
+        // Gambar poligon prekursor jika ada
+        if (polygonGeoJSON) {
+            const polygonLayer = L.geoJSON(polygonGeoJSON, {
+                style: function() {
+                    return { color: "#ff7800", weight: 3, opacity: 0.8 };
+                }
+            }).addTo(map);
+            bounds = polygonLayer.getBounds();
+        }
+
+        // Tambahkan penanda gempa jika ada
+        if (earthquakeData) {
+            const earthquakeMarker = L.marker([earthquakeData.lat, earthquakeData.lon]).addTo(map);
+            earthquakeMarker.bindPopup(
+                `<b>Gempa Validasi</b><br>` +
+                `Magnitudo: M${earthquakeData.magnitudo}<br>` +
+                `Waktu: ${earthquakeData.time}<br>` +
+                `Kedalaman: ${earthquakeData.depth} km <br>` 
+                // `Lokasi: ${earthquakeData.remark} km`
+            );
+            
+            // Jika tidak ada poligon, atur bounds berdasarkan lokasi gempa
+            if (!bounds) {
+                bounds = L.latLngBounds([earthquakeData.lat, earthquakeData.lon], [earthquakeData.lat, earthquakeData.lon]);
+            }
+        }
+        
+        // Atur view peta agar pas dengan poligon/gempa
+        if (bounds) {
+            map.fitBounds(bounds, { padding: [20, 20] });
+        } else {
+            // Default view jika tidak ada data sama sekali
+            map.setView([-2.5, 118], 5);
+        }
+    });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

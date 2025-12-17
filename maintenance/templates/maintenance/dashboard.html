@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+        <div class="container mx-auto">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Maintenance Dashboard</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-5 border-l-4 border-blue-500">
+                    <div class="flex flex-row items-center">
+                        <div class="flex-1 text-right md:text-center">
+                            <h5 class="font-bold uppercase text-gray-500 text-xs">Total Aset</h5>
+                            <h3 class="font-bold text-3xl">{{ total_alat }} <span class="text-sm text-gray-400 font-normal">Unit</span></h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-5 border-l-4 border-green-500">
+                    <div class="flex flex-row items-center">
+                        <div class="flex-1 text-right md:text-center">
+                            <h5 class="font-bold uppercase text-gray-500 text-xs">Alat Normal</h5>
+                            <h3 class="font-bold text-3xl text-green-600">{{ alat_aktif }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-5 border-l-4 border-red-500">
+                    <div class="flex flex-row items-center">
+                        <div class="flex-1 text-right md:text-center">
+                            <h5 class="font-bold uppercase text-gray-500 text-xs">Alat Bermasalah</h5>
+                            <h3 class="font-bold text-3xl text-red-600">{{ alat_rusak }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-5 border-l-4 border-yellow-500">
+                    <div class="flex flex-row items-center">
+                        <div class="flex-1 text-right md:text-center">
+                            <h5 class="font-bold uppercase text-gray-500 text-xs">Tiket Open</h5>
+                            <h3 class="font-bold text-3xl text-yellow-600">{{ tiket_open }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Tiket Terbaru / Prioritas</h3>
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shelter / Alat</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Masalah</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prioritas</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for issue in recent_issues %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ issue.tanggal_lapor|date:"d M Y" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ issue.instrument.shelter }}
+                                <div class="text-xs text-gray-500 font-normal">{{ issue.instrument.nama_alat }}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">{{ issue.judul }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if issue.prioritas == 'TINGGI' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Tinggi</span>
+                                {% elif issue.prioritas == 'SEDANG' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Sedang</span>
+                                {% else %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Rendah</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ issue.get_status_display }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada tiket aktif.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock content %}

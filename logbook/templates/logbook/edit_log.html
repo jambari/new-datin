@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  
+  <style>
+      .compact-container { max-width: 800px; margin: 0 auto; width: 95%; }
+      .btn-custom-submit {
+          background-color: #eab308 !important; /* Warna Kuning untuk Edit */
+          color: white !important;
+          padding: 10px 20px; border-radius: 6px; font-weight: bold;
+          border: none; cursor: pointer; width: 100%; transition: 0.2s;
+      }
+      .btn-custom-submit:hover { background-color: #ca8a04 !important; }
+      .form-label { font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 4px; display: block; }
+      .form-control { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9rem; }
+      .form-group { margin-bottom: 12px; }
+  </style>
+
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+        <div class="compact-container">
+            
+            <a href="{% url 'logbook:logbook_list' %}" class="inline-flex items-center mb-4 text-gray-600 hover:text-gray-900">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Kembali ke Daftar
+            </a>
+
+            <div class="bg-white shadow rounded-lg p-6 border-t-4 border-yellow-500">
+                <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">
+                    Edit Logbook ({{ log_entry.tanggal|date:"d M Y" }})
+                </h2>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 form-group">
+                        <div><label class="form-label">{{ form.shift.label }}</label>{{ form.shift }}</div>
+                        <div><label class="form-label">{{ form.status_absen.label }}</label>{{ form.status_absen }}</div>
+                    </div>
+
+                    <div class="form-group" id="div_petugas_sebelum">
+                        <label class="form-label">{{ form.petugas_sebelum.label }}</label>{{ form.petugas_sebelum }}
+                    </div>
+                    <div class="form-group hidden" id="div_petugas_selanjutnya">
+                        <label class="form-label">{{ form.petugas_selanjutnya.label }}</label>{{ form.petugas_selanjutnya }}
+                    </div>
+
+                    <hr class="my-4 border-gray-200">
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 form-group">
+                        {% for field in form %}
+                            {% if field.name not in 'shift status_absen petugas_sebelum petugas_selanjutnya catatan' %}
+                            <div><label class="form-label text-xs">{{ field.label }}</label>{{ field }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label class="form-label">{{ form.catatan.label }}</label>{{ form.catatan }}
+                    </div>
+
+                    <div class="mt-6">
+                        <button type="submit" class="btn-custom-submit">
+                            Simpan Perubahan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusField = document.getElementById('id_status_absen');
+        const divSebelum = document.getElementById('div_petugas_sebelum');
+        const divSelanjutnya = document.getElementById('div_petugas_selanjutnya');
+
+        if(statusField && divSebelum && divSelanjutnya){
+            function toggleFields() {
+                if (statusField.value === 'Masuk') {
+                    divSebelum.classList.remove('hidden');
+                    divSelanjutnya.classList.add('hidden');
+                } else {
+                    divSebelum.classList.add('hidden');
+                    divSelanjutnya.classList.remove('hidden');
+                }
+            }
+            toggleFields();
+            statusField.addEventListener('change', toggleFields);
+        }
+    });
+</script>
+{% endblock %}

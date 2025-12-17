@@ -1,0 +1,19 @@
+<header class="bg-white shadow-sm relative">
+<div class="flex items-center justify-between p-4">
+    <div class="flex items-center">
+      <button id="sidebar-toggle" class="p-2 text-gray-600 hover:text-gray-900">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="flex items-center space-x-4">
+        <p class="mr-4">Welcome, <strong>{{ user.username }}</strong></p>
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="px-3 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Logout</button>
+        </form>
+    </div>
+</div>
+</header>

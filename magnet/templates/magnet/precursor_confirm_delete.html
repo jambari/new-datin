@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load tz %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+<div class="bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg mx-auto">
+    <h2 class="text-2xl font-bold mb-6 text-white">Konfirmasi Hapus</h2>
+    
+    <p class="text-white mb-6">
+        Apakah Anda yakin ingin menghapus prekursor untuk <strong>{{ object.location_description }}</strong> 
+        pada tanggal anomali <strong>{{ object.anomaly_timestamp|date:"d M Y, H:i" }}</strong>?
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="flex justify-end space-x-4">
+            <a href="{% url 'precursor_list' %}" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                Batal
+            </a>
+            <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                Ya, Hapus
+            </button>
+        </div>
+    </form>
+</div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  // JavaScript to toggle the advanced filter panel
+  const filterBtn = document.getElementById('advanced-filter-btn');
+  const filterPanel = document.getElementById('advanced-filter-panel');
+
+  filterBtn.addEventListener('click', () => {
+    filterPanel.classList.toggle('hidden');
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

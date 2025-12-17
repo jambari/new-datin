@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load tz %} {# Load timezone filters if needed #}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+
+      <div class="container mx-auto p-6">
+          <h1 class="text-3xl font-bold mb-6 text-gray-900">Strike Data List</h1>
+            <form method="post" action="{% url 'lightning:strike_delete_all' %}" onsubmit="return confirm('Are you sure you want to delete ALL strike records? This action cannot be undone.');">
+                {% csrf_token %} {# Required for security #}
+                <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 focus:ring-opacity-50">
+                    Delete All Records
+                </button>
+            </form>
+            <form method="get" action="{% url 'lightning:strike_list' %}" class="bg-white p-4 rounded-lg shadow-md mb-6">
+                    {# Changed grid layout #}
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                        {# Dates #}
+                        <div>
+                            <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date:</label>
+                            <input type="date" id="start_date" name="start_date" value="{{ filter_start_date }}" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date:</label>
+                            <input type="date" id="end_date" name="end_date" value="{{ filter_end_date }}" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        {# Coordinates #}
+                        <div>
+                            <label for="min_lat" class="block text-sm font-medium text-gray-700 mb-1">Min Lat:</label>
+                            <input type="number" step="any" id="min_lat" name="min_lat" value="{{ filter_min_lat }}" placeholder="e.g. -5.0" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="max_lat" class="block text-sm font-medium text-gray-700 mb-1">Max Lat:</label>
+                            <input type="number" step="any" id="max_lat" name="max_lat" value="{{ filter_max_lat }}" placeholder="e.g. 5.0" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="min_lon" class="block text-sm font-medium text-gray-700 mb-1">Min Lon:</label>
+                            <input type="number" step="any" id="min_lon" name="min_lon" value="{{ filter_min_lon }}" placeholder="e.g. 100.0" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="max_lon" class="block text-sm font-medium text-gray-700 mb-1">Max Lon:</label>
+                            <input type="number" step="any" id="max_lon" name="max_lon" value="{{ filter_max_lon }}" placeholder="e.g. 120.0" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="strike_type" class="block text-sm font-medium text-gray-700 mb-1">Strike Type:</label>
+                            <select id="strike_type" name="strike_type" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="" {% if filter_strike_type is None or filter_strike_type == '' %}selected{% endif %}>All Types</option>
+                                <option value="0" {% if filter_strike_type == 0 %}selected{% endif %}>CG+ (0)</option>
+                                <option value="1" {% if filter_strike_type == 1 %}selected{% endif %}>CG- (1)</option>
+                                <option value="2" {% if filter_strike_type == 2 %}selected{% endif %}>IC / Type 2 (2)</option>
+                                {# Add other specific types if they exist, e.g.: #}
+                                {# <option value="10" {% if filter_strike_type == 10 %}selected{% endif %}>Other Type (10)</option> #}
+                            </select>
+                        </div>
+                        {# Spacer to align button #}
+                        <div class="hidden md:block"></div>
+                        <div class="hidden md:block"></div>
+                        <div class="hidden md:block"></div>
+
+                        {# Submit Button #}
+                        <div class="pt-2 md:pt-0">
+                            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50">
+                                Filter
+                            </button>
+                        </div>
+                    </div>
+            </form>
+
+
+          <div class="bg-white shadow-md rounded-lg overflow-hidden">
+              <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                      <tr>
+                          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Timestamp (WIT)
+                          </th>
+                          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Latitude
+                          </th>
+                          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Longitude
+                          </th>
+                          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Type
+                          </th>
+                           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Epoch (ms)
+                          </th>
+                      </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                      {% for strike in strike_list %} {# Use context_object_name #}
+                      <tr class="hover:bg-gray-50 transition-colors duration-150">
+                          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {{ strike.timestamp|date:"Y-m-d H:i:s.u" }}
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {{ strike.latitude|floatformat:6|default:"N/A" }}
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {{ strike.longitude|floatformat:6|default:"N/A" }}
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {% if strike.strike_type == 0 %} CG+
+                              {% elif strike.strike_type == 1 %} CG-
+                              {% elif strike.strike_type is None %} Unknown
+                              {% else %} IC
+                              {% endif %}
+                          </td>
+                           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {{ strike.epoch_ms }}
+                          </td>
+                      </tr>
+                      {% empty %}
+                      <tr>
+                          <td colspan="5" class="px-6 py-4 text-center text-gray-500">No strike data found matching filters.</td> {# Adjusted colspan and message #}
+                      </tr>
+                      {% endfor %}
+                  </tbody>
+              </table>
+          </div>
+
+          {% if is_paginated %}
+          <div class="flex justify-center items-center mt-6 space-x-2">
+            <div class="text-sm text-gray-600">
+                Total Records Found: <span class="font-semibold">{{ total_records|default:"0" }}</span>
+             </div>
+              {% if page_obj.has_previous %}
+                  {# Add existing GET parameters to pagination links #}
+                  <a href="?page={{ page_obj.previous_page_number }}{% if filter_start_date %}&start_date={{ filter_start_date }}{% endif %}{% if filter_end_date %}&end_date={{ filter_end_date }}{% endif %}" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">&laquo; Previous</a>
+              {% else %}
+                  <span class="px-3 py-1 bg-gray-100 text-gray-400 rounded-md cursor-not-allowed">&laquo; Previous</span>
+              {% endif %}
+
+              <span class="px-3 py-1 text-gray-700">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</span>
+
+              {% if page_obj.has_next %}
+                   {# Add existing GET parameters to pagination links #}
+                  <a href="?page={{ page_obj.next_page_number }}{% if filter_start_date %}&start_date={{ filter_start_date }}{% endif %}{% if filter_end_date %}&end_date={{ filter_end_date }}{% endif %}" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Next &raquo;</a>
+              {% else %}
+                  <span class="px-3 py-1 bg-gray-100 text-gray-400 rounded-md cursor-not-allowed">Next &raquo;</span>
+              {% endif %}
+          </div>
+          {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

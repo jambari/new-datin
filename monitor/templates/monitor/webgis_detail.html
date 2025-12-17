@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGIS - {{ event.event_id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; }
+        #layout-container { display: flex; height: 100vh; width: 100vw; }
+        
+        /* Sidebar Styles */
+        #sidebar {
+            width: 350px;
+            background: #fff;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Map Styles */
+        #map { flex: 1; height: 100%; z-index: 1; }
+
+        .info-label { font-size: 0.85rem; color: #6c757d; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+        .info-value { font-size: 1.1rem; color: #212529; font-weight: 500; margin-bottom: 15px; }
+        
+        .mag-circle {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; font-weight: bold; color: white;
+            margin: 0 auto 20px auto;
+        }
+        .bg-low { background-color: #28a745; }
+        .bg-med { background-color: #ffc107; color: #000; }
+        .bg-high { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div id="layout-container">
+    <div id="sidebar">
+        <a href="{% url 'public_event_list' %}" class="btn btn-outline-secondary btn-sm mb-4 w-100">
+            <i class="bi bi-arrow-left"></i> Kembali ke Tabel
+        </a>
+
+        <h5 class="text-center fw-bold mb-3">Detail Gempa</h5>
+        
+        <div class="mag-circle {% if event.magnitude < 3 %}bg-low{% elif event.magnitude < 5 %}bg-med{% else %}bg-high{% endif %}">
+            {{ event.magnitude|floatformat:1 }}
+        </div>
+
+        <div>
+            <div class="info-label">Waktu (UTC)</div>
+            <div class="info-value">{{ event.origin_time|date:"Y-m-d H:i:s" }}</div>
+
+            <div class="info-label">Wilayah</div>
+            <div class="info-value">{{ event.region }}</div>
+
+            <div class="row">
+                <div class="col-6">
+                    <div class="info-label">Latitude</div>
+                    <div class="info-value">{{ event.latitude|floatformat:5 }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="info-label">Longitude</div>
+                    <div class="info-value">{{ event.longitude|floatformat:5 }}</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-6">
+                    <div class="info-label">Kedalaman</div>
+                    <div class="info-value">{{ event.depth }} km</div>
+                </div>
+                <div class="col-6">
+                    <div class="info-label">Fase</div>
+                    <div class="info-value">{{ event.phases }}</div>
+                </div>
+            </div>
+
+            <div class="info-label">Agency & Status</div>
+            <div class="info-value">
+                <span class="badge bg-secondary">{{ event.agency }}</span>
+                <span class="badge bg-info text-dark">{{ event.status }}</span>
+            </div>
+            
+            <div class="info-label">Event ID</div>
+            <div class="info-value small text-muted font-monospace">{{ event.event_id }}</div>
+        </div>
+        
+        <div class="mt-auto text-center text-muted small">
+            Monitoring Gempa Bumi<br>Integrated System
+        </div>
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ambil koordinat dari data server
+        var lat = {{ event.latitude }};
+        var lon = {{ event.longitude }};
+        var mag = {{ event.magnitude }};
+        var region = "{{ event.region }}";
+
+        // Inisialisasi Peta
+        var map = L.map('map').setView([lat, lon], 7);
+
+        // Layer Peta Dasar (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marker Gempa (Lingkaran Merah Berdenyut sederhana)
+        var earthquakeMarker = L.circleMarker([lat, lon], {
+            color: 'red',
+            fillColor: '#f03',
+            fillOpacity: 0.5,
+            radius: mag * 4 // Ukuran marker tergantung magnitudo
+        }).addTo(map);
+
+        earthquakeMarker.bindPopup(`
+            <b>Gempa M${mag}</b><br>
+            ${region}<br>
+            Kedalaman: {{ event.depth }} km
+        `).openPopup();
+        
+        // Tambahkan Grid/Scale control
+        L.control.scale().addTo(map);
+    });
+</script>
+
+</body>
+</html>

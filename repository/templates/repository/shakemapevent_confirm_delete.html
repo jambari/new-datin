@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+        <div class="container mx-auto px-6 py-8">
+            <div class="max-w-xl mx-auto bg-white rounded-lg shadow-md p-8">
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Confirm Deletion</h1>
+                <p class="text-gray-600 mb-6">
+                    Are you sure you want to delete the Shakemap event from 
+                    <strong>{{ object.location_string }}</strong> that occurred on 
+                    <strong>{{ object.event_time|date:"d M Y, H:i" }}</strong>?
+                </p>
+                <p class="text-red-600 font-semibold mb-6">This action cannot be undone.</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="flex items-center justify-end space-x-4">
+                        <a href="{% url 'shakemap-list' %}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                            Cancel
+                        </a>
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700">
+                            Delete
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+  </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

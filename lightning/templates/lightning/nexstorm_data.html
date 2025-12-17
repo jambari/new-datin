@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <h1 class="text-3xl font-bold text-gray-900">Latest Nexstorm Data</h1>
+      {% if nexstorm_data %}
+      <div class="p-6 bg-white shadow-md rounded-lg">
+          <p><strong>Station ID:</strong> {{ nexstorm_data.StationId }}</p>
+          <p><strong>Time:</strong> {{ nexstorm_data.formatted_time }}</p>
+          <p><strong>Version:</strong> {{ nexstorm_data.SoftwareVersion }}</p>
+
+          <h2 class="text-2xl font-semibold mt-6 mb-4">Strike Data</h2>
+          <div class="overflow-x-auto">
+              <table class="min-w-full bg-white border border-gray-200">
+                  <thead class="bg-gray-200">
+                      <tr>
+                          <th class="px-4 py-2 text-left">Time</th>
+                          <th class="px-4 py-2 text-left">Distance (km)</th>
+                          <th class="px-4 py-2 text-left">Bearing</th>
+                          <th class="px-4 py-2 text-left">Latitude</th>
+                          <th class="px-4 py-2 text-left">Longitude</th>
+                          <th class="px-4 py-2 text-left">Type</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {% for strike in strike_data %}
+                      <tr>
+                          <td class="px-4 py-2 border-b">{{ strike.time }}</td>
+                          <td class="px-4 py-2 border-b">{{ strike.dist|floatformat:1 }}</td>
+                          <td class="px-4 py-2 border-b">{{ strike.bng }}</td>
+                          <td class="px-4 py-2 border-b">{{ strike.lat|floatformat:4 }}</td>
+                          <td class="px-4 py-2 border-b">{{ strike.lon|floatformat:4 }}</td>
+                          <td class="px-4 py-2 border-b">
+                              {% if strike.type == 0 %}Cloud-to-Ground{% elif strike.type == 1 %}Cloud-to-Cloud{% else %}Unknown{% endif %}
+                          </td>
+                      </tr>
+                      {% endfor %}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+      {% else %}
+      <p class="text-center text-gray-500">No NexStorm data available yet.</p>
+      {% endif %}
+    </main>
+  </div>
+</div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

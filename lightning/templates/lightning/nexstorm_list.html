@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load tz %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <h1 class="text-3xl font-bold text-gray-900">Nexstorm Data</h1>
+
+        <div class="container mx-auto p-6">
+            <h1 class="text-3xl font-bold mb-6">All Nexstorm Data Entries</h1>
+            
+            <div class="space-y-4">
+                {% for entry in page_obj %}
+                <a href="{% url 'nexstorm-detail' pk=entry.pk %}" class="block">
+                    <div class="p-4 bg-white shadow-md rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <h2 class="text-xl font-semibold">Entry ID: {{ entry.id }}</h2>
+                        <p class="text-sm text-gray-600">Timestamp: <strong>{{ entry.formatted_time }}</strong></p>
+                        <p class="text-sm text-gray-600">Station ID: {{ entry.json_data.StationId }}</p>
+                    </div>
+                </a>
+                {% empty %}
+                <p class="text-center text-gray-500">No data entries found.</p>
+                {% endfor %}
+            </div>
+
+            {% if is_paginated %}
+            <div class="flex justify-center items-center mt-6 space-x-2">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 bg-gray-200 rounded-md">&laquo; Previous</a>
+                {% endif %}
+                <span class="px-3 py-1 text-gray-700">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</span>
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 bg-gray-200 rounded-md">Next &raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </main>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}
+

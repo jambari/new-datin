@@ -1,0 +1,502 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Gempa Bumi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+    <style>
+        :root {
+            --primary-bg: #f3f4f6;
+            --header-bg: #1e293b; /* Dark Slate */
+            --card-border: #e5e7eb;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        body { 
+            background-color: var(--primary-bg); 
+            font-family: 'Inter', sans-serif; 
+            font-size: 0.875rem;
+            color: var(--text-main);
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+        }
+
+        /* Navbar Styling */
+        .navbar {
+            background-color: var(--header-bg) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        .navbar-brand { font-weight: 600; letter-spacing: -0.025em; font-size: 1.1rem; }
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(4px);
+        }
+        .btn-glass:hover { background: rgba(255, 255, 255, 0.2); color: white; }
+
+        /* Card Styling */
+        .filter-card, .table-card {
+            background: white;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+        }
+
+        /* Soft Badges */
+        .badge-soft {
+            padding: 0.35em 0.65em;
+            font-weight: 600;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+        .bg-soft-success { background-color: #d1fae5; color: #065f46; }
+        .bg-soft-warning { background-color: #fef3c7; color: #92400e; }
+        .bg-soft-danger { background-color: #fee2e2; color: #991b1b; }
+        .bg-soft-info { background-color: #dbeafe; color: #1e40af; }
+        .bg-soft-secondary { background-color: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+
+        /* Map */
+        #map { height: 380px; width: 100%; border-radius: 8px; border: 1px solid #e5e7eb; }
+
+        /* Table Styling */
+        .table thead th {
+            background-color: #f9fafb;
+            color: #6b7280;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e5e7eb;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        .table tbody td {
+            vertical-align: middle;
+            padding: 12px 10px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #374151;
+        }
+        .table-hover tbody tr:hover { background-color: #f9fafb; }
+        
+        .text-coord { color: #6b7280; font-family: 'Monaco', 'Consolas', monospace; font-size: 0.8rem; }
+        .text-event-id { color: #9ca3af; font-size: 0.75rem; }
+
+        footer { background-color: white; border-top: 1px solid #e5e7eb; color: #6b7280; padding: 20px 0; margin-top: auto; }
+        footer span { color: #1e293b; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-activity text-info me-2"></i>Monitoring Gempa Bumi Integrasi
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-white-50 small pe-3 border-end border-secondary">Total Data: <strong class="text-white">{{ count }}</strong></span>
+                <a href="{% url 'export_json' %}?{{ request.GET.urlencode }}" target="_blank" class="btn btn-glass btn-sm fw-medium">
+                    <i class="bi bi-code-slash"></i> JSON API
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 main-content mt-4">
+        
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <button class="btn btn-white border shadow-sm btn-sm fw-medium text-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="bi bi-funnel-fill text-primary me-1"></i> Filter & Peta Pencarian
+            </button>
+        </div>
+
+        <div class="collapse mb-4 {% if request.GET %}show{% endif %}" id="filterCollapse">
+            <div class="filter-card p-4">
+                <form method="GET">
+                    <input type="hidden" name="per_page" value="{{ per_page }}">
+                    
+                    <div class="row g-4">
+                        <div class="col-lg-5">
+                            <h6 class="fw-bold mb-3 text-dark border-bottom pb-2">Kriteria Pencarian</h6>
+                            
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted fw-bold">Agency</label>
+                                    <select name="agency" class="form-select form-select-sm text-dark">
+                                        <option value="">Semua</option>
+                                        {% for opt in agency_options %}
+                                            <option value="{{ opt }}" {% if filters.agency == opt %}selected{% endif %}>{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted fw-bold">Status</label>
+                                    <select name="status" class="form-select form-select-sm text-dark">
+                                        <option value="">Semua</option>
+                                        {% for opt in status_options %}
+                                            <option value="{{ opt }}" {% if filters.status == opt %}selected{% endif %}>{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted fw-bold">Tanggal</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="date" name="start_date" class="form-control" value="{{ filters.start_date }}">
+                                        <input type="date" name="end_date" class="form-control" value="{{ filters.end_date }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted fw-bold">Magnitudo</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" step="0.1" name="min_mag" class="form-control" placeholder="0" value="{{ filters.min_mag }}">
+                                        <input type="number" step="0.1" name="max_mag" class="form-control" placeholder="9" value="{{ filters.max_mag }}">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted fw-bold">Kedalaman (km)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" name="min_depth" class="form-control" placeholder="Min" value="{{ filters.min_depth }}">
+                                        <input type="number" name="max_depth" class="form-control" placeholder="Max" value="{{ filters.max_depth }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <label class="form-label small text-muted fw-bold mb-0">Koordinat Area</label>
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input" type="checkbox" id="togglePGR5">
+                                        <label class="form-check-label small text-primary fw-bold" for="togglePGR5">
+                                            Wilayah PGR5
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-6">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light text-muted">Lat</span>
+                                        <input type="number" step="any" id="min_lat" name="min_lat" class="form-control" placeholder="Min" value="{{ filters.min_lat }}">
+                                        <input type="number" step="any" id="max_lat" name="max_lat" class="form-control" placeholder="Max" value="{{ filters.max_lat }}">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light text-muted">Lon</span>
+                                        <input type="number" step="any" id="min_lon" name="min_lon" class="form-control" placeholder="Min" value="{{ filters.min_lon }}">
+                                        <input type="number" step="any" id="max_lon" name="max_lon" class="form-control" placeholder="Max" value="{{ filters.max_lon }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2 mt-4 pt-2 border-top">
+                                <button type="submit" class="btn btn-primary btn-sm px-4 shadow-sm"><i class="bi bi-search"></i> Terapkan</button>
+                                <a href="{% url 'public_event_list' %}" class="btn btn-light border btn-sm text-muted">Reset</a>
+                                <button type="submit" name="export" value="true" class="btn btn-success btn-sm ms-auto text-white shadow-sm" style="--bs-btn-bg: #10b981; --bs-btn-border-color: #10b981;">
+                                    <i class="bi bi-file-earmark-excel"></i> CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-7">
+                            <div class="bg-light p-1 rounded border">
+                                <div id="map"></div>
+                            </div>
+                            <div class="text-end mt-1">
+                                <small class="text-muted fst-italic" style="font-size: 0.75rem">*Gambar kotak manual, atau centang 'Wilayah PGR5' untuk filter otomatis.</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <form method="GET" class="d-flex align-items-center">
+                {% for key, value in filters.items %}
+                    {% if key != 'per_page' and key != 'page' %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
+                {% endfor %}
+
+                <label class="me-2 text-muted small fw-medium">Tampilkan:</label>
+                <select name="per_page" class="form-select form-select-sm w-auto border-secondary-subtle" onchange="this.form.submit()">
+                    <option value="20" {% if per_page == '20' %}selected{% endif %}>20 Baris</option>
+                    <option value="50" {% if per_page == '50' %}selected{% endif %}>50 Baris</option>
+                    <option value="100" {% if per_page == '100' %}selected{% endif %}>100 Baris</option>
+                    <option value="all" {% if per_page == 'all' %}selected{% endif %}>Semua</option>
+                </select>
+            </form>
+            
+            <div class="text-muted small">
+                {% if per_page == 'all' %}
+                    Total {{ count }} data
+                {% else %}
+                    Page <strong>{{ events.number }}</strong> of {{ events.paginator.num_pages }}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Waktu (UTC)</th>
+                            <th class="text-center">Mag</th>
+                            <th>Wilayah</th>
+                            <th class="text-end">Kedalaman</th>
+                            <th>Koordinat</th>
+                            <th class="text-center">Fase</th>
+                            <th class="text-center">Agency</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Event ID</th>
+                            <th class="pe-4 text-center">WebGIS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td class="ps-4 text-nowrap text-secondary font-monospace" style="font-size: 0.8rem;">
+                                {{ event.origin_time|date:"Y-m-d H:i:s" }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-soft 
+                                    {% if event.magnitude < 3 %}bg-soft-success
+                                    {% elif event.magnitude < 5 %}bg-soft-warning
+                                    {% else %}bg-soft-danger{% endif %}">
+                                    {{ event.magnitude|floatformat:1 }}
+                                </span>
+                            </td>
+                            <td class="fw-medium text-dark">{{ event.region }}</td>
+                            <td class="text-end text-secondary">{{ event.depth }} km</td>
+                            <td>
+                                <span class="text-coord">{{ event.latitude|floatformat:5 }}, {{ event.longitude|floatformat:5 }}</span>
+                            </td>
+                            <td class="text-center text-muted small">{{ event.phases|default:"-" }}</td>
+                            <td class="text-center">
+                                <span class="badge badge-soft bg-soft-secondary">{{ event.agency }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if event.status %}
+                                    <span class="badge badge-soft bg-soft-info">{{ event.status }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-event-id font-monospace">{{ event.event_id }}</td>
+                            <td class="pe-4 text-center">
+                                <a href="{% url 'webgis_detail' event.event_id %}" class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm" style="font-size: 0.75rem;">
+                                    <i class="bi bi-geo-alt-fill"></i> Lihat
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-gray-300"></i>
+                                Tidak ada data yang sesuai filter.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if events.has_other_pages and per_page != 'all' %}
+            <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-3 px-4">
+                <small class="text-muted">
+                    Menampilkan {{ events.start_index }} - {{ events.end_index }} dari {{ count }}
+                </small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if events.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link border-0 text-secondary" href="?page={{ events.previous_page_number }}&per_page={{ per_page }}&agency={{ filters.agency }}&status={{ filters.status }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}&min_mag={{ filters.min_mag }}&max_mag={{ filters.max_mag }}&min_depth={{ filters.min_depth }}&max_depth={{ filters.max_depth }}&min_lat={{ filters.min_lat }}&max_lat={{ filters.max_lat }}&min_lon={{ filters.min_lon }}&max_lon={{ filters.max_lon }}"><i class="bi bi-chevron-left"></i> Prev</a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item disabled">
+                            <span class="page-link border-0 text-dark fw-bold">Halaman {{ events.number }}</span>
+                        </li>
+
+                        {% if events.has_next %}
+                        <li class="page-item">
+                            <a class="page-link border-0 text-secondary" href="?page={{ events.next_page_number }}&per_page={{ per_page }}&agency={{ filters.agency }}&status={{ filters.status }}&start_date={{ filters.start_date }}&end_date={{ filters.end_date }}&min_mag={{ filters.min_mag }}&max_mag={{ filters.max_mag }}&min_depth={{ filters.min_depth }}&max_depth={{ filters.max_depth }}&min_lat={{ filters.min_lat }}&max_lat={{ filters.max_lat }}&min_lon={{ filters.min_lon }}&max_lon={{ filters.max_lon }}">Next <i class="bi bi-chevron-right"></i></a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            Handcrafted by <span>Jambari</span> &bull; Data Source <span>Quakelink BMKG</span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Inisialisasi Peta
+            var map = L.map('map').setView([-2.5, 118.0], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            // 2. Setup Draw Control
+            var drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+
+            var drawControl = new L.Control.Draw({
+                draw: {
+                    polygon: true, rectangle: true, circle: false,
+                    marker: false, polyline: false, circlemarker: false
+                },
+                edit: { featureGroup: drawnItems, remove: true }
+            });
+            // FIX: Menggunakan addControl, bukan addLayer
+            map.addControl(drawControl);
+
+            // 3. Referensi Element
+            const minLat = document.getElementById('min_lat');
+            const maxLat = document.getElementById('max_lat');
+            const minLon = document.getElementById('min_lon');
+            const maxLon = document.getElementById('max_lon');
+            const togglePGR5 = document.getElementById('togglePGR5');
+            let pgr5Layer = null;
+
+            // --- FUNGSI HELPER: UPDATE INPUT FIELDS ---
+            function updateFields(layer) {
+                var b = layer.getBounds();
+                minLat.value = b.getSouth().toFixed(5);
+                maxLat.value = b.getNorth().toFixed(5);
+                minLon.value = b.getWest().toFixed(5);
+                maxLon.value = b.getEast().toFixed(5);
+            }
+
+            // --- FITUR BARU: FETCH & TOGGLE GEOJSON PGR5 ---
+            // Mengambil file GeoJSON dari folder static
+            fetch('{% static "pgr5.geojson" %}') 
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("HTTP error " + response.status); 
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("GeoJSON berhasil dimuat:", data); // Debugging
+
+                    pgr5Layer = L.geoJSON(data, {
+                        style: {
+                            color: "#ff7800",
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.1,
+                            dashArray: '5, 5'
+                        }
+                    });
+
+                    // Jika checkbox sudah dicentang saat reload, trigger manual
+                    if(togglePGR5.checked) {
+                        togglePGR5.dispatchEvent(new Event('change'));
+                    }
+                })
+                .catch(err => {
+                    console.error("Gagal memuat GeoJSON:", err);
+                    alert("Gagal memuat file peta wilayah (pgr5.geojson). Pastikan file ada di folder static.");
+                });
+
+            // Event Listener Checkbox
+            if (togglePGR5) {
+                togglePGR5.addEventListener('change', function() {
+                    // PERBAIKAN: Cek apakah layer sudah siap DAN memiliki data
+                    if (!pgr5Layer || pgr5Layer.getLayers().length === 0) {
+                        console.warn("Layer PGR5 belum siap atau kosong.");
+                        return; 
+                    }
+
+                    if (this.checked) {
+                        drawnItems.clearLayers();
+                        pgr5Layer.addTo(drawnItems);
+                        
+                        // PERBAIKAN: Hanya fitBounds jika bounds valid
+                        var bounds = pgr5Layer.getBounds();
+                        if (bounds.isValid()) {
+                            map.fitBounds(bounds);
+                            updateFields(pgr5Layer);
+                        } else {
+                            console.error("Bounds tidak valid");
+                        }
+                    } else {
+                        drawnItems.removeLayer(pgr5Layer);
+                        minLat.value = ''; maxLat.value = ''; 
+                        minLon.value = ''; maxLon.value = '';
+                    }
+                });
+            }
+
+            // --- EVENT DRAWING MANUAL ---
+            // Saat user menggambar kotak/polygon manual
+            map.on(L.Draw.Event.CREATED, function (e) {
+                // Matikan checkbox PGR5 jika user menggambar manual agar tidak konflik
+                if (togglePGR5 && togglePGR5.checked) {
+                    togglePGR5.checked = false;
+                    if(pgr5Layer) drawnItems.removeLayer(pgr5Layer);
+                }
+
+                drawnItems.clearLayers(); // Hapus gambar lama
+                drawnItems.addLayer(e.layer); // Tambah gambar baru
+                updateFields(e.layer); // Update input
+            });
+
+            // Saat gambar diedit
+            map.on(L.Draw.Event.EDITED, function (e) {
+                e.layers.eachLayer(layer => updateFields(layer));
+            });
+            
+            // Saat gambar dihapus
+            map.on(L.Draw.Event.DELETED, function() {
+                minLat.value = ''; maxLat.value = ''; minLon.value = ''; maxLon.value = '';
+                if(togglePGR5) togglePGR5.checked = false;
+            });
+
+            // --- RE-DRAW SAAT PAGE RELOAD (Hasil Filter) ---
+            // Jika user habis menekan tombol "Terapkan", gambar ulang kotak filter di peta
+            const cMinLat = parseFloat("{{ filters.min_lat|default:'' }}");
+            const cMaxLat = parseFloat("{{ filters.max_lat|default:'' }}");
+            const cMinLon = parseFloat("{{ filters.min_lon|default:'' }}");
+            const cMaxLon = parseFloat("{{ filters.max_lon|default:'' }}");
+
+            if (!isNaN(cMinLat) && !isNaN(cMaxLat) && !isNaN(cMinLon)) {
+                if (cMinLat !== cMaxLat) {
+                    var bounds = [[cMinLat, cMinLon], [cMaxLat, cMaxLon]];
+                    L.rectangle(bounds, {color: "#10b981", weight: 1, fillOpacity: 0.1}).addTo(drawnItems);
+                    map.fitBounds(bounds);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

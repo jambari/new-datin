@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  <div class="flex-1 flex flex-col">
+    <main class="flex-1 p-8 overflow-y-auto">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="border-b pb-4 mb-4">
+                <h1 class="text-3xl font-bold text-gray-900 flex items-center space-x-4">
+                    <span>
+                        National Registry of Seismograph Stations
+                        <br>maintained by BMKG
+                    </span>
+                    <!-- <img src="{% static 'repository/images/logo-bmkg.png' %}" 
+                        alt="BMKG Logo" 
+                        class="max-h-6 w-auto"> -->
+                </h1>
+            </div>
+        </div>
+
+
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="border-b pb-4 mb-4">
+          <h1 class="text-3xl font-bold text-gray-900">{{ station.name }} ({{ station.code }})</h1>
+          <p class="text-md text-gray-600">Network: {{ station.network }}</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h2 class="text-xl font-semibold mb-2">Location</h2>
+            <p><strong class="font-medium">Latitude:</strong> {{ station.latitude }}</p>
+            <p><strong class="font-medium">Longitude:</strong> {{ station.longitude }}</p>
+            <p><strong class="font-medium">Elevation:</strong> {{ station.elevation|default:"N/A" }} m</p>
+          </div>
+          <div>
+            <div id="station-detail-map" class="w-full h-64 rounded-lg">
+                <img src="{% static 'repository/images/station_locs/' %}{{ station.code }}_map.png" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="border-b pb-4 mb-4">
+          <!-- <h2 class="" >Arrival Picks Statistic</h2> -->
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <img src="{% static 'repository/images/plot/resP_azi/' %}{{ station.code }}_resP_azi.png" alt="">
+            <!-- <p><strong class="font-medium">Elevation:</strong> {{ station.elevation|default:"N/A" }} m</p> -->
+          </div>
+          <div>
+            <div id="station-detail-map" class="w-full h-64 rounded-lg">
+                <img src="{% static 'repository/images/plot/resS_azi/' %}{{ station.code }}_resS_azi.png" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- another section -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="border-b pb-4 mb-4">
+          <!-- <h2 class="" >Arrival Picks Statistic</h2> -->
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <img src="{% static 'repository/images/plot/resP_date/' %}{{ station.code }}_resP_date.png" alt="">
+            <!-- <p><strong class="font-medium">Elevation:</strong> {{ station.elevation|default:"N/A" }} m</p> -->
+          </div>
+          <div>
+            <div id="station-detail-map" class="w-full h-64 rounded-lg">
+                <img src="{% static 'repository/images/plot/resS_date/' %}{{ station.code }}_resS_date.png" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- another section -->
+             <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="border-b pb-4 mb-4">
+          <!-- <h2 class="" >Arrival Picks Statistic</h2> -->
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <img src="{% static 'repository/images/plot/resP_distance/' %}{{ station.code }}_resP_distance.png" alt="">
+            <!-- <p><strong class="font-medium">Elevation:</strong> {{ station.elevation|default:"N/A" }} m</p> -->
+          </div>
+          <div>
+            <div id="station-detail-map" class="w-full h-64 rounded-lg">
+                <img src="{% static 'repository/images/plot/resS_distance/' %}{{ station.code }}_resS_distance.png" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- another section -->
+             <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="border-b pb-4 mb-4">
+          <!-- <h2 class="" >Arrival Picks Statistic</h2> -->
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <img src="{% static 'repository/images/plot/mean_resP_map/' %}{{ station.code }}_mean_resP_amp.png" alt="">
+            <!-- <p><strong class="font-medium">Elevation:</strong> {{ station.elevation|default:"N/A" }} m</p> -->
+          </div>
+          <div>
+            <div id="station-detail-map" class="w-full h-64 rounded-lg">
+                <img src="{% static 'repository/images/plot/SP_dt/' %}{{ station.code }}_SP_dt.png" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+{{ station_data_for_js|json_script:"station-data" }}
+{% endblock %}

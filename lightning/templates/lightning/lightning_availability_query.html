@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* 1. Style Filter Box */
+    .custom-filter-box {
+        background-color: #ffffff;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .custom-select {
+        padding: 5px 10px;
+        border: 1px solid #999;
+        border-radius: 4px;
+        background-color: white;
+        font-size: 13px;
+        min-width: 100px;
+        color: #333;
+        cursor: pointer;
+    }
+
+    .custom-btn {
+        background-color: #4f46e5;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .custom-btn-green {
+        background-color: #10b981; /* Emerald-500 */
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .custom-btn-green:hover {
+        background-color: #059669;
+    }
+
+    /* 2. Style Tabel COMPACT */
+    .matrix-table {
+        border-collapse: separate; /* Penting untuk sticky header */
+        border-spacing: 0;
+        width: 100%;
+    }
+    
+    .matrix-table th, .matrix-table td {
+        text-align: center;
+        border: 1px solid #ccc;
+        padding: 0;
+        height: 22px;
+        font-size: 11px;
+    }
+
+    .col-day {
+        min-width: 24px; 
+        max-width: 24px;
+        width: 24px;
+    }
+
+    .matrix-input {
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        border: none;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 600;
+        color: #1f2937;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .matrix-input:focus {
+        outline: 2px solid #3b82f6;
+        background-color: white;
+        z-index: 10;
+        position: relative;
+    }
+
+    .matrix-input::-webkit-outer-spin-button,
+    .matrix-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* --- PERBAIKAN STICKY COLUMN --- */
+    
+    /* Base Sticky Style */
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        z-index: 20; 
+        border-right: 2px solid #9ca3af; 
+    }
+
+    /* KHUSUS HEADER (Gelap) */
+    thead th.sticky-col {
+        background-color: #1f2937; /* Gray-800 */
+        color: white;
+        z-index: 30; 
+    }
+
+    /* KHUSUS BODY (Terang) */
+    tbody td.sticky-col {
+        background-color: #f9fafb; /* Gray-50 */
+        color: #111827; /* Gray-900 */
+        z-index: 20;
+    }
+</style>
+
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4">
+        <div class="container mx-auto">
+            
+            <!-- HEADER & FILTER -->
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-xl font-bold text-gray-800">{{ page_title }}</h1>
+                
+                <form method="get" class="custom-filter-box">
+                    <div>
+                        <span class="text-xs font-bold text-gray-600">Bulan:</span>
+                        <select name="month" class="custom-select">
+                            {% for m in months_range %}
+                            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold text-gray-600">Tahun:</span>
+                        <select name="year" class="custom-select">
+                            {% for y in years_range %}
+                            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="custom-btn">Tampilkan</button>
+                </form>
+            </div>
+
+            <!-- TABEL WRAPPER -->
+            <div class="bg-white shadow rounded-lg overflow-hidden mb-4">
+                <div class="overflow-x-auto"> 
+                    <table class="matrix-table">
+                        <thead class="bg-gray-800 text-white">
+                            <tr>
+                                <th class="sticky-col py-1" style="width: 30px;">No</th>
+                                <th class="sticky-col py-1" style="left: 30px; width: 80px;">Nama Sta</th>
+                                
+                                {% for d in list_tanggal %}
+                                    <th class="col-day">{{ d }}</th>
+                                {% endfor %}
+                                
+                                <th class="bg-gray-700" style="width: 40px;">Avg</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white">
+                            {% for row in tabel_data %}
+                            <tr>
+                                <td class="sticky-col font-mono">{{ forloop.counter }}</td>
+                                <td class="sticky-col font-bold" style="left: 30px; text-align: left; padding-left: 4px;">{{ row.nama }}</td>
+                                
+                                {% for day in row.hari %}
+                                <td id="td-{{ row.nama }}-{{ day.day_num }}">
+                                    <input type="number" 
+                                        class="matrix-input"
+                                        value="{{ day.val|floatformat:0 }}"
+                                        data-station="{{ row.nama }}"
+                                        data-date="{{ day.full_date }}"
+                                        min="0" max="100"
+                                        onchange="handleEdit(this)">
+                                </td>
+                                {% endfor %}
+
+                                <td class="font-bold bg-gray-100" id="avg-{{ row.nama }}">{{ row.avg_row|floatformat:0 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+                            
+            <!-- LEGEND -->
+            <div class="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200 mb-6">
+                <p class="font-bold mb-1">Keterangan Warna:</p>
+                <div class="flex gap-4">
+                    <div class="flex items-center gap-1"><div style="width:12px; height:12px; background-color:#f87171; border:1px solid #999;"></div>(0 - 24%)</div>
+                    <div class="flex items-center gap-1"><div style="width:12px; height:12px; background-color:#fb923c; border:1px solid #999;"></div>(25 - 49%)</div>
+                    <div class="flex items-center gap-1"><div style="width:12px; height:12px; background-color:#facc15; border:1px solid #999;"></div>(50 - 80%)</div>
+                    <div class="flex items-center gap-1"><div style="width:12px; height:12px; background-color:#4ade80; border:1px solid #999;"></div>(> 80%)</div>
+                </div>
+                <p class="mt-1 italic">* Nilai default 100 jika data tidak tersedia. Klik angka untuk mengedit.</p>
+            </div>
+
+            <!-- CHART SECTION -->
+            <div class="bg-white shadow rounded-lg p-4 mb-6">
+                <!-- Header Chart dengan Tombol Refresh -->
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">SLA Stasiun {{ sensor_name }} Bulan {{ month_name }} {{ selected_year }}</h3>
+                    
+                    <!-- Tombol Refresh Chart Manual -->
+                    <button type="button" onclick="forceUpdateChart()" class="custom-btn-green flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh Chart
+                    </button>
+                </div>
+
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="availabilityChart"></canvas>
+                </div>
+            </div>
+
+        </div> <!-- Closing Container -->
+    </main>
+  </div>
+</div>
+
+<!-- LIBRARIES -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Plugin DataLabels untuk menampilkan angka di atas batang -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+    const currentSensorType = "{{ sensor_type }}";
+    const updateApiUrl = "{{ update_url }}";
+
+    // Variabel Global Chart
+    let myChart = null;
+
+    // --- HELPER FUNCTIONS WARNA ---
+    function getChartColor(val) {
+        if (val > 80) return '#4ade80'; // Hijau
+        if (val >= 50) return '#facc15'; // Kuning
+        if (val >= 25) return '#fb923c'; // Oranye
+        return '#f87171'; // Merah
+    }
+
+    function getChartBorderColor(val) {
+        if (val > 80) return '#22c55e';
+        if (val >= 50) return '#eab308';
+        if (val >= 25) return '#f97316';
+        return '#ef4444';
+    }
+
+    // 1. Fungsi Mewarnai Cell Tabel
+    function setCellColor(input) {
+        const val = parseFloat(input.value);
+        const td = input.parentElement;
+        
+        td.style.backgroundColor = ''; 
+        td.style.color = 'black'; 
+
+        if (val > 80) {
+            td.style.backgroundColor = '#4ade80'; 
+        } else if (val >= 50) {
+            td.style.backgroundColor = '#facc15'; 
+        } else if (val >= 25) {
+            td.style.backgroundColor = '#fb923c'; 
+        } else {
+            td.style.backgroundColor = '#f87171'; 
+            td.style.color = 'white'; 
+        }
+    }
+
+    // 2. Init Script
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.matrix-input').forEach(input => {
+            setCellColor(input);
+        });
+        
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+            });
+        }
+
+        renderChart();
+    });
+
+    // 3. Handle Edit & Save
+    function handleEdit(input) {
+        const station = input.dataset.station;
+        const date = input.dataset.date;
+        let value = parseFloat(input.value);
+
+        if (isNaN(value)) value = 0;
+        if (value > 100) value = 100;
+        if (value < 0) value = 0;
+        input.value = value; 
+
+        // Update warna cell segera
+        setCellColor(input);
+
+        // --- OPTIMASI: HITUNG RATA-RATA & UPDATE CHART SEGERA (OPTIMISTIC UI) ---
+        // Kita panggil ini DI SINI agar chart langsung berubah tanpa menunggu server
+        recalculateRowAvg(station);
+
+        // Kirim ke Server (Background Process)
+        fetch(updateApiUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({
+                station: station,
+                date: date,
+                value: value,
+                sensor_type: currentSensorType 
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status !== 'success') {
+                console.error("Gagal menyimpan:", data.message);
+                // Opsional: Beri feedback visual jika gagal
+            }
+        })
+        .catch(err => console.error("Error:", err));
+    }
+
+    // 4. Hitung Ulang Rata-rata Baris
+    function recalculateRowAvg(stationName) {
+        const inputs = document.querySelectorAll(`input[data-station='${stationName}']`);
+        let total = 0;
+        let count = 0;
+        
+        inputs.forEach(inp => {
+            total += parseFloat(inp.value || 0);
+            count++;
+        });
+
+        if (count > 0) {
+            const avg = parseFloat((total / count).toFixed(2)); 
+            
+            // Update teks tabel
+            const avgCell = document.getElementById(`avg-${stationName}`);
+            if(avgCell) avgCell.innerText = avg.toFixed(0);
+
+            // Update data chart spesifik
+            updateSingleChartData(stationName, avg);
+        }
+    }
+
+    // --- 5. FUNGSI UPDATE CHART SPESIFIK (SINGLE BAR) ---
+    function updateSingleChartData(stationName, newAvg) {
+        if (!myChart) return;
+
+        const index = myChart.data.labels.indexOf(stationName);
+        if (index !== -1) {
+            myChart.data.datasets[0].data[index] = newAvg;
+            myChart.data.datasets[0].backgroundColor[index] = getChartColor(newAvg);
+            myChart.data.datasets[0].borderColor[index] = getChartBorderColor(newAvg);
+            myChart.update();
+        }
+    }
+
+    // --- 6. FUNGSI UPDATE PAKSA SEMUA CHART (DARI TOMBOL REFRESH) ---
+    function forceUpdateChart() {
+        if (!myChart) return;
+        
+        const labels = myChart.data.labels;
+        const newData = [];
+        const newColors = [];
+        const newBorders = [];
+        
+        // Loop setiap stasiun yang ada di chart
+        labels.forEach((stationName) => {
+            // Ambil nilai rata-rata terbaru langsung dari cell tabel 'Avg'
+            const avgCell = document.getElementById(`avg-${stationName}`);
+            let val = 0;
+            if (avgCell) {
+                val = parseFloat(avgCell.innerText) || 0;
+            }
+            
+            newData.push(val);
+            newColors.push(getChartColor(val));
+            newBorders.push(getChartBorderColor(val));
+        });
+        
+        // Terapkan data baru ke chart
+        myChart.data.datasets[0].data = newData;
+        myChart.data.datasets[0].backgroundColor = newColors;
+        myChart.data.datasets[0].borderColor = newBorders;
+        
+        myChart.update();
+    }
+
+    // --- 7. RENDER CHART JS AWAL ---
+    function renderChart() {
+        const ctx = document.getElementById('availabilityChart').getContext('2d');
+        
+        // Hapus chart lama jika ada (mencegah memory leak / glitch)
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        Chart.register(ChartDataLabels); 
+
+        const labels = [
+            {% for row in tabel_data %}
+                "{{ row.nama }}",
+            {% endfor %}
+        ];
+
+        const dataValues = [
+            {% for row in tabel_data %}
+                {{ row.avg_row }},
+            {% endfor %}
+        ];
+
+        const backgroundColors = dataValues.map(val => getChartColor(val));
+        const borderColors = dataValues.map(val => getChartBorderColor(val));
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Rata-rata Availability (%)',
+                    data: dataValues,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1,
+                    barPercentage: 0.6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: { top: 30 }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100, 
+                        title: { display: true, text: 'Persentase (%)' }
+                    },
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 90,
+                            minRotation: 45
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        offset: -4,
+                        color: '#333',   
+                        font: { weight: 'bold', size: 10 },
+                        formatter: function(value) {
+                            return (value > 0) ? Math.round(value) : ""; 
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

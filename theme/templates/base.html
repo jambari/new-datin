@@ -1,0 +1,32 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>Aplikasi Chang'e</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    {% tailwind_css %}
+</head>
+<body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+    {% block content %}
+    {% endblock %}
+
+    {% block extra_scripts %}{% endblock %}
+
+
+<script>
+(function() {
+  const hour = new Date().getHours();
+  const root = document.documentElement;
+  if (hour >= 6 && hour < 18) {
+    root.classList.remove('dark'); // Light mode
+  } else {
+    root.classList.add('dark');    // Dark mode
+  }
+})();
+</script>
+
+</body>
+</html>

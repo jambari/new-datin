@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Container Laporan */
+    .report-container {
+        padding: 20px;
+        background-color: white;
+        font-family: 'Arial', sans-serif;
+        color: black;
+        width: fit-content; /* Container menyesuaikan konten tabel */
+        min-width: 100%;    /* Tapi minimal selebar layar */
+    }
+
+    /* Filter Form */
+    .filter-box {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        background-color: #f9f9f9;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        border-radius: 6px;
+        width: fit-content; /* Agar filter tidak melar */
+    }
+    .filter-box select, .filter-box button {
+        padding: 6px 12px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .filter-box button {
+        background-color: #4f46e5;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .btn-print {
+        background-color: #059669 !important;
+        margin-left: auto;
+    }
+
+    /* Judul Kota */
+    .city-header {
+        background-color: #1f2937;
+        color: white;
+        padding: 5px 15px; /* Padding dikurangi */
+        font-size: 12px;   /* Font diperkecil agar header tidak terlalu tebal */
+        font-weight: bold;
+        margin-top: 20px;  /* Margin dikurangi */
+        margin-bottom: 0; 
+        border-top-left-radius: 4px;
+        border-top-right-radius: 4px;
+        /* Lebar disesuaikan dengan total lebar kolom tabel di bawah (100 + 80*4 + 140 = 560px) */
+        width: 560px; 
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Tabel Data FIX PIXEL */
+    .almanac-table {
+        width: auto; /* Jangan 100% agar tidak melar */
+        border-collapse: collapse;
+        font-size: 10px; /* Font diperkecil menjadi 10px */
+        margin-bottom: 20px; /* Margin bawah dikurangi */
+        page-break-inside: avoid;
+        table-layout: fixed; /* KUNCI: Lebar kolom kaku */
+    }
+
+    .almanac-table th, .almanac-table td {
+        border: 1px solid #333;
+        padding: 2px 4px; /* Padding diperkecil */
+        text-align: center;
+        height: 16px; /* Tinggi baris diperkecil menjadi 16px */
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .almanac-table thead th {
+        background-color: #e5e7eb;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Kolom Tanggal (Spesifik) */
+    .col-date { 
+        background-color: #f3f4f6; 
+        font-weight: bold; 
+        text-align: left; 
+        padding-left: 10px; 
+    }
+
+    /* Print Styles */
+    @media print {
+        @page { margin: 1.5cm; }
+        body * { visibility: hidden; }
+        .report-container, .report-container * { visibility: visible; }
+        .report-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+        }
+        .filter-box, nav, aside, header { display: none !important; }
+    }
+</style>
+
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+        <div class="report-container">
+            
+            <h2 style="margin-bottom: 20px; font-size: 22px; font-weight: bold; text-align: left; padding-left: 10px;">
+                {{ page_title }}
+            </h2>
+
+            <!-- Form Filter -->
+            <form method="get" class="filter-box">
+                <label>Bulan:</label>
+                <select name="month">
+                    {% for m in months_range %}
+                    <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+                
+                <label>Tahun:</label>
+                <select name="year">
+                    {% for y in years_range %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button type="submit">Tampilkan</button>
+                <button type="button" class="btn-print" onclick="window.print()">Cetak / PDF</button>
+            </form>
+
+            <!-- Loop Per Kota -->
+            {% if report_data %}
+                {% for item in report_data %}
+                <div class="city-section">
+                    <!-- Header Kota -->
+                    <div class="city-header">{{ item.city|upper }}</div>
+                    
+                    <!-- Tabel Data -->
+                    <table class="almanac-table">
+                        <!-- Definisi Lebar Kolom FIX (Pixel) - TOTAL 560px -->
+                        <colgroup>
+                            <col style="width: 100px;"> <!-- Tanggal -->
+                            <col style="width: 80px;">  <!-- Matahari Terbit -->
+                            <col style="width: 80px;">  <!-- Matahari Terbenam -->
+                            <col style="width: 80px;">  <!-- Bulan Terbit -->
+                            <col style="width: 80px;">  <!-- Bulan Terbenam -->
+                            <col style="width: 140px;"> <!-- Fase Bulan -->
+                        </colgroup>
+
+                        <thead>
+                            <tr>
+                                <th rowspan="2">TANGGAL</th>
+                                <th colspan="2">MATAHARI</th>
+                                <th colspan="2">BULAN</th>
+                                <th rowspan="2">FASE BULAN</th>
+                            </tr>
+                            <tr>
+                                <th>TERBIT</th>
+                                <th>TERBENAM</th>
+                                <th>TERBIT</th>
+                                <th>TERBENAM</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in item.events %}
+                            <tr>
+                                <td class="col-date">{{ event.date|date:"d-m-Y" }}</td>
+                                
+                                <!-- Matahari -->
+                                <td>{{ event.sun_rise|date:"H:i:s"|default:"-" }}</td>
+                                <td>{{ event.sun_set|date:"H:i:s"|default:"-" }}</td>
+                                
+                                <!-- Bulan -->
+                                <td>{{ event.moon_rise|date:"H:i:s"|default:"-" }}</td>
+                                <td>{{ event.moon_set|date:"H:i:s"|default:"-" }}</td>
+                                
+                                <!-- Fase Bulan (0-1) -->
+                                <td>
+                                    {% if event.moon_phase is not None %}
+                                        {{ event.moon_phase|floatformat:2 }}
+                                        <!-- Indikator Simpel -->
+                                        {% if event.moon_phase < 0.05 %} (Baru){% endif %}
+                                        {% if event.moon_phase > 0.45 and event.moon_phase < 0.55 %} (Purnama){% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+            
+            {% else %}
+                <div style="text-align: center; padding: 40px; color: #666; font-style: italic;">
+                    <p>Tidak ada data almanak untuk periode ini.</p>
+                    <p class="text-sm">Pastikan database SunMoonEvent sudah diisi.</p>
+                </div>
+            {% endif %}
+
+        </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

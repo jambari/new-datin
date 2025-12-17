@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load tz %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <h1 class="text-3xl font-bold text-gray-900">Terbit dan Terbenam Bulan</h1>
+      <br>
+      <!-- Filter Form -->
+      <form method="get" class="mb-6 flex flex-wrap items-end gap-4">
+        <div>
+          <label class="block text-sm text-gray-700">City</label>
+          <select name="city" class="mt-1 block rounded border-gray-300">
+            <option value="">All</option>
+            {% for c in cities %}
+              <option value="{{ c }}" {% if c == city %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-700">Start Date</label>
+          <input type="date" name="start" value="{{ start|date:'Y-m-d' }}" class="mt-1 block rounded border-gray-300">
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-700">End Date</label>
+          <input type="date" name="end" value="{{ end|date:'Y-m-d' }}" class="mt-1 block rounded border-gray-300">
+        </div>
+
+        <div>
+          <button type="submit" class="mt-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-blue-700">
+            Filter
+          </button>
+        </div>
+      </form>
+
+      <!-- Results Table -->
+      {% timezone "Asia/Jayapura" %}
+      <table class="min-w-full bg-white border rounded shadow">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="px-4 py-2 text-left">Tanggal</th>
+            <th class="px-4 py-2 text-left">Kota</th>
+            <th class="px-4 py-2">Terbit Matahari </th>
+            <th class="px-4 py-2">Terbenam Matahari</th>
+            <th class="px-4 py-2">Terbit Bulan</th>
+            <th class="px-4 py-2">Terbenam Bulan</th>
+            <!-- <th class="px-4 py-2">Moon Phase</th> -->
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in page_obj %}
+          <tr class="border-t">
+            <td class="px-4 py-2">{{ e.date }}</td>
+            <td class="px-4 py-2">{{ e.city }}</td>
+            <td class="px-4 py-2">{% if e.sun_rise %}{{ e.sun_rise|date:"H:i" }}{% else %}-{% endif %}</td>
+            <td class="px-4 py-2">{% if e.sun_set %}{{ e.sun_set|date:"H:i" }}{% else %}-{% endif %}</td>
+            <td class="px-4 py-2">{% if e.moon_rise %}{{ e.moon_rise|date:"H:i" }}{% else %}-{% endif %}</td>
+            <td class="px-4 py-2">{% if e.moon_set %}{{ e.moon_set|date:"H:i" }}{% else %}-{% endif %}</td>
+            <!-- <td class="px-4 py-2">{{ e.moon_phase|floatformat:2 }}</td> -->
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="px-4 py-4 text-center text-gray-500">No data</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endtimezone %}
+
+      <!-- Pagination -->
+      <div class="mt-4 flex justify-center space-x-2">
+        {% if page_obj.has_previous %}
+          <a href="?page=1{% if city %}&city={{ city }}{% endif %}{% if start %}&start={{ start|date:'Y-m-d' }}{% endif %}{% if end %}&end={{ end|date:'Y-m-d' }}{% endif %}" class="px-3 py-1 bg-gray-300 rounded">First</a>
+          <a href="?page={{ page_obj.previous_page_number }}{% if city %}&city={{ city }}{% endif %}{% if start %}&start={{ start|date:'Y-m-d' }}{% endif %}{% if end %}&end={{ end|date:'Y-m-d' }}{% endif %}" class="px-3 py-1 bg-gray-300 rounded">Previous</a>
+        {% endif %}
+
+        <span class="px-3 py-1 bg-gray-200 rounded">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if city %}&city={{ city }}{% endif %}{% if start %}&start={{ start|date:'Y-m-d' }}{% endif %}{% if end %}&end={{ end|date:'Y-m-d' }}{% endif %}" class="px-3 py-1 bg-gray-300 rounded">Next</a>
+          <a href="?page={{ page_obj.paginator.num_pages }}{% if city %}&city={{ city }}{% endif %}{% if start %}&start={{ start|date:'Y-m-d' }}{% endif %}{% if end %}&end={{ end|date:'Y-m-d' }}{% endif %}" class="px-3 py-1 bg-gray-300 rounded">Last</a>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

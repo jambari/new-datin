@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Laporan Logbook - {{ log.tanggal }}</title>
+    {% load tz %}
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            color: #000;
+            background: #fff;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+        }
+        .header p {
+            margin: 5px 0 0;
+            font-size: 14px;
+        }
+        .meta-table {
+            width: 100%;
+            margin-bottom: 30px;
+            border-collapse: collapse;
+        }
+        .meta-table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+        .label {
+            font-weight: bold;
+            width: 180px;
+        }
+        .status-box {
+            border: 1px solid #000;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted #ccc;
+            padding-bottom: 5px;
+        }
+        .status-value {
+            font-weight: bold;
+        }
+        .status-on { color: black; }
+        .status-off { color: black; text-decoration: underline; }
+        
+        .notes-box {
+            border: 1px solid #000;
+            padding: 20px;
+            min-height: 100px;
+            margin-bottom: 50px;
+        }
+        .footer {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+            text-align: center;
+        }
+        .signature-line {
+            margin-top: 60px;
+            border-top: 1px solid #000;
+            width: 200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; margin: 2cm; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    <div class="no-print" style="margin-bottom: 20px;">
+        <a href="javascript:window.close();" style="text-decoration: none; background: #ddd; padding: 10px 20px; border-radius: 5px; color: #333;">&larr; Kembali / Tutup</a>
+    </div>
+
+    <div class="header">
+        <h1>Laporan Logbook Harian</h1>
+        <p>Badan Meteorologi, Klimatologi, dan Geofisika</p>
+        <p>Stasiun Geofisika Kelas I Jayapura</p>
+    </div>
+
+    <table class="meta-table">
+        <tr>
+            <td class="label">Tanggal</td>
+            <td>: {{ log.tanggal|date:"d F Y" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Waktu Input (WIT)</td>
+            <td>: {{ log.waktu_dibuat|timezone:"Asia/Jayapura"|date:"H:i:s" }} WIT</td>
+        </tr>
+        <tr>
+            <td class="label">Shift</td>
+            <td>: {{ log.shift }}</td>
+        </tr>
+        <tr>
+            <td class="label">Petugas Jaga</td>
+            <td>: {{ log.petugas.get_full_name|default:log.petugas.username|title }}</td>
+        </tr>
+        
+        <tr>
+            <td class="label">Status Absen</td>
+            <td>: <strong>{{ log.status_absen }}</strong></td>
+        </tr>
+
+        {% if log.status_absen == 'Masuk' %}
+        <tr>
+            <td class="label">Menggantikan Petugas</td>
+            <td>: {{ log.petugas_sebelum.get_full_name|default:log.petugas_sebelum.username|default:"-"|title }}</td>
+        </tr>
+        {% elif log.status_absen == 'Pulang' %}
+        <tr>
+            <td class="label">Digantikan Oleh</td>
+            <td>: {{ log.petugas_selanjutnya.get_full_name|default:log.petugas_selanjutnya.username|default:"-"|title }}</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <h3 style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-top: 0;">Status Peralatan</h3>
+    <div class="status-box">
+        <div class="status-grid">
+            <div class="status-item">
+                <span>Seiscomp Seismik</span>
+                <span class="status-value {% if log.seiscomp_seismik == 'OFF' %}status-off{% endif %}">{{ log.seiscomp_seismik }}</span>
+            </div>
+            <div class="status-item">
+                <span>Seiscomp Akselerograf</span>
+                <span class="status-value {% if log.seiscomp_accelero == 'OFF' %}status-off{% endif %}">{{ log.seiscomp_accelero }}</span>
+            </div>
+            <div class="status-item">
+                <span>ESDX</span>
+                <span class="status-value {% if log.esdx == 'OFF' %}status-off{% endif %}">{{ log.esdx }}</span>
+            </div>
+            <div class="status-item">
+                <span>Petir</span>
+                <span class="status-value {% if log.petir == 'OFF' %}status-off{% endif %}">{{ log.petir }}</span>
+            </div>
+            <div class="status-item">
+                <span>LEMI</span>
+                <span class="status-value {% if log.lemi == 'OFF' %}status-off{% endif %}">{{ log.lemi }}</span>
+            </div>
+            <div class="status-item">
+                <span>Proton</span>
+                <span class="status-value {% if log.proton == 'OFF' %}status-off{% endif %}">{{ log.proton }}</span>
+            </div>
+        </div>
+    </div>
+
+    <h3 style="border-bottom: 1px solid #000; padding-bottom: 5px;">Catatan Tambahan</h3>
+    <div class="notes-box">
+        {{ log.catatan|default:"Tidak ada catatan tambahan."|linebreaks }}
+    </div>
+
+    <div class="footer">
+        <div style="width: 45%;">
+            <p>Mengetahui,</p>
+            <p>Koordinator/Kepala</p>
+            <div class="signature-line"></div>
+        </div>
+        <div style="width: 45%;">
+            <p>Jayapura, {{ log.tanggal|date:"d F Y" }}</p>
+            <p>Petugas Jaga,</p>
+            <div class="signature-line">{{ log.petugas.get_full_name|default:log.petugas.username|default:"(..........................)"|title }}</div>
+        </div>
+    </div>
+
+</body>
+</html>

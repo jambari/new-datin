@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">Observation Details</h1>
+        <a href="{% url 'observation_list' %}" class="text-sm text-indigo-600 hover:text-indigo-800">&larr; Back to Records</a>
+      </div>
+
+      <div class="mt-8 p-6 bg-white rounded-lg shadow-md">
+        <div class="grid grid-cols-3 gap-4 border-b pb-4 mb-4">
+            <div><p class="text-sm text-gray-500">Date</p><p class="font-semibold">{{ observation.observation_date }}</p></div>
+            <div><p class="text-sm text-gray-500">Observer</p><p class="font-semibold">{{ observation.observer }}</p></div>
+            <div><p class="text-sm text-gray-500">Session</p><p class="font-semibold">{{ observation.session }}</p></div>
+        </div>
+        
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Raw Input Data</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+                <h3 class="font-medium text-gray-700">Titik Tetap</h3>
+                <p>CR Awal: {{ observation.cr_awal }}</p>
+                <p>CL Awal: {{ observation.cl_awal }}</p>
+                <p>CR Akhir: {{ observation.cr_akhir }}</p>
+                <p>CL Akhir: {{ observation.cl_akhir }}</p>
+            </div>
+            <div>
+                <h3 class="font-medium text-gray-700">Meridian Results</h3>
+                <p>Meridian 1: {{ observation.meridian_1 }}</p>
+                <p>Meridian 2: {{ observation.meridian_2 }}</p>
+            </div>
+            <div>
+                <h3 class="font-medium text-gray-700">Deklinasi Readings</h3>
+                {% for key, value in observation.deklinasi_readings.items %}
+                    <p>{{ key }}: {{ value.hh }}:{{ value.mm }}:{{ value.ss }} - Circle: {{ value.circ }}</p>
+                {% endfor %}
+            </div>
+            <div>
+                <h3 class="font-medium text-gray-700">Inklinasi Readings</h3>
+                {% for key, value in observation.inklinasi_readings.items %}
+                    <p>{{ key }}: {{ value.hh }}:{{ value.mm }}:{{ value.ss }} - Circle: {{ value.circ }} - Ftotal: {{ value.ftotal }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+                <div class="mt-8 pt-6 border-t">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800">Conversion Results (Degrees, Minutes, Seconds)</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                  <h3 class="font-medium text-gray-700">Titik Tetap (DMS)</h3>
+                  <p>CR Awal: {{ converted_data.cr_awal.deg }}° {{ converted_data.cr_awal.min }}' {{ converted_data.cr_awal.sec }}"</p>
+                  <p>CL Awal: {{ converted_data.cl_awal.deg }}° {{ converted_data.cl_awal.min }}' {{ converted_data.cl_awal.sec }}"</p>
+                  <p>CR Akhir: {{ converted_data.cr_akhir.deg }}° {{ converted_data.cr_akhir.min }}' {{ converted_data.cr_akhir.sec }}"</p>
+                  <p>CL Akhir: {{ converted_data.cl_akhir.deg }}° {{ converted_data.cl_akhir.min }}' {{ converted_data.cl_akhir.sec }}"</p>
+              </div>
+              <div>
+                  <h3 class="font-medium text-gray-700">Deklinasi Readings (DMS)</h3>
+                  {% for key, value in converted_data.deklinasi.items %}
+                      <p>{{ key }}: {{ value.deg }}° {{ value.min }}' {{ value.sec }}"</p>
+                  {% endfor %}
+              </div>
+              <div>
+                  <h3 class="font-medium text-gray-700">Inklinasi Readings (DMS)</h3>
+                  {% for key, value in converted_data.inklinasi.items %}
+                      <p>{{ key }}: {{ value.deg }}° {{ value.min }}' {{ value.sec }}"</p>
+                  {% endfor %}
+              </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

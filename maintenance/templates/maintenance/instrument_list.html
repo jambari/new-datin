@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+        <div class="container mx-auto">
+            
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-800">Daftar Alat & Sensor</h2>
+                
+                <a href="{% url 'maintenance:instrument_create' %}" 
+                   class="text-white font-bold py-2 px-4 rounded inline-flex items-center shadow"
+                   style="background-color: #2563EB; color: white;">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>Tambah Alat</span>
+                </a>
+            </div>
+
+            <div style="background-color: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <form method="get" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; font-size: 13px; font-weight: bold; color: #4b5563; margin-bottom: 5px;">Filter Jenis Alat</label>
+                        <select name="jenis" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background-color: #f9fafb;">
+                            <option value="">-- Semua Jenis --</option>
+                            {% for code, label in jenis_choices %}
+                                <option value="{{ code }}" {% if selected_jenis == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; font-size: 13px; font-weight: bold; color: #4b5563; margin-bottom: 5px;">Filter Status</label>
+                        <select name="status" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background-color: #f9fafb;">
+                            <option value="">-- Semua Status --</option>
+                            {% for code, label in status_choices %}
+                                <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" style="padding: 8px 20px; background-color: #4b5563; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                            Terapkan
+                        </button>
+                        <a href="{% url 'maintenance:instrument_list' %}" style="padding: 8px 15px; background-color: #e5e7eb; color: #374151; text-decoration: none; border-radius: 4px; border: 1px solid #d1d5db;">
+                            Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Alat</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shelter / Lokasi</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for item in instruments %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ item.nama_alat }}</div>
+                                <div class="text-sm text-gray-500">{{ item.merk_tipe|default:"-" }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    {{ item.get_jenis_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-bold text-gray-900">{{ item.shelter }}</div>
+                                <div class="text-sm text-gray-500">{{ item.lokasi }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if item.status == 'AKTIF' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: #d1fae5; color: #065f46;">Aktif</span>
+                                {% elif item.status == 'BERMASALAH' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: #fef3c7; color: #92400e;">Bermasalah</span>
+                                {% elif item.status == 'MATI' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: #fee2e2; color: #b91c1c;">Rusak/Mati</span>
+                                {% else %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background-color: #dbeafe; color: #1e40af;">Maintenance</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="{% url 'maintenance:instrument_update' item.id %}" class="hover:underline" style="color: #2563EB; margin-right: 15px;">Edit</a>
+                                <a href="{% url 'maintenance:instrument_delete' item.id %}" class="hover:underline" style="color: #DC2626;">Hapus</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                                Tidak ada data yang sesuai dengan filter.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 5px; font-size: 14px;">
+                {% if instruments.has_previous %}
+                    <a href="?page=1&jenis={{ selected_jenis }}&status={{ selected_status }}" style="padding: 8px 12px; border: 1px solid #d1d5db; background-color: white; color: #374151; text-decoration: none; border-radius: 4px;">&laquo; Awal</a>
+                    <a href="?page={{ instruments.previous_page_number }}&jenis={{ selected_jenis }}&status={{ selected_status }}" style="padding: 8px 12px; border: 1px solid #d1d5db; background-color: white; color: #374151; text-decoration: none; border-radius: 4px;">Sebelumnya</a>
+                {% endif %}
+
+                <span style="padding: 8px 12px; color: #374151; font-weight: bold;">
+                    Halaman {{ instruments.number }} dari {{ instruments.paginator.num_pages }}
+                </span>
+
+                {% if instruments.has_next %}
+                    <a href="?page={{ instruments.next_page_number }}&jenis={{ selected_jenis }}&status={{ selected_status }}" style="padding: 8px 12px; border: 1px solid #d1d5db; background-color: white; color: #374151; text-decoration: none; border-radius: 4px;">Selanjutnya</a>
+                    <a href="?page={{ instruments.paginator.num_pages }}&jenis={{ selected_jenis }}&status={{ selected_status }}" style="padding: 8px 12px; border: 1px solid #d1d5db; background-color: white; color: #374151; text-decoration: none; border-radius: 4px;">Akhir &raquo;</a>
+                {% endif %}
+            </div>
+
+        </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock content %}

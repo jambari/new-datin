@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* --- LAYOUT UTAMA --- */
+    body {
+        background-color: #f0f2f5;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    
+    .layout-wrapper { display: flex; min-height: 100vh; }
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .scrollable-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+
+    /* --- CONTROLS --- */
+    .controls-card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        max-width: 600px;
+        justify-content: center;
+    }
+    
+    .btn {
+        padding: 8px 15px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        color: white;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-blue { background-color: #007bff; }
+    .btn-green { background-color: #28a745; }
+    .form-control { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+    /* --- INSTAGRAM CANVAS (Square) --- */
+    /* Kita buat ukuran aslinya 1080px, tapi kita scale pakai CSS transform agar muat di layar */
+    .canvas-wrapper {
+        width: 540px; /* Ukuran tampilan di layar (setengah aslinya) */
+        height: 540px;
+        margin-bottom: 50px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        position: relative;
+    }
+
+    #igPost {
+        width: 1080px;  /* Resolusi Asli Instagram */
+        height: 1080px; /* Resolusi Asli Instagram */
+        background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); /* Tema Gelap Elegan */
+        color: white;
+        padding: 60px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        
+        /* Scale down untuk preview agar tidak overflow layar user */
+        transform: scale(0.5); 
+        transform-origin: top left;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    /* --- DESAIN INFOGRAFIS --- */
+    .ig-header {
+        text-align: center;
+        border-bottom: 2px solid rgba(255,255,255,0.2);
+        padding-bottom: 30px;
+    }
+    .ig-logo-text { font-size: 28px; letter-spacing: 2px; text-transform: uppercase; color: #a8dadc; margin-bottom: 10px; font-weight: bold; }
+    .ig-title { font-size: 60px; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: -1px; background: -webkit-linear-gradient(#f1c40f, #e67e22); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .ig-subtitle { font-size: 32px; color: #ecf0f1; margin-top: 10px; font-weight: 300; }
+
+    .ig-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 40px;
+    }
+
+    /* Main Big Stat */
+    .big-stat-box {
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 40px;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+    }
+    .big-stat-label { font-size: 30px; text-transform: uppercase; color: #bdc3c7; letter-spacing: 1px; }
+    .big-stat-value { font-size: 100px; font-weight: 900; margin: 10px 0; color: #fff; line-height: 1; }
+    
+    /* Grid Detail */
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+    }
+    .mini-card {
+        background: rgba(0,0,0,0.3);
+        padding: 30px;
+        border-radius: 15px;
+        text-align: center;
+        border-left: 5px solid #fff;
+    }
+    .mc-red { border-color: #e74c3c; }
+    .mc-blue { border-color: #3498db; }
+    
+    .mini-val { font-size: 50px; font-weight: bold; margin-bottom: 5px; }
+    .mini-lbl { font-size: 20px; color: #bdc3c7; text-transform: uppercase; }
+
+    /* Chart Container */
+    .chart-area {
+        height: 250px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 15px;
+        padding: 20px;
+        position: relative;
+    }
+
+    .ig-footer {
+        border-top: 1px solid rgba(255,255,255,0.2);
+        padding-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 24px;
+        color: #95a5a6;
+    }
+
+    /* Utility */
+    .text-warning { color: #f1c40f; }
+
+</style>
+
+<div class="layout-wrapper">
+    {% include 'partials/_sidebar.html' %}
+    <div class="main-content">
+        {% include 'partials/_topbar.html' %}
+        
+        <main class="scrollable-area">
+            
+            <div class="controls-card">
+                <form method="get" style="display:flex; align-items:center; gap:10px;">
+                    <label style="font-weight:bold;">Pilih Tanggal Akhir:</label>
+                    <input type="date" name="date" value="{{ end_date }}" class="form-control">
+                    <button type="submit" class="btn btn-blue">
+                        <i class="fas fa-sync"></i> Generate
+                    </button>
+                </form>
+                <div style="border-left:1px solid #ddd; height:30px; margin:0 10px;"></div>
+                <button onclick="downloadImage()" class="btn btn-green">
+                    <i class="fas fa-download"></i> Download JPG
+                </button>
+            </div>
+
+            <div class="canvas-wrapper">
+                
+                <div id="igPost">
+                    
+                    <div class="ig-header">
+                        <div class="ig-logo-text"><i class="fas fa-bolt"></i> STASIUN GEOFISIKA KELAS I TERNATE</div>
+                        <h1 class="ig-title">INFOGRAFIS PETIR</h1>
+                        <div class="ig-subtitle">Periode: {{ display_date_range }}</div>
+                    </div>
+
+                    <div class="ig-body">
+                        
+                        <div class="big-stat-box">
+                            <div class="big-stat-label">Total Sambaran Minggu Ini</div>
+                            <div class="big-stat-value">{{ total_strikes }}</div>
+                            <div style="font-size: 24px; color:#f39c12;">
+                                <i class="fas fa-exclamation-triangle"></i> Tertinggi pada: {{ max_date }} ({{ max_strike }})
+                            </div>
+                        </div>
+
+                        <div class="detail-grid">
+                            <div class="mini-card mc-red">
+                                <div class="mini-val" style="color:#ff6b6b;">{{ total_cg_plus }}</div>
+                                <div class="mini-lbl">CG (+) Positif</div>
+                            </div>
+                            <div class="mini-card mc-blue">
+                                <div class="mini-val" style="color:#54a0ff;">{{ total_cg_minus }}</div>
+                                <div class="mini-lbl">CG (-) Negatif</div>
+                            </div>
+                        </div>
+
+                        <div class="chart-area">
+                            <canvas id="infographicChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="ig-footer">
+                        <div><i class="fas fa-globe"></i> bmkg.go.id</div>
+                        <div>BMKG Datin System</div>
+                        <div><i class="fab fa-instagram"></i> @infobmkgmalut</div>
+                    </div>
+
+                </div>
+                </div>
+
+        </main>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+    Chart.register(ChartDataLabels);
+
+    // --- 1. Render Chart (Versi Cantik utk Infografis) ---
+    const ctx = document.getElementById('infographicChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Sambaran',
+                data: {{ chart_data|safe }},
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                borderRadius: 10,
+                barThickness: 40
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    color: '#000',
+                    anchor: 'end',
+                    align: 'top',
+                    font: { size: 24, weight: 'bold' }, // Font besar utk resolusi 1080p
+                    offset: -5
+                }
+            },
+            scales: {
+                y: { 
+                    display: false, // Hilangkan sumbu Y agar bersih
+                    beginAtZero: true 
+                },
+                x: {
+                    ticks: {
+                        color: '#fff',
+                        font: { size: 20 }, // Font sumbu X besar
+                        maxRotation: 0
+                    },
+                    grid: { display: false }
+                }
+            },
+            animation: false // Matikan animasi agar screenshot aman
+        }
+    });
+
+    // --- 2. Fungsi Download Image ---
+    function downloadImage() {
+        const element = document.getElementById("igPost");
+        
+        // Kita perlu clone node untuk menghapus transform scale sebelum screenshot
+        // Atau cara termudah: html2canvas punya opsi 'scale' dan kita screenshot elemen aslinya
+        
+        html2canvas(element, {
+            scale: 1, // Capture pada resolusi asli (karena elemen sudah 1080x1080)
+            useCORS: true,
+            backgroundColor: null // Transparent bg (meski div punya warna)
+        }).then(canvas => {
+            // Buat link download
+            const link = document.createElement('a');
+            link.download = 'infografis-petir-{{ end_date }}.jpg';
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+        });
+    }
+</script>
+{% endblock %}

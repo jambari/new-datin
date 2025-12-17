@@ -1,0 +1,26 @@
+# --- Folder yang Anda minta untuk di-ignore ---
+lightning/db3/
+magnet/raw/
+archive_shakemaps/
+archive_shakemaps_backfill/
+
+# --- Standar Django & Python (Sangat Disarankan) ---
+__pycache__/
+*.pyc
+db.sqlite3
+
+# --- Media & Static (Opsional, jika tidak ingin upload file user) ---
+media/
+staticfiles/
+
+# --- KEAMANAN (PENTING) ---
+# File ini terlihat seperti credential/key di screenshot Anda.
+# JANGAN upload file credential ke GitHub publik.
+eloquent-env-*.json
+*.log
+# --- File Data Besar ---
+*.xyz
+
+# --- Virtual Environment (Wajib di-ignore) ---
+# Folder ini berisi library python, bukan kode Anda
+datin/

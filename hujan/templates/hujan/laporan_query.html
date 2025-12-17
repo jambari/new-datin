@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<style>
+    /* Container Utama */
+    .report-container {
+        padding: 20px;
+        background-color: white; 
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+        color: #000;
+        /* Center container content */
+        display: flex;
+        flex-direction: column;
+        align-items: center; 
+    }
+
+    /* Filter Box (Lebar menyesuaikan konten, tidak full screen) */
+    .filter-box {
+        width: 700px; /* Samakan dengan lebar tabel */
+        background-color: #f8f9fa;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-bottom: 25px;
+    }
+
+    /* Narasi Style (Lebar fixed compact) */
+    .narasi-box {
+        width: 700px;
+        margin-bottom: 30px;
+        line-height: 1.5;
+        text-align: justify;
+        font-size: 13px;
+    }
+    .highlight {
+        font-weight: bold;
+        color: #d9534f; /* Merah bata */
+        background-color: #fcefdc;
+        padding: 0 3px;
+    }
+
+    /* --- CHART STYLES --- */
+    .chart-section {
+        width: 800px; /* Grafik sedikit lebih lebar dari tabel supaya detail terlihat */
+        margin-bottom: 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 40px;
+    }
+    
+    .bar-chart-container {
+        width: 100%;
+        height: 300px;
+    }
+
+    .pie-chart-container {
+        width: 400px; /* Pie chart tidak perlu terlalu besar */
+        height: 300px;
+    }
+
+    /* --- TABEL COMPACT (FIXED PIXEL) --- */
+    table.report-table {
+        width: 650px; /* Fixed width: Pas di A4 Portrait/Landscape */
+        border-collapse: collapse;
+        font-size: 11px; /* Font kecil compact */
+        margin-top: 10px;
+        margin-bottom: 50px;
+    }
+
+    table.report-table th, 
+    table.report-table td {
+        border: 1px solid #000;
+        padding: 4px 6px; /* Padding sempit */
+        text-align: center;
+        height: 20px; /* Tinggi baris dipaksa kecil */
+    }
+
+    table.report-table th {
+        background-color: #3b82f6;
+        color: white;
+        text-transform: uppercase;
+        font-weight: bold;
+        font-size: 10px;
+    }
+
+    table.report-table tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    /* Warna Kategori di Tabel */
+    .cat-red { color: red; font-weight: bold; }
+    .cat-gray { color: #888; font-style: italic; }
+
+    /* Print Settings */
+    @media print {
+        @page { size: portrait; margin: 1cm; } /* Portrait aman karena lebar tabel cuma 650px */
+        body * { visibility: hidden; }
+        .report-container, .report-container * { visibility: visible; }
+        .report-container { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            align-items: center;
+        }
+        .filter-box, nav, aside, header, #sidebar-toggle { display: none !important; }
+        /* Pastikan background color tercetak */
+        table.report-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+</style>
+
+<div class="flex h-screen bg-gray-100">
+    {% include 'partials/_sidebar.html' %}
+  
+    <div class="flex-1 flex flex-col overflow-hidden">
+        {% include 'partials/_topbar.html' %} 
+
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+            <div class="report-container">
+                
+                <h2 class="text-xl font-bold mb-4 text-gray-800" style="width: 700px; text-align: center;">Bahan Buletin Hujan</h2>
+
+                <form method="GET" action="" class="filter-box flex gap-4 items-end">
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Start Date</label>
+                        <input type="date" name="start" value="{{ start_date }}" required class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">End Date</label>
+                        <input type="date" name="end" value="{{ end_date }}" required class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div>
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-4 rounded text-sm">Submit</button>
+                        <button type="button" onclick="window.print()" class="bg-green-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded text-sm ml-2">Cetak</button>
+                    </div>
+                </form>
+
+                {% if hujan_records %}
+                
+                <div class="narasi-box">
+                    <p>
+                        Secara umum curah hujan bulan <span class="highlight">{{ stats.bulan_str }}</span> yang tercatat di Stasiun Geofisika Jayapura dan sekitarnya mengalami variasi intensitas. 
+                        Grafik berikut menunjukkan curah hujan selama bulan <span class="highlight">{{ stats.bulan_str }}</span>. 
+                        Berdasarkan data penakar hujan Obs, terdapat <span class="highlight">{{ stats.total_hari_hujan }}</span> hari hujan (nilai Obs > 0 mm) selama periode ini. Hari dengan nilai 0 dianggap bukan hari hujan.
+                        Curah hujan tertinggi tercatat pada tanggal <span class="highlight">{{ stats.max_date|date:"d F Y" }}</span> mencapai <span class="highlight">{{ stats.max_val }} mm</span> dengan kategori "<span class="highlight">{{ stats.max_kategori }}</span>".
+                    </p>
+                </div>
+
+                <div class="chart-section">
+                    <h3 class="font-bold text-sm text-gray-700">Curah Hujan Bulan {{ stats.bulan_str }}</h3>
+                    <div class="bar-chart-container">
+                        <canvas id="barChart"></canvas>
+                    </div>
+
+                    <h3 class="font-bold text-sm text-gray-700 mt-4">Persentase Berdasarkan Kategori</h3>
+                    <div class="pie-chart-container">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-sm text-gray-700">Tabel Data Hujan (Obs)</h3>
+                <table class="report-table">
+                    <colgroup>
+                        <col style="width: 40px;">  <col style="width: 120px;"> <col style="width: 120px;"> <col style="width: 150px;"> <col style="width: 150px;"> </colgroup>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Tanggal</th>
+                            <th>Jumlah (mm)</th>
+                            <th>Kategori</th>
+                            <th>Pengamat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in hujan_records %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ row.tanggal|date:"d-m-Y" }}</td>
+                            <td>{{ row.obs }}</td>
+                            <td class="{% if row.obs > 50 %}cat-red{% elif row.obs == 0 %}cat-gray{% endif %}">
+                                {{ row.kategori }}
+                            </td>
+                            <td>{{ row.petugas|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% elif start_date %}
+                    <div class="p-4 bg-yellow-100 text-center rounded text-sm">Data tidak ditemukan.</div>
+                {% endif %}
+
+            </div>
+        </main>
+    </div>
+</div>
+
+{% if hujan_records %}
+<script>
+    Chart.register(ChartDataLabels);
+
+    // --- BAR CHART ---
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: JSON.parse('{{ chart_dates|safe }}'), // Tanggal (1, 2, 3...)
+            datasets: [{
+                label: 'Curah Hujan',
+                data: JSON.parse('{{ chart_obs|safe }}'),
+                backgroundColor: '#1f77b4',
+                barPercentage: 0.7, // Batang tidak terlalu gemuk
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 0,
+                    font: { size: 9 },
+                    formatter: Math.round
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Jumlah (mm)' } },
+                x: { title: { display: true, text: 'Tanggal' } }
+            }
+        }
+    });
+
+    // --- PIE CHART ---
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+            labels: JSON.parse('{{ pie_labels|safe }}'),
+            datasets: [{
+                data: JSON.parse('{{ pie_data|safe }}'),
+                backgroundColor: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } },
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold', size: 10 },
+                    formatter: (value, ctx) => {
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.map(data => { sum += data; });
+                        return (value*100 / sum).toFixed(1) + "%";
+                    }
+                }
+            }
+        }
+    });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}

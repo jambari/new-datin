@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% load tz %}
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+    /* Pastikan peta ditampilkan dengan benar */
+    #map {
+        height: 450px;
+        width: 100%;
+        border-radius: 0.5rem;
+        border: 1px solid #4a5568; /* a dark gray border */
+    }
+
+    .triangle-icon {
+        background: transparent;
+        border: none;
+    }
+</style>
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+        <h1 class="text-3xl font-semibold text-gray-800 dark:text-gray-100">Tambah Prekursor Baru</h1>
+
+        <div class="mt-8 bg-white dark:bg-gray-900 shadow-md rounded-lg p-8">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Kolom Kiri -->
+                    <div>
+                        {% for field in form %}
+                            {% if field.name != 'location_polygon' %}
+                            <div class="mb-4">
+                                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ field.label }}</label>
+                                {{ field.errors }}
+                                {{ field }}
+                                {% if field.help_text %}
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text }}</p>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                                <!-- Render field tersembunyi di sini -->
+                                {{ field }}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Kolom Kanan: Peta -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Gambar Area Prediksi di Peta</label>
+                        <div id="map" class="h-96 w-full rounded-lg border border-gray-300 dark:border-gray-600"></div>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="px-6 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">Simpan Prekursor</button>
+                </div>
+            </form>
+        </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const centerCoords = [-2.511455, 140.7029646];
+
+    // Inisialisasi Peta
+    var map = L.map('map').setView(centerCoords, 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Menambahkan marker segitiga sebagai titik pusat
+     var redTriangleIcon = L.divIcon({
+        className: 'triangle-icon',
+        html: `<svg height="25" width="25" viewBox="0 0 100 100">
+                   <polygon points="50,15 100,85 0,85" style="fill:red; stroke:black; stroke-width:3" />
+               </svg>`,
+        iconSize: [25, 25],
+        iconAnchor: [12.5, 25]
+    });
+    L.marker(centerCoords, {icon: redTriangleIcon}).addTo(map);
+
+
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    var drawControl = new L.Control.Draw({
+        edit: { featureGroup: drawnItems, remove: true },
+        draw: {
+            polygon: { allowIntersection: false, showArea: true },
+            rectangle: true,
+            polyline: false, circle: false, marker: false, circlemarker: false
+        }
+    });
+    drawControl.addTo(map);
+
+    // --- LOGIKA BARU UNTUK GARIS BANTU AZIMUTH ---
+    const azimuthInput = document.querySelector("#id_azimuth");
+    let guideLine = null;
+
+    function toRadians(degrees) { return degrees * Math.PI / 180; }
+    function toDegrees(radians) { return radians * 180 / Math.PI; }
+
+    function calculateDestination(lat, lon, bearing, distance) {
+        const R = 6371; // Radius Bumi dalam km
+        const latRad = toRadians(lat);
+        const bearingRad = toRadians(bearing);
+        const latDestRad = Math.asin(Math.sin(latRad) * Math.cos(distance / R) + Math.cos(latRad) * Math.sin(distance / R) * Math.cos(bearingRad));
+        let lonDestRad = toRadians(lon) + Math.atan2(Math.sin(bearingRad) * Math.sin(distance / R) * Math.cos(latRad), Math.cos(distance / R) - Math.sin(latRad) * Math.sin(latDestRad));
+        return [toDegrees(latDestRad), toDegrees(lonDestRad)];
+    }
+
+    if (azimuthInput) {
+        azimuthInput.addEventListener('input', function() {
+            if (guideLine) {
+                map.removeLayer(guideLine);
+            }
+            const azimuth = parseFloat(this.value);
+            if (!isNaN(azimuth) && azimuth >= 0 && azimuth <= 360) {
+                const endPoint = calculateDestination(centerCoords[0], centerCoords[1], azimuth, 500); // Garis bantu sepanjang 500 km
+                guideLine = L.polyline([centerCoords, endPoint], {
+                    color: 'orange',
+                    weight: 2,
+                    dashArray: '10, 10'
+                }).addTo(map);
+            }
+        });
+    }
+    // --- AKHIR LOGIKA BARU ---
+
+    var polygonField = document.querySelector("#id_location_polygon");
+    
+    function updatePolygonField(layer) {
+        var geojson = layer.toGeoJSON();
+        var wkt = 'POLYGON((' +
+            geojson.geometry.coordinates[0].map(p => p.join(' ')).join(',') +
+            '))';
+        polygonField.value = wkt;
+    }
+    
+    function updateRectangleField(layer) {
+        var bounds = layer.getBounds();
+        var coords = [
+            [bounds.getWest(), bounds.getNorth()],
+            [bounds.getEast(), bounds.getNorth()],
+            [bounds.getEast(), bounds.getSouth()],
+            [bounds.getWest(), bounds.getSouth()],
+            [bounds.getWest(), bounds.getNorth()]
+        ];
+        var wkt = 'POLYGON((' +
+            coords.map(p => p.join(' ')).join(',') +
+            '))';
+        polygonField.value = wkt;
+    }
+
+    map.on(L.Draw.Event.CREATED, function (event) {
+        var layer = event.layer;
+        drawnItems.clearLayers();
+        drawnItems.addLayer(layer);
+        if (event.layerType === 'polygon') {
+            updatePolygonField(layer);
+        } else if (event.layerType === 'rectangle') {
+            updateRectangleField(layer);
+        }
+    });
+    
+    map.on(L.Draw.Event.EDITED, function (event) {
+        event.layers.eachLayer(function (layer) {
+            if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+                updatePolygonField(layer);
+            }
+        });
+    });
+
+    map.on(L.Draw.Event.DELETED, function (event) { 
+        polygonField.value = ''; 
+    });
+
+    // Style the form fields with Tailwind classes
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.type !== 'hidden') {
+            el.classList.add('mt-1', 'block', 'w-full', 'rounded-md', 'border-gray-300', 'shadow-sm', 'focus:border-indigo-300', 'focus:ring', 'focus:ring-indigo-200', 'focus:ring-opacity-50', 'dark:bg-gray-700', 'dark:border-gray-600', 'dark:text-white');
+        }
+    });
+});
+</script>
+{% endblock %}
+

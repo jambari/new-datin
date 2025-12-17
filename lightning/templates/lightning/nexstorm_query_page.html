@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* --- 1. LAYOUT RESET --- */
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #f4f6f9;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .custom-wrapper {
+        display: flex;
+        height: 100vh;
+        width: 100%;
+    }
+
+    .custom-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .scrollable-area {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center; 
+    }
+
+    /* Container Laporan - TETAP LEBAR UNTUK GRAFIK */
+    .report-container {
+        width: 100%;
+        max-width: 880px; /* Lebar agar Chart lega */
+    }
+
+    /* --- 2. KOMPONEN UI --- */
+    .report-card {
+        background: #fff;
+        border: 1px solid #cacedb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .report-header {
+        text-align: center;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .report-header h1 {
+        font-family: 'Segoe UI', sans-serif;
+        color: #333;
+        font-size: 18px;
+        margin: 0;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    /* Filter Box */
+    .filter-box {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        align-items: flex-end;
+        background-color: #f8f9fa;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+    }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #555; }
+    .form-control { padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+    .btn-submit {
+        padding: 6px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    .btn-submit:hover { background-color: #0056b3; }
+
+    /* --- 3. STATS (KOTAK RINGKASAN) --- */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+    .stat-card {
+        background: white;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .stat-label { 
+        font-size: 10px; 
+        text-transform: uppercase; 
+        color: #666; 
+        font-weight: bold; 
+        margin-bottom: 4px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 4px;
+    }
+    
+    .stat-main-value { 
+        font-size: 20px; 
+        font-weight: 800; 
+        color: #333; 
+        margin: 4px 0;
+    }
+
+    .stat-sub { font-size: 10px; color: #555; margin-top: 2px; }
+    .stat-detail { font-size: 9px; color: #888; margin-top: 2px; }
+    
+    .hl-date { color: #007bff; font-weight: bold; }
+    .hl-plus { color: #dc3545; font-weight: bold; } 
+    .hl-minus { color: #0d6efd; font-weight: bold; } 
+
+    /* --- 4. TABEL (DIBATASI LEBARNYA AGAR COMPACT) --- */
+    .table-wrapper {
+        display: flex;
+        justify-content: center; /* Posisi tabel di tengah */
+        width: 100%;
+    }
+    
+    .data-table {
+        /* KUNCI PERBAIKAN: Jangan 100%, tapi dibatasi max-width nya */
+        width: 100%;
+        max-width: 680px; /* Tabel dipaksa ramping (compact) */
+        
+        border-collapse: collapse;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 12px; 
+        color: #333;
+    }
+
+    .data-table th, .data-table td {
+        border: 1px solid #aaa;
+        padding: 4px 8px; 
+        text-align: center;
+    }
+
+    .data-table th {
+        background-color: #e9ecef;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 10px;
+    }
+
+    /* Lebar Kolom Compact */
+    .col-no { width: 45px; }
+    .col-date { width: 130px; }
+    .col-data { width: 90px; } 
+    .col-total { width: 100px; background-color: #fdfdfd; font-weight: bold;}
+
+    .data-table tr:nth-child(even) { background-color: #f8f9fa; }
+    .data-table tr:hover { background-color: #e2e6ea; }
+
+    /* --- 5. CHART --- */
+    .chart-title {
+        text-align: center;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        color: #444;
+    }
+    /* Tinggi chart disesuaikan dengan lebar baru */
+    .chart-container { position: relative; height: 320px; width: 100%; }
+
+    /* --- 6. UTILS --- */
+    .hidden { display: none !important; }
+    .alert-msg { padding: 10px; margin-bottom: 15px; border-radius: 4px; text-align: center; font-size: 13px; }
+    .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+
+</style>
+
+<div class="custom-wrapper">
+    {% include 'partials/_sidebar.html' %}
+
+    <div class="custom-content">
+        {% include 'partials/_topbar.html' %}
+
+        <main class="scrollable-area">
+            
+            <div class="report-container">
+                
+                <div class="report-card">
+                    <div class="report-header">
+                        <h1>Rekapitulasi Petir Harian</h1>
+                    </div>
+                    <div class="filter-box">
+                        <div class="form-group">
+                            <label>Dari Tanggal</label>
+                            <input type="date" id="startDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Sampai Tanggal</label>
+                            <input type="date" id="endDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <button id="btnSearch" onclick="fetchData()" class="btn-submit">
+                                Cari Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="jsMessage" class="alert-msg alert-error hidden"></div>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert-msg alert-success">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <div id="resultSection" class="hidden">
+                    
+                    <div class="stats-container">
+                        
+                        <div class="stat-card">
+                            <div class="stat-label">Total Sambaran</div>
+                            <div class="stat-main-value" id="dispTotal">0</div>
+                            <div class="stat-sub">Seluruh Periode</div>
+                        </div>
+
+                        <div class="stat-card" style="border-bottom: 3px solid #198754;">
+                            <div class="stat-label">Tertinggi (Max)</div>
+                            <div class="stat-main-value" style="font-size: 18px;" id="dispMaxTotal">0</div>
+                            <div class="stat-sub hl-date" id="dispMaxDate">-</div>
+                            <div class="stat-detail">
+                                CG+: <span class="hl-plus" id="dispMaxPlus">0</span> | 
+                                CG-: <span class="hl-minus" id="dispMaxMinus">0</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="border-bottom: 3px solid #ffc107;">
+                            <div class="stat-label">Terendah (Min)</div>
+                            <div class="stat-main-value" style="font-size: 18px;" id="dispMinTotal">0</div>
+                            <div class="stat-sub hl-date" id="dispMinDate">-</div>
+                            <div class="stat-detail">
+                                CG+: <span class="hl-plus" id="dispMinPlus">0</span> | 
+                                CG-: <span class="hl-minus" id="dispMinMinus">0</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-label">Rata-rata Harian</div>
+                            <div class="stat-main-value" id="dispAvg">0</div>
+                            <div class="stat-sub">Sambaran / Hari</div>
+                        </div>
+
+                    </div>
+
+                    <div class="report-card">
+                        <div id="dynamicChartTitle" class="chart-title">
+                            Grafik Jumlah Sambaran Petir Per Hari
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <h6 style="margin:0 0 10px 0; color:#666; font-size:11px; font-weight:bold; text-align:center;">DATA RINCI</h6>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-no">No</th>
+                                        <th class="col-date">Tanggal</th>
+                                        <th class="col-data">CG (+)</th>
+                                        <th class="col-data">CG (-)</th>
+                                        <th class="col-total">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+    Chart.register(ChartDataLabels);
+    let myChart = null;
+    const API_URL = "{% url 'lightning:nexstorm_query_api' %}";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date();
+        const past = new Date();
+        past.setDate(today.getDate() - 30);
+        document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        document.getElementById('startDate').value = past.toISOString().split('T')[0];
+    });
+
+    async function fetchData() {
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const resultDiv = document.getElementById('resultSection');
+        const msgDiv = document.getElementById('jsMessage');
+        const btn = document.getElementById('btnSearch');
+
+        resultDiv.classList.add('hidden');
+        msgDiv.classList.add('hidden');
+        btn.disabled = true;
+        btn.textContent = "Loading...";
+
+        try {
+            const res = await fetch(`${API_URL}?start_date=${start}&end_date=${end}`);
+            if(!res.ok) throw new Error("Gagal mengambil data.");
+            const json = await res.json();
+            const data = json.strike_aggregation || json || [];
+
+            if(data.length === 0) throw new Error("Data tidak ditemukan.");
+
+            document.getElementById('dynamicChartTitle').innerText = 
+                `GRAFIK JUMLAH SAMBARAN PETIR PER HARI ${start} S/D ${end}`;
+
+            calculateStats(data);
+            renderVisuals(data);
+
+            resultDiv.classList.remove('hidden');
+
+        } catch (e) {
+            msgDiv.textContent = e.message;
+            msgDiv.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Cari Data";
+        }
+    }
+
+    function calculateStats(data) {
+        let sumTotal = 0;
+        let maxObj = data[0] || {total: 0, date: '-', cg_plus: 0, cg_minus: 0};
+        let minObj = data[0] || {total: Infinity, date: '-', cg_plus: 0, cg_minus: 0};
+
+        data.forEach(d => {
+            const t = d.total || 0;
+            sumTotal += t;
+            if (t > maxObj.total) maxObj = d;
+            if (t < minObj.total) minObj = d;
+        });
+
+        const avg = data.length > 0 ? (sumTotal / data.length).toFixed(1) : 0;
+
+        document.getElementById('dispTotal').innerText = sumTotal.toLocaleString();
+        document.getElementById('dispMaxTotal').innerText = maxObj.total.toLocaleString();
+        document.getElementById('dispMaxDate').innerText = maxObj.date;
+        document.getElementById('dispMaxPlus').innerText = maxObj.cg_plus;
+        document.getElementById('dispMaxMinus').innerText = maxObj.cg_minus;
+        document.getElementById('dispMinTotal').innerText = minObj.total.toLocaleString();
+        document.getElementById('dispMinDate').innerText = minObj.date;
+        document.getElementById('dispMinPlus').innerText = minObj.cg_plus;
+        document.getElementById('dispMinMinus').innerText = minObj.cg_minus;
+        document.getElementById('dispAvg').innerText = avg;
+    }
+
+    function renderVisuals(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = "";
+        const labels = [], valsPlus = [], valsMinus = [];
+
+        data.sort((a,b) => new Date(a.date) - new Date(b.date));
+
+        data.forEach((row, idx) => {
+            const tr = `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${row.date}</td>
+                    <td style="color:#dc3545;">${row.cg_plus}</td>
+                    <td style="color:#0d6efd;">${row.cg_minus}</td>
+                    <td style="font-weight:bold;">${row.total}</td>
+                </tr>
+            `;
+            tbody.innerHTML += tr;
+
+            labels.push(row.date);
+            valsPlus.push(row.cg_plus);
+            valsMinus.push(row.cg_minus);
+        });
+
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        if(myChart) myChart.destroy();
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'CG+',
+                        data: valsPlus,
+                        backgroundColor: '#dc3545',
+                        borderRadius: 3
+                    },
+                    {
+                        label: 'CG-',
+                        data: valsMinus,
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, font: {size: 11} } },
+                    datalabels: { 
+                        display: true,
+                        color: '#444',
+                        anchor: 'end',
+                        align: 'top',
+                        offset: -4,
+                        font: { size: 9, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { ticks: { maxRotation: 90, minRotation: 90, font: {size: 10} } }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

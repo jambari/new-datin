@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="p-6 ">
+    <h1 class="text-2xl font-bold mb-4">Kalkulator Meridian</h1>
+
+    <form id="dataForm">
+        <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+            <table class="w-full text-center border-collapse">
+                <thead>
+                    <tr>
+                        <th colspan="4" class="p-2 text-lg font-semibold border-b-2 border-gray-300">Deklinasi</th>
+                    </tr>
+                    <tr>
+                        <th class="p-2 border-b border-gray-200 align-bottom">Arah</th>
+                        <th class="p-2 border-b border-gray-200 font-normal text-gray-600">Degree</th>
+                        <th class="p-2 border-b border-gray-200 font-normal text-gray-600">Minute</th>
+                        <th class="p-2 border-b border-gray-200 font-normal text-gray-600">Second</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in deklinasi_labels %}
+                    <tr>
+                        <td class="p-2 border-b border-gray-200 font-bold">{{ item|upper }}</td>
+                        <td class="p-1 border-b border-gray-200"><input type="number" id="{{ item }}_deg" class="w-full p-1 text-center border rounded"></td>
+                        <td class="p-1 border-b border-gray-200"><input type="number" id="{{ item }}_min" class="w-full p-1 text-center border rounded"></td>
+                        <td class="p-1 border-b border-gray-200"><input type="number" step="0.1" id="{{ item }}_sec" class="w-full p-1 text-center border rounded"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mb-6">
+            <button type="submit" class="bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700">Hitung Meridian</button>
+        </div>
+    </form>
+
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <h2 class="text-lg font-semibold mb-2">Hasil Perhitungan</h2>
+        <table class="w-full text-center border-collapse mb-4">
+            <thead>
+                <tr>
+                    <th class="p-2 border-b border-gray-200">Meridian 1</th>
+                    <th class="p-2 border-b border-gray-200">Meridian 2</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="p-2 font-semibold text-lg" id="meridian1_result">0° 0' 0.00"</td>
+                    <td class="p-2 font-semibold text-lg" id="meridian2_result">0° 0' 0.00"</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="text-center text-gray-700 text-lg font-medium mt-4 space-y-1">
+            <p id="live_clock_wit">Memuat jam WIT...</p>
+            <p id="live_clock_utc">Memuat jam UTC...</p>
+        </div>
+        <div id="calculation_error" class="text-red-500 text-base mt-2"></div>
+    </div>
+</div>
+<!-- Footer -->
+<footer class="mt-8 text-center text-gray-500 dark:text-gray-400">
+    with ❤️ Jambari
+</footer>
+<script>
+    // --- SKRIP KALKULASI (TIDAK BERUBAH) ---
+    const dataForm = document.getElementById('dataForm');
+    dataForm.addEventListener('submit', (event) => { /* ... kode tidak berubah ... */
+        event.preventDefault();
+        try {
+            const values = readValuesFromForm();
+            calculateAndDisplay(values);
+            document.getElementById('calculation_error').textContent = '';
+        } catch (error) {
+            document.getElementById('calculation_error').textContent = error.message;
+            document.getElementById('meridian1_result').textContent = 'Error';
+            document.getElementById('meridian2_result').textContent = 'Error';
+        }
+    });
+
+    function readValuesFromForm() { /* ... kode tidak berubah ... */
+        const data = {};
+        const keys = ['wu', 'ed', 'wd', 'eu'];
+        for (const key of keys) {
+            const deg = document.getElementById(`${key}_deg`).value;
+            const min = document.getElementById(`${key}_min`).value;
+            const sec = document.getElementById(`${key}_sec`).value;
+
+            if (deg === '' || min === '' || sec === '') {
+                throw new Error(`Semua field (Deg, Min, Sec) untuk ${key.toUpperCase()} harus diisi.`);
+            }
+
+            data[key] = {
+                deg: parseInt(deg),
+                min: parseInt(min),
+                sec: parseFloat(sec),
+            };
+        }
+        return data;
+    }
+    
+    function calculateAndDisplay(data) { /* ... kode tidak berubah ... */
+        const dmsToDd = (d, m, s) => d + m / 60 + s / 3600;
+        const ddToDmsString = (dd) => {
+            let d = Math.floor(dd);
+            let m_float = (dd - d) * 60;
+            let m = Math.floor(m_float);
+            let s = (m_float - m) * 60;
+            return `${d}° ${m}' ${s.toFixed(2)}"`;
+        };
+
+        const wu_dd = dmsToDd(data.wu.deg, data.wu.min, data.wu.sec);
+        const ed_dd = dmsToDd(data.ed.deg, data.ed.min, data.ed.sec);
+        const wd_dd = dmsToDd(data.wd.deg, data.wd.min, data.wd.sec);
+        const eu_dd = dmsToDd(data.eu.deg, data.eu.min, data.eu.sec);
+
+        const avg1 = (wu_dd + ed_dd) / 2.0;
+        const avg2 = (wd_dd + eu_dd) / 2.0;
+        const nilaiKecil = Math.min(avg1, avg2);
+        const nilaiBesar = Math.max(avg1, avg2);
+        const meridianKedua_dd = (nilaiKecil + nilaiBesar) / 2.0;
+        const meridianPertama_dd = (meridianKedua_dd + 180) % 360;
+
+        document.getElementById('meridian1_result').textContent = ddToDmsString(meridianPertama_dd);
+        document.getElementById('meridian2_result').textContent = ddToDmsString(meridianKedua_dd);
+    }
+
+    // --- SKRIP JAM DIPERBARUI ---
+    const clockElementWIT = document.getElementById('live_clock_wit');
+    const clockElementUTC = document.getElementById('live_clock_utc');
+
+    function updateClocks() {
+        const now = new Date();
+        
+        // Opsi format waktu yang sama untuk keduanya
+        const options = {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        };
+
+        // WIT
+        const witOptions = { timeZone: 'Asia/Jayapura' };
+        const witDate = new Date(now.toLocaleString('en-US', witOptions));
+        const witHours = String(witDate.getHours()).padStart(2, '0');
+        const witMinutes = String(witDate.getMinutes()).padStart(2, '0');
+        const witSeconds = String(witDate.getSeconds()).padStart(2, '0');
+        clockElementWIT.textContent = `Waktu Lokal: ${witHours}:${witMinutes}:${witSeconds} WIT`;
+        
+        // Format dan tampilkan waktu UTC
+        const utcFormatter = new Intl.DateTimeFormat('id-ID', { ...options, timeZone: 'UTC' });
+        const timeStringUTC = utcFormatter.format(now);
+        clockElementUTC.textContent = `Waktu Universal: ${timeStringUTC} UTC`;
+    }
+
+    // Panggil fungsi jam setiap detik
+    setInterval(updateClocks, 1000);
+
+    // Panggil sekali saat halaman dimuat
+    updateClocks();
+
+</script>
+{% endblock %}

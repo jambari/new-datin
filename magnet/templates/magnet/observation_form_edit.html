@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <h1 class="text-2xl font-bold text-gray-900">
+        {% if observation %}Edit Observation{% else %}Form Pengamatan Magnetik{% endif %}
+      </h1>
+
+      <div class="mt-6 p-6 bg-white rounded-lg shadow-md">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-6 border-b">
+          <div><h3 class="font-semibold text-gray-700">Observatorium</h3><p class="text-gray-600">Stasiun Geofisika Kelas I Jayapura</p></div>
+          <div><h3 class="font-semibold text-gray-700">Koordinat Observatorium</h3><p class="text-gray-600">2.5144 S, 140.704 E</p></div>
+          <div><h3 class="font-semibold text-gray-700">Peralatan Pengamatan</h3><p class="text-gray-600">1. Zeiss 010B + MinGeo <br> 2. GEM GSM-19T Magnetometer</p></div>
+        </div>
+
+        <form method="POST">
+          {% csrf_token %}
+          <section class="mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label for="observation_date" class="block text-sm font-medium text-gray-700">Date</label>
+                <input type="date" name="observation_date" value="{{ observation.observation_date|date:'Y-m-d' }}" id="observation_date" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label for="observer" class="block text-sm font-medium text-gray-700">Observer Name</label>
+                <select name="observer" id="observer" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option value="">--- Select Observer ---</option>
+                  {% for name in observer_names %}<option value="{{ name }}" {% if observation.observer == name %}selected{% endif %}>{{ name }}</option>{% endfor %}
+                </select>
+              </div>
+              <div>
+                <label for="session" class="block text-sm font-medium text-gray-700">Session</label>
+                <select name="session" id="session" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option value="">--- Select Session ---</option>
+                  {% for s in sessions %}<option value="{{ s }}" {% if observation.session == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                </select>
+              </div>
+            </div>
+          </section>
+          <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="4" class="p-2 font-semibold border border-gray-300">Pembacaan titik tetap awal</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="p-2 font-medium border border-gray-300">CR</td><td class="p-2 font-medium border border-gray-300">grad</td>
+                <td class="p-2 font-medium border border-gray-300">CL</td><td class="p-2 font-medium border border-gray-300">grad</td>
+              </tr>
+              <tr>
+                <td colspan="2" class="p-2 border border-gray-300"><input type="number" step="any" value="{{ observation.cr_awal }}" name="cr_awal" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td colspan="2" class="p-2 border border-gray-300"><input type="number" step="any" value="{{ observation.cr_akhir }}" name="cl_awal" class="w-full text-center border-gray-200 rounded-md"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="5" class="p-2 font-semibold border border-gray-300">Deklinasi</th></tr></thead>
+            <tbody>
+              <tr>
+                <td rowspan="2" class="p-2 font-medium border border-gray-300"></td>
+                <td colspan="3" class="p-2 font-medium border border-gray-300">Waktu (UTC)</td>
+                <td class="p-2 font-medium border border-gray-300">Circle</td>
+              </tr>
+              <tr>
+                <td class="p-2 font-medium border border-gray-300">HH</td><td class="p-2 font-medium border border-gray-300">MM</td><td class="p-2 font-medium border border-gray-300">SS</td>
+                <td class="p-2 font-medium border border-gray-300">grad</td>
+              </tr>
+              {% for item in deklinasi_data %}
+              <tr>
+                <td class="p-2 font-medium border border-gray-300">{{ item.name }}</td>
+                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_hh" value="{{ item.data.hh }}" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_mm" value="{{ item.data.mm }}" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_ss" value="{{ item.data.ss }}" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td class="p-2 border border-gray-300"><input type="number" step="any" name="dek_{{ item.name|lower }}_circ" value="{{ item.data.circ }}" class="w-full text-center border-gray-200 rounded-md dek-circle-input"></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
+            <tbody>
+              <tr>
+                <td class="p-2 font-medium border border-gray-300">Meridian 1</td>
+                <td class="p-2 font-medium border border-gray-300">Rata-rata</td>
+                <td class="p-2 font-medium border border-gray-300">Meridian 2</td>
+                <td class="p-2 font-medium border border-gray-300">Rata-rata</td>
+              </tr>
+              <tr>
+                <td colspan="2" class="p-2 border border-gray-300"><input type="number" step="any" id="meridian_1" name="meridian_1" class="w-full text-center bg-gray-100 border-gray-200 rounded-md" readonly></td>
+                <td colspan="2" class="p-2 border border-gray-300"><input type="number" step="any" id="meridian_2" name="meridian_2" class="w-full text-center bg-gray-100 border-gray-200 rounded-md" readonly></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="4" class="p-2 font-semibold border border-gray-300">Pembacaan titik tetap akhir</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="p-2 font-medium border border-gray-300">CR</td><td class="p-2 font-medium border border-gray-300">grad</td>
+                <td class="p-2 font-medium border border-gray-300">CL</td><td class="p-2 font-medium border border-gray-300">grad</td>
+              </tr>
+              <tr>
+                <td colspan="2" class="p-2 border border-gray-300"><input type="number" value="{{ observation.cr_akhir }}"  step="any" name="cr_akhir" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td colspan="2" class="p-2 border border-gray-300"><input type="number" value="{{ observation.cl_akhir }}" step="any" name="cl_akhir" class="w-full text-center border-gray-200 rounded-md"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="6" class="p-2 font-semibold border border-gray-300">Inklinasi</th></tr></thead>
+            <tbody>
+              <tr>
+                <td rowspan="2" class="p-2 font-medium border border-gray-300"></td>
+                <td colspan="3" class="p-2 font-medium border border-gray-300">Waktu (UTC)</td>
+                <td class="p-2 font-medium border border-gray-300">Circle</td>
+                <td class="p-2 font-medium border border-gray-300">Ftotal</td>
+              </tr>
+              <tr>
+                <td class="p-2 font-medium border border-gray-300">HH</td><td class="p-2 font-medium border border-gray-300">MM</td><td class="p-2 font-medium border border-gray-300">SS</td>
+                <td class="p-2 font-medium border border-gray-300">grad</td>
+                <td class="p-2 font-medium border border-gray-300"></td>
+              </tr>
+              {% for item in inklinasi_data %}
+              <tr>
+                <td class="p-2 font-medium border border-gray-300">{{ item.name }}</td>
+                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_hh" value="{{ item.data.hh }}" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_mm" value="{{ item.data.mm }}" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_ss" value="{{ item.data.ss }}" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td class="p-2 border border-gray-300"><input type="number" step="any" name="ink_{{ item.name|lower }}_circ" value="{{ item.data.circ }}" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td class="p-2 border border-gray-300"><input type="number" step="any" name="ink_{{ item.name|lower }}_ftotal" value="{{ item.data.ftotal }}" class="w-full text-center border-gray-200 rounded-md"></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          
+          <div class="mt-8 pt-6 border-t flex justify-end">
+            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700">Calculate & Save</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Select all four circle inputs from the Deklinasi section
+    const dekCircleInputs = document.querySelectorAll('.dek-circle-input');
+    
+    // Select the two Meridian output fields
+    const meridian1Field = document.getElementById('meridian_1');
+    const meridian2Field = document.getElementById('meridian_2');
+
+    // This function performs the calculation
+    function calculateMeridians() {
+      let sum = 0;
+      let count = 0;
+      const values = [];
+
+      // Get values from all four inputs
+      dekCircleInputs.forEach(input => {
+        if (input.value !== '') {
+          values.push(parseFloat(input.value));
+        }
+      });
+
+      // Check if all four fields are filled
+      if (values.length === 4) {
+        // Calculate the sum
+        sum = values.reduce((total, current) => total + current, 0);
+        
+        // Calculate Meridian 2 (the average)
+        const meridian2 = sum / 4;
+        
+        // Calculate Meridian 1 (average - 200)
+        const meridian1 = meridian2 - 200;
+
+        // Populate the fields, formatted to 4 decimal places
+        meridian2Field.value = meridian2.toFixed(4);
+        meridian1Field.value = meridian1.toFixed(4);
+      } else {
+        // Clear the fields if not all inputs are filled
+        meridian1Field.value = '';
+        meridian2Field.value = '';
+      }
+    }
+
+    // Add an event listener to each input field
+    // It will trigger the calculation every time the user types
+    dekCircleInputs.forEach(input => {
+      input.addEventListener('input', calculateMeridians);
+    });
+
+    // Run the calculation once on page load for the pre-filled data
+    calculateMeridians(); 
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

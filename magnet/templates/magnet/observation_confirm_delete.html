@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="sm:ml-64 flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <h1 class="text-3xl font-bold text-gray-900">Confirm Deletion</h1>
+
+      <div class="mt-8 p-6 bg-white rounded-lg shadow-md">
+        <p class="text-lg">Are you sure you want to delete the observation record from <strong>{{ observation.observation_date }}</strong> by <strong>{{ observation.observer }}</strong>?</p>
+        <p class="text-gray-600 mt-2">This action cannot be undone.</p>
+        
+        <form method="post" class="mt-6">
+          {% csrf_token %}
+          <div class="flex space-x-4">
+            <button type="submit" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700">
+              Yes, Delete
+            </button>
+            <a href="{% url 'observation_list' %}" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-md hover:bg-gray-400">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

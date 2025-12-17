@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+    <style>
+        /* theme/templates/base.html di dalam <style> */
+
+        .leaflet-bottom.leaflet-left {
+        width: 100%;
+        pointer-events: none; /* Agar peta di bawahnya tetap bisa diklik */
+        }
+        .leaflet-control-copyright {
+        width: 100%;
+        text-align: center;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 0 5px black;
+        font-size: 14px;
+        }
+    </style>
+
+<style>
+  .leaflet-top {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .leaflet-top .leaflet-control {
+    pointer-events: auto;
+  }
+  
+  /* 2. Targetkan HANYA kontrol custom kita untuk pemusatan, biarkan kontrol zoom tetap di tempatnya */
+  .leaflet-custom-center-control {
+    margin: 10px auto !important; /* Paksa pemusatan horizontal */
+    position: relative; /* Penting untuk dropdown hasil pencarian */
+  }
+
+  /* 3. Perbaiki gaya dropdown hasil pencarian */
+  .search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+  }
+  .search-results a {
+    display: block;
+    padding: 8px 12px;
+    color: black;
+    text-decoration: none;
+  }
+  .search-results a:hover {
+    background-color: #f0f0f0;
+  }
+</style>
+<div class="w-full">
+    <div id="stations-map" class="h-screen w-full"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'repository/js/esri-leaflet.js' %}"></script>
+<script src="{% static 'repository/js/d3.v7.min.js' %}"></script>
+<script src="{% static 'repository/js/indofaults.js' %}"></script>
+<script src="{% static 'repository/js/slab_indonesia_usgs.js' %}"></script>  
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // URL ini sekarang menunjuk ke API Django Anda
+fetch('/repository/stations.geojson')
+  .then(response => response.json())
+  .then(data => {
+      if (!data.features) {
+          throw new Error("Invalid data format: Missing 'features'.");
+      }
+
+      var map = L.map('stations-map').setView([-2.5, 120], 6);
+
+      var layer = L.esri.basemapLayer('Oceans').addTo(map);
+
+    // --- KONTROL LOGO + SEARCH (TOP CENTER) ---
+    L.Control.TopCenter = L.Control.extend({
+        onAdd: function(map) {
+            // 4. Tambahkan kelas custom baru ke wadah
+            var container = L.DomUtil.create('div', 'leaflet-bar leaflet-custom-center-control');
+            container.style.backgroundColor = 'white';
+            container.style.padding = '8px 12px';
+            container.style.borderRadius = '6px';
+            container.style.display = 'flex';
+            container.style.alignItems = 'center';
+            container.style.gap = '10px';
+            container.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+
+            var img = L.DomUtil.create('img', '', container);
+            img.src = "{% static 'repository/images/logo_spicks.png' %}";
+            img.style.width = '100px';
+
+            var input = L.DomUtil.create('input', '', container);
+            input.type = 'text';
+            input.placeholder = 'Search Station...';
+            input.style.width = '200px';
+            
+            var resultsContainer = L.DomUtil.create('div', 'search-results', container);
+            
+            let debounceTimer;
+            input.addEventListener('keyup', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const query = input.value;
+                    if (query.length < 2) {
+                        resultsContainer.innerHTML = '';
+                        return;
+                    }
+                fetch(`/api/station/search/?q=${query}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // --- Logika yang Dioptimalkan Dimulai Di Sini ---
+                        if (data.stations && data.stations.length > 0) {
+                            data.stations.forEach(station => {
+                                const link = L.DomUtil.create('a', '', resultsContainer);
+                                link.href = station.url; // Gunakan URL dari API
+                                link.textContent = `(${station.code})`;
+                                link.target = "_blank"; 
+                            });
+                            resultsContainer.innerHTML = linksHtml;
+                        } else {
+                            resultsContainer.innerHTML = '<div class="p-2 text-gray-500">No results found.</div>';
+                        }
+                        // --- Logika yang Dioptimalkan Berakhir Di Sini ---
+                    })
+                    .catch(error => console.error('Search failed:', error));
+            }, 300);
+        });
+
+        // Sembunyikan hasil saat mengklik di luar
+        map.on('click', function() {
+            resultsContainer.innerHTML = '';
+        });
+
+            L.DomEvent.disableClickPropagation(container);
+            return container;
+        }
+    });
+    // Tambahkan kontrol ke 'topleft', CSS akan memusatkannya
+    new L.Control.TopCenter({ position: 'topleft' }).addTo(map);
+
+      data.features.forEach(station => {
+          if (!station.geometry || !station.geometry.coordinates) {
+              console.warn("Skipping invalid station:", station);
+              return;
+          }
+
+          const [lon, lat, ele] = station.geometry.coordinates;
+          const stationCode = station.properties.code;
+
+          // Create a custom green triangle marker
+          const triangleIcon = L.divIcon({
+              className: 'custom-icon',
+              html: '<div style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 20px solid #344CB7;"></div>',
+              iconSize: [20, 20], 
+              iconAnchor: [10, 20], 
+              popupAnchor: [0, -20]
+          });
+
+          // Create the marker with the triangle icon
+          const marker = L.marker([lat, lon], { icon: triangleIcon })
+              .addTo(map)
+              .bindPopup(`
+                  <b>${station.properties.name}</b><br>
+                  Network: ${station.properties.code}<br>
+                  Elevation: ${ele} m <br>
+                  <a target="_blank" href="/repository/station/${stationCode}">View details</a>
+              `);
+
+          // Add a **permanent** label using L.divIcon
+          const label = L.marker([lat, lon], {
+              icon: L.divIcon({
+                  className: 'station-code',
+                  html: `<b>${stationCode}</b>`, // Display station code
+                  iconSize: [40, 15], 
+                  iconAnchor: [20, -10] // Position above the marker
+              }),
+              interactive: false // Prevent interaction
+          }).addTo(map);
+      });
+
+      // Color scale for depth visualization
+      const colorCategories = [
+          { range: [0, 20], color: 'rgb(245,0,0)' },
+          { range: [20, 40], color: 'rgb(250,75,0)' },
+          { range: [40, 60], color: 'rgb(252,118,0)' },
+          { range: [60, 80], color: 'rgb(253,160,0)' },
+          { range: [80, 100], color: 'rgb(250,160,0)' },
+          { range: [100, 120], color: 'rgb(245,245,0)' },
+          { range: [120, 200], color: 'rgb(210,247,0)' },
+          { range: [200, 300], color: 'rgb(169,247,0)' },
+          { range: [300, 400], color: 'rgb(128,247,0)' },
+          { range: [400, 500], color: 'rgb(86,247,0)' },
+          { range: [500, 660], color: 'rgb(0,245,0)' }
+      ];
+
+      function getColor(value) {
+          for (let category of colorCategories) {
+              if (value >= category.range[0] && value <= category.range[1]) {
+                  return category.color;
+              }
+          }
+          return 'rgba(255,255,255,0.8)'; // Default white
+      }
+
+      var jsonUrl = "{% static 'repository/js/slab_indonesia_usgs.json' %}"; 
+
+      // Load the GeoJSON file and color the features
+      d3.json(jsonUrl).then(function(data) {
+          L.geoJSON(data, {
+              style: function(feature) {
+                  return {
+                      color: getColor(feature.properties.DEPTH),
+                      weight: 2,
+                      fillOpacity: 0.5
+                  };
+              }
+          }).addTo(map);
+      });
+
+      L.Control.NorthArrow = L.Control.extend({
+        onAdd: function(map) {
+            var allEvents = L.DomUtil.create('img');
+            allEvents.src = "{% static '/repository/images/gpt_north_arrow.svg' %}";
+            allEvents.style.width = '60px';
+            return allEvents;
+        },
+        onRemove: function(map) {
+            // Nothing to do here
+        }
+        });
+    
+        L.control.northArrow = function(opts) {
+            return new L.Control.NorthArrow(opts);
+        }
+    
+        L.control.northArrow({ position: 'topleft' }).addTo(map);
+
+        var indoFaultsStyle = {
+            "color": "#000000",
+            "weight": 1,
+            "opacity": 1,
+            "fillColor": '#000000',
+        }
+
+        L.geoJSON(indoFaults, {
+            style: indoFaultsStyle
+        }).addTo(map);
+
+      L.Control.Watermark = L.Control.extend({
+          onAdd: function(map) {
+              var div = L.DomUtil.create('div', 'leaflet-control-copyright');
+              div.innerHTML = "© {% now "Y" %} Cipirit- Corp";
+              return div;
+          }
+      });
+
+      // 2. Tambahkan instance dari control baru ke peta
+      new L.Control.Watermark({ position: 'bottomleft' }).addTo(map);
+
+  })
+  .catch(error => console.error('Error loading stations:', error));
+
+});
+</script>
+{% endblock %}

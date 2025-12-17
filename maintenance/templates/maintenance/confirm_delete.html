@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div style="display: flex; min-height: 100vh; background-color: #f3f4f6;">
+  {% include 'partials/_sidebar.html' %}
+  
+  <div style="flex: 1; display: flex; flex-direction: column;">
+    {% include 'partials/_topbar.html' %} 
+
+    <main style="padding: 30px; display: flex; justify-content: center; align-items: flex-start; margin-top: 50px;">
+        <div style="width: 100%; max-width: 500px; background: white; border-radius: 8px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); overflow: hidden;">
+            
+            <div style="background-color: #fef2f2; padding: 15px 20px; border-bottom: 1px solid #fee2e2; display: flex; align-items: center;">
+                <div style="background-color: #fee2e2; padding: 8px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="24" height="24" style="color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #991b1b;">Konfirmasi Hapus</h2>
+            </div>
+            
+            <div style="padding: 20px;">
+                <p style="color: #4b5563; margin-bottom: 20px; font-size: 16px;">
+                    Apakah Anda yakin ingin menghapus data {{ type_name }}: 
+                    <br>
+                    <span style="display: block; margin-top: 10px; padding: 10px; background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-weight: bold; color: #111827;">
+                        "{{ object }}"
+                    </span>
+                </p>
+                <p style="font-size: 13px; color: #6b7280;">Tindakan ini tidak dapat dibatalkan.</p>
+
+                <form method="post" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
+                    {% csrf_token %}
+                    <a href="javascript:history.back()" style="padding: 8px 16px; background-color: #e5e7eb; color: #374151; text-decoration: none; border-radius: 4px; font-size: 14px; border: 1px solid #d1d5db;">
+                        Batal
+                    </a>
+                    <button type="submit" style="padding: 8px 16px; background-color: #dc2626; color: white; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+                        Ya, Hapus
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

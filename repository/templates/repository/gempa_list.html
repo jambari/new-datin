@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% load tz %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <h1 class="text-3xl font-bold text-gray-900">Repository Gempa</h1>
+
+      <div class="mt-4 p-4 bg-white rounded-lg shadow">
+        <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+          <div class="flex space-x-2">
+            <!-- <a href="#" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 text-sm">+ Add Gempa</a> -->
+            <button id="advanced-filter-btn" class="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-md hover:bg-gray-300 text-sm">Advanced Filters</button>
+          </div>
+          <form method="GET" class="w-full sm:w-auto flex">
+            <input type="text" name="q" value="{{ filters.q|default:'' }}" placeholder="Search..." class="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none">
+            <button type="submit" class="px-4 py-2 bg-gray-800 text-white rounded-r-md hover:bg-gray-700">Search</button>
+          </form>
+        </div>
+
+        <div id="advanced-filter-panel" class="hidden mt-4 pt-4 border-t">
+<form method="GET">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label for="felt" class="block text-sm font-medium text-gray-700">Felt Status</label>
+                <select name="felt" id="felt" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option value="" {% if not filters.felt %}selected{% endif %}>All</option>
+                  <option value="true" {% if filters.felt == 'true' %}selected{% endif %}>Felt</option>
+                  <option value="false" {% if filters.felt == 'false' %}selected{% endif %}>Not Felt</option>
+                </select>
+              </div>
+              <div>
+                <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                <input type="date" name="start_date" id="start_date" value="{{ filters.start_date|default:'' }}" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label for="end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+                <input type="date" name="end_date" id="end_date" value="{{ filters.end_date|default:'' }}" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div>
+                <label for="min_mag" class="block text-sm font-medium text-gray-700">Min/Max Magnitude</label>
+                <div class="flex space-x-2 mt-1">
+                  <input type="number" step="0.1" name="min_mag" placeholder="Min" value="{{ filters.min_mag|default:'' }}" class="w-full px-3 py-2 border rounded-md">
+                  <input type="number" step="0.1" name="max_mag" placeholder="Max" value="{{ filters.max_mag|default:'' }}" class="w-full px-3 py-2 border rounded-md">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Min/Max Depth</label>
+                <div class="flex space-x-2 mt-1">
+                  <input type="number" name="min_depth" placeholder="Min" value="{{ filters.min_depth|default:'' }}" class="w-full px-3 py-2 border rounded-md">
+                  <input type="number" name="max_depth" placeholder="Max" value="{{ filters.max_depth|default:'' }}" class="w-full px-3 py-2 border rounded-md">
+                </div>
+              </div>
+              <div>
+                <label for="station" class="block text-sm font-medium text-gray-700">Station</label>
+                <select name="station" id="station" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option value="">All Stations</option>
+                  {% for code in station_codes %}
+                    <option value="{{ code }}" {% if filters.station == code %}selected{% endif %}>{{ code }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Min/Max Latitude</label>
+                <div class="flex space-x-2 mt-1">
+                  <input type="number" step="any" name="min_lat" placeholder="Min" value="{{ filters.min_lat|default:'' }}" class="w-full px-3 py-2 border rounded-md">
+                  <input type="number" step="any" name="max_lat" placeholder="Max" value="{{ filters.max_lat|default:'' }}" class="w-full px-3 py-2 border rounded-md">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Min/Max Longitude</label>
+                <div class="flex space-x-2 mt-1">
+                  <input type="number" step="any" name="min_lon" placeholder="Min" value="{{ filters.min_lon|default:'' }}" class="w-full px-3 py-2 border rounded-md">
+                  <input type="number" step="any" name="max_lon" placeholder="Max" value="{{ filters.max_lon|default:'' }}" class="w-full px-3 py-2 border rounded-md">
+                </div>
+              </div>
+
+            </div>
+            <div class="mt-4 flex justify-end space-x-2">
+              <a href="{% url 'gempa_list' %}" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Clear</a>
+              <a href="?{{ filters.urlencode }}&export=csv" class="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700">
+                Export to CSV
+              </a>
+              <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700">Apply Filters</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <div class="mt-8 bg-white shadow rounded-lg overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left ...">Stasiun</th>
+              <th class="px-6 py-3 text-left ...">Date </th>
+              <th class="px-6 py-3 text-left ...">Time (UTC)</th>
+              <th class="px-6 py-3 text-left ...">Lintang</th>
+              <th class="px-6 py-3 text-left ...">Bujur</th>
+              <th class="px-6 py-3 text-left ...">Magnitudo</th>
+              <th class="px-6 py-3 text-left ...">Depth</th>
+              <th class="px-6 py-3 text-left ...">Remark</th>
+              <th class="px-6 py-3 text-left ...">Felt?</th>
+              <th class="px-6 py-3 text-left ...">Impact</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for gempa in gempas %}
+            <tr class="hover:bg-gray-50 {% if gempa.felt %}bg-yellow-50{% endif %}">
+              <td class="px-6 py-4 ...">{{ gempa.station_code }}</td>
+              <td class="px-6 py-4 ...">
+                <div class="font-medium ...">{{ gempa.origin_datetime|timezone:"Asia/Jayapura"|date:"Y-m-d" }}</div>
+              </td>
+              <td class="px-6 py-4 ...">
+                <div class="text-gray-500">{{ gempa.origin_datetime|time:"H:i:s" }}</div>
+              </td>
+              <td class="px-6 py-4 ...">
+                <div class="font-medium ...">{{ gempa.latitude|floatformat:5 }}</div>
+              </td>
+              <td class="px-6 py-4 ...">
+                <div class="text-gray-500">{{ gempa.longitude|floatformat:5 }}</div>
+              </td>
+              <td class="px-6 py-4 ...">
+                  <div class="font-medium ...">{{ gempa.magnitudo }}</div>
+              </td>
+              <td class="px-6 py-4 ...">
+                  <div class="text-gray-500">{{ gempa.depth }}</div>
+              </td>
+              <td class="px-6 py-4 ...">{{ gempa.remark }}</td>
+              <td class="px-6 py-4 ...">{% if gempa.felt %}Yes{% else %}No{% endif %}</td>
+              <td class="px-6 py-4 ...">{{ gempa.impact|default:"-" }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+              <a href="{% url 'gempa_detail' pk=gempa.pk %}" class="px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition">Detail</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="p-4 border-t flex justify-between items-center">
+        <div class="text-sm text-gray-700">Showing {{ gempas.start_index }} to {{ gempas.end_index }} of {{ gempas.paginator.count }} entries</div>
+        <div class="flex items-center space-x-1">
+          {% with query_string=filters.urlencode %}
+            {% if gempas.has_previous %}<a href="?page=1&{{ query_string }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">&laquo;</a><a href="?page={{ gempas.previous_page_number }}&{{ query_string }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">&lsaquo;</a>{% endif %}
+            <span class="px-3 py-1 text-sm">Page {{ gempas.number }} of {{ gempas.paginator.num_pages }}</span>
+            {% if gempas.has_next %}<a href="?page={{ gempas.next_page_number }}&{{ query_string }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">&rsaquo;</a><a href="?page={{ gempas.paginator.num_pages }}&{{ query_string }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">&raquo;</a>{% endif %}
+          {% endwith %}
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  // JavaScript to toggle the advanced filter panel
+  const filterBtn = document.getElementById('advanced-filter-btn');
+  const filterPanel = document.getElementById('advanced-filter-panel');
+
+  filterBtn.addEventListener('click', () => {
+    filterPanel.classList.toggle('hidden');
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}

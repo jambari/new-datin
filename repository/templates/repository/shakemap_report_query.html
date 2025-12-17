@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Styling Khusus Laporan (Plain CSS) */
+    .report-container {
+        padding: 20px;
+        background-color: white;
+        font-family: 'Arial', sans-serif;
+        color: black;
+    }
+
+    /* Form Filter */
+    .filter-box {
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .filter-box select, .filter-box button {
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+    .filter-box button {
+        background-color: #4f46e5;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    /* --- LAYOUT EVENT PER BARIS (FLEXBOX) --- */
+    .event-wrapper {
+        display: flex;
+        gap: 10px; 
+        margin-bottom: 20px;
+        border-bottom: 1px dashed #999;
+        padding-bottom: 15px;
+        page-break-inside: avoid;
+    }
+
+    /* Bagian Kiri: Tabel Data */
+    .event-table-side {
+        display: block;
+        overflow-x: auto;
+    }
+
+    /* Bagian Kanan: Gambar Shakemap */
+    .event-map-side {
+        width: 200px; 
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        border: 1px solid #ccc;
+        padding: 4px;
+        background-color: #fff;
+        height: fit-content; 
+    }
+
+    .event-map-side img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        display: block;
+    }
+    
+    .map-caption {
+        font-size: 9px;
+        margin-top: 3px;
+        text-align: center;
+        color: #555;
+    }
+
+    /* Tabel Laporan Compact */
+    .report-table {
+        width: auto; 
+        border-collapse: collapse;
+        font-size: 10px;
+        table-layout: fixed; 
+    }
+
+    .report-table th, .report-table td {
+        border: 1px solid #000;
+        padding: 2px 4px; 
+        height: 18px; 
+        overflow: hidden; 
+        white-space: nowrap; 
+        text-overflow: ellipsis; 
+    }
+
+    /* Tabel Rekapitulasi (Style Baru) */
+    .recap-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10px;
+        margin-top: 30px;
+        page-break-inside: avoid; /* Jangan memotong tabel di tengah */
+    }
+    .recap-table th, .recap-table td {
+        border: 1px solid #000;
+        padding: 3px;
+        text-align: center;
+    }
+    .recap-header {
+        background-color: #e5e7eb;
+        font-weight: bold;
+    }
+    .recap-title {
+        font-size: 14px;
+        font-weight: bold;
+        margin-top: 40px;
+        margin-bottom: 10px;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    /* Override white-space untuk kolom tertentu jika perlu wrap (misal Header Event) */
+    .event-row td {
+        white-space: normal; 
+        word-wrap: break-word;
+    }
+
+    /* Baris Parameter Gempa (Header Event) */
+    .event-row {
+        background-color: #d1d5db;
+        font-weight: bold;
+        text-align: left;
+        font-size: 11px;
+    }
+
+    /* Baris Header Kolom Stasiun */
+    .station-header-row {
+        background-color: #f3f4f6;
+        font-weight: bold;
+        text-align: center;
+        font-size: 10px;
+    }
+
+    .text-center { text-align: center; }
+    .no-data {
+        text-align: center;
+        padding: 20px;
+        font-style: italic;
+        color: #666;
+    }
+
+    /* Print Adjustment */
+    @media print {
+        @page { 
+            margin: 1cm; 
+            size: landscape; 
+        }
+        body * { visibility: hidden; }
+        .report-container, .report-container * { visibility: visible; }
+        .report-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+        }
+        .filter-box, nav, aside { display: none; }
+        .event-row, .station-header-row, .recap-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+</style>
+
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %} 
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+        <div class="report-container">
+            
+            <h2 style="margin-bottom: 15px; font-size: 18px; font-weight: bold;">{{ page_title }}</h2>
+
+            <!-- Filter -->
+            <form method="get" class="filter-box">
+                <label>Bulan:</label>
+                <select name="month">
+                    {% for m in months_range %}
+                    <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+                
+                <label>Tahun:</label>
+                <select name="year">
+                    {% for y in years_range %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button type="submit">Tampilkan</button>
+                <button type="button" onclick="window.print()" style="background-color: #059669; margin-left: auto;">Cetak / PDF</button>
+            </form>
+
+            <!-- Loop Events -->
+            {% if events %}
+                
+                {% for event in events %}
+                <!-- WRAPPER PER EVENT (Flexbox) -->
+                <div class="event-wrapper">
+                    
+                    <!-- KIRI: TABEL DATA -->
+                    <div class="event-table-side">
+                        <table class="report-table">
+                            <!-- Definisi Lebar Kolom FIX (Pixel) -->
+                            <colgroup>
+                                <col style="width: 30px;">  <!-- No -->
+                                <col style="width: 60px;">  <!-- Kode -->
+                                <col style="width: 60px;">  <!-- Jarak -->
+                                <col style="width: 90px;">  <!-- Intensitas -->
+                                <col style="width: 90px;">  <!-- PGA EW -->
+                                <col style="width: 90px;">  <!-- PGA NS -->
+                                <col style="width: 90px;">  <!-- PGA UD -->
+                            </colgroup>
+
+                            <!-- BARIS 1: PARAMETER GEMPA -->
+                            <tr class="event-row">
+                                <td colspan="7">
+                                    {{ event.event_time|date:"d-m-Y H:i:s" }} UTC | 
+                                    {{ event.latitude|floatformat:4 }}, {{ event.longitude|floatformat:4 }} | 
+                                    M {{ event.magnitude }} | 
+                                    Kedalaman: {{ event.depth }} km | 
+                                    {{ event.location_string }}
+                                </td>
+                            </tr>
+
+                            <!-- BARIS 2: HEADER STASIUN -->
+                            <tr class="station-header-row">
+                                <th>No</th>
+                                <th>Kode</th>
+                                <th>Jarak (km)</th>
+                                <th>Intensitas (MMI)</th>
+                                <th>PGA EW (gal)</th>
+                                <th>PGA NS (gal)</th>
+                                <th>PGA UD (gal)</th>
+                            </tr>
+
+                            <!-- BARIS 3 dst: DATA STASIUN -->
+                            {% for station in event.stations.all %}
+                            <tr>
+                                <td class="text-center">{{ forloop.counter }}</td>
+                                <td class="text-center"><b>{{ station.station_code }}</b></td>
+                                <td class="text-center">{{ station.distance_km|floatformat:1 }}</td>
+                                <td class="text-center">{{ station.intensity|floatformat:1 }}</td>
+                                <td class="text-center">{{ station.pga_ew|floatformat:4 }}</td>
+                                <td class="text-center">{{ station.pga_ns|floatformat:4 }}</td>
+                                <td class="text-center">{{ station.pga_ud|floatformat:4 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center" style="color: red;">Tidak ada data stasiun untuk event ini.</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+
+                    <!-- KANAN: GAMBAR SHAKEMAP -->
+                    <div class="event-map-side">
+                        {% if event.shakemap_image %}
+                            <img src="{{ event.shakemap_image.url }}" alt="Shakemap {{ event.event_id }}">
+                            <!-- <div class="map-caption">ID: {{ event.event_id }}</div> -->
+                        {% else %}
+                            <div style="padding: 20px; text-align: center; color: #999; font-size: 10px;">
+                                [No Image]
+                            </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+                {% endfor %}
+
+                <!-- === TABEL REKAPITULASI (BARU) === -->
+                <div class="recap-section">
+                    <div class="recap-title">Rekapitulasi Kejadian Shakemap Bulan {{ month_name }} {{ selected_year }}</div>
+                    
+                    <table class="recap-table">
+                        <thead>
+                            <tr class="recap-header">
+                                <th rowspan="2" style="width: 30px;">NO</th>
+                                <th rowspan="2" style="width: 80px;">JAM (UTC)</th>
+                                <th colspan="{{ days_range_list|length }}">TANGGAL</th>
+                                <th rowspan="2" style="width: 50px;">TOTAL</th>
+                            </tr>
+                            <tr class="recap-header">
+                                {% for d in days_range_list %}
+                                    <th>{{ d }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in recap_data %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ row.label }}</td>
+                                
+                                {% for val in row.days %}
+                                    <td {% if val != "-" %}style="background-color: #dcfce7; font-weight: bold;"{% endif %}>{{ val }}</td>
+                                {% endfor %}
+                                
+                                <td style="font-weight: bold;">{{ row.total }}</td>
+                            </tr>
+                            {% endfor %}
+                            
+                            <!-- Baris Total -->
+                            <tr style="background-color: #f3f4f6; font-weight: bold;">
+                                <td colspan="2">JUMLAH</td>
+                                {% for total in day_totals %}
+                                    <td>{{ total }}</td>
+                                {% endfor %}
+                                <td>{{ grand_total }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            {% else %}
+                <div class="no-data">
+                    <p>Tidak ada event shakemap pada bulan {{ month_name }} {{ selected_year }}.</p>
+                </div>
+            {% endif %}
+
+        </div>
+    </main>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}
