@@ -162,8 +162,8 @@ LOGIN_REDIRECT_URL = 'dashboard'
 
 LOGOUT_REDIRECT_URL = 'login'
 
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+# DEBUG = True
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
