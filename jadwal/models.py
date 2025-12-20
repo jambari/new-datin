@@ -10,6 +10,7 @@ class Pegawai(models.Model):
     jabatan = models.CharField(max_length=100, help_text="Contoh: PMG Pertama")
     is_reguler = models.BooleanField(default=False, help_text="Centang jika pegawai ini pola kerjanya Reguler (Senin-Jumat)")
     urutan = models.IntegerField(default=0, help_text="Untuk mengatur urutan baris di tabel")
+    tanggal_keluar = models.DateField(null=True, blank=True, help_text="Isi jika pegawai pindah/pensiun. Pegawai otomatis hilang dari jadwal setelah tanggal ini.")
 
     def __str__(self):
         return self.nama

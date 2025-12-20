@@ -3,8 +3,8 @@ from .models import Pegawai, PolaDinas, JadwalHarian
 
 @admin.register(Pegawai)
 class PegawaiAdmin(admin.ModelAdmin):
-    list_display = ('nama', 'nip', 'is_reguler', 'urutan')
-    list_editable = ('urutan', 'is_reguler')
+    list_display = ('nama', 'nip', 'is_reguler', 'urutan', 'tanggal_keluar')
+    list_editable = ('urutan','tanggal_keluar', 'is_reguler')
 
 @admin.register(PolaDinas)
 class PolaDinasAdmin(admin.ModelAdmin):

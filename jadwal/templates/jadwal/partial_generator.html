@@ -1,0 +1,114 @@
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;" class="no-print">
+
+<div style="display: flex; gap: 20px; flex-wrap: wrap;" class="no-print">
+    <div class="gen-box" style="flex: 2; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+        <h4 style="margin-top: 0;">⚙️ Generator Jadwal Otomatis</h4>
+        
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 11px; font-weight: bold;">1. Pola Shift:</label>
+                <select id="pola_type" style="width: 100%; padding: 8px; border-radius: 4px;">
+                    <option value="PSM">24 Jam (PSM)</option>
+                    <option value="PS-MT">Dua Shift (PS & MT)</option>
+                </select>
+                <div style="margin-top: 10px;">
+                    <label style="font-size: 11px; font-weight: bold;">2. Tgl Mulai:</label>
+                    <input type="number" id="start_day" value="1" min="1" max="31" style="width: 60px; padding: 6px;">
+                </div>
+            </div>
+
+            <div style="flex: 2; min-width: 300px; padding-left: 20px; border-left: 1px solid #eee;">
+                <label style="font-size: 11px; font-weight: bold;">3. Status Khusus (LN/CB/TB/C):</label>
+                <div id="exception-container" style="margin-top: 10px;">
+                    <div class="exc-row" style="display: flex; gap: 5px; margin-bottom: 10px;">
+                        <select class="exc-pegawai" style="flex: 2; padding: 6px; font-size: 11px;">
+                            <option value="">-- Pilih Pegawai --</option>
+                            {% for p in pegawai_all %}
+                            <option value="{{ p.id }}">{{ p.nama }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="exc-kode" style="width: 60px; padding: 6px; font-size: 11px;">
+                            <option value="LN">LN</option>
+                            <option value="CB">CB</option>
+                            <option value="TB">TB</option>
+                            <option value="C">Cuti</option>
+                            <option value="ST">ST</option>
+                        </select>
+                        <input type="number" class="exc-start" placeholder="Tgl" style="width: 45px; padding: 6px;">
+                        <span style="align-self: center;">s/d</span>
+                        <input type="number" class="exc-end" placeholder="Tgl" style="width: 45px; padding: 6px;">
+                        <button type="button" onclick="removeExc(this)" style="background: #ff4d4d; color: white; border: none; padding: 0 10px; border-radius: 4px;">x</button>
+                    </div>
+                </div>
+                <button type="button" onclick="addExc()" style="background: #28a745; color: white; border: none; padding: 5px 12px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer;">+ Tambah</button>
+            </div>
+        </div>
+
+        <button onclick="runGenerator()" style="background: #007bff; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px;">
+            GENERATE JADWAL SEKARANG
+        </button>
+    </div>
+
+    <div class="riwayat-box" style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+        <h4 style="margin-top: 0;">🕒 Riwayat / Undo</h4>
+        <div style="max-height: 200px; overflow-y: auto;">
+            {% for h in history_list %}
+            <div style="font-size: 11px; padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <span><strong>{{ h.created_at|date:"d M H:i" }}</strong><br><small>{{ h.keterangan }}</small></span>
+                <a href="{% url 'restore_jadwal' h.id %}" onclick="return confirm('Restore?')" style="background: #ffc107; padding: 4px 8px; text-decoration: none; color: #000; border-radius: 4px; font-weight: bold;">RESTORE</a>
+            </div>
+            {% empty %}
+            <p style="color: #999; font-size: 11px;">Belum ada riwayat.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function addExc() {
+        const container = document.getElementById('exception-container');
+        const firstRow = container.querySelector('.exc-row');
+        const newRow = firstRow.cloneNode(true);
+        newRow.querySelectorAll('input').forEach(i => i.value = '');
+        newRow.querySelector('select').selectedIndex = 0;
+        container.appendChild(newRow);
+    }
+
+    function removeExc(btn) {
+        const container = document.getElementById('exception-container');
+        if (container.querySelectorAll('.exc-row').length > 1) {
+            btn.closest('.exc-row').remove();
+        }
+    }
+
+    function runGenerator() {
+        if (!confirm("Generate ulang akan menghapus jadwal lama. Lanjutkan?")) return;
+        
+        // Ambil Data Status Khusus
+        const exceptions = [];
+        document.querySelectorAll('.exc-row').forEach(row => {
+            const pId = row.querySelector('.exc-pegawai').value;
+            const kode = row.querySelector('.exc-kode').value;
+            const start = row.querySelector('.exc-start').value;
+            const end = row.querySelector('.exc-end').value;
+            if (pId && start && end) {
+                exceptions.push({ id: pId, kode: kode, start: start, end: end });
+            }
+        });
+
+        const formData = new FormData();
+        formData.append('month', "{{ month }}");
+        formData.append('year', "{{ year }}");
+        formData.append('pola_type', document.getElementById('pola_type').value);
+        formData.append('start_day', document.getElementById('start_day').value);
+        formData.append('exceptions_data', JSON.stringify(exceptions)); // Kirim data khusus
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 'api_generate_jadwal' %}", { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            location.reload();
+        });
+    }
+</script>

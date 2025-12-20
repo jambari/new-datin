@@ -1,3 +1,4 @@
+from django.db.models import Q
 import calendar
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect
@@ -33,8 +34,11 @@ def tabel_jadwal(request):
     _, num_days = calendar.monthrange(selected_year, selected_month)
     list_tanggal = range(1, num_days + 1)
 
+    start_of_month = date(selected_year, selected_month, 1)
     # Ambil semua pegawai
-    pegawai_list = Pegawai.objects.all()
+    pegawai_list = Pegawai.objects.filter(
+        Q(tanggal_keluar__isnull=True) | Q(tanggal_keluar__gte=start_of_month)
+    )
 
     # Struktur Data untuk Tabel
     laporan = []

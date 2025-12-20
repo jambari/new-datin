@@ -5,70 +5,84 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Jadwal Dinas Operasional - {{ month_name }} {{ year }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jadwal Dinas - {{ month_name }} {{ year }}</title>
     <style>
-        /* CSS LAYOUT */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; background-color: #f0f2f5; margin: 0; padding: 20px 0; display: flex; justify-content: center; }
-        .paper-container { background-color: white; width: 1250px; padding: 20px 40px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-radius: 4px; position: relative; }
+        /* --- 1. TAMPILAN LAYAR (DESKTOP & MOBILE) --- */
+        /* Kita kembalikan ke font 12px agar tidak kekecilan */
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; background-color: #f0f2f5; margin: 0; padding: 20px; }
         
-        /* HEADER */
-        .header { text-align: center; margin-bottom: 15px; }
-        .header h2 { font-size: 16px; margin: 2px 0; }
-        .header h3 { font-size: 14px; margin: 2px 0; }
-        .header p { margin: 2px 0; font-size: 10px; }
+        .paper-container { 
+            background: white; 
+            width: 100%; 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 40px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+            border-radius: 8px; 
+            overflow-x: auto; /* Solusi Mobile tetap ada */
+        }
         
-        /* NAV & CONTROLS */
-        .nav-control { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .btn-print { background-color: #6c757d; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-        .btn-print:hover { background-color: #5a6268; }
+        .header { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #000; padding-bottom: 10px; position: relative; }
+        .header img { height: 65px; position: absolute; left: 0; top: 0; }
+        .header h2 { font-size: 22px; margin: 5px 0; text-transform: uppercase; font-weight: 800; }
+        .header h3 { font-size: 18px; margin: 5px 0; }
+        .header p { font-size: 15px; font-weight: bold; margin: 5px 0; }
         
-        /* TABLE STYLES */
-        table { width: 100%; border-collapse: collapse; border: 1px solid #000; table-layout: fixed; }
-        th, td { border: 1px solid #000; padding: 3px 2px; text-align: center; vertical-align: middle; overflow: hidden; white-space: nowrap; }
-        th { background-color: #f0f0f0; font-weight: bold; font-size: 10px; }
+        /* Agar TIDAK BANTET: Kita berikan tinggi baris yang pasti */
+        table { width: 100%; min-width: 1250px; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; }
         
-        /* WEEKEND HIGHLIGHT STYLE */
-        .th-weekend { background-color: #ffcccc !important; color: red; } /* Header Merah */
-        .td-weekend { background-color: #fff0f0; } /* Body Agak Merah Muda (Opsional, akan ditimpa warna dinas) */
-
-        /* COLUMN WIDTHS */
-        .col-no { width: 30px; }
-        .col-nama { width: 220px; text-align: left; }
-        .col-tgl { width: 27px; }
-        .col-jam { width: 45px; }
-        .col-um { width: 35px; }
+        th { background-color: #f8f9fa; font-weight: bold; font-size: 11px; height: 40px; }
         
-        .td-nama { text-align: left; font-weight: bold; font-size: 11px; white-space: normal; line-height: 1.2; padding-left: 5px; }
-        .td-nip { text-align: left; font-size: 9px; color: #555; display: block; }
+        /* Baris Data: Tinggi 35px agar terlihat gagah dan tidak sesak */
+        td { border: 1px solid #000; text-align: center; vertical-align: middle; height: 35px; }
+        
+        /* Lebar Kolom */
+        .col-no { width: 35px; }
+        .col-nama { width: 220px; } 
+        .col-tgl { width: 32px; }
+        .col-jam { width: 50px; } 
+        .col-um { width: 45px; }
+        
+        .td-nama { text-align: left; font-weight: bold; font-size: 11px; padding: 0 8px; line-height: 1.4; }
+        .td-nip { font-size: 9px; color: #555; display: block; font-weight: normal; margin-top: 2px; }
+        
+        .th-weekend { background-color: #ffcccc !important; color: red !important; }
+        
+        /* Teks di dalam sel (PSM, PS, MT, dll) */
         .cell-dinas { font-weight: bold; font-size: 10px; cursor: pointer; }
-        .cell-dinas:hover { background-color: #e6f7ff !important; }
-        .total-col { background-color: #fffacd; font-weight: bold; }
         
-        /* GENERATOR & HISTORY BOX */
-        .gen-box { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-top: 20px; }
-        .input-row { display: flex; align-items: center; margin-bottom: 5px; gap: 5px; }
-        .input-row select, .input-row input { padding: 5px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; }
-        .del-btn { background: #ff4d4d; color: white; border: none; cursor: pointer; padding: 4px 8px; border-radius: 3px; }
+        /* Baris spacer di bawah nama petugas */
+        .cell-spacer { height: 12px; background-color: #f9f9f9 !important; }
 
-        /* HISTORY TABLE */
-        .history-table { width: 100%; font-size: 11px; border: none; margin-top: 5px; }
-        .history-table td { border: none; border-bottom: 1px solid #eee; padding: 5px; text-align: left; }
-        .btn-restore { background-color: #ffc107; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 10px; color: black; }
+        /* --- 2. MODAL PILIH POLA --- */
+        #polaModal { 
+            display:none; position:absolute; z-index:1000; background:white; 
+            border:1px solid #999; padding:15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            border-radius: 12px; width: 320px; 
+        }
+        .modal-title { font-weight: bold; font-size: 13px; margin-bottom: 10px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
+        #polaModal button { padding: 10px 2px; font-size: 11px; font-weight: bold; cursor: pointer; border: 1px solid #ddd; border-radius: 6px; background: #fff; transition: 0.2s; }
+        #polaModal button:hover { background: #f0f0f0; border-color: #bbb; }
 
-        /* MODAL */
-        #polaModal { display:none; position:fixed; z-index:100; background:white; border:1px solid #999; padding:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 5px; min-width: 280px; }
-        #polaModal button { cursor: pointer; padding: 6px 4px; margin: 2px; font-size: 10px; border: 1px solid #ccc; border-radius: 3px; background-color: #f0f0f0; font-weight: bold; width: 100%; }
-        .btn-group-dinas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px; }
-        .btn-group-status { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px; }
-        .btn-danger { background-color: #ffcccc !important; border-color: #ff9999 !important; }
-
-        /* PRINT SETTINGS */
+        /* --- 3. KHUSUS CETAK (OPTIMASI 1 HALAMAN) --- */
         @media print {
-            @page { size: A4 landscape; margin: 5mm; }
-            body { background-color: white; padding: 0; display: block; }
-            .paper-container { width: 100%; box-shadow: none; padding: 0; margin: 0; border: none; }
-            .nav-control, .no-print, #polaModal, .gen-box, .history-box { display: none !important; }
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { size: A4 landscape; margin: 0.5cm; }
+            body { background: white; padding: 0; margin: 0; font-size: 10px; }
+            .paper-container { width: 100%; max-width: none; box-shadow: none; padding: 0; margin: 0; overflow: visible; }
+            .no-print, .nav-control, #polaModal, .generator-section { display: none !important; }
+            
+            /* Agar muat satu halaman tanpa merusak proporsi vertikal */
+            table { width: 100%; min-width: 100%; table-layout: fixed; }
+            th { height: 30px; font-size: 9px; }
+            td { height: 28px; font-size: 9px; }
+            .col-nama { width: 160px; }
+            .td-nama { font-size: 9px; }
+            .cell-spacer { height: 8px; }
+            .header h2 { font-size: 20px !important; }
+            .header h3 { font-size: 16px !important; }
+            .header img { height: 50px; }
         }
     </style>
 </head>
@@ -76,256 +90,144 @@
 
     <div class="paper-container">
         <div class="header">
-            <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="Logo" style="height: 50px; float: left; margin-right: 10px;">
+            <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="Logo">
             <h2>BADAN METEOROLOGI KLIMATOLOGI DAN GEOFISIKA</h2>
             <h3>STASIUN GEOFISIKA KELAS I JAYAPURA</h3>
-            <p>Jl. Drs. Krisna Sunarya No. 26 Tlp. (0967) 533533, Angkasapura - Jayapura</p>
-            <hr style="border: 1px solid black; margin: 5px 0;">
-            <h2 style="margin-top: 10px;">JADWAL DINAS OPERASIONAL</h2>
-            <h3>BULAN {{ month_name|upper }} {{ year }}</h3>
+            <p>Jadwal Dinas Operasional Bulan {{ month_name }} {{ year }}</p>
         </div>
 
-        <div class="nav-control">
-            <div>
-                <a href="?month={{ prev_month }}&year={{ prev_year }}" style="text-decoration:none;">&laquo; Bulan Sebelumnya</a> | 
-                <a href="?month={{ next_month }}&year={{ next_year }}" style="text-decoration:none;">Bulan Selanjutnya &raquo;</a> |
-                <a href="/admin/jadwal/jadwalharian/" target="_blank">Admin</a>
+        <div class="nav-control no-print" style="margin-bottom:15px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: bold;">
+                <a href="?month={{ prev_month }}&year={{ prev_year }}" style="text-decoration:none; color: #007bff;">&laquo; Bulan Sebelumnya</a> | 
+                <a href="?month={{ next_month }}&year={{ next_year }}" style="text-decoration:none; color: #007bff;">Bulan Selanjutnya &raquo;</a>
             </div>
-            
-            <button onclick="window.print()" class="btn-print">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>
-                    <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2z"/>
-                    <path d="M4.5 9a.5.5 0 0 1 .5.5v.5h6v-.5a.5.5 0 0 1 1 0v.5a.5.5 0 0 1-.5.5H13v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.5-.5v-.5a.5.5 0 0 1 .5-.5"/>
-                </svg>
-                CETAK / PRINT
-            </button>
+            <button onclick="window.print()" style="padding: 8px 20px; cursor:pointer; font-weight:bold; background:#2c3e50; color:white; border:none; border-radius:6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">🖨️ CETAK JADWAL</button>
         </div>
 
         <table id="table-jadwal">
-            <colgroup>
-                <col class="col-no"> <col class="col-nama">
-                {% for d in days_range %} <col class="col-tgl"> {% endfor %}
-                <col class="col-jam"> <col class="col-um">
-            </colgroup>
             <thead>
                 <tr>
-                    <th rowspan="2">No</th> <th rowspan="2">Nama Petugas / NIP</th>
-                    <th colspan="{{ days_range|length }}">TANGGAL</th>
-                    <th rowspan="2">Jam</th> <th rowspan="2">UM</th>
-                </tr>
-                <tr> 
+                    <th class="col-no">No</th>
+                    <th class="col-nama">Nama Petugas / NIP</th>
                     {% for d in days_range %} 
-                        <th class="th-date" data-day="{{ d }}">{{ d }}</th> 
-                    {% endfor %} 
+                        <th class="col-tgl th-date" data-day="{{ d }}">{{ d }}</th> 
+                    {% endfor %}
+                    <th class="col-jam">Jam</th>
+                    <th class="col-um">UM</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in laporan %}
                 <tr>
-                    <td rowspan="2">{{ forloop.counter }}</td>
-                    <td class="td-nama">{{ item.pegawai.nama }}<span class="td-nip">{{ item.pegawai.nip }}</span></td>
+                    <td rowspan="2" style="font-weight: bold;">{{ forloop.counter }}</td>
+                    <td class="td-nama">
+                        {{ item.pegawai.nama }}
+                        <span class="td-nip">{{ item.pegawai.nip }}</span>
+                    </td>
                     {% for d in days_range %}
                         {% with cell=item.hari|get_item:d %}
-                            <td class="cell-dinas" style="background-color: {{ cell.warna }};" 
-                                data-pegawai-id="{{ item.pegawai.id }}" data-date="{{ year }}-{{ month|stringformat:'02d' }}-{{ d|stringformat:'02d' }}">
-                                {{ cell.kode }}
-                            </td>
+                        <td class="cell-dinas" style="background-color: {{ cell.warna }};" 
+                            data-pegawai-id="{{ item.pegawai.id }}" 
+                            data-date="{{ year }}-{{ month|stringformat:'02d' }}-{{ d|stringformat:'02d' }}">
+                            {{ cell.kode }}
+                        </td>
                         {% endwith %}
                     {% endfor %}
-                    <td rowspan="2" class="total-col" id="total-jam-{{ item.pegawai.id }}">{{ item.total_jam|floatformat:0 }}</td>
-                    <td rowspan="2" class="total-col" id="uang-makan-{{ item.pegawai.id }}">{{ item.uang_makan }}</td>
+                    <td rowspan="2" style="font-weight: bold; background: #fffde7;" id="total-jam-{{ item.pegawai.id }}">{{ item.total_jam|floatformat:0 }}</td>
+                    <td rowspan="2" style="font-weight: bold; background: #fffde7;" id="uang-makan-{{ item.pegawai.id }}">{{ item.uang_makan }}</td>
                 </tr>
-                <tr> {% for d in days_range %} <td class="cell-spacer" style="background-color: #f9f9f9; height: 10px;"></td> {% endfor %} </tr>
+                <tr>
+                    {% for d in days_range %} <td class="cell-spacer"></td> {% endfor %}
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <div style="margin-top: 10px; font-size: 10px;">
-            <strong>KETERANGAN :</strong>
-            <ul style="list-style-type: none; padding: 0; margin: 0; display: inline-block;">
-                <li><strong>PS</strong>=07.30-20.00 | <strong>MT</strong>=19.30-08.00 | <strong>PSM</strong>=24 Jam | <strong>R</strong>=Reguler</li>
-            </ul>
-        </div>
-
-        <div class="gen-box no-print" style="display: flex; gap: 20px;">
-            <div style="flex: 2;">
-                <h3 style="margin-top: 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Generator Jadwal</h3>
-                <div style="display: flex; gap: 20px;">
-                    <div style="flex: 1;">
-                        <small>1. Pola Shift:</small>
-                        <select id="selectPola" style="width: 100%;"><option value="PSM">24 Jam (PSM)</option><option value="PS-MT">2 Shift (PS-MT)</option></select>
-                        <br>
-                        <small>2. Tgl Mulai:</small>
-                        <input type="number" id="startDay" value="1" min="1" max="31" style="width: 50px;">
-                    </div>
-                    <div style="flex: 1.5;">
-                        <small>3. Status Khusus (LN/CB/TB):</small>
-                        <div id="exceptionList"></div>
-                        <button onclick="addExceptionRow()" style="background: #28a745; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">+ Tambah</button>
-                    </div>
-                </div>
-                <button onclick="generateSchedule()" style="background: #007bff; color: white; padding: 8px; border: none; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px;">GENERATE OTOMATIS</button>
+        <div id="polaModal">
+            <div class="modal-title">PILIH POLA DINAS</div>
+            <div class="btn-grid">
+                <button onclick="selectPola('PSM')" style="background: #c8d6e5;">PSM</button>
+                <button onclick="selectPola('PS')" style="background: #67CA16; color: white;">PS</button>
+                <button onclick="selectPola('MT')" style="background: #B3CED6;">MT</button>
+                <button onclick="selectPola('P')" style="background: #90AB8B; color: white;">Pagi</button>
+                <button onclick="selectPola('S')" style="background: #927B67; color: white;">Siang</button>
+                <button onclick="selectPola('M1')" style="background: #ddd;">M1</button>
             </div>
-
-            <div style="flex: 1; border-left: 1px solid #ccc; padding-left: 20px;">
-                <h3 style="margin-top: 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Riwayat / Undo</h3>
-                <table class="history-table">
-                    {% for h in history_list %}
-                    <tr>
-                        <td><strong>{{ h.created_at|date:"d M H:i" }}</strong><br><span style="color: #555;">{{ h.keterangan }}</span></td>
-                        <td style="text-align: right;"><a href="{% url 'restore_jadwal' h.id %}" onclick="return confirm('Restore?')"><button class="btn-restore">RESTORE</button></a></td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="2">Belum ada riwayat.</td></tr>
-                    {% endfor %}
-                </table>
+            <div class="modal-title">STATUS LAIN</div>
+            <div class="btn-grid">
+                <button onclick="selectPola('R')">Reguler</button>
+                <button onclick="selectPola('WFA')" style="background:#d1ecf1;">WFA</button>
+                <button onclick="selectPola('ST')" style="background:#feca57;">ST</button>
+                <button onclick="selectPola('L')">Libur</button>
+                <button onclick="selectPola('C')" style="background:#ffcccc;">Cuti</button>
+                <button onclick="selectPola('TB')" style="background:#1dd1a1; color: white;">TB</button>
+                <button onclick="selectPola('CB')" style="background:#ee5253; color: white;">CB</button>
+                <button onclick="selectPola('LN')" style="background:#F25016; color: white;">LN</button>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 5px;">
+                <button onclick="selectPola('')" style="flex:1; background:#ff4d4d !important; color:white; border:none;">Hapus</button>
+                <button onclick="closeModal()" style="flex:1;">Batal</button>
             </div>
         </div>
-
-    </div>
-
-    <select id="pegawaiTemplate" style="display:none;">
-        {% for p in pegawai_all %}
-        <option value="{{ p.id }}">{{ p.nama }}</option>
-        {% endfor %}
-    </select>
-
-    <div id="polaModal">
-        <strong>Pilih Pola:</strong>
-        <div class="btn-group-dinas">
-            <button onclick="selectPola('PSM')">PSM</button>
-            <button onclick="selectPola('PS')">PS</button>
-            <button onclick="selectPola('MT')">MT</button>
-            <button onclick="selectPola('P')">Pagi</button>
-            <button onclick="selectPola('S')">Siang</button>
-            <button onclick="selectPola('M1')">M1</button>
+        
+        <div class="generator-section" style="margin-top: 30px;">
+            {% include "jadwal/partial_generator.html" %} 
         </div>
-        <strong>Status Lain:</strong>
-        <div class="btn-group-status">
-            <button onclick="selectPola('R')" style="background-color: #e0e0e0;">R (Reguler)</button>
-            <button onclick="selectPola('ST')" style="background-color: #e6e6fa;">ST</button>
-            <button onclick="selectPola('TB')">TB</button>
-            <button onclick="selectPola('C')">Cuti</button>
-            <button onclick="selectPola('CB')" style="background-color: #ffcccc;">CB</button>
-            <button onclick="selectPola('L')">Lbr</button>
-            <button onclick="selectPola('LN')" style="background-color: #ffccbc;">LN</button>
-        </div>
-        <div style="margin-top: 5px; display: flex; justify-content: space-between;">
-            <button onclick="selectPola('')" class="btn-danger">Hapus</button>
-            <button onclick="closeModal()">Batal</button>
+
+        <div style="margin-top: 20px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 10px;">
+            KETERANGAN : PS=07.30-20.00 | MT=19.30-08.00 | PSM=24 Jam | R=Reguler
         </div>
     </div>
 
-    <script>
-        // --- SCRIPT AUTO HIGHLIGHT SABTU MINGGU ---
-        document.addEventListener("DOMContentLoaded", function() {
-            const year = {{ year }};
-            const month = {{ month }} - 1; // JS month 0-11
-            const table = document.getElementById("table-jadwal");
+<script>
+    let currentCell = null;
+    let currentPegawaiId = null;
+    let currentDate = null;
+
+    // Mewarnai Header Weekend (Sabtu & Minggu)
+    document.querySelectorAll('.th-date').forEach(th => {
+        const day = parseInt(th.getAttribute('data-day'));
+        const dateObj = new Date({{ year }}, {{ month }} - 1, day);
+        if (dateObj.getDay() === 0 || dateObj.getDay() === 6) th.classList.add('th-weekend');
+    });
+
+    // Menampilkan Modal di posisi Klik
+    document.querySelectorAll('.cell-dinas').forEach(cell => {
+        cell.onclick = function(e) {
+            currentCell = this;
+            currentPegawaiId = this.getAttribute('data-pegawai-id');
+            currentDate = this.getAttribute('data-date');
+            const modal = document.getElementById('polaModal');
+            modal.style.display = 'block';
             
-            // Ambil semua header tanggal
-            const dateHeaders = table.querySelectorAll(".th-date");
-            
-            dateHeaders.forEach((th, index) => {
-                const day = parseInt(th.getAttribute("data-day"));
-                const dateObj = new Date(year, month, day);
-                const dayOfWeek = dateObj.getDay(); // 0=Sun, 6=Sat
+            // Positioning modal agar tidak terpotong layar
+            let leftPos = e.pageX;
+            if (leftPos + 330 > window.innerWidth) leftPos = window.innerWidth - 340;
+            modal.style.left = leftPos + 'px';
+            modal.style.top = e.pageY + 'px';
+        };
+    });
 
-                if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    // 1. Warnai Header
-                    th.classList.add("th-weekend");
-                    
-                    // 2. Warnai Kolom di Body (Opsional: hanya jika kosong)
-                    // Index kolom di body = index + 2 (karena ada kolom No dan Nama)
-                    // Note: Hati-hati karena struktur baris 1 (nama) dan baris 2 (spacer) berbeda
-                    const rows = table.querySelectorAll("tbody tr");
-                    rows.forEach(row => {
-                        // Pastikan baris ini memiliki cukup kolom (baris data pegawai)
-                        if (row.children.length > index + 2) {
-                            const cell = row.children[index + 2];
-                            // Cek apakah ini sel dinas
-                            if (cell.classList.contains("cell-dinas")) {
-                                // Jika background putih/default (tidak ada shift), beri warna weekend
-                                const currentBg = cell.style.backgroundColor;
-                                if (!currentBg || currentBg === "rgb(255, 255, 255)" || currentBg === "#ffffff") {
-                                    cell.style.backgroundColor = "#fff5f5"; // Merah sangat muda
-                                }
-                            } else if (cell.classList.contains("cell-spacer")) {
-                                // Warnai spacer row juga
-                                cell.style.backgroundColor = "#fff5f5";
-                            }
-                        }
-                    });
-                }
-            });
-        });
+    function closeModal() { document.getElementById('polaModal').style.display = 'none'; }
 
-        // --- FUNGSI STANDAR LAINNYA ---
-        function addExceptionRow() {
-            const container = document.getElementById('exceptionList');
-            const row = document.createElement('div');
-            row.className = 'input-row';
-            const selectPegawai = document.createElement('select');
-            selectPegawai.innerHTML = document.getElementById('pegawaiTemplate').innerHTML; selectPegawai.style.width = "120px";
-            const selectStatus = document.createElement('select');
-            selectStatus.innerHTML = `<option value="LN">LN</option><option value="CB">CB</option><option value="TB">TB</option><option value="ST">ST</option><option value="C">C</option>`;
-            const inputStart = document.createElement('input'); inputStart.type = 'number'; inputStart.placeholder = 'Tgl'; inputStart.style.width="35px";
-            const inputEnd = document.createElement('input'); inputEnd.type = 'number'; inputEnd.placeholder = 'Sd'; inputEnd.style.width="35px";
-            const btnDel = document.createElement('button'); btnDel.innerText = "x"; btnDel.className = 'del-btn'; btnDel.onclick = function() { container.removeChild(row); };
-            row.appendChild(selectPegawai); row.appendChild(selectStatus); row.appendChild(inputStart); row.appendChild(inputEnd); row.appendChild(btnDel);
-            container.appendChild(row);
-        }
-
-        function generateSchedule() {
-            const polaSelected = document.getElementById('selectPola').value;
-            const startDay = document.getElementById('startDay').value;
-            const exceptions = [];
-            for(let row of document.getElementById('exceptionList').children) {
-                const selects = row.getElementsByTagName('select');
-                const inputs = row.getElementsByTagName('input');
-                if(inputs[0].value && inputs[1].value) {
-                    exceptions.push({id: selects[0].value, kode: selects[1].value, start: inputs[0].value, end: inputs[1].value});
-                }
+    // Kirim Update ke Server
+    function selectPola(kode) {
+        fetch("{% url 'api_update_jadwal' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ pegawai_id: currentPegawaiId, tanggal: currentDate, kode_pola: kode })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'saved' || data.status === 'deleted') {
+                currentCell.innerText = data.pola;
+                currentCell.style.backgroundColor = data.warna;
+                document.getElementById(`total-jam-${currentPegawaiId}`).innerText = data.new_total_jam;
+                document.getElementById(`uang-makan-${currentPegawaiId}`).innerText = data.new_uang_makan;
+                closeModal();
             }
-            if(!confirm("Generate Jadwal? Data lama akan di-backup otomatis.")) return;
-            
-            const btn = document.querySelector('button[onclick="generateSchedule()"]'); btn.innerText = "..."; btn.disabled = true;
-            const formData = new FormData();
-            formData.append('month', '{{ month }}'); formData.append('year', '{{ year }}'); formData.append('pola_type', polaSelected);
-            formData.append('start_day', startDay); formData.append('exceptions_data', JSON.stringify(exceptions)); formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-            fetch("{% url 'api_generate_jadwal' %}", { method: 'POST', body: formData })
-            .then(res => res.json()).then(data => {
-                if(data.status === 'success') { alert(data.message); location.reload(); }
-                else { alert("Gagal: " + data.message); btn.innerText = "GENERATE OTOMATIS"; btn.disabled = false; }
-            });
-        }
-
-        let currentCell = null; let currentPegawaiId = null; let currentDate = null;
-        document.querySelectorAll('.cell-dinas').forEach(cell => {
-            cell.onclick = function(e) {
-                currentCell = this; currentPegawaiId = this.getAttribute('data-pegawai-id'); currentDate = this.getAttribute('data-date');
-                const modal = document.getElementById('polaModal'); modal.style.display = 'block'; modal.style.left = e.pageX + 'px'; modal.style.top = e.pageY + 'px';
-            };
         });
-        function closeModal() { document.getElementById('polaModal').style.display = 'none'; }
-        window.onclick = function(e) { if(e.target == document.getElementById('polaModal')) closeModal(); }
-
-        function selectPola(kode) {
-            fetch("{% url 'api_update_jadwal' %}", {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-                body: JSON.stringify({ pegawai_id: currentPegawaiId, tanggal: currentDate, kode_pola: kode })
-            }).then(res => res.json()).then(data => {
-                if(data.status === 'saved' || data.status === 'deleted') {
-                    currentCell.innerText = data.status === 'deleted' ? '' : data.pola;
-                    currentCell.style.backgroundColor = data.status === 'deleted' ? 'transparent' : data.warna;
-                    const tEl = document.getElementById('total-jam-' + currentPegawaiId); const uEl = document.getElementById('uang-makan-' + currentPegawaiId);
-                    if(tEl) tEl.innerText = data.new_total_jam; if(uEl) uEl.innerText = data.new_uang_makan;
-                    closeModal();
-                } else { alert("Gagal: " + data.message); }
-            });
-        }
-    </script>
+    }
+</script>
 </body>
 </html>
