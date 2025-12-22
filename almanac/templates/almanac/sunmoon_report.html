@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-
+{% load tz %}
 {% block content %}
+
 <style>
     /* Container Laporan */
     .report-container {
@@ -175,33 +176,29 @@
                                 <th>TERBENAM</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for event in item.events %}
-                            <tr>
-                                <td class="col-date">{{ event.date|date:"d-m-Y" }}</td>
-                                
-                                <!-- Matahari -->
-                                <td>{{ event.sun_rise|date:"H:i:s"|default:"-" }}</td>
-                                <td>{{ event.sun_set|date:"H:i:s"|default:"-" }}</td>
-                                
-                                <!-- Bulan -->
-                                <td>{{ event.moon_rise|date:"H:i:s"|default:"-" }}</td>
-                                <td>{{ event.moon_set|date:"H:i:s"|default:"-" }}</td>
-                                
-                                <!-- Fase Bulan (0-1) -->
-                                <td>
-                                    {% if event.moon_phase is not None %}
-                                        {{ event.moon_phase|floatformat:2 }}
-                                        <!-- Indikator Simpel -->
-                                        {% if event.moon_phase < 0.05 %} (Baru){% endif %}
-                                        {% if event.moon_phase > 0.45 and event.moon_phase < 0.55 %} (Purnama){% endif %}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
+                            <tbody>
+                                {% for event in item.events %}
+                                <tr>
+                                    <td class="col-date">{{ event.date|date:"d-m-Y" }}</td>
+                                    
+                                    <td>{{ event.sun_rise|timezone:"Asia/Jayapura"|date:"H:i:s"|default:"-" }}</td>
+                                    <td>{{ event.sun_set|timezone:"Asia/Jayapura"|date:"H:i:s"|default:"-" }}</td>
+                                    
+                                    <td>{{ event.moon_rise|timezone:"Asia/Jayapura"|date:"H:i:s"|default:"-" }}</td>
+                                    <td>{{ event.moon_set|timezone:"Asia/Jayapura"|date:"H:i:s"|default:"-" }}</td>
+                                    
+                                    <td>
+                                        {% if event.moon_phase is not None %}
+                                            {{ event.moon_phase|floatformat:2 }}
+                                            {% if event.moon_phase < 0.05 %} (Baru){% endif %}
+                                            {% if event.moon_phase > 0.45 and event.moon_phase < 0.55 %} (Purnama){% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
                     </table>
                 </div>
                 {% endfor %}
