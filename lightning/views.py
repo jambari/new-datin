@@ -1,7 +1,7 @@
 # lightning/views.py
 import json
 import calendar
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import date, datetime, timedelta, timezone as dt_timezone
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.views import View
