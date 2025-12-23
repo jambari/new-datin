@@ -3,7 +3,7 @@
 from django.shortcuts import render, redirect, get_object_or_404 # Add redirect and get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .models import Hujan
-from django.db.models import Max, Count, Q
+from django.db.models import Max, Count, Q, Sum
 from datetime import datetime
 import json
 from .forms import HujanForm
@@ -50,6 +50,7 @@ def query_laporan_hujan(request):
         hujan_records = Hujan.objects.filter(
             tanggal__range=[start_date, end_date]
         ).order_by('tanggal')
+        total_hujan = hujan_records.aggregate(Sum('obs'))['obs__sum'] or 0
 
         if hujan_records.exists():
             # --- LOGIKA NARASI (Hanya Obs) ---
@@ -73,6 +74,7 @@ def query_laporan_hujan(request):
                 'max_val': max_val,
                 'max_date': max_obj.tanggal if max_obj else None,
                 'max_kategori': max_obj.kategori if max_obj else '-',
+                'total_hujan': total_hujan,
             }
 
             # --- PERSIAPAN DATA BAR CHART (OBS) ---

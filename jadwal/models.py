@@ -43,6 +43,8 @@ class JadwalHarian(models.Model):
     pegawai = models.ForeignKey(Pegawai, on_delete=models.CASCADE, related_name='jadwal_harian')
     tanggal = models.DateField()
     pola = models.ForeignKey(PolaDinas, on_delete=models.SET_NULL, null=True, blank=True)
+    is_approved = models.BooleanField(default=False) 
+    edited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     keterangan_lain = models.CharField(max_length=10, choices=STATUS_CHOICES, blank=True, null=True, help_text="Isi jika status bukan dinas biasa (misal DL/Cuti)")
 
     class Meta:
@@ -56,7 +58,7 @@ class JadwalHarian(models.Model):
 
 class RiwayatJadwal(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True) # Siapa yang mengubah
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='riwayat_user')
     bulan = models.IntegerField()
     tahun = models.IntegerField()
     keterangan = models.CharField(max_length=150) # Contoh: "Backup sebelum Generate"

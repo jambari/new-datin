@@ -8,81 +8,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jadwal Dinas - {{ month_name }} {{ year }}</title>
     <style>
-        /* --- 1. TAMPILAN LAYAR (DESKTOP & MOBILE) --- */
-        /* Kita kembalikan ke font 12px agar tidak kekecilan */
-        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        /* --- 1. TAMPILAN LAYAR (COMPACT & PROPORSIONAL) --- */
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; background-color: #f0f2f5; margin: 0; padding: 15px; }
         
         .paper-container { 
-            background: white; 
-            width: 100%; 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 40px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
-            border-radius: 8px; 
-            overflow-x: auto; /* Solusi Mobile tetap ada */
+            background: white; width: 100%; max-width: 1550px; margin: 0 auto; padding: 25px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 8px; overflow-x: auto; 
         }
         
-        .header { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #000; padding-bottom: 10px; position: relative; }
-        .header img { height: 65px; position: absolute; left: 0; top: 0; }
-        .header h2 { font-size: 22px; margin: 5px 0; text-transform: uppercase; font-weight: 800; }
-        .header h3 { font-size: 18px; margin: 5px 0; }
-        .header p { font-size: 15px; font-weight: bold; margin: 5px 0; }
+        .header { text-align: center; margin-bottom: 15px; border-bottom: 2.5px solid #000; padding-bottom: 10px; position: relative; }
+        .header img { height: 55px; position: absolute; left: 0; top: 0; }
+        .header h2 { font-size: 18px; margin: 2px 0; text-transform: uppercase; font-weight: 800; }
+        .header h3 { font-size: 15px; margin: 2px 0; }
+        .header p { font-size: 13px; font-weight: bold; margin: 2px 0; }
         
-        /* Agar TIDAK BANTET: Kita berikan tinggi baris yang pasti */
-        table { width: 100%; min-width: 1250px; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; }
+        table { width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; }
+        th { background-color: #f8f9fa; font-weight: bold; font-size: 10px; height: 35px; border: 1px solid #000; }
+        td { border: 1px solid #000; text-align: center; vertical-align: middle; height: 30px; }
         
-        th { background-color: #f8f9fa; font-weight: bold; font-size: 11px; height: 40px; }
+        /* Lebar Kolom Proporsional */
+        .col-no { width: 30px; }
+        .col-nama { width: 250px; } /* Diperlebar untuk Nama & Gelar */
+        .col-tgl { width: 25px; }   /* Dipersempit agar matriks rapat */
+        .col-jam { width: 40px; } 
+        .col-um { width: 35px; }
         
-        /* Baris Data: Tinggi 35px agar terlihat gagah dan tidak sesak */
-        td { border: 1px solid #000; text-align: center; vertical-align: middle; height: 35px; }
-        
-        /* Lebar Kolom */
-        .col-no { width: 35px; }
-        .col-nama { width: 220px; } 
-        .col-tgl { width: 32px; }
-        .col-jam { width: 50px; } 
-        .col-um { width: 45px; }
-        
-        .td-nama { text-align: left; font-weight: bold; font-size: 11px; padding: 0 8px; line-height: 1.4; }
+        .td-nama { text-align: left; font-weight: bold; font-size: 10.5px; padding: 0 10px; line-height: 1.2; }
         .td-nip { font-size: 9px; color: #555; display: block; font-weight: normal; margin-top: 2px; }
-        
         .th-weekend { background-color: #ffcccc !important; color: red !important; }
-        
-        /* Teks di dalam sel (PSM, PS, MT, dll) */
-        .cell-dinas { font-weight: bold; font-size: 10px; cursor: pointer; }
-        
-        /* Baris spacer di bawah nama petugas */
-        .cell-spacer { height: 12px; background-color: #f9f9f9 !important; }
+        .cell-dinas { font-weight: bold; font-size: 9.5px; cursor: pointer; transition: background 0.2s; }
+        .cell-spacer { height: 10px; background-color: #f9f9f9 !important; }
 
-        /* --- 2. MODAL PILIH POLA --- */
+        /* Keterangan Tepat di Bawah Matriks */
+        .footer-ket { margin-top: 10px; font-weight: bold; border-top: 2px solid #000; padding-top: 8px; font-size: 11px; text-align: left; }
+
+        /* --- 2. MODAL PILIH POLA (CANTIK) --- */
         #polaModal { 
             display:none; position:absolute; z-index:1000; background:white; 
-            border:1px solid #999; padding:15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            border:1px solid #ccc; padding:18px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); 
             border-radius: 12px; width: 320px; 
         }
-        .modal-title { font-weight: bold; font-size: 13px; margin-bottom: 10px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
-        #polaModal button { padding: 10px 2px; font-size: 11px; font-weight: bold; cursor: pointer; border: 1px solid #ddd; border-radius: 6px; background: #fff; transition: 0.2s; }
-        #polaModal button:hover { background: #f0f0f0; border-color: #bbb; }
+        .modal-section-title { font-weight: 800; font-size: 12px; margin-bottom: 12px; color: #444; border-bottom: 1px solid #eee; padding-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
+        #polaModal button { 
+            padding: 10px 2px; font-size: 11px; font-weight: bold; cursor: pointer; 
+            border: 1px solid #ddd; border-radius: 8px; background: #fff; transition: transform 0.1s;
+        }
+        #polaModal button:active { transform: scale(0.95); }
+        .btn-hapus { background: #ff4d4d !important; color: white !important; border: none !important; }
+        .btn-batal { background: #f8f9fa !important; color: #333 !important; border: 1px solid #ddd !important; }
 
-        /* --- 3. KHUSUS CETAK (OPTIMASI 1 HALAMAN) --- */
+        /* --- 3. FIX CETAK (1 HALAMAN LANDSCAPE) --- */
         @media print {
             @page { size: A4 landscape; margin: 0.5cm; }
-            body { background: white; padding: 0; margin: 0; font-size: 10px; }
-            .paper-container { width: 100%; max-width: none; box-shadow: none; padding: 0; margin: 0; overflow: visible; }
+            body { background: white; padding: 0; margin: 0; }
+            .paper-container { width: 100% !important; max-width: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; }
             .no-print, .nav-control, #polaModal, .generator-section { display: none !important; }
             
-            /* Agar muat satu halaman tanpa merusak proporsi vertikal */
-            table { width: 100%; min-width: 100%; table-layout: fixed; }
-            th { height: 30px; font-size: 9px; }
-            td { height: 28px; font-size: 9px; }
-            .col-nama { width: 160px; }
-            .td-nama { font-size: 9px; }
-            .cell-spacer { height: 8px; }
-            .header h2 { font-size: 20px !important; }
-            .header h3 { font-size: 16px !important; }
-            .header img { height: 50px; }
+            /* Zoom Otomatis agar muat 1 halaman */
+            table { font-size: 9px; width: 100% !important; zoom: 0.92; }
+            .col-nama { width: 220px !important; }
+            .cell-dinas { border: 1px solid #000 !important; opacity: 1 !important; }
+            th, td { border: 1px solid #000 !important; }
+            .footer-ket { font-size: 10px !important; border-top: 1.5px solid #000 !important; }
         }
     </style>
 </head>
@@ -101,7 +89,17 @@
                 <a href="?month={{ prev_month }}&year={{ prev_year }}" style="text-decoration:none; color: #007bff;">&laquo; Bulan Sebelumnya</a> | 
                 <a href="?month={{ next_month }}&year={{ next_year }}" style="text-decoration:none; color: #007bff;">Bulan Selanjutnya &raquo;</a>
             </div>
-            <button onclick="window.print()" style="padding: 8px 20px; cursor:pointer; font-weight:bold; background:#2c3e50; color:white; border:none; border-radius:6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">🖨️ CETAK JADWAL</button>
+            
+            <div style="display: flex; gap: 10px;">
+                {% if request.user|has_group:"koordinator" %}
+                <a href="{% url 'approve_all_jadwal' %}?month={{ month }}&year={{ year }}" 
+                   onclick="return confirm('Setujui semua jadwal pending?')"
+                   style="padding: 8px 18px; text-decoration:none; font-weight:bold; background:#27ae60; color:white; border-radius:8px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">
+                    ✅ SETUJUI SEMUA
+                </a>
+                {% endif %}
+                <button onclick="window.print()" style="padding: 8px 18px; cursor:pointer; font-weight:bold; background:#2c3e50; color:white; border:none; border-radius:8px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">🖨️ CETAK JADWAL</button>
+            </div>
         </div>
 
         <table id="table-jadwal">
@@ -126,15 +124,18 @@
                     </td>
                     {% for d in days_range %}
                         {% with cell=item.hari|get_item:d %}
-                        <td class="cell-dinas" style="background-color: {{ cell.warna }};" 
+                        <td class="cell-dinas" 
+                            style="background-color: {{ cell.warna }}; 
+                                {% if not cell.is_approved and cell.kode %} border: 1.5px dashed #ff4d4d; opacity: 0.8; {% endif %}" 
                             data-pegawai-id="{{ item.pegawai.id }}" 
-                            data-date="{{ year }}-{{ month|stringformat:'02d' }}-{{ d|stringformat:'02d' }}">
+                            data-date="{{ year }}-{{ month|stringformat:'02d' }}-{{ d|stringformat:'02d' }}"
+                            title="{% if not cell.is_approved and cell.kode %}Pending Approval Koordinator{% endif %}">
                             {{ cell.kode }}
                         </td>
                         {% endwith %}
                     {% endfor %}
-                    <td rowspan="2" style="font-weight: bold; background: #fffde7;" id="total-jam-{{ item.pegawai.id }}">{{ item.total_jam|floatformat:0 }}</td>
-                    <td rowspan="2" style="font-weight: bold; background: #fffde7;" id="uang-makan-{{ item.pegawai.id }}">{{ item.uang_makan }}</td>
+                    <td rowspan="2" style="font-weight: bold; background: #fffde7; font-size: 9.5px;" id="total-jam-{{ item.pegawai.id }}">{{ item.total_jam|floatformat:0 }}</td>
+                    <td rowspan="2" style="font-weight: bold; background: #fffde7; font-size: 9.5px;" id="uang-makan-{{ item.pegawai.id }}">{{ item.uang_makan }}</td>
                 </tr>
                 <tr>
                     {% for d in days_range %} <td class="cell-spacer"></td> {% endfor %}
@@ -143,17 +144,21 @@
             </tbody>
         </table>
 
+        <div class="footer-ket">
+            KETERANGAN : PS=07.30-20.00 | MT=19.30-08.00 | PSM=24 Jam | R=Reguler
+        </div>
+
         <div id="polaModal">
-            <div class="modal-title">PILIH POLA DINAS</div>
+            <div class="modal-section-title">Pilih Pola Dinas</div>
             <div class="btn-grid">
                 <button onclick="selectPola('PSM')" style="background: #c8d6e5;">PSM</button>
                 <button onclick="selectPola('PS')" style="background: #67CA16; color: white;">PS</button>
                 <button onclick="selectPola('MT')" style="background: #B3CED6;">MT</button>
                 <button onclick="selectPola('P')" style="background: #90AB8B; color: white;">Pagi</button>
                 <button onclick="selectPola('S')" style="background: #927B67; color: white;">Siang</button>
-                <button onclick="selectPola('M1')" style="background: #ddd;">M1</button>
+                <button onclick="selectPola('M')" style="background: #ddd;">Malam</button>
             </div>
-            <div class="modal-title">STATUS LAIN</div>
+            <div class="modal-section-title">Status Lain</div>
             <div class="btn-grid">
                 <button onclick="selectPola('R')">Reguler</button>
                 <button onclick="selectPola('WFA')" style="background:#d1ecf1;">WFA</button>
@@ -164,19 +169,17 @@
                 <button onclick="selectPola('CB')" style="background:#ee5253; color: white;">CB</button>
                 <button onclick="selectPola('LN')" style="background:#F25016; color: white;">LN</button>
             </div>
-            <div style="display: flex; gap: 8px; margin-top: 5px;">
-                <button onclick="selectPola('')" style="flex:1; background:#ff4d4d !important; color:white; border:none;">Hapus</button>
-                <button onclick="closeModal()" style="flex:1;">Batal</button>
+            <div style="display: flex; gap: 10px; margin-top: 5px;">
+                <button onclick="selectPola('')" class="btn-hapus" style="flex:1;">Hapus</button>
+                <button onclick="closeModal()" class="btn-batal" style="flex:1;">Batal</button>
             </div>
         </div>
         
-        <div class="generator-section" style="margin-top: 30px;">
+        {% if request.user|has_group:"koordinator" %}
+        <div class="generator-section no-print" style="margin-top: 40px; border-top: 1px dashed #ccc; padding-top: 20px;">
             {% include "jadwal/partial_generator.html" %} 
         </div>
-
-        <div style="margin-top: 20px; font-weight: bold; border-top: 1px solid #ccc; padding-top: 10px;">
-            KETERANGAN : PS=07.30-20.00 | MT=19.30-08.00 | PSM=24 Jam | R=Reguler
-        </div>
+        {% endif %}
     </div>
 
 <script>
@@ -184,33 +187,33 @@
     let currentPegawaiId = null;
     let currentDate = null;
 
-    // Mewarnai Header Weekend (Sabtu & Minggu)
+    // Mewarnai Header Weekend
     document.querySelectorAll('.th-date').forEach(th => {
         const day = parseInt(th.getAttribute('data-day'));
         const dateObj = new Date({{ year }}, {{ month }} - 1, day);
         if (dateObj.getDay() === 0 || dateObj.getDay() === 6) th.classList.add('th-weekend');
     });
 
-    // Menampilkan Modal di posisi Klik
+    // Event Klik Sel
     document.querySelectorAll('.cell-dinas').forEach(cell => {
         cell.onclick = function(e) {
-            currentCell = this;
-            currentPegawaiId = this.getAttribute('data-pegawai-id');
-            currentDate = this.getAttribute('data-date');
-            const modal = document.getElementById('polaModal');
-            modal.style.display = 'block';
-            
-            // Positioning modal agar tidak terpotong layar
-            let leftPos = e.pageX;
-            if (leftPos + 330 > window.innerWidth) leftPos = window.innerWidth - 340;
-            modal.style.left = leftPos + 'px';
-            modal.style.top = e.pageY + 'px';
+            {% if request.user|has_group:"koordinator" or request.user|has_group:"operasional" %}
+                currentCell = this;
+                currentPegawaiId = this.getAttribute('data-pegawai-id');
+                currentDate = this.getAttribute('data-date');
+                const modal = document.getElementById('polaModal');
+                modal.style.display = 'block';
+                
+                let leftPos = e.pageX;
+                if (leftPos + 330 > window.innerWidth) leftPos = window.innerWidth - 340;
+                modal.style.left = leftPos + 'px';
+                modal.style.top = e.pageY + 'px';
+            {% endif %}
         };
     });
 
     function closeModal() { document.getElementById('polaModal').style.display = 'none'; }
 
-    // Kirim Update ke Server
     function selectPola(kode) {
         fetch("{% url 'api_update_jadwal' %}", {
             method: 'POST',
@@ -222,6 +225,17 @@
             if (data.status === 'saved' || data.status === 'deleted') {
                 currentCell.innerText = data.pola;
                 currentCell.style.backgroundColor = data.warna;
+                
+                if (data.is_approved) {
+                    currentCell.style.border = "1px solid #000"; 
+                    currentCell.style.opacity = "1";
+                    currentCell.removeAttribute('title');
+                } else {
+                    currentCell.style.border = "1.5px dashed #ff4d4d"; 
+                    currentCell.style.opacity = "0.8";
+                    currentCell.setAttribute('title', 'Pending Approval Koordinator');
+                }
+
                 document.getElementById(`total-jam-${currentPegawaiId}`).innerText = data.new_total_jam;
                 document.getElementById(`uang-makan-${currentPegawaiId}`).innerText = data.new_uang_makan;
                 closeModal();

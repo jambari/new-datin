@@ -6,4 +6,5 @@ urlpatterns = [
     path('api/generate/', views.generate_auto_schedule, name='api_generate_jadwal'),
     path('api/update/', views.update_jadwal_api, name='api_update_jadwal'),
     path('restore/<int:backup_id>/', views.restore_jadwal, name='restore_jadwal'),
+    path('approve-all/', views.approve_all_jadwal, name='approve_all_jadwal'),
 ]

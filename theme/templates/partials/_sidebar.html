@@ -15,6 +15,16 @@
           <span class="ml-3">Logbook</span>
         </a>
       </li>
+
+        <li class="mb-2">
+        <a href="https://drive.google.com/drive/u/1/folders/1rSPdVmh9e0JnaeirS4ehg6_hOAJf99bB" target="_blank" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-gray-700">
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <span class="ml-3">Laporan Operasional</span>
+        </a>
+        </li>
+
       <li class="mb-2">
         <a href="{% url 'gempa_list' %}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-gray-700">
           <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
@@ -31,12 +41,12 @@
         <ul id="dropdown-seismik" class="hidden py-2 space-y-2 ml-4 bg-gray-900 rounded-lg">
             <li>
                 <a href="{% url 'data_availability_list' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Input Availability</span>
+                    <span class="ml-3">Chanel</span>
                 </a>
             </li>
             <li>
                 <a href="{% url 'seismo_availability_query' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Query Availability</span>
+                    <span class="ml-3">Ketersediaan Data Seismik</span>
                 </a>
             </li>
         </ul>
@@ -51,12 +61,12 @@
         <ul id="dropdown-accelero" class="hidden py-2 space-y-2 ml-4 bg-gray-900 rounded-lg">
             <li>
                 <a href="{% url 'accelero_availability_list' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Input Availability</span>
+                    <span class="ml-3">Chanel</span>
                 </a>
             </li>
             <li>
                 <a href="{% url 'accelero_availability_query' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Query Availability</span>
+                    <span class="ml-3">Ketersediaan data Akselerograf</span>
                 </a>
             </li>
         </ul>
@@ -86,7 +96,7 @@
             </li>
             <li>
                 <a href="{% url 'magnet_availability_query' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Data Availability</span>
+                    <span class="ml-3">Ketersediaan data</span>
                 </a>
             </li>
         </ul>
@@ -126,7 +136,7 @@
             </li>
             <li>
                 <a href="{% url 'lightning:lightning_availability_query' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Query Availability</span>
+                    <span class="ml-3">Ketersediaan data</span>
                 </a>
             </li>
             <li>
@@ -193,7 +203,7 @@
               <ul id="dropdown-hujan" class="hidden py-2 space-y-2 ml-4 bg-gray-900 rounded-lg">
                   <li>
                       <a href="{% url 'daftar_hujan' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                          <span class="ml-3">Input / Data Hujan</span>
+                          <span class="ml-3">Data Hujan</span>
                       </a>
                   </li>
                   <li>
@@ -204,16 +214,16 @@
               </ul>
       </li>
 
-    {% if request.user|has_group:"koordinator" %}
-      <li class="mb-2">
-        <a href="{% url 'jadwal_dinas' %}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-gray-700">
-          <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-          </svg>
-          <span class="ml-3">Jadwal Dinas</span>
-        </a>
-      </li>
-      {% endif %}
+        {% if request.user.is_authenticated %}
+        <li class="mb-2">
+            <a href="{% url 'jadwal_dinas' %}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-gray-700">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span class="ml-3">Jadwal Dinas</span>
+            </a>
+        </li>
+        {% endif %}
 
     <li class="mb-2">
         <button type="button" class="flex items-center w-full p-2 text-base font-normal transition duration-75 rounded-lg group hover:bg-gray-700 text-white" onclick="document.getElementById('dropdown-maintenance').classList.toggle('hidden')">

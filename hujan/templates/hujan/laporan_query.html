@@ -190,6 +190,15 @@
                         </tr>
                         {% endfor %}
                     </tbody>
+
+                    <tfoot>
+                        <tr style="font-weight: bold; background-color: #f8f9fa;">
+                            <td colspan="2" style="text-align: center;">Total:</td>
+                            <td style="text-align: center;">{{ stats.total_hujan|floatformat:1 }} mm</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
                 </table>
 
                 {% elif start_date %}

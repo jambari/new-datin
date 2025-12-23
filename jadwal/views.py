@@ -1,8 +1,9 @@
 from django.db.models import Q
 import calendar
 from datetime import date, datetime, timedelta
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from .models import Pegawai, JadwalHarian, PolaDinas, RiwayatJadwal
 import random
@@ -12,7 +13,7 @@ from django.db import transaction
 import json
 from django.views.decorators.csrf import csrf_exempt
 
-@staff_member_required
+@login_required
 def tabel_jadwal(request):
     # Ambil parameter bulan dan tahun dari URL, atau default ke bulan ini
     today = date.today()
@@ -66,10 +67,11 @@ def tabel_jadwal(request):
             is_weekend = current_date.weekday() >= 5 # 5=Sat, 6=Sun
             
             data_sel = jadwal_map.get(tgl)
-            cell_data = {'kode': '', 'warna': '#ffffff', 'css_class': ''}
+            cell_data = {'kode': '', 'warna': '#ffffff', 'is_approved': True}
 
             if data_sel:
                 # Prioritas 1: Keterangan Lain (DL, Cuti, TB)
+                cell_data['is_approved'] = data_sel.is_approved
                 if data_sel.keterangan_lain:
                     if data_sel.keterangan_lain == 'TB':
                         cell_data['kode'] = 'TB'
@@ -314,69 +316,61 @@ def generate_auto_schedule(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
     
 @csrf_exempt
-@staff_member_required
+@login_required
 def update_jadwal_api(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        pegawai_id = data.get('pegawai_id')
-        tanggal_str = data.get('tanggal') 
-        kode_pola = data.get('kode_pola') 
-
         try:
+            data = json.loads(request.body)
+            pegawai_id = data.get('pegawai_id')
+            tanggal_str = data.get('tanggal') 
+            kode_pola = data.get('kode_pola') 
+
             pegawai = Pegawai.objects.get(id=pegawai_id)
             tgl = datetime.strptime(tanggal_str, "%Y-%m-%d").date()
             
-            # 1. PROSES SIMPAN / HAPUS JADWAL
+            # Cek apakah user adalah koordinator
+            is_koordinator = request.user.groups.filter(name='koordinator').exists()
+            # Jika koordinator, otomatis approved. Jika operasional, butuh approval.
+            status_approval = True if is_koordinator else False
+
             pola_obj = None
             if not kode_pola:
-                # Jika kode kosong, hapus jadwal
+                # Menghapus jadwal dianggap aksi yang sudah approved
                 JadwalHarian.objects.filter(pegawai=pegawai, tanggal=tgl).delete()
-                status_res = 'deleted'
-                warna_res = 'transparent'
-                kode_res = ''
+                status_res, warna_res, kode_res = 'deleted', 'transparent', ''
+                status_approval = True 
             else:
-                # Cari Pola
                 pola_obj = PolaDinas.objects.filter(kode=kode_pola).first()
                 if not pola_obj:
                      return JsonResponse({'status': 'error', 'message': 'Pola tidak valid'})
 
-                # Update atau Create
+                # Simpan jadwal dengan status approval dan pencatat editor
                 JadwalHarian.objects.update_or_create(
                     pegawai=pegawai,
                     tanggal=tgl,
-                    defaults={'pola': pola_obj}
+                    defaults={
+                        'pola': pola_obj,
+                        'is_approved': status_approval,
+                        'edited_by': request.user
+                    }
                 )
-                status_res = 'saved'
-                warna_res = pola_obj.warna
-                kode_res = pola_obj.kode
+                status_res, warna_res, kode_res = 'saved', pola_obj.warna, pola_obj.kode
 
-            # 2. HITUNG ULANG TOTAL JAM & UM (Real-time Calculation)
-            # Ambil bulan dan tahun dari tanggal yang diedit
-            month = tgl.month
-            year = tgl.year
-            
-            # Hitung total durasi bulan ini untuk pegawai ini saja
+            # Hitung ulang Total Jam & Uang Makan
+            month, year = tgl.month, tgl.year
             jadwal_sebulan = JadwalHarian.objects.filter(
-                pegawai=pegawai,
-                tanggal__month=month,
-                tanggal__year=year
+                pegawai=pegawai, tanggal__month=month, tanggal__year=year
             ).select_related('pola')
 
-            total_jam_baru = 0
-            for j in jadwal_sebulan:
-                if j.pola and j.pola.durasi:
-                    total_jam_baru += j.pola.durasi
-            
-            # Hitung Uang Makan (UM)
+            total_jam_baru = sum(j.pola.durasi for j in jadwal_sebulan if j.pola and j.pola.durasi)
             uang_makan_baru = int(total_jam_baru / 7.5)
 
-            # 3. KIRIM BALIK KE BROWSER
             return JsonResponse({
                 'status': status_res,
                 'pola': kode_res,
                 'warna': warna_res,
-                # Data baru untuk update tabel:
-                'new_total_jam': int(total_jam_baru), # Kirim angka bulat
+                'is_approved': status_approval,
+                'new_total_jam': int(total_jam_baru),
                 'new_uang_makan': uang_makan_baru
             })
 
@@ -384,7 +378,6 @@ def update_jadwal_api(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
-
 def create_backup(month, year, user, note="Backup Otomatis"):
     # 1. Ambil semua jadwal bulan itu
     jadwal_objs = JadwalHarian.objects.filter(
@@ -438,3 +431,24 @@ def restore_jadwal(request, backup_id):
                 continue # Skip jika pegawai/pola sdh dihapus master datanya
                 
     return redirect(f'/jadwal/?month={month}&year={year}')
+
+@login_required
+def approve_all_jadwal(request):
+    # Pastikan hanya koordinator yang bisa akses
+    if not request.user.groups.filter(name='koordinator').exists():
+        return JsonResponse({'status': 'error', 'message': 'Hanya Koordinator yang bisa menyetujui'}, status=403)
+    
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    
+    if month and year:
+        # Set is_approved jadi True untuk semua jadwal di bulan tersebut
+        JadwalHarian.objects.filter(
+            tanggal__month=month, 
+            tanggal__year=year, 
+            is_approved=False
+        ).update(is_approved=True)
+        
+        return redirect(f'/jadwal/?month={month}&year={year}')
+    
+    return JsonResponse({'status': 'error', 'message': 'Parameter tidak lengkap'})
