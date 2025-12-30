@@ -25,11 +25,26 @@
         </a>
         </li>
 
-      <li class="mb-2">
-        <a href="{% url 'gempa_list' %}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-gray-700">
-          <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-          <span class="ml-3">Gempa Bumi</span>
-        </a>
+        <li class="mb-2">
+        <button type="button" class="flex items-center w-full p-2 text-base font-normal transition duration-75 rounded-lg group hover:bg-gray-700 text-white" onclick="document.getElementById('dropdown-gempa-new').classList.toggle('hidden')">
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+            <span class="flex-1 ml-3 text-left whitespace-nowrap">Gempa bumi</span>
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+        </button>
+        <ul id="dropdown-gempa-new" class="hidden py-2 space-y-2 ml-4 bg-gray-900 rounded-lg">
+            <li>
+                <a href="{% url 'gempa_list' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
+                    <span class="ml-3">Repository</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'seismicity_analysis' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
+                    <span class="ml-3">Integrasi</span>
+                </a>
+            </li>
+        </ul>
       </li>
 
       <li class="mb-2">
@@ -144,11 +159,11 @@
                     <span class="ml-3">Hitung sambaran</span>
                 </a>
             </li>
-            <li>
+            <!-- <li>
                 <a href="#"flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
                     <span class="ml-3">Instagram Post (Beta)</span>
                 </a>
-            </li>
+            </li> -->
         </ul>
       </li>
 

@@ -26,6 +26,7 @@ def index(request):
     tz_jayapura = zoneinfo.ZoneInfo("Asia/Jayapura")
     now_jayapura = timezone.now().astimezone(tz_jayapura)
     today_jayapura = now_jayapura.date()
+    yesterday_jayapura = today_jayapura - timezone.timedelta(days=1)
     
     # 1. Cek Jadwal Air Hujan (Setiap Senin)
     # weekday() returns 0 for Monday
@@ -33,6 +34,11 @@ def index(request):
     
     # 2. Cek Jadwal HV Sampler di Database untuk hari ini
     hv_today = JadwalHVSampler.objects.filter(tanggal=today_jayapura).first()
+    # 3. Cek Jadwal HV Sampler kemarin (Pengangkatan)
+    hv_yesterday = JadwalHVSampler.objects.filter(tanggal=yesterday_jayapura).first()
+
+    # Gabungkan logika: jika ada jadwal hari ini ATAU kemarin, tampilkan input HV Sampler
+    show_hv_fields = True if (hv_today or hv_yesterday) else False
     
     # --- LOGIC PENYIMPANAN DATA (POST) ---
     if request.method == 'POST':
@@ -96,6 +102,8 @@ def index(request):
         # Variabel Notifikasi Jadwal
         'is_hari_senin': is_hari_senin,
         'hv_today': hv_today,
+        'hv_yesterday': hv_yesterday,
+        'show_hv_fields': show_hv_fields,
     }
     return render(request, 'logbook/index.html', context)
 

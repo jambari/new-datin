@@ -382,72 +382,111 @@
         document.getElementById('dispAvg').innerText = avg;
     }
 
-    function renderVisuals(data) {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = "";
-        const labels = [], valsPlus = [], valsMinus = [];
+ function renderVisuals(data) {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = "";
+    const labels = [], valsPlus = [], valsMinus = [];
 
-        data.sort((a,b) => new Date(a.date) - new Date(b.date));
+    // Variabel untuk akumulasi total
+    let sumPlus = 0;
+    let sumMinus = 0;
+    let sumTotal = 0;
 
-        data.forEach((row, idx) => {
-            const tr = `
-                <tr>
-                    <td>${idx + 1}</td>
-                    <td>${row.date}</td>
-                    <td style="color:#dc3545;">${row.cg_plus}</td>
-                    <td style="color:#0d6efd;">${row.cg_minus}</td>
-                    <td style="font-weight:bold;">${row.total}</td>
-                </tr>
-            `;
-            tbody.innerHTML += tr;
+    data.sort((a,b) => new Date(a.date) - new Date(b.date));
 
-            labels.push(row.date);
-            valsPlus.push(row.cg_plus);
-            valsMinus.push(row.cg_minus);
-        });
+    data.forEach((row, idx) => {
+        // Akumulasi nilai
+        sumPlus += (row.cg_plus || 0);
+        sumMinus += (row.cg_minus || 0);
+        sumTotal += (row.total || 0);
 
-        const ctx = document.getElementById('mainChart').getContext('2d');
-        if(myChart) myChart.destroy();
+        const tr = `
+            <tr>
+                <td>${idx + 1}</td>
+                <td>${row.date}</td>
+                <td style="color:#dc3545;">${(row.cg_plus || 0).toLocaleString()}</td>
+                <td style="color:#0d6efd;">${(row.cg_minus || 0).toLocaleString()}</td>
+                <td style="font-weight:bold;">${(row.total || 0).toLocaleString()}</td>
+            </tr>
+        `;
+        tbody.innerHTML += tr;
 
-        myChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'CG+',
-                        data: valsPlus,
-                        backgroundColor: '#dc3545',
-                        borderRadius: 3
-                    },
-                    {
-                        label: 'CG-',
-                        data: valsMinus,
-                        backgroundColor: '#0d6efd',
-                        borderRadius: 3
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { boxWidth: 10, font: {size: 11} } },
-                    datalabels: { 
-                        display: true,
-                        color: '#444',
-                        anchor: 'end',
-                        align: 'top',
-                        offset: -4,
-                        font: { size: 9, weight: 'bold' }
-                    }
+        labels.push(row.date);
+        valsPlus.push(row.cg_plus);
+        valsMinus.push(row.cg_minus);
+    });
+
+    // Hitung Rata-rata
+    const count = data.length;
+    const avgPlus = count > 0 ? (sumPlus / count).toFixed(1) : 0;
+    const avgMinus = count > 0 ? (sumMinus / count).toFixed(1) : 0;
+    const avgTotal = count > 0 ? (sumTotal / count).toFixed(1) : 0;
+
+    // Tambahkan Baris TOTAL
+    const totalRow = `
+        <tr style="background-color: #eee; font-weight: bold; border-top: 2px solid #333;">
+            <td colspan="2">TOTAL</td>
+            <td style="color:#dc3545;">${sumPlus.toLocaleString()}</td>
+            <td style="color:#0d6efd;">${sumMinus.toLocaleString()}</td>
+            <td style="background-color: #e9ecef;">${sumTotal.toLocaleString()}</td>
+        </tr>
+    `;
+
+    // Tambahkan Baris RATA-RATA
+    const avgRow = `
+        <tr style="background-color: #f8f9fa; font-weight: bold;">
+            <td colspan="2">RATA-RATA PER HARI</td>
+            <td style="color:#dc3545;">${avgPlus}</td>
+            <td style="color:#0d6efd;">${avgMinus}</td>
+            <td style="background-color: #f1f3f5;">${avgTotal}</td>
+        </tr>
+    `;
+
+    tbody.innerHTML += totalRow + avgRow;
+
+    // --- Bagian Chart tetap sama ---
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    if(myChart) myChart.destroy();
+
+    myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'CG+',
+                    data: valsPlus,
+                    backgroundColor: '#dc3545',
+                    borderRadius: 3
                 },
-                scales: {
-                    y: { beginAtZero: true },
-                    x: { ticks: { maxRotation: 90, minRotation: 90, font: {size: 10} } }
+                {
+                    label: 'CG-',
+                    data: valsMinus,
+                    backgroundColor: '#0d6efd',
+                    borderRadius: 3
                 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 10, font: {size: 11} } },
+                datalabels: { 
+                    display: true,
+                    color: '#444',
+                    anchor: 'end',
+                    align: 'top',
+                    offset: -4,
+                    font: { size: 9, weight: 'bold' }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true },
+                x: { ticks: { maxRotation: 90, minRotation: 90, font: {size: 10} } }
             }
-        });
-    }
+        }
+    });
+}
 </script>
 {% endblock %}

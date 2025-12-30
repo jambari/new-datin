@@ -50,7 +50,16 @@
                     <div class="form-group hidden" id="div_petugas_selanjutnya">
                         <label class="form-label">{{ form.petugas_selanjutnya.label }}</label>{{ form.petugas_selanjutnya }}
                     </div>
-
+                    {% if form.instance.hv_counter_hour or show_hv_fields %}
+                        <div class="my-4 p-4 rounded-lg border bg-gray-50 border-gray-200">
+                            <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase">Data HV Sampler</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div><label class="form-label text-xs">Counter Hour</label>{{ form.hv_counter_hour }}</div>
+                                <div><label class="form-label text-xs">Flow Rate</label>{{ form.hv_flow_rate }}</div>
+                                <div><label class="form-label text-xs">Berat Kertas (gr)</label>{{ form.hv_berat_kertas }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
                     <hr class="my-4 border-gray-200">
 
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4 form-group">

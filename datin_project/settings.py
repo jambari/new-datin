@@ -162,8 +162,8 @@ LOGIN_REDIRECT_URL = 'dashboard'
 
 LOGOUT_REDIRECT_URL = 'login'
 
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+# DEBUG = True
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
@@ -255,3 +255,7 @@ EMAIL_HOST_PASSWORD = 'Palau2025!@'
 BACKUP_REMOTE_HOST = '36.91.166.188'     # IP of the other server
 BACKUP_REMOTE_USER = 'jamz'             # User on remote server
 BACKUP_REMOTE_PATH = '/var/backups/datin/' # Path on remote server
+
+# settings.py
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880   # 5MB

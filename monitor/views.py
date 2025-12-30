@@ -221,7 +221,7 @@ def seismicity_analysis(request):
         events = events.filter(agency__in=['BMKG-JAY', 'BMKG-NBPI', 'PGR5', 'BMKG-SWI'])
     elif agency == 'PGR_1_ALL':
         # Filter baru untuk PGR I
-        events = events.filter(agency__in=['BMKG-BSI', 'BMKG-DSI', 'BMKG-GSI'])
+        events = events.filter(agency__in=['BMKG-BSI', 'BMKG-DSI', 'BMKG-GSI', 'PGR1'])
     elif agency:
         events = events.filter(agency__iexact=agency)
 
