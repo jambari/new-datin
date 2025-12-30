@@ -1,0 +1,306 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis Seismisitas | BMKG Professional Report</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="{% static 'repository/js/indofaults.js' %}"></script>
+    <script src="{% static 'repository/js/batas_laut_indonesia.js' %}"></script>
+    <script src="{% static 'repository/js/batas_provinsi_papua.js' %}"></script>
+    <script src="{% static 'repository/js/garis_pantai_papua.js' %}"></script>
+    <script src="{% static 'repository/js/subduksi.js' %}"></script>
+    <script src="{% static 'repository/js/newpng.js' %}"></script>
+
+    <style>
+        :root { --bmkg-blue: #1e293b; }
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: #000; overflow-x: hidden; }
+        
+        .navbar { background-color: var(--bmkg-blue) !important; padding: 0.7rem; }
+        .btn-glass { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: white; font-size: 0.75rem; }
+        .formal-frame { background: white; border: 2.5px solid #000; padding: 20px; width: 100%; position: relative; }
+        .header-grid { display: grid; grid-template-columns: 120px 1fr 120px; align-items: center; border-bottom: 2.5px solid #000; padding-bottom: 15px; margin-bottom: 15px; }
+        .title-box { text-align: center; }
+        .t-main { font-weight: 900; font-size: 1.45rem; display: block; text-transform: uppercase; line-height: 1.1; }
+        .t-sub { font-weight: 400; font-style: italic; font-size: 1.15rem; display: block; margin-top: 5px; color: #333; }
+        #map { height: 680px; border: 2px solid #000; width: 100%; z-index: 1; }
+        .legend-grid { display: grid; grid-template-columns: 1.2fr 1.2fr 1fr 1fr; border: 2px solid #000; border-top: none; background: white; }
+        .legend-box { border-right: 1px solid #000; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .legend-box:last-child { border-right: none; }
+        .legend-box img { max-width: 100%; height: auto; display: block; }
+        .legend-t { font-weight: bold; font-size: 0.65rem; border-bottom: 1px solid #000; width: 100%; margin-bottom: 8px; text-transform: uppercase; padding-bottom: 2px; }
+        .excel-table { border-collapse: collapse; width: 100%; font-size: 10px; table-layout: fixed; }
+        .excel-table th, .excel-table td { border: 1px solid black; padding: 4px 6px; text-align: center; overflow: hidden; white-space: nowrap; }
+        .excel-table th { background-color: #d1d5db; font-weight: bold; }
+        .report-card { background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .chart-box { height: 180px; width: 100%; }
+        .badge-item { border-left: 5px solid; padding: 5px 10px; margin-bottom: 8px; background: #f8fafc; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+        .shakemap-grid { max-height: 480px; overflow-y: auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 5px; }
+        #scaleCont .leaflet-control-scale-line { border: 2px solid #000; border-top: none; background: white; font-weight: bold; font-size: 11px; }
+        @media print { .no-print { display: none !important; } .formal-frame { border: none; padding: 0; } body { background: white; } }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark no-print">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="{% url 'public_event_list' %}"><i class="bi bi-activity text-info"></i> Monitoring Gempa</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="{% url 'public_event_list' %}">Data Tabular</a></li>
+                <li class="nav-item"><a class="nav-link active fw-bold" href="{% url 'seismicity_analysis' %}">Analisis Seismisitas</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-white-50 small pe-3 border-end">Total: <strong class="text-white">{{ stats.total }}</strong></span>
+                <a href="{% url 'export_json' %}?{{ request.GET.urlencode }}" class="btn btn-glass btn-sm">JSON API</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid p-4">
+    <ul class="nav nav-pills mb-4 no-print" id="reportTabs" role="tablist">
+        <li class="nav-item"><button class="nav-link active px-4 fw-bold shadow-sm me-2" id="tab-map-btn" data-bs-toggle="pill" data-bs-target="#pane-map">Peta Laporan</button></li>
+        <li class="nav-item"><button class="nav-link px-4 fw-bold shadow-sm" id="tab-stats-btn" data-bs-toggle="pill" data-bs-target="#pane-stats">Statistik & Report</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="pane-map" role="tabpanel">
+            <div class="row">
+                <div class="col-md-4 no-print">
+                    <div class="report-card">
+                        <h6 class="fw-bold border-bottom pb-2 mb-3">Parameter Laporan</h6>
+                        <form method="GET" class="row g-2 mb-3">
+                            <div class="col-6"><label class="small fw-bold">Mulai</label><input type="date" name="start_date" class="form-control form-control-sm" value="{{ filters.start_date }}"></div>
+                            <div class="col-6"><label class="small fw-bold">Selesai</label><input type="date" name="end_date" class="form-control form-control-sm" value="{{ filters.end_date }}"></div>
+                            <div class="col-12">
+                                <label class="small fw-bold">Agency</label>
+                                <select name="agency" class="form-select form-select-sm">
+                                    <option value="PGR_V_ALL" {% if filters.agency == 'PGR_V_ALL' %}selected{% endif %}>Seluruh UPT PGR V (Gabungan)</option>
+                                    <option value="PGR_1_ALL" {% if filters.agency == 'PGR_1_ALL' %}selected{% endif %}>Seluruh UPT PGR I (Gabungan)</option>
+                                    {% for opt in agency_options %}<option value="{{ opt }}" {% if filters.agency == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 mt-2"><button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Update Data</button></div>
+                        </form>
+                        <hr>
+                        <div class="mb-2"><label class="small fw-bold">Wilayah</label><input type="text" id="inT" class="form-control form-control-sm" value="PAPUA DAN SEKITARNYA"></div>
+                        <div class="mb-2"><label class="small fw-bold">Periode</label><input type="text" id="inP" class="form-control form-control-sm" value="DESEMBER 2025"></div>
+                        
+                        <div class="mt-3">
+                            <label class="small fw-bold">Basemap</label>
+                            <select id="selB" class="form-select form-select-sm mb-2">
+                                <option value="Oceans">Esri Oceans</option>
+                                <option value="Topographic">Esri Topography</option>
+                                <option value="Imagery">Esri Imagery</option>
+                                <option value="NationalGeographic">Esri National Geographic</option>
+                                <option value="Gray">Esri Light Gray</option>
+                                <option value="DarkGray">Esri Dark Gray</option>
+                                <option value="Streets">Esri Streets</option>
+                                <option value="Terrain">Esri Terrain</option>
+                            </select>
+                            <label class="small fw-bold">North Arrow</label>
+                            <select id="selA" class="form-select form-select-sm">
+                                <option value="gpt_north_arrow.svg">GPT Compass (SVG)</option>
+                                <option value="north-arrow-2.jpg">Classic Arrow (JPG)</option>
+                                <option value="claude_north_arrow.svg">Claude Modern (SVG)</option>
+                            </select>
+                        </div>
+                        <div class="form-check form-switch mt-3 mb-3">
+                            <input class="form-check-input" type="checkbox" id="swS" checked>
+                            <label class="form-check-label small fw-bold">Tampilkan Kontur Slab</label>
+                        </div>
+                        <button onclick="window.print()" class="btn btn-success btn-sm w-100 fw-bold"><i class="bi bi-printer"></i> Cetak PDF</button>
+                        <br>
+                        <br>
+                        <a href="?{{ request.GET.urlencode }}&export=true" class="btn btn-outline-primary btn-sm fw-bold">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Download .CSV
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="formal-frame shadow-sm">
+                        <div class="header-grid">
+                            <div class="text-start"><img src="{% static 'repository/images/logo-bmkg.png' %}" style="height:85px;"></div>
+                            <div class="title-box">
+                                <span id="outT" class="t-main">PETA SEISMISITAS WILAYAH PAPUA DAN SEKITARNYA</span>
+                                <span id="outP" class="t-sub">PERIODE DESEMBER 2025</span>
+                                <div id="scaleCont" class="mt-2 d-flex justify-content-center"></div>
+                            </div>
+                            <div class="text-end"><img id="outA" src="{% static 'repository/images/gpt_north_arrow.svg' %}" style="width:70px;"></div>
+                        </div>
+                        
+                        <div id="map"></div>
+
+                        <div class="legend-grid">
+                            <div class="legend-box"><span class="legend-t">LEGENDA</span><img src="{% static 'repository/images/legenda.png' %}"></div>
+                            <div class="legend-box"><span class="legend-t"></span><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
+                            <div class="legend-box"><span class="legend-t">UPT / SUMBER</span><div class="fw-bold mt-2" style="font-size:0.85rem;">STASIUN GEOFISIKA JAYAPURA</div></div>
+                            <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1">Total Gempa: {{ stats.total }}<br>M ≥ 5: {{ stats.m_gt_5 }}<br>Felt: {{ stats.felt }}</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="pane-stats" role="tabpanel">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6"><div class="report-card">
+                    <div class="row align-items-center">
+                        <div class="col-3">
+                            <div class="badge-item border-primary">M < 3: {{stats.m_lt_3}}</div>
+                            <div class="badge-item border-warning">3-5: {{stats.m_3_5}}</div>
+                            <div class="badge-item border-danger">M > 5: {{stats.m_gt_5}}</div>
+                        </div>
+                        <div class="col-5"><div class="chart-box"><canvas id="cMB"></canvas></div></div>
+                        <div class="col-4"><div class="chart-box"><canvas id="cMP"></canvas></div></div>
+                    </div>
+                </div></div>
+                <div class="col-md-6"><div class="report-card">
+                    <div class="row align-items-center">
+                        <div class="col-3">
+                            <div class="badge-item border-danger">D < 60: {{stats.d_lt_60}}</div>
+                            <div class="badge-item border-warning">60-300: {{stats.d_60_300}}</div>
+                            <div class="badge-item border-success">D > 300: {{stats.d_gt_300}}</div>
+                        </div>
+                        <div class="col-5"><div class="chart-box"><canvas id="cDB"></canvas></div></div>
+                        <div class="col-4"><div class="chart-box"><canvas id="cDP"></canvas></div></div>
+                    </div>
+                </div></div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-7"><div class="report-card">
+                    <h6 class="fw-bold mb-3 text-center">Recap Frekuensi Harian (Excel Style)</h6>
+                    <table class="excel-table">
+                        <thead>
+                            <tr>
+                                <th style="width:35px;">No</th><th style="width:110px;">Tanggal</th>
+                                <th class="bg-primary text-white" style="width:45px;">M<3</th><th class="bg-primary text-white" style="width:45px;">3-5</th><th class="bg-primary text-white" style="width:45px;">M>5</th>
+                                <th class="bg-danger text-white" style="width:45px;">D<60</th><th class="bg-danger text-white" style="width:45px;">60-300</th><th class="bg-danger text-white" style="width:45px;">D>300</th>
+                                <th style="width:55px;">Tot</th>
+                            </tr>
+                        </thead>
+                        <tbody>{% for d in daily_stats %}<tr><td>{{forloop.counter}}</td><td>{{d.date|date:"d/m/Y"}}</td><td>{{d.m_lt_3}}</td><td>{{d.m_3_5}}</td><td>{{d.m_gt_5}}</td><td>{{d.d_lt_60}}</td><td>{{d.d_60_300}}</td><td>{{d.d_gt_300}}</td><td class="fw-bold bg-light">{{d.total}}</td></tr>{% endfor %}</tbody>
+                    </table>
+                </div></div>
+                <div class="col-md-5"><div class="report-card">
+                    <h6 class="fw-bold mb-3 text-center">Repository Shakemap</h6>
+                    <div class="shakemap-grid">
+                        {% for e in felt_events %}
+                        <div class="text-center">
+                            {% if e.shakemap_image %}<img src="{{ e.shakemap_image.url }}" style="width:100%; border:1px solid #000;">
+                            {% else %}<div class="bg-light py-4 small border">No Map</div>{% endif %}
+                            <div style="font-size:0.65rem;" class="fw-bold mt-1">M{{e.magnitude}} - {{e.event_time|date:"d/m/y"}}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div></div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6"><div class="report-card">
+                    <h6 class="fw-bold mb-3 text-center">Grafik Tren Frekuensi Harian</h6>
+                    <div style="height:250px;"><canvas id="cDay"></canvas></div>
+                </div></div>
+                <div class="col-md-6"><div class="report-card">
+                    <h6 class="fw-bold mb-3 text-center">Daftar Gempa Dirasakan</h6>
+                    <table class="excel-table">
+                        <thead><tr><th style="width:30px;">No</th><th style="width:130px;">Waktu (WIB)</th><th style="width:45px;">Mag</th><th style="width:45px;">Dpt</th><th>Wilayah</th></tr></thead>
+                        <tbody>{% for e in felt_events %}<tr><td>{{forloop.counter}}</td><td>{{e.event_time|date:"d/m/Y H:i"}}</td><td>{{e.magnitude}}</td><td>{{e.depth}}</td><td class="text-start">{{e.location_string}}</td></tr>{% endfor %}</tbody>
+                    </table>
+                </div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. LEAFLET SETUP
+    var map = L.map('map', { zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
+    var base = L.esri.basemapLayer('Oceans').addTo(map);
+
+    // 2. SLAB LAYER (.json)
+    var lyrS = L.layerGroup().addTo(map);
+    const cCat = [[0,20,'rgb(245,0,0)'],[20,40,'rgb(250,75,0)'],[40,60,'rgb(252,118,0)'],[60,80,'rgb(253,160,0)'],[80,100,'rgb(250,160,0)'],[100,120,'rgb(245,245,0)'],[120,200,'rgb(210,247,0)'],[200,300,'rgb(169,247,0)'],[300,400,'rgb(128,247,0)'],[400,500,'rgb(86,247,0)'],[500,660,'rgb(0,245,0)']];
+    
+    d3.json("{% static 'repository/js/slab_indonesia_usgs.json' %}").then(data => {
+        L.geoJSON(data, { style: f => {
+            let d = f.properties.DEPTH, c = 'transparent';
+            for(let r of cCat) if(d>=r[0] && d<=r[1]) c=r[2];
+            return { color: c, weight: 1.5, opacity: 0.8 };
+        }}).addTo(lyrS);
+    });
+
+    // 3. OVERLAYS
+    if(typeof newPng !== 'undefined') {
+        L.geoJSON(newPng, {
+            style: function(feature) {
+                return {
+                    color: "#94a3b8",      
+                    weight: 1,
+                    fillColor: "#f8fafc",  
+                    fillOpacity: 0.8,
+                    pane: 'tilePane'       
+                };
+            }
+        }).addTo(map);
+    }
+
+    if(typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { style: { color: "#000", weight: 0.8 } }).addTo(map);
+    if(typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } }).addTo(map);
+
+    // 4. MARKERS
+    function getCol(d) { return d<=60?'#F00':(d<=300?'#FF0':'#0F0'); }
+    function getRad(m) { return m<=5?6:(m<=7?15:28); }
+    {% for e in events %}
+    L.circleMarker([{{e.latitude}},{{e.longitude}}], { radius:getRad({{e.magnitude}}), fillColor:getCol({{e.depth}}), color:"#000", weight:1, fillOpacity:0.8 }).addTo(map);
+    {% endfor %}
+
+    // 5. SCALE & UI SYNC
+    var scale = L.control.scale({ position: 'topleft', imperial: false }).addTo(map);
+    document.getElementById('scaleCont').appendChild(scale.getContainer());
+
+    document.getElementById('selB').addEventListener('change', e => { 
+        map.removeLayer(base); 
+        base = L.esri.basemapLayer(e.target.value).addTo(map); 
+    });
+    document.getElementById('selA').addEventListener('change', e => { document.getElementById('outA').src = "{% static 'repository/images/' %}" + e.target.value; });
+    document.getElementById('swS').addEventListener('change', e => { if(e.target.checked) map.addLayer(lyrS); else map.removeLayer(lyrS); });
+    document.getElementById('inT').addEventListener('input', e => { document.getElementById('outT').innerText = "PETA SEISMISITAS WILAYAH " + e.target.value.toUpperCase(); });
+    document.getElementById('inP').addEventListener('input', e => { document.getElementById('outP').innerText = "PERIODE " + e.target.value.toUpperCase(); });
+
+    // 6. CHART ENGINE
+    Chart.register(ChartDataLabels);
+    const opt = { responsive: true, maintainAspectRatio: false, plugins: { datalabels: { anchor: 'end', align: 'top', font: { size: 9, weight: 'bold' } }, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } };
+    
+    let rendered = false;
+    function renderCharts() {
+        if (rendered) return;
+        new Chart("cMB", { type:'bar', data:{ labels:['M<3','3-5','>5'], datasets:[{ data:[{{stats.m_lt_3}},{{stats.m_3_5}},{{stats.m_gt_5}}], backgroundColor:['#3b82f6','#f59e0b','#ef4444'] }] }, options:opt });
+        new Chart("cMP", { type:'pie', data:{ labels:['M<3','3-5','>5'], datasets:[{ data:[{{stats.m_lt_3}},{{stats.m_3_5}},{{stats.m_gt_5}}], backgroundColor:['#3b82f6','#f59e0b','#ef4444'] }] } });
+        new Chart("cDB", { type:'bar', data:{ labels:['D<60','60-300','>300'], datasets:[{ data:[{{stats.d_lt_60}},{{stats.d_60_300}},{{stats.d_gt_300}}], backgroundColor:['#ef4444','#f59e0b','#22c55e'] }] }, options:opt });
+        new Chart("cDP", { type:'pie', data:{ labels:['D<60','60-300','>300'], datasets:[{ data:[{{stats.d_lt_60}},{{stats.d_60_300}},{{stats.d_gt_300}}], backgroundColor:['#ef4444','#f59e0b','#22c55e'] }] } });
+        new Chart("cDay", { type:'bar', data:{ labels:[{% for d in daily_stats %}"{{d.date|date:'d/m'}}",{% endfor %}], datasets:[{ data:[{% for d in daily_stats %}{{d.total}},{% endfor %}], backgroundColor:'#3b82f6' }] }, options:{ ...opt, scales:{ y:{ display:true } } } });
+        rendered = true;
+    }
+
+    document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => map.invalidateSize());
+    document.getElementById('tab-stats-btn').addEventListener('shown.bs.tab', () => renderCharts());
+</script>
+
+</body>
+</html>

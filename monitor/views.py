@@ -5,13 +5,16 @@ from rest_framework.response import Response
 from .models import EarthquakeEvent
 from .serializers import EarthquakeEventSerializer
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import requests
 from django.contrib.gis.geos import GEOSGeometry, Point
 import json
 import os
 from django.conf import settings
+from django.db.models import Count, Q
+from django.db.models.functions import TruncDate
+from repository.models import ShakemapEvent
 
 # --- API View (Penerima Data dari Windows) ---
 @api_view(['POST'])
@@ -204,3 +207,73 @@ def webgis_event_detail(request, event_id):
         'event': event,
     }
     return render(request, 'monitor/webgis_detail.html', context)
+
+def seismicity_analysis(request):
+    events = EarthquakeEvent.objects.all()
+    
+# --- LOGIKA FILTER ---
+    agency = request.GET.get('agency')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if agency == 'PGR_V_ALL':
+        # List akurat untuk PGR V (Total ~208)
+        events = events.filter(agency__in=['BMKG-JAY', 'BMKG-NBPI', 'PGR5', 'BMKG-SWI'])
+    elif agency == 'PGR_1_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['BMKG-BSI', 'BMKG-DSI', 'BMKG-GSI'])
+    elif agency:
+        events = events.filter(agency__iexact=agency)
+
+    if start_date: events = events.filter(origin_time__date__gte=start_date)
+    if end_date: events = events.filter(origin_time__date__lte=end_date)
+
+# --- TAMBAHAN: LOGIKA EXPORT CSV ---
+    if request.GET.get('export') == 'true':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="analisis_gempa_{datetime.now().strftime("%Y%m%d")}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Event ID', 'Waktu (UTC)', 'Magnitudo', 'Lat', 'Lon', 'Kedalaman', 'Wilayah', 'Agency'])
+        for e in events.order_by('-origin_time'):
+            writer.writerow([e.event_id, e.origin_time, e.magnitude, e.latitude, e.longitude, e.depth, e.region, e.agency])
+        return response
+
+    # --- AMBIL DATA SHAKEMAP (REPOSITORY) ---
+    felt_events = ShakemapEvent.objects.all()
+    if start_date: felt_events = felt_events.filter(event_time__date__gte=start_date)
+    if end_date: felt_events = felt_events.filter(event_time__date__lte=end_date)
+    felt_events = felt_events.order_by('-event_time')
+
+    # --- STATISTIK ---
+    stats = {
+        'total': events.count(),
+        'felt': felt_events.count(),
+        'm_lt_3': events.filter(magnitude__lt=3.0).count(),
+        'm_3_5': events.filter(magnitude__gte=3.0, magnitude__lt=5.0).count(),
+        'm_gt_5': events.filter(magnitude__gte=5.0).count(),
+        'd_lt_60': events.filter(depth__lt=60).count(),
+        'd_60_300': events.filter(depth__gte=60, depth__lt=300).count(),
+        'd_gt_300': events.filter(depth__gte=300).count(),
+    }
+
+    daily_stats = events.annotate(date=TruncDate('origin_time')).values('date').annotate(
+        total=Count('event_id'),
+        m_lt_3=Count('event_id', filter=Q(magnitude__lt=3.0)),
+        m_3_5=Count('event_id', filter=Q(magnitude__gte=3.0, magnitude__lt=5.0)),
+        m_gt_5=Count('event_id', filter=Q(magnitude__gte=5.0)),
+        d_lt_60=Count('event_id', filter=Q(depth__lt=60)),
+        d_60_300=Count('event_id', filter=Q(depth__gte=60, depth__lt=300)),
+        d_gt_300=Count('event_id', filter=Q(depth__gte=300))
+    ).order_by('date')
+
+    agency_options = EarthquakeEvent.objects.exclude(agency__isnull=True).values_list('agency', flat=True).distinct().order_by('agency')
+
+    context = {
+        'events': events,
+        'felt_events': felt_events,
+        'stats': stats,
+        'daily_stats': daily_stats,
+        'agency_options': agency_options,
+        'filters': request.GET,
+    }
+    return render(request, 'monitor/seismicity_analysis.html', context)

@@ -69,3 +69,25 @@ class RiwayatJadwal(models.Model):
 
     def __str__(self):
         return f"{self.keterangan} - {self.created_at.strftime('%d/%m %H:%M')}"
+    
+class JadwalHVSampler(models.Model):
+    TIPE_CHOICES = [
+        ('PS', 'Pasang Filter SPM (08.00)'),
+        ('AK', 'Angkat Filter SPM (08.00)'),
+    ]
+    
+    tanggal = models.DateField()
+    tipe = models.CharField(max_length=2, choices=TIPE_CHOICES)
+    catatan_khusus = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Contoh: Listrik padam, kebakaran hutan, pembongkaran gedung, dll."
+    )
+
+    class Meta:
+        verbose_name = "Jadwal HV Sampler"
+        verbose_name_plural = "Jadwal HV Sampler"
+        ordering = ['tanggal']
+
+    def __str__(self):
+        return f"{self.tanggal} - {self.get_tipe_display()}"
