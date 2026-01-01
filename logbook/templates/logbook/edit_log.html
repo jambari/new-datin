@@ -6,16 +6,29 @@
   
   <style>
       .compact-container { max-width: 800px; margin: 0 auto; width: 95%; }
-      .btn-custom-submit {
-          background-color: #eab308 !important; /* Warna Kuning untuk Edit */
-          color: white !important;
-          padding: 10px 20px; border-radius: 6px; font-weight: bold;
-          border: none; cursor: pointer; width: 100%; transition: 0.2s;
-      }
-      .btn-custom-submit:hover { background-color: #ca8a04 !important; }
       .form-label { font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 4px; display: block; }
       .form-control { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9rem; }
-      .form-group { margin-bottom: 12px; }
+
+      /* --- FORCE HORIZONTAL CHECKBOX --- */
+      #div_petugas_sebelum ul, #div_petugas_selanjutnya ul {
+          display: flex !important;
+          flex-direction: row !important;
+          flex-wrap: wrap !important;
+          gap: 10px 25px !important;
+          list-style: none !important;
+          padding: 15px !important;
+          background: #f9fafb;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          margin-top: 5px !important;
+      }
+      #div_petugas_sebelum li, #div_petugas_selanjutnya li { display: inline-flex !important; align-items: center !important; }
+      #div_petugas_sebelum input[type="checkbox"], #div_petugas_selanjutnya input[type="checkbox"] { margin-right: 8px !important; width: 18px; height: 18px; }
+      #div_petugas_sebelum label, #div_petugas_selanjutnya label { font-size: 0.85rem !important; font-weight: normal !important; color: #334155; }
+      /* --- END STYLING --- */
+
+      .btn-custom-submit { background-color: #eab308 !important; color: white !important; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; }
+      .hv-box { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin: 15px 0; }
   </style>
 
   {% include 'partials/_sidebar.html' %}
@@ -25,33 +38,32 @@
 
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
         <div class="compact-container">
-            
             <a href="{% url 'logbook:logbook_list' %}" class="inline-flex items-center mb-4 text-gray-600 hover:text-gray-900">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                Kembali ke Daftar
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> Kembali
             </a>
 
             <div class="bg-white shadow rounded-lg p-6 border-t-4 border-yellow-500">
-                <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">
-                    Edit Logbook ({{ log_entry.tanggal|date:"d M Y" }})
-                </h2>
+                <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">Edit Logbook</h2>
 
                 <form method="POST">
                     {% csrf_token %}
-                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 form-group">
-                        <div><label class="form-label">{{ form.shift.label }}</label>{{ form.shift }}</div>
-                        <div><label class="form-label">{{ form.status_absen.label }}</label>{{ form.status_absen }}</div>
+                        <div><label class="form-label">Shift</label>{{ form.shift }}</div>
+                        <div><label class="form-label">Status Absen</label>{{ form.status_absen }}</div>
                     </div>
 
-                    <div class="form-group" id="div_petugas_sebelum">
-                        <label class="form-label">{{ form.petugas_sebelum.label }}</label>{{ form.petugas_sebelum }}
+                    <div id="div_petugas_sebelum" class="form-group">
+                        <label class="form-label">Petugas Shift Sebelumnya</label>
+                        {{ form.petugas_sebelum }}
                     </div>
-                    <div class="form-group hidden" id="div_petugas_selanjutnya">
-                        <label class="form-label">{{ form.petugas_selanjutnya.label }}</label>{{ form.petugas_selanjutnya }}
+                    
+                    <div id="div_petugas_selanjutnya" class="form-group hidden">
+                        <label class="form-label">Petugas Shift Selanjutnya</label>
+                        {{ form.petugas_selanjutnya }}
                     </div>
+
                     {% if form.instance.hv_counter_hour or show_hv_fields %}
-                        <div class="my-4 p-4 rounded-lg border bg-gray-50 border-gray-200">
+                        <div class="hv-box">
                             <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase">Data HV Sampler</h3>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div><label class="form-label text-xs">Counter Hour</label>{{ form.hv_counter_hour }}</div>
@@ -59,26 +71,20 @@
                                 <div><label class="form-label text-xs">Berat Kertas (gr)</label>{{ form.hv_berat_kertas }}</div>
                             </div>
                         </div>
-                        {% endif %}
-                    <hr class="my-4 border-gray-200">
+                    {% endif %}
 
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 form-group">
+                    <hr class="my-4 border-gray-100">
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 form-group">
                         {% for field in form %}
-                            {% if field.name not in 'shift status_absen petugas_sebelum petugas_selanjutnya catatan' %}
+                            {% if field.name not in 'shift status_absen petugas_sebelum petugas_selanjutnya catatan hv_counter_hour hv_flow_rate hv_berat_kertas' %}
                             <div><label class="form-label text-xs">{{ field.label }}</label>{{ field }}</div>
                             {% endif %}
                         {% endfor %}
                     </div>
 
-                    <div class="form-group mt-4">
-                        <label class="form-label">{{ form.catatan.label }}</label>{{ form.catatan }}
-                    </div>
-
-                    <div class="mt-6">
-                        <button type="submit" class="btn-custom-submit">
-                            Simpan Perubahan
-                        </button>
-                    </div>
+                    <div class="form-group mt-4"><label class="form-label">Catatan</label>{{ form.catatan }}</div>
+                    <button type="submit" class="btn-custom-submit mt-6">Simpan Perubahan</button>
                 </form>
             </div>
         </div>
@@ -92,19 +98,17 @@
         const divSebelum = document.getElementById('div_petugas_sebelum');
         const divSelanjutnya = document.getElementById('div_petugas_selanjutnya');
 
-        if(statusField && divSebelum && divSelanjutnya){
-            function toggleFields() {
-                if (statusField.value === 'Masuk') {
-                    divSebelum.classList.remove('hidden');
-                    divSelanjutnya.classList.add('hidden');
-                } else {
-                    divSebelum.classList.add('hidden');
-                    divSelanjutnya.classList.remove('hidden');
-                }
+        function toggleFields() {
+            if (statusField.value === 'Masuk') {
+                divSebelum.classList.remove('hidden');
+                divSelanjutnya.classList.add('hidden');
+            } else if (statusField.value === 'Pulang') {
+                divSebelum.classList.add('hidden');
+                divSelanjutnya.classList.remove('hidden');
             }
-            toggleFields();
-            statusField.addEventListener('change', toggleFields);
         }
+        toggleFields();
+        statusField.addEventListener('change', toggleFields);
     });
 </script>
 {% endblock %}

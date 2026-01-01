@@ -54,6 +54,7 @@ def index(request):
             
             # Tetap simpan tanggal berdasarkan input/auto hari ini
             log_entry.save()
+            form.save_m2m()
             
             try:
                 send_telegram_log(log_entry)
@@ -127,6 +128,7 @@ def edit_log(request, log_id):
         form = LogbookForm(request.POST, instance=log_entry)
         if form.is_valid():
             saved_log = form.save()
+            form.save_m2m()
             try:
                 send_telegram_log(saved_log, is_update=True)
             except Exception as e:

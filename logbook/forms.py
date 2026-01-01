@@ -13,8 +13,8 @@ class LogbookForm(forms.ModelForm):
         widgets = {
             'shift': forms.Select(attrs={'class': 'form-control'}),
             'status_absen': forms.Select(attrs={'class': 'form-control', 'id': 'id_status_absen'}),
-            'petugas_sebelum': forms.Select(attrs={'class': 'form-control'}),
-            'petugas_selanjutnya': forms.Select(attrs={'class': 'form-control'}),
+            'petugas_sebelum': forms.CheckboxSelectMultiple(),
+            'petugas_selanjutnya': forms.CheckboxSelectMultiple(),
             'hv_counter_hour': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'hv_flow_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'hv_berat_kertas': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),

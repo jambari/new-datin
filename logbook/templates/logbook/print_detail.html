@@ -41,32 +41,39 @@
             font-weight: bold;
             width: 180px;
         }
-        .status-box {
+        .status-box, .hv-box {
             border: 1px solid #000;
-            padding: 20px;
-            margin-bottom: 30px;
+            padding: 15px;
+            margin-bottom: 25px;
         }
-        .status-grid {
+        .status-grid, .hv-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 10px;
         }
-        .status-item {
+        /* Grid 3 kolom untuk HV Sampler agar sejajar */
+        .hv-grid {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+        .status-item, .hv-item {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             border-bottom: 1px dotted #ccc;
             padding-bottom: 5px;
+        }
+        .item-label {
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
         }
         .status-value {
             font-weight: bold;
         }
-        .status-on { color: black; }
-        .status-off { color: black; text-decoration: underline; }
         
         .notes-box {
             border: 1px solid #000;
             padding: 20px;
-            min-height: 100px;
+            min-height: 80px;
             margin-bottom: 50px;
         }
         .footer {
@@ -78,13 +85,14 @@
         .signature-line {
             margin-top: 60px;
             border-top: 1px solid #000;
-            width: 200px;
+            width: 220px;
             margin-left: auto;
             margin-right: auto;
+            font-weight: bold;
         }
         @media print {
             .no-print { display: none; }
-            body { padding: 0; margin: 2cm; }
+            body { padding: 0; margin: 1.5cm; }
         }
     </style>
 </head>
@@ -117,7 +125,6 @@
             <td class="label">Petugas Jaga</td>
             <td>: {{ log.petugas.get_full_name|default:log.petugas.username|title }}</td>
         </tr>
-        
         <tr>
             <td class="label">Status Absen</td>
             <td>: <strong>{{ log.status_absen }}</strong></td>
@@ -126,42 +133,74 @@
         {% if log.status_absen == 'Masuk' %}
         <tr>
             <td class="label">Menggantikan Petugas</td>
-            <td>: {{ log.petugas_sebelum.get_full_name|default:log.petugas_sebelum.username|default:"-"|title }}</td>
+            <td>: 
+                {% for p in log.petugas_sebelum.all %}
+                    {{ p.get_full_name|default:p.username|title }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    -
+                {% endfor %}
+            </td>
         </tr>
         {% elif log.status_absen == 'Pulang' %}
         <tr>
             <td class="label">Digantikan Oleh</td>
-            <td>: {{ log.petugas_selanjutnya.get_full_name|default:log.petugas_selanjutnya.username|default:"-"|title }}</td>
+            <td>: 
+                {% for p in log.petugas_selanjutnya.all %}
+                    {{ p.get_full_name|default:p.username|title }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    -
+                {% endfor %}
+            </td>
         </tr>
         {% endif %}
     </table>
 
-    <h3 style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-top: 0;">Status Peralatan</h3>
+    {% if log.hv_counter_hour or log.hv_flow_rate or log.hv_berat_kertas %}
+    <h3 style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-top: 10px;">Data HV Sampler</h3>
+    <div class="hv-box">
+        <div class="hv-grid">
+            <div class="hv-item">
+                <span class="item-label">Counter Hour</span>
+                <span class="status-value">{{ log.hv_counter_hour|default:"-" }}</span>
+            </div>
+            <div class="hv-item">
+                <span class="item-label">Flow Rate</span>
+                <span class="status-value">{{ log.hv_flow_rate|default:"-" }}</span>
+            </div>
+            <div class="hv-item">
+                <span class="item-label">Berat Kertas</span>
+                <span class="status-value">{{ log.hv_berat_kertas|default:"-" }} gr</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <h3 style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-top: 10px;">Status Peralatan</h3>
     <div class="status-box">
         <div class="status-grid">
             <div class="status-item">
-                <span>Seiscomp Seismik</span>
-                <span class="status-value {% if log.seiscomp_seismik == 'OFF' %}status-off{% endif %}">{{ log.seiscomp_seismik }}</span>
+                <span class="item-label">Seiscomp Seismik</span>
+                <span class="status-value">{{ log.seiscomp_seismik }}</span>
             </div>
             <div class="status-item">
-                <span>Seiscomp Akselerograf</span>
-                <span class="status-value {% if log.seiscomp_accelero == 'OFF' %}status-off{% endif %}">{{ log.seiscomp_accelero }}</span>
+                <span class="item-label">Seiscomp Akselerograf</span>
+                <span class="status-value">{{ log.seiscomp_accelero }}</span>
             </div>
             <div class="status-item">
-                <span>ESDX</span>
-                <span class="status-value {% if log.esdx == 'OFF' %}status-off{% endif %}">{{ log.esdx }}</span>
+                <span class="item-label">ESDX</span>
+                <span class="status-value">{{ log.esdx }}</span>
             </div>
             <div class="status-item">
-                <span>Petir</span>
-                <span class="status-value {% if log.petir == 'OFF' %}status-off{% endif %}">{{ log.petir }}</span>
+                <span class="item-label">Petir</span>
+                <span class="status-value">{{ log.petir }}</span>
             </div>
             <div class="status-item">
-                <span>LEMI</span>
-                <span class="status-value {% if log.lemi == 'OFF' %}status-off{% endif %}">{{ log.lemi }}</span>
+                <span class="item-label">LEMI</span>
+                <span class="status-value">{{ log.lemi }}</span>
             </div>
             <div class="status-item">
-                <span>Proton</span>
-                <span class="status-value {% if log.proton == 'OFF' %}status-off{% endif %}">{{ log.proton }}</span>
+                <span class="item-label">Proton</span>
+                <span class="status-value">{{ log.proton }}</span>
             </div>
         </div>
     </div>
@@ -180,7 +219,9 @@
         <div style="width: 45%;">
             <p>Jayapura, {{ log.tanggal|date:"d F Y" }}</p>
             <p>Petugas Jaga,</p>
-            <div class="signature-line">{{ log.petugas.get_full_name|default:log.petugas.username|default:"(..........................)"|title }}</div>
+            <div class="signature-line">
+                {{ log.petugas.get_full_name|default:log.petugas.username|title }}
+            </div>
         </div>
     </div>
 

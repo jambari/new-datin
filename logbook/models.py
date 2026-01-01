@@ -8,6 +8,7 @@ class Logbook(models.Model):
         ('Siang', 'Siang'),
         ('Malam', 'Malam'),
         ('Pagi Siang', 'Pagi Siang'),
+        ('Malam Tengah Malam', 'Malam Tengah Malam'),
         ('Pagi Siang Malam', 'Pagi Siang Malam'),
     ]
 
@@ -35,23 +36,19 @@ class Logbook(models.Model):
         verbose_name="Status Absen"
     )
 
-    petugas_sebelum = models.ForeignKey(
+    petugas_sebelum = models.ManyToManyField(
         User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
         blank=True, 
         related_name='logs_as_previous',
         verbose_name="Petugas Shift Sebelumnya"
     )
 
-    petugas_selanjutnya = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='logs_as_next',
-        verbose_name="Petugas Shift Selanjutnya"
-    )
+    petugas_selanjutnya = models.ManyToManyField(
+            User, 
+            blank=True, 
+            related_name='logs_as_next',
+            verbose_name="Petugas Shift Selanjutnya"
+        )
 
     # Existing Fields
     shift = models.CharField(max_length=50, choices=SHIFT_CHOICES)
