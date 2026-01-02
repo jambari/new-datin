@@ -1,0 +1,42 @@
+{% load tz %}
+{% for log in page_obj %}
+<tr>
+    <td style="color: var(--ios-label); font-weight: 500;">{{ log.tanggal|date:"d-m-Y" }}</td>
+    <td style="font-weight: 700;">{{ log.waktu_dibuat|timezone:"Asia/Jayapura"|date:"H:i" }}</td>
+    <td><span style="background: #EEE; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">{{ log.shift }}</span></td>
+    <td>
+        <div style="font-weight: 600;">{{ log.petugas.username|title }}</div>
+        <div style="font-size: 0.75rem; color: var(--ios-label);">
+            {% if log.status_absen == 'Masuk' %}
+                Ganti: {% for p in log.petugas_sebelum.all %}{{ p.username|title }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            {% else %}
+                Diganti: {% for p in log.petugas_selanjutnya.all %}{{ p.username|title }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            {% endif %}
+        </div>
+    </td>
+    <td style="text-align: center;">
+        <a href="{% url 'logbook:edit_log' log.id %}" class="btn-action btn-edit">Edit</a>
+        <a href="{% url 'logbook:print_log_detail' log.id %}" target="_blank" class="btn-action btn-print">Print</a>
+    </td>
+</tr>
+{% empty %}
+<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--ios-label); font-style: italic;">Tidak ada data ditemukan.</td></tr>
+{% endfor %}
+
+{% if page_obj.has_other_pages %}
+<tr>
+    <td colspan="5" style="padding: 12px; background: #F9F9F9;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+            <span>Hal {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+            <div style="display: flex; gap: 8px;">
+                {% if page_obj.has_previous %}
+                    <button onclick="fetchLogs('{{ page_obj.previous_page_number }}')" class="btn-cari" style="padding: 4px 12px; font-size: 0.75rem;">Prev</button>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <button onclick="fetchLogs('{{ page_obj.next_page_number }}')" class="btn-cari" style="padding: 4px 12px; font-size: 0.75rem;">Next</button>
+                {% endif %}
+            </div>
+        </div>
+    </td>
+</tr>
+{% endif %}

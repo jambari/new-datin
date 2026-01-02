@@ -7,7 +7,7 @@ class LogbookForm(forms.ModelForm):
         model = Logbook
         fields = [
             'shift', 'status_absen', 'petugas_sebelum', 'petugas_selanjutnya',
-            'hv_counter_hour', 'hv_flow_rate', 'hv_berat_kertas',
+            'hv_counter_hour', 'hv_flow_rate', 'hv_berat_kertas','hv_jam_pasang', 'hv_jam_angkat',
             'seiscomp_seismik', 'seiscomp_accelero', 'esdx', 'petir', 'lemi', 'proton', 'catatan'
         ]
         widgets = {
@@ -18,6 +18,8 @@ class LogbookForm(forms.ModelForm):
             'hv_counter_hour': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'hv_flow_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'hv_berat_kertas': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'hv_jam_pasang': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'hv_jam_angkat': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
             'seiscomp_seismik': forms.Select(attrs={'class': 'form-control'}),
             'seiscomp_accelero': forms.Select(attrs={'class': 'form-control'}),
             'esdx': forms.Select(attrs={'class': 'form-control'}),

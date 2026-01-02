@@ -1,145 +1,316 @@
 {% extends "base.html" %}
-{% load static %}
-{% load tz %}
+{% load static %}{% load tz %}
 
 {% block content %}
-<div class="flex h-screen bg-gray-100">
-  
-  <style>
-      .compact-container { max-width: 1000px; margin: 0 auto; width: 95%; }
+<style>
+    /* iOS UI Design System */
+    :root {
+        --ios-blue: #007AFF;
+        --ios-green: #34C759;
+        --ios-bg: #F2F2F7;
+        --ios-card: #FFFFFF;
+        --ios-text: #000000;
+        --ios-label: #8E8E93;
+        --ios-border: #C6C6C8;
+        --sidebar-bg: #1e293b; /* Sesuaikan dengan warna sidebar Anda */
+    }
 
-      /* --- PERBAIKAN CSS HORIZONTAL (STRATEGI BARU) --- */
-      #div_petugas_sebelum div, #div_petugas_selanjutnya div {
-          display: block !important;
-      }
-      
-      /* Target langsung ke tag UL yang dibuat Django */
-      #div_petugas_sebelum ul, #div_petugas_selanjutnya ul {
-          display: flex !important;
-          flex-direction: row !important;
-          flex-wrap: wrap !important; /* Supaya otomatis baris baru jika penuh */
-          gap: 10px 25px !important;
-          list-style: none !important;
-          padding: 15px !important;
-          margin: 10px 0 !important;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          width: 100% !important;
-      }
-      
-      #div_petugas_sebelum li, #div_petugas_selanjutnya li {
-          display: inline-flex !important;
-          align-items: center !important;
-          margin: 0 !important;
-          padding: 0 !important;
-      }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--ios-bg);
+        color: var(--ios-text);
+        margin: 0;
+    }
 
-      #div_petugas_sebelum input[type="checkbox"], 
-      #div_petugas_selanjutnya input[type="checkbox"] {
-          margin-right: 8px !important;
-          width: 18px !important;
-          height: 18px !important;
-          cursor: pointer !important;
-      }
+    /* --- FIX SIDEBAR FULL HEIGHT --- */
+    #sidebar {
+        min-height: 100vh; /* Memastikan sidebar selalu setinggi layar */
+        background-color: var(--sidebar-bg);
+        width: 260px;
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+    }
 
-      #div_petugas_sebelum label, #div_petugas_selanjutnya label {
-          font-size: 0.85rem !important;
-          font-weight: normal !important;
-          cursor: pointer !important;
-          display: flex !important;
-          align-items: center !important;
-      }
-      /* --- END STYLING --- */
+    #sidebar.hidden {
+        display: none; /* Skrip toggle akan memicu ini */
+    }
 
-      .form-group { margin-bottom: 12px; }
-      .form-label { font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 4px; display: block; }
-      .form-control { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9rem; }
-      .btn-custom-submit { background-color: #198754 !important; color: white !important; padding: 10px; border-radius: 6px; font-weight: bold; width: 100%; border: none; cursor: pointer; }
-      .hv-box { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin: 15px 0; }
-  </style>
+    .compact-container { max-width: 1000px; margin: 0 auto; width: 92%; padding: 20px 0; }
 
-  {% include 'partials/_sidebar.html' %}
+    /* Card Styling (iOS Style) */
+    .card { 
+        background: var(--ios-card); 
+        padding: 24px; 
+        border-radius: 16px; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04); 
+        margin-bottom: 24px; 
+        border: 1px solid rgba(0,0,0,0.05);
+    }
 
-  <div class="flex-1 flex flex-col overflow-hidden">
-    {% include 'partials/_topbar.html' %} 
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        letter-spacing: -0.3px;
+        color: var(--ios-text);
+    }
 
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4">
-        <div class="compact-container">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6">Logbook Harian</h1>
+    /* Form Controls iOS Style */
+    .form-label { 
+        font-size: 0.75rem; 
+        font-weight: 600; 
+        color: var(--ios-label); 
+        margin-bottom: 6px; 
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
 
-            <div class="bg-white shadow rounded-lg p-6">
-                <h2 class="text-lg font-bold mb-4 text-gray-700 border-b pb-2">Input Log Baru</h2>
+    .form-control, select, textarea { 
+        width: 100%; 
+        padding: 12px 16px; 
+        background-color: #F9F9FB;
+        border: 1px solid #E5E5EA; 
+        border-radius: 12px; 
+        font-size: 1rem; 
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--ios-blue);
+        background-color: #FFFFFF;
+        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+    }
+
+    /* Button Styling */
+    .btn-simpan { 
+        background-color: var(--ios-green); 
+        color: white; 
+        padding: 16px; 
+        border-radius: 14px; 
+        width: 100%; 
+        font-weight: 700; 
+        font-size: 1rem;
+        border: none; 
+        cursor: pointer; 
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-simpan:active { transform: scale(0.97); opacity: 0.9; }
+
+    .btn-cari { 
+        background-color: var(--ios-blue); 
+        color: white; 
+        padding: 8px 18px; 
+        border-radius: 10px; 
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+    }
+
+    /* Checkbox iOS Style */
+    #div_petugas_sebelum ul, #div_petugas_selanjutnya ul { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+        gap: 12px; 
+        list-style: none; 
+        padding: 20px; 
+        background: #F2F2F7; 
+        border-radius: 14px; 
+        border: 1px solid #E5E5EA; 
+        margin: 8px 0;
+    }
+
+    input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        accent-color: var(--ios-blue);
+        cursor: pointer;
+    }
+
+    /* Table iOS Styling */
+    .custom-table { width: 100%; border-collapse: collapse; }
+    .custom-table th { 
+        background: #F9F9FB; 
+        padding: 12px 16px; 
+        text-align: left; 
+        font-size: 0.7rem; 
+        text-transform: uppercase; 
+        color: var(--ios-label);
+        letter-spacing: 0.5px;
+    }
+    .custom-table td { padding: 16px; border-bottom: 1px solid #F2F2F7; }
+    .custom-table tr:last-child td { border-bottom: none; }
+
+    .btn-action { padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; text-decoration: none; margin-left: 4px; }
+    .btn-edit { background: rgba(255, 149, 0, 0.1); color: #FF9500; }
+    .btn-print { background: rgba(0, 122, 255, 0.1); color: var(--ios-blue); }
+
+    .hv-box { 
+        background-color: rgba(255, 149, 0, 0.04); 
+        border: 1px solid rgba(255, 149, 0, 0.15); 
+        border-radius: 14px; 
+        padding: 18px; 
+        margin: 20px 0; 
+    }
+
+    .hidden { display: none; }
+</style>
+
+<div class="flex h-screen bg-gray-100 overflow-hidden">
+    <div id="sidebar">
+        {% include 'partials/_sidebar.html' %}
+    </div>
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+        {% include 'partials/_topbar.html' %}
+
+        <main class="flex-1 overflow-x-hidden overflow-y-auto p-4">
+            <div class="compact-container">
                 
-                <form method="POST">
-                    {% csrf_token %}
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 form-group">
-                        <div><label class="form-label">Shift</label>{{ form.shift }}</div>
-                        <div><label class="form-label">Status Absen</label>{{ form.status_absen }}</div>
-                    </div>
+                {% if notif_rutin %}
+                <div class="card" style="background-color: #E8F2FF; border: none; padding: 16px;">
+                    <strong style="color: var(--ios-blue); font-size: 0.8rem;">🔔 PENGINGAT TUGAS HARI INI</strong>
+                    <ul style="margin: 10px 0 0 18px; color: #3A3A3C; font-size: 0.9rem;">
+                        {% for tugas in notif_rutin %}<li>{{ tugas }}</li>{% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
 
-                    <div id="div_petugas_sebelum" class="form-group">
-                        <label class="form-label">Petugas Shift Sebelumnya (Bisa pilih > 1)</label>
-                        {{ form.petugas_sebelum }}
-                    </div>
+                <div class="card">
+                    <h2 class="card-title">Input Log Baru</h2>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            <div><label class="form-label">Shift Kerja</label>{{ form.shift }}</div>
+                            <div><label class="form-label">Status Absen</label>{{ form.status_absen }}</div>
+                        </div>
 
-                    <div id="div_petugas_selanjutnya" class="form-group hidden">
-                        <label class="form-label">Petugas Shift Selanjutnya (Bisa pilih > 1)</label>
-                        {{ form.petugas_selanjutnya }}
-                    </div>
+                        <div id="div_petugas_sebelum" class="mb-6">
+                            <label class="form-label">Petugas Sebelumnya (Handover)</label>
+                            {{ form.petugas_sebelum }}
+                        </div>
 
-                    {% if show_hv_fields %}
+                        <div id="div_petugas_selanjutnya" class="mb-6 hidden">
+                            <label class="form-label">Petugas Selanjutnya (Handover)</label>
+                            {{ form.petugas_selanjutnya }}
+                        </div>
+
+                        {% if show_hv_fields %}
                         <div class="hv-box">
-                            <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase">Data HV Sampler: {% if hv_today %}Pemasangan{% else %}Pengangkatan{% endif %}</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div><label class="form-label text-xs">Counter Hour</label>{{ form.hv_counter_hour }}</div>
+                            <strong style="font-size: 0.7rem; color: #C97900; letter-spacing: 0.5px;">DATA HV SAMPLER: {% if hv_today %}PASANG{% else %}ANGKAT{% endif %}</strong>
+                            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-3">
+                                <div><label class="form-label text-xs">Counter</label>{{ form.hv_counter_hour }}</div>
                                 <div><label class="form-label text-xs">Flow Rate</label>{{ form.hv_flow_rate }}</div>
-                                <div><label class="form-label text-xs">Berat Kertas (gr)</label>{{ form.hv_berat_kertas }}</div>
+                                <div><label class="form-label text-xs">Berat (gr)</label>{{ form.hv_berat_kertas }}</div>
+                                <div><label class="form-label text-xs">Jam Pasang</label>{{ form.hv_jam_pasang }}</div>
+                                <div><label class="form-label text-xs">Jam Angkat</label>{{ form.hv_jam_angkat }}</div>
                             </div>
                         </div>
-                    {% endif %}
+                        {% endif %}
 
-                    <hr class="my-4 border-gray-100">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-5 mb-6">
+                            {% for field in form %}
+                                {% if field.name not in 'shift status_absen petugas_sebelum petugas_selanjutnya catatan hv_counter_hour hv_flow_rate hv_berat_kertas hv_jam_pasang hv_jam_angkat' %}
+                                <div>
+                                    <label class="form-label">{{ field.label }}</label>
+                                    {{ field }}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 form-group">
-                        {% for field in form %}
-                            {% if field.name not in 'shift status_absen petugas_sebelum petugas_selanjutnya catatan hv_counter_hour hv_flow_rate hv_berat_kertas' %}
-                            <div><label class="form-label text-xs">{{ field.label }}</label>{{ field }}</div>
-                            {% endif %}
-                        {% endfor %}
+                        <div class="mb-6">
+                            <label class="form-label">Catatan Tambahan</label>
+                            {{ form.catatan }}
+                        </div>
+
+                        <button type="submit" class="btn-simpan">Simpan Logbook</button>
+                    </form>
+                </div>
+
+                <div class="card p-0 overflow-hidden">
+                    <div class="p-4 bg-gray-50 flex justify-between items-center border-b">
+                        <div class="flex items-center space-x-3">
+                            <input type="date" id="start_date" value="{{ start_date }}" class="form-control" style="width: 140px; padding: 8px;">
+                            <span style="color: var(--ios-label);">→</span>
+                            <input type="date" id="end_date" value="{{ end_date }}" class="form-control" style="width: 140px; padding: 8px;">
+                            <button onclick="fetchLogs(1)" class="btn-cari">Cari</button>
+                        </div>
+                        <span style="font-size: 0.7rem; color: var(--ios-label); font-weight: 700;">WIT (UTC+9)</span>
                     </div>
 
-                    <div class="form-group mt-4"><label class="form-label">Catatan</label>{{ form.catatan }}</div>
-                    <button type="submit" class="btn-custom-submit mt-4">Simpan Log</button>
-                </form>
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Waktu</th>
+                                <th>Shift</th>
+                                <th>Petugas & Info</th>
+                                <th style="text-align: center;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-table-body">
+                            {% include "logbook/_log_table_partial.html" %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    </main>
-  </div>
+        </main>
+    </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const statusField = document.getElementById('id_status_absen');
-        const divSebelum = document.getElementById('div_petugas_sebelum');
-        const divSelanjutnya = document.getElementById('div_petugas_selanjutnya');
+        // --- Sidebar Toggle Logic ---
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+            });
+        }
 
-        function toggleFields() {
-            if (statusField.value === 'Masuk') {
-                divSebelum.classList.remove('hidden');
-                divSelanjutnya.classList.add('hidden');
-                // Uncheck yang tidak aktif
-                divSelanjutnya.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-            } else if (statusField.value === 'Pulang') {
-                divSebelum.classList.add('hidden');
-                divSelanjutnya.classList.remove('hidden');
-                // Uncheck yang tidak aktif
-                divSebelum.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        // --- Logic Toggle Petugas (Awal/Akhir Shift) ---
+        const s = document.getElementById('id_status_absen'), 
+              b = document.getElementById('div_petugas_sebelum'), 
+              n = document.getElementById('div_petugas_selanjutnya');
+              
+        function toggle() {
+            if (s && s.value === 'Masuk') { 
+                b.classList.remove('hidden'); 
+                n.classList.add('hidden'); 
+            } else if (s) { 
+                b.classList.add('hidden'); 
+                n.classList.remove('hidden'); 
             }
         }
-        toggleFields();
-        statusField.addEventListener('change', toggleFields);
+        if(s) { s.addEventListener('change', toggle); toggle(); }
+
+        // --- AJAX Fetch Data ---
+        window.fetchLogs = function(page = 1) {
+            const start = document.getElementById('start_date').value, 
+                  end = document.getElementById('end_date').value;
+            const target = document.getElementById('log-table-body');
+            
+            if (target) {
+                target.style.opacity = '0.5';
+                fetch(`?start_date=${start}&end_date=${end}&page=${page}`, { 
+                    headers: {'x-requested-with': 'XMLHttpRequest'} 
+                })
+                .then(r => r.text())
+                .then(h => { 
+                    target.innerHTML = h; 
+                    target.style.opacity = '1'; 
+                })
+                .catch(err => {
+                    console.error('Fetch Error:', err);
+                    target.style.opacity = '1';
+                });
+            }
+        }
     });
 </script>
 {% endblock %}

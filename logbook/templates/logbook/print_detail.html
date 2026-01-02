@@ -2,228 +2,74 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Laporan Logbook - {{ log.tanggal }}</title>
+    <title>Laporan - {{ log.tanggal }}</title>
     {% load tz %}
     <style>
-        body {
-            font-family: "Times New Roman", Times, serif;
-            color: #000;
-            background: #fff;
-            padding: 40px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-            text-transform: uppercase;
-        }
-        .header p {
-            margin: 5px 0 0;
-            font-size: 14px;
-        }
-        .meta-table {
-            width: 100%;
-            margin-bottom: 30px;
-            border-collapse: collapse;
-        }
-        .meta-table td {
-            padding: 5px;
-            vertical-align: top;
-        }
-        .label {
-            font-weight: bold;
-            width: 180px;
-        }
-        .status-box, .hv-box {
-            border: 1px solid #000;
-            padding: 15px;
-            margin-bottom: 25px;
-        }
-        .status-grid, .hv-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        /* Grid 3 kolom untuk HV Sampler agar sejajar */
-        .hv-grid {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-        .status-item, .hv-item {
-            display: flex;
-            flex-direction: column;
-            border-bottom: 1px dotted #ccc;
-            padding-bottom: 5px;
-        }
-        .item-label {
-            font-size: 11px;
-            color: #555;
-            text-transform: uppercase;
-        }
-        .status-value {
-            font-weight: bold;
-        }
-        
-        .notes-box {
-            border: 1px solid #000;
-            padding: 20px;
-            min-height: 80px;
-            margin-bottom: 50px;
-        }
-        .footer {
-            margin-top: 50px;
-            display: flex;
-            justify-content: space-between;
-            text-align: center;
-        }
-        .signature-line {
-            margin-top: 60px;
-            border-top: 1px solid #000;
-            width: 220px;
-            margin-left: auto;
-            margin-right: auto;
-            font-weight: bold;
-        }
-        @media print {
-            .no-print { display: none; }
-            body { padding: 0; margin: 1.5cm; }
-        }
+        body { font-family: serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #000; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+        .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .meta-table td { padding: 4px; vertical-align: top; }
+        .label { font-weight: bold; width: 160px; }
+        .hv-box, .status-box { border: 1px solid #000; padding: 12px; margin-bottom: 20px; }
+        .hv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; } /* */
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .item { display: flex; flex-direction: column; border-bottom: 1px dotted #ccc; padding-bottom: 3px; }
+        .item-label { font-size: 10px; text-transform: uppercase; color: #444; }
+        .item-val { font-weight: bold; font-size: 13px; }
+        .footer { margin-top: 40px; display: flex; justify-content: space-between; text-align: center; }
+        .sig { margin-top: 50px; border-top: 1px solid #000; width: 200px; font-weight: bold; padding-top: 5px; margin-left: auto; margin-right: auto; }
+        @media print { .no-print { display: none; } }
     </style>
 </head>
 <body onload="window.print()">
-
-    <div class="no-print" style="margin-bottom: 20px;">
-        <a href="javascript:window.close();" style="text-decoration: none; background: #ddd; padding: 10px 20px; border-radius: 5px; color: #333;">&larr; Kembali / Tutup</a>
-    </div>
-
     <div class="header">
-        <h1>Laporan Logbook Harian</h1>
-        <p>Badan Meteorologi, Klimatologi, dan Geofisika</p>
-        <p>Stasiun Geofisika Kelas I Jayapura</p>
+        <h1>LAPORAN LOGBOOK HARIAN</h1>
+        <p>Badan Meteorologi, Klimatologi, dan Geofisika<br>Stasiun Geofisika Kelas I Jayapura</p>
     </div>
 
     <table class="meta-table">
-        <tr>
-            <td class="label">Tanggal</td>
-            <td>: {{ log.tanggal|date:"d F Y" }}</td>
-        </tr>
-        <tr>
-            <td class="label">Waktu Input (WIT)</td>
-            <td>: {{ log.waktu_dibuat|timezone:"Asia/Jayapura"|date:"H:i:s" }} WIT</td>
-        </tr>
-        <tr>
-            <td class="label">Shift</td>
-            <td>: {{ log.shift }}</td>
-        </tr>
-        <tr>
-            <td class="label">Petugas Jaga</td>
-            <td>: {{ log.petugas.get_full_name|default:log.petugas.username|title }}</td>
-        </tr>
-        <tr>
-            <td class="label">Status Absen</td>
-            <td>: <strong>{{ log.status_absen }}</strong></td>
-        </tr>
-
-        {% if log.status_absen == 'Masuk' %}
-        <tr>
-            <td class="label">Menggantikan Petugas</td>
-            <td>: 
-                {% for p in log.petugas_sebelum.all %}
-                    {{ p.get_full_name|default:p.username|title }}{% if not forloop.last %}, {% endif %}
-                {% empty %}
-                    -
-                {% endfor %}
-            </td>
-        </tr>
-        {% elif log.status_absen == 'Pulang' %}
-        <tr>
-            <td class="label">Digantikan Oleh</td>
-            <td>: 
-                {% for p in log.petugas_selanjutnya.all %}
-                    {{ p.get_full_name|default:p.username|title }}{% if not forloop.last %}, {% endif %}
-                {% empty %}
-                    -
-                {% endfor %}
-            </td>
-        </tr>
-        {% endif %}
+        <tr><td class="label">Tanggal</td><td>: {{ log.tanggal|date:"d F Y" }}</td></tr>
+        <tr><td class="label">Waktu Input</td><td>: {{ log.waktu_dibuat|timezone:"Asia/Jayapura"|date:"H:i:s" }} WIT</td></tr>
+        <tr><td class="label">Shift</td><td>: {{ log.shift }}</td></tr>
+        <tr><td class="label">Petugas Jaga</td><td>: {{ log.petugas.username|title }}</td></tr>
+        <tr><td class="label">Status Absen</td><td>: {{ log.status_absen }}</td></tr>
+        <tr><td class="label">Handover</td><td>: 
+            {% if log.status_absen == 'Masuk' %}Ganti: {% for p in log.petugas_sebelum.all %}{{ p.username|title }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            {% else %}Diganti: {% for p in log.petugas_selanjutnya.all %}{{ p.username|title }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}
+        </td></tr>
     </table>
 
-    {% if log.hv_counter_hour or log.hv_flow_rate or log.hv_berat_kertas %}
-    <h3 style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-top: 10px;">Data HV Sampler</h3>
+    {% if log.hv_counter_hour or log.hv_jam_pasang %}
+    <h4 style="margin: 0 0 5px 0;">DATA HV SAMPLER</h4>
     <div class="hv-box">
         <div class="hv-grid">
-            <div class="hv-item">
-                <span class="item-label">Counter Hour</span>
-                <span class="status-value">{{ log.hv_counter_hour|default:"-" }}</span>
-            </div>
-            <div class="hv-item">
-                <span class="item-label">Flow Rate</span>
-                <span class="status-value">{{ log.hv_flow_rate|default:"-" }}</span>
-            </div>
-            <div class="hv-item">
-                <span class="item-label">Berat Kertas</span>
-                <span class="status-value">{{ log.hv_berat_kertas|default:"-" }} gr</span>
-            </div>
+            <div class="item"><span class="item-label">Jam Pasang</span><span class="item-val">{{ log.hv_jam_pasang|default:"-" }}</span></div>
+            <div class="item"><span class="item-label">Jam Angkat</span><span class="item-val">{{ log.hv_jam_angkat|default:"-" }}</span></div>
+            <div class="item"><span class="item-label">Counter</span><span class="item-val">{{ log.hv_counter_hour|default:"-" }}</span></div>
+            <div class="item"><span class="item-label">Flow Rate</span><span class="item-val">{{ log.hv_flow_rate|default:"-" }}</span></div>
+            <div class="item"><span class="item-label">Berat Kertas</span><span class="item-val">{{ log.hv_berat_kertas|default:"-" }} gr</span></div>
         </div>
     </div>
     {% endif %}
 
-    <h3 style="border-bottom: 1px solid #000; padding-bottom: 5px; margin-top: 10px;">Status Peralatan</h3>
+    <h4 style="margin: 0 0 5px 0;">STATUS PERALATAN</h4>
     <div class="status-box">
         <div class="status-grid">
-            <div class="status-item">
-                <span class="item-label">Seiscomp Seismik</span>
-                <span class="status-value">{{ log.seiscomp_seismik }}</span>
-            </div>
-            <div class="status-item">
-                <span class="item-label">Seiscomp Akselerograf</span>
-                <span class="status-value">{{ log.seiscomp_accelero }}</span>
-            </div>
-            <div class="status-item">
-                <span class="item-label">ESDX</span>
-                <span class="status-value">{{ log.esdx }}</span>
-            </div>
-            <div class="status-item">
-                <span class="item-label">Petir</span>
-                <span class="status-value">{{ log.petir }}</span>
-            </div>
-            <div class="status-item">
-                <span class="item-label">LEMI</span>
-                <span class="status-value">{{ log.lemi }}</span>
-            </div>
-            <div class="status-item">
-                <span class="item-label">Proton</span>
-                <span class="status-value">{{ log.proton }}</span>
-            </div>
+            <div class="item"><span class="item-label">Seiscomp Seismik</span><span class="item-val">{{ log.seiscomp_seismik }}</span></div>
+            <div class="item"><span class="item-label">Seiscomp Accelero</span><span class="item-val">{{ log.seiscomp_accelero }}</span></div>
+            <div class="item"><span class="item-label">ESDX</span><span class="item-val">{{ log.esdx }}</span></div>
+            <div class="item"><span class="item-label">Petir</span><span class="item-val">{{ log.petir }}</span></div>
+            <div class="item"><span class="item-label">LEMI</span><span class="item-val">{{ log.lemi }}</span></div>
+            <div class="item"><span class="item-label">Proton</span><span class="item-val">{{ log.proton }}</span></div>
         </div>
     </div>
 
-    <h3 style="border-bottom: 1px solid #000; padding-bottom: 5px;">Catatan Tambahan</h3>
-    <div class="notes-box">
-        {{ log.catatan|default:"Tidak ada catatan tambahan."|linebreaks }}
-    </div>
+    <h4 style="margin: 0 0 5px 0;">CATATAN TAMBAHAN</h4>
+    <div class="status-box" style="min-height: 80px;">{{ log.catatan|linebreaks|default:"-" }}</div>
 
     <div class="footer">
-        <div style="width: 45%;">
-            <p>Mengetahui,</p>
-            <p>Koordinator/Kepala</p>
-            <div class="signature-line"></div>
-        </div>
-        <div style="width: 45%;">
-            <p>Jayapura, {{ log.tanggal|date:"d F Y" }}</p>
-            <p>Petugas Jaga,</p>
-            <div class="signature-line">
-                {{ log.petugas.get_full_name|default:log.petugas.username|title }}
-            </div>
-        </div>
+        <div style="width: 40%;"><p>Mengetahui,</p><p>Koordinator/Kepala</p><div class="sig"></div></div>
+        <div style="width: 40%;"><p>Jayapura, {{ log.tanggal|date:"d F Y" }}</p><p>Petugas Jaga,</p><div class="sig">{{ log.petugas.username|title }}</div></div>
     </div>
-
 </body>
 </html>
