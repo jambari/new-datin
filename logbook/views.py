@@ -24,9 +24,11 @@ def index(request):
 
     # --- LOGIKA NOTIFIKASI JADWAL RUTIN ---
     notif_rutin = []
-    if day_of_week in [2, 4]: notif_rutin.append("Jadwal Pengamatan Absolut") # Rabu & Jumat
+    if day_of_week == 0: 
+        notif_rutin.append("Pengambilan Sampel Air Hujan pukul 09:00 WIT")
+    if day_of_week in [2, 4]: notif_rutin.append("Jadwal Pengamatan Absolut pukul 09:00 WIT") # Rabu & Jumat
     if day_of_week == 4: notif_rutin.append("Jadwal Pembuatan Infografis") # Jumat
-    if day_of_week in [0, 3]: notif_rutin.append("Jadwal Penyusunan Laporan Prekursor") # Senin & Kamis
+    if day_of_week in [0, 3]: notif_rutin.append("Jadwal Penyusunan Laporan Prekursor pukul 09:00 WIT") # Senin & Kamis
 
     # HV Sampler Logic
     hv_today = JadwalHVSampler.objects.filter(tanggal=today_jayapura).first()
