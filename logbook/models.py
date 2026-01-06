@@ -60,7 +60,7 @@ class Logbook(models.Model):
     proton = models.CharField(max_length=3, choices=STATUS_CHOICES, default='OFF', verbose_name="Proton")
     hv_counter_hour = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Counter Hour")
     hv_flow_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Flow Rate")
-    hv_berat_kertas = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Berat Kertas (gr)")
+    hv_berat_kertas = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name="Berat Kertas (gr)")
     hv_jam_pasang = models.TimeField(null=True, blank=True, verbose_name="Jam Pemasangan HV")
     hv_jam_angkat = models.TimeField(null=True, blank=True, verbose_name="Jam Pengangkatan HV")
     catatan = models.TextField(blank=True, null=True, verbose_name="Catatan")
