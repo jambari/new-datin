@@ -17,7 +17,7 @@ class LogbookForm(forms.ModelForm):
             'petugas_selanjutnya': forms.CheckboxSelectMultiple(),
             'hv_counter_hour': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'hv_flow_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
-            'hv_berat_kertas': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'hv_berat_kertas': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'placeholder': '0.0000'}),
             'hv_jam_pasang': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
             'hv_jam_angkat': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
             'seiscomp_seismik': forms.Select(attrs={'class': 'form-control'}),
