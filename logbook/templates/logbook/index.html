@@ -169,6 +169,14 @@
 
         <main class="flex-1 overflow-x-hidden overflow-y-auto p-4">
             <div class="compact-container">
+                {% if not is_authorized %}
+                <div class="card" style="text-align: center; padding: 50px 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🚫</div>
+                    <h2 class="card-title">Akses Ditolak</h2>
+                    <p style="color: var(--ios-label);">Maaf, perangkat Anda dengan IP <strong>{{ user_ip }}</strong> tidak diizinkan untuk mengakses logbook operasional.</p>
+                    <p style="margin-top: 10px; font-size: 0.8rem;">Gunakan jaringan Wi-Fi kantor untuk mengisi logbook.</p>
+                </div>
+                {% else %}
                 
                 {% if notif_rutin %}
                 <div class="card" style="background-color: #E8F2FF; border: none; padding: 16px;">
@@ -257,6 +265,7 @@
                         </tbody>
                     </table>
                 </div>
+                {% endif %}
             </div>
         </main>
     </div>
