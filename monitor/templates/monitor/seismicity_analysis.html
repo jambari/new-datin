@@ -88,9 +88,21 @@
                             <div class="col-12">
                                 <label class="small fw-bold">Agency</label>
                                 <select name="agency" class="form-select form-select-sm">
-                                    <option value="PGR_V_ALL" {% if filters.agency == 'PGR_V_ALL' %}selected{% endif %}>Seluruh UPT PGR V (Gabungan)</option>
+                                    <option value="PGR_5_ALL" {% if filters.agency == 'PGR_5_ALL' %}selected{% endif %}>Seluruh UPT PGR V (Gabungan)</option>
                                     <option value="PGR_1_ALL" {% if filters.agency == 'PGR_1_ALL' %}selected{% endif %}>Seluruh UPT PGR I (Gabungan)</option>
-                                    {% for opt in agency_options %}<option value="{{ opt }}" {% if filters.agency == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+                                    <option value="PGR_2_ALL" {% if filters.agency == 'PGR_2_ALL' %}selected{% endif %}>Seluruh UPT PGR II (Gabungan)</option>
+                                    <option value="PGR_3_ALL" {% if filters.agency == 'PGR_3_ALL' %}selected{% endif %}>Seluruh UPT PGR III (Gabungan)</option>
+                                    <option value="PGR_4_ALL" {% if filters.agency == 'PGR_4_ALL' %}selected{% endif %}>Seluruh UPT PGR IV (Gabungan)</option>
+                                    <option value="PGR_5_ALL" {% if filters.agency == 'PGR_5_ALL' %}selected{% endif %}>Seluruh UPT PGR V (Gabungan)</option>
+                                    <option value="PGR_6_ALL" {% if filters.agency == 'PGR_6_ALL' %}selected{% endif %}>Seluruh UPT PGR VI (Gabungan)</option>
+                                    <option value="PGR_7_ALL" {% if filters.agency == 'PGR_7_ALL' %}selected{% endif %}>Seluruh UPT PGR VII (Gabungan)</option>
+                                    <option value="PGR_8_ALL" {% if filters.agency == 'PGR_8_ALL' %}selected{% endif %}>Seluruh UPT PGR VIII (Gabungan)</option>
+                                    <option value="PGR_9_ALL" {% if filters.agency == 'PGR_9_ALL' %}selected{% endif %}>Seluruh UPT PGR IX (Gabungan)</option>
+                                    <option value="PGR_10_ALL" {% if filters.agency == 'PGR_10_ALL' %}selected{% endif %}>Seluruh UPT PGR X (Gabungan)</option>
+                                    <option value="BMKG-BKI" {% if filters.agency == 'BMKG-BKI' %}selected{% endif %}>BMKG-BKI</option>
+                                    {% for opt in agency_options %}
+                                        <option value="{{ opt }}" {% if filters.agency == opt %}selected{% endif %}>{{ opt }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                             <div class="col-12 mt-2"><button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Update Data</button></div>
@@ -148,8 +160,8 @@
                         <div class="legend-grid">
                             <div class="legend-box"><span class="legend-t">LEGENDA</span><img src="{% static 'repository/images/legenda.png' %}"></div>
                             <div class="legend-box"><span class="legend-t"></span><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
-                            <div class="legend-box"><span class="legend-t">UPT / SUMBER</span><div class="fw-bold mt-2" style="font-size:0.85rem;">STASIUN GEOFISIKA JAYAPURA</div></div>
-                            <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1">Total Gempa: {{ stats.total }}<br>M ≥ 5: {{ stats.m_gt_5 }}<br>Felt: {{ stats.felt }}</div></div>
+                            <div class="legend-box"><span class="legend-t">UPT / SUMBER</span><div class="fw-bold mt-2" style="font-size:0.85rem;">STASIUN GEOFISIKA JAYAPURA <br>  </div></div>
+                            <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1">Total Gempa: {{ stats.total }}<br>M ≥ 5: {{ stats.m_gt_5 }}</div></div>
                         </div>
                     </div>
                 </div>
@@ -200,13 +212,13 @@
                 <div class="col-md-5"><div class="report-card">
                     <h6 class="fw-bold mb-3 text-center">Repository Shakemap</h6>
                     <div class="shakemap-grid">
-                        {% for e in felt_events %}
+                        <!-- {% for e in felt_events %}
                         <div class="text-center">
                             {% if e.shakemap_image %}<img src="{{ e.shakemap_image.url }}" style="width:100%; border:1px solid #000;">
                             {% else %}<div class="bg-light py-4 small border">No Map</div>{% endif %}
                             <div style="font-size:0.65rem;" class="fw-bold mt-1">M{{e.magnitude}} - {{e.event_time|date:"d/m/y"}}</div>
                         </div>
-                        {% endfor %}
+                        {% endfor %} -->
                     </div>
                 </div></div>
             </div>

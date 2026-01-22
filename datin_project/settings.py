@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'logbook',
     'jadwal',
     'maintenance',
+    'perjadin',
 ]
 
 # Add this to the bottom of the file
@@ -180,7 +181,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'import-hujan-data-daily': {
         'task': 'hujan.tasks.import_today_hujan_data',
-        'schedule': crontab(minute=1, hour=2),
+        'schedule': crontab(minute=1, hour=1),
     },
     'process-shakemaps-daily': {
         'task': 'repository.tasks.run_process_shakemaps',
@@ -192,7 +193,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'lightning.tasks.process_yesterday_nexstorm_file', # Nama task dari @shared_task
         'schedule': crontab(minute=5, hour=0), # Berjalan setiap hari pukul 00:05
     },
-    # --- AKHIR JADWAL BARU ---
+    'export-gmt-history-daily': {
+        'task': 'monitor.tasks.export_and_sync_gmt_history',
+        'schedule': crontab(minute=53, hour=21), # Runs every day at 21:37
+    },
 }
 
 # settings.py

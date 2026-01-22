@@ -53,7 +53,7 @@ def grad_to_dms(grad_str):
 @login_required
 def observation_form_view(request):
     # This logic runs for both GET and POST requests
-    observer_names = ["Netty", "Lidya", "Jambari", "Berlian", "Achmad", "Alif", "Rivaldo"]
+    observer_names = ["Netty", "Lidya", "Jambari", "Berlian", "Achmad", "Alif", "Rivaldo", "Donny", "Anas", "Richard", "Juan"]
     sessions = ["Session 1", "Session 2"]
     
     if request.method == 'POST':

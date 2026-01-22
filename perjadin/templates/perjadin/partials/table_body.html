@@ -1,0 +1,56 @@
+<style>
+    .table-perjadin { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .table-perjadin th { background: #333; color: white; border: 1px solid #444; padding: 8px; }
+    .table-perjadin td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+    .table-perjadin tr:nth-child(even) { background-color: #f2f2f2; }
+    .table-perjadin tr:hover { background-color: #e9f5ff; }
+    
+    .nama-kolom { text-align: left !important; font-weight: bold; color: #0056b3; cursor: pointer; min-width: 180px; }
+    .tgl-kolom { width: 25px; font-size: 10px; }
+    
+    /* Indikator PD */
+    .badge-pd { background: #28a745; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; font-size: 10px; }
+    .dot-empty { color: #ccc; }
+    .total-kolom { font-weight: bold; background: #fafafa; }
+    .biaya-kolom { text-align: right !important; font-weight: bold; color: #d9534f; width: 120px; }
+</style>
+
+<table class="table-perjadin">
+    <thead>
+        <tr>
+            <th rowspan="2">Nama Pegawai</th>
+            <th colspan="{{ days|length }}">Tanggal ({{ month_name }} {{ current_year }})</th>
+            <th rowspan="2">Total Trip</th>
+            <th rowspan="2">Estimasi Lumsum</th>
+        </tr>
+        <tr>
+            {% for d in days %}
+            <th class="tgl-kolom">{{ d }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in rekap_data %}
+        <tr>
+            <td class="nama-kolom" onclick="loadDetail('{{ item.pegawai.id }}')">
+                {{ item.pegawai.nama }}
+            </td>
+            {% for status in item.status_hari %}
+            <td>
+                {% if status == 'PD' %}
+                <span class="badge-pd">PD</span>
+                {% else %}
+                <span class="dot-empty">•</span>
+                {% endif %}
+            </td>
+            {% endfor %}
+            <td class="total-kolom">{{ item.total_trips }}</td>
+            <td class="biaya-kolom">Rp {{ item.total_uang|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top: 10px; font-size: 11px; color: #666;">
+    <span class="badge-pd">PD</span> = Perjalanan Dinas
+</div>

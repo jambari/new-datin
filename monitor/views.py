@@ -216,12 +216,39 @@ def seismicity_analysis(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    if agency == 'PGR_V_ALL':
+    if agency == 'PGR_5_ALL':
         # List akurat untuk PGR V (Total ~208)
         events = events.filter(agency__in=['BMKG-JAY', 'BMKG-NBPI', 'PGR5', 'BMKG-SWI'])
     elif agency == 'PGR_1_ALL':
         # Filter baru untuk PGR I
-        events = events.filter(agency__in=['BMKG-BSI', 'BMKG-DSI', 'BMKG-GSI', 'PGR1'])
+        events = events.filter(agency__in=['PGR1', 'BMKG-DSI', 'BMKG-TPTI', 'BMKG-BSI','BMKG-GSI'])
+    elif agency == 'PGR_2_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['PGR2', 'BMKG-KLI', 'BMKG-TNG', 'BMKG-BDN','BMKG-SKB'])
+    elif agency == 'PGR_3_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['BMKG-BALI1', 'BMKG-BALI', 'BMKG-DNP', 'BMKG-MTRM'])
+    elif agency == 'PGR_4_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['PGR4', 'BMKG-MKS', 'BMKG-PCI', 'BMKG-KDI'])
+    elif agency == 'PGR_6_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['PGR6', 'BMKG-KSI'])
+    elif agency == 'PGR_7_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['PGR7', 'BMKG-BJI', 'BMKG-KRK', 'BMKG-SJI','BMKG-TRT'])
+    elif agency == 'PGR_8_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['PGR8', 'BMKG-WSI', 'BMKG-ALK'])
+    elif agency == 'PGR_9_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['PGR9', 'BMKG-SMKI'])
+    elif agency == 'PGR_10_ALL':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['PGR10', 'BMKG-GTO','BMKG-TNTI'])
+    elif agency == 'BMKG-BKI':
+        # Filter baru untuk PGR I
+        events = events.filter(agency__in=['BMKG-BKI'])
     elif agency:
         events = events.filter(agency__iexact=agency)
 

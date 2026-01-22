@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* CSS Standar Perjadin */
+    .perjadin-container { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+    .card { background: #fff; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .card-header { background: #003366; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .card-body { padding: 20px; overflow-x: auto; }
+    
+    /* Form Styling */
+    .form-section { margin: 20px; padding: 20px; border: 2px dashed #bbb; border-radius: 10px; background: #f9f9f9; }
+    .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
+    .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    
+    .btn-submit { background: #0056b3; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; }
+    .btn-submit:hover { background: #004494; }
+
+    /* Modal Styling */
+    #modal-container { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); }
+    .modal-content-box { background: white; margin: 10% auto; padding: 0; border-radius: 8px; width: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    .modal-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; background: #f4f4f4; border-radius: 8px 8px 0 0; }
+    .close-btn { font-size: 24px; cursor: pointer; border: none; background: none; }
+
+    .nav-bulan { margin-bottom: 10px; font-size: 14px; }
+    .nav-bulan a { color: #0056b3; text-decoration: none; font-weight: bold; }
+    .nav-bulan a:hover { text-decoration: underline; }
+</style>
+
+<div class="perjadin-container">
+    <div class="nav-bulan">
+        <a href="?month={{ prev_month }}&year={{ prev_year }}">« Bulan Sebelumnya</a> 
+        <span style="color: #ccc; margin: 0 10px;">|</span> 
+        <a href="?month={{ next_month }}&year={{ next_year }}">Bulan Selanjutnya »</a>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 style="margin:0;">REKAPITULASI PERJALANAN DINAS - {{ month_name }} 2026</h2>
+            <span>User: <strong>{{ request.user.username }}</strong></span>
+        </div>
+        
+        <div id="tabel-rekap" class="card-body">
+            {% include 'perjadin/partials/table_body.html' %}
+        </div>
+
+        <div class="form-section">
+            <h3 style="margin-top:0;">+ Input Perjalanan Dinas Baru</h3>
+            <form method="POST" action="{% url 'perjadin:tambah_perjadin' %}" onsubmit="this.querySelector('button').disabled=true;">
+                {% csrf_token %}
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label for="id_pegawai">Pegawai</label>
+                        <select name="pegawai" id="id_pegawai" required>
+                            <option value="">-- Pilih --</option>
+                            {% for p in pegawai_all %}
+                                <option value="{{ p.id }}">{{ p.nama }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_jenis">Jenis Perjadin</label>
+                        <select name="jenis" id="id_jenis" required>
+                            <option value="">-- Pilih --</option>
+                            {% for j in jenis_list %}
+                                <option value="{{ j.id }}">{{ j.nama }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_tujuan">Tujuan</label>
+                        <input type="text" name="tujuan" id="id_tujuan" placeholder="Contoh: Jakarta" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_kegiatan">Kegiatan</label>
+                        <input type="text" name="kegiatan" id="id_kegiatan" placeholder="Contoh: Rakornas Datin">
+                    </div>
+                    <div class="form-group">
+                        <label for="id_tgl_mulai">Tgl Mulai</label>
+                        <input type="date" name="tgl_mulai" id="id_tgl_mulai" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_tgl_selesai">Tgl Selesai</label>
+                        <input type="date" name="tgl_selesai" id="id_tgl_selesai" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit text-white">SIMPAN DATA</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="modal-container">
+    <div class="modal-content-box">
+        <div class="modal-header">
+            <h3 style="margin:0;">Detail Perjalanan Dinas</h3>
+            <button class="close-btn" onclick="document.getElementById('modal-container').style.display='none'">&times;</button>
+        </div>
+        <div id="modal-content" style="padding: 20px;"></div>
+    </div>
+</div>
+
+<script>
+    function loadDetail(pegawaiId) {
+        // Tampilkan modal dan beri loading teks
+        const container = document.getElementById('modal-container');
+        const content = document.getElementById('modal-content');
+        
+        content.innerHTML = '<p style="text-align:center;">Memuat data...</p>';
+        container.style.display = 'block';
+
+        // Ambil data dari URL detail menggunakan fetch (Pengganti HTMX)
+        fetch(`/perjadin/detail/${pegawaiId}/`)
+            .then(response => {
+                if (!response.ok) throw new Error('Gagal mengambil data');
+                return response.text();
+            })
+            .then(html => {
+                // Masukkan HTML yang diterima ke dalam modal
+                content.innerHTML = html;
+            })
+            .catch(error => {
+                content.innerHTML = '<p style="color:red;">Error: ' + error.message + '</p>';
+            });
+    }
+
+    // Fungsi untuk menutup modal
+    function closeModal() {
+        document.getElementById('modal-container').style.display = 'none';
+    }
+</script>
+{% endblock %}
