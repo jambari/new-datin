@@ -56,7 +56,7 @@
         <ul id="dropdown-seismik" class="hidden py-2 space-y-2 ml-4 bg-gray-900 rounded-lg">
             <li>
                 <a href="{% url 'data_availability_list' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Chanel</span>
+                    <span class="ml-3">Channel</span>
                 </a>
             </li>
             <li>
@@ -76,7 +76,7 @@
         <ul id="dropdown-accelero" class="hidden py-2 space-y-2 ml-4 bg-gray-900 rounded-lg">
             <li>
                 <a href="{% url 'accelero_availability_list' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Chanel</span>
+                    <span class="ml-3">Channel</span>
                 </a>
             </li>
             <li>
@@ -95,8 +95,19 @@
         </button>
         <ul id="dropdown-magnet" class="hidden py-2 space-y-2 ml-4 bg-gray-900 rounded-lg">
             <li>
-                <a href="{% url 'observation_list' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
-                    <span class="ml-3">Pengamatan Absolut</span>
+                <a href="{% url 'observation_form' %}" class="flex items-center p-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700">
+                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                    <span class="ml-1">Absolut MinGeo (Grad)</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'observation_bartington' %}" class="flex items-center p-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700">
+                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                    <span class="ml-1">Absolut Bartington (Deg)</span>
                 </a>
             </li>
             <li>
@@ -240,7 +251,7 @@
         </li>
         {% endif %}
 
-    <li class="mb-2">
+    <!-- <li class="mb-2">
         <button type="button" class="flex items-center w-full p-2 text-base font-normal transition duration-75 rounded-lg group hover:bg-gray-700 text-white" onclick="document.getElementById('dropdown-maintenance').classList.toggle('hidden')">
             <svg class="w-6 h-6 text-gray-400 group-hover:text-white transition duration-75" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -276,7 +287,7 @@
             <span class="ml-3 font-bold text-white">Rekap Perjadin</span>
         </a>
     </li>
-    {% endif %}
+    {% endif %} -->
 
     </ul>
   </nav>

@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col">
+    {% include 'partials/_topbar.html' %} 
+    <main class="flex-1 p-8 overflow-y-auto">
+      <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+        <span>Form Absolut Bartington (Deg)</span>
+        <span id="utc-clock-badge" class="ml-6 px-3 py-1 text-2xl font-medium text-blue-800 bg-blue-100 rounded-full"></span>
+      </h1>
+
+      <div class="mt-6 p-6 bg-white rounded-lg shadow-md">
+        <form id="observation-form" method="POST">
+          {% csrf_token %}
+          <section class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Date</label>
+              <input type="date" name="observation_date" class="mt-1 w-full px-3 py-2 border rounded-md" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Observer</label>
+              <select name="observer" class="mt-1 w-full px-3 py-2 border rounded-md" required>
+                {% for name in observer_names %}<option value="{{ name }}">{{ name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Session</label>
+              <select name="session" class="mt-1 w-full px-3 py-2 border rounded-md" required>
+                {% for s in sessions %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+            </div>
+          </section>
+
+          <table class="w-full mb-8 border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="2" class="p-2 border">Pembacaan titik tetap awal (deg)</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="p-2 border">
+                  <span class="block mb-1 font-medium">CR</span>
+                  <div class="flex space-x-1 justify-center">
+                    <input type="number" name="cr_awal_deg" value="{{ cr_awal_default.deg }}" class="w-16 border rounded text-center">
+                    <input type="number" name="cr_awal_min" value="{{ cr_awal_default.min }}" class="w-12 border rounded text-center">
+                    <input type="number" name="cr_awal_sec" value="{{ cr_awal_default.sec }}" class="w-14 border rounded text-center">
+                  </div>
+                </td>
+                <td class="p-2 border">
+                  <span class="block mb-1 font-medium">CL</span>
+                  <div class="flex space-x-1 justify-center">
+                    <input type="number" name="cl_awal_deg" value="{{ cl_awal_default.deg }}" class="w-16 border rounded text-center">
+                    <input type="number" name="cl_awal_min" value="{{ cl_awal_default.min }}" class="w-12 border rounded text-center">
+                    <input type="number" name="cl_awal_sec" value="{{ cl_awal_default.sec }}" class="w-14 border rounded text-center">
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table class="w-full mb-8 border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="5" class="p-2 border">Deklinasi</th></tr></thead>
+            <tbody>
+              <tr><td></td><td colspan="3" class="border">Waktu (UTC)</td><td class="border">Circle (deg min sec)</td></tr>
+              {% for item in deklinasi_data %}
+              <tr>
+                <td class="p-2 border"><span class="time-populator cursor-pointer px-2 py-1 bg-gray-200 rounded text-xs" data-prefix="dek_{{ item.name|lower }}">{{ item.name }}</span></td>
+                <td class="border"><input type="number" id="dek_{{ item.name|lower }}_hh" name="dek_{{ item.name|lower }}_hh" class="w-full text-center"></td>
+                <td class="border"><input type="number" id="dek_{{ item.name|lower }}_mm" name="dek_{{ item.name|lower }}_mm" class="w-full text-center"></td>
+                <td class="border"><input type="number" id="dek_{{ item.name|lower }}_ss" name="dek_{{ item.name|lower }}_ss" class="w-full text-center"></td>
+                <td class="border">
+                  <div class="flex space-x-1 justify-center">
+                    <input type="number" name="dek_{{ item.name|lower }}_deg" value="{{ item.deg }}" class="w-12 border rounded text-center bart-deg">
+                    <input type="number" name="dek_{{ item.name|lower }}_min" value="{{ item.min }}" class="w-10 border rounded text-center bart-min">
+                    <input type="number" name="dek_{{ item.name|lower }}_sec" value="{{ item.sec }}" class="w-10 border rounded text-center bart-sec">
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <table class="w-full mb-8 border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="2" class="p-2 border text-red-600">Reference Meridian (Shoot before Inklinasi)</th></tr></thead>
+            <tbody>
+              <tr><td class="p-2 border">Meridian 1 (Avg - 180°)</td><td class="p-2 border">Meridian 2 (Avg)</td></tr>
+              <tr>
+                <td class="p-2 border">
+                  <input type="text" id="meridian_1" name="meridian_1" class="w-full text-center bg-gray-100 font-bold" readonly>
+                  <div id="meridian_1_dms" class="text-xs text-blue-600 font-semibold mt-1"></div>
+                </td>
+                <td class="p-2 border">
+                  <input type="text" id="meridian_2" name="meridian_2" class="w-full text-center bg-gray-100 font-bold" readonly>
+                  <div id="meridian_2_dms" class="text-xs text-blue-600 font-semibold mt-1"></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table class="w-full mb-8 border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="6" class="p-2 border">Inklinasi</th></tr></thead>
+            <tbody>
+              {% for item in inklinasi_data %}
+              <tr>
+                <td class="p-2 border"><span class="time-populator cursor-pointer px-2 py-1 bg-gray-200 rounded text-xs" data-prefix="ink_{{ item.name|lower }}">{{ item.name }}</span></td>
+                <td class="border"><input type="number" id="ink_{{ item.name|lower }}_hh" name="ink_{{ item.name|lower }}_hh" class="w-full text-center"></td>
+                <td class="border"><input type="number" id="ink_{{ item.name|lower }}_mm" name="ink_{{ item.name|lower }}_mm" class="w-full text-center"></td>
+                <td class="border"><input type="number" id="ink_{{ item.name|lower }}_ss" name="ink_{{ item.name|lower }}_ss" class="w-full text-center"></td>
+                <td class="border">
+                  <div class="flex space-x-1 justify-center">
+                    <input type="number" name="ink_{{ item.name|lower }}_deg" value="{{ item.deg }}" class="w-12 border rounded text-center">
+                    <input type="number" name="ink_{{ item.name|lower }}_min" value="{{ item.min }}" class="w-10 border rounded text-center">
+                    <input type="number" name="ink_{{ item.name|lower }}_sec" value="{{ item.sec }}" class="w-10 border rounded text-center">
+                  </div>
+                </td>
+                <td class="border"><input type="number" step="any" name="ink_{{ item.name|lower }}_ftotal" class="w-full text-center border rounded" required></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <table class="w-full mb-8 border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="2" class="p-2 border">Pembacaan titik tetap akhir (deg)</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="p-2 border">
+                  <span class="block mb-1 font-medium">CR</span>
+                  <div class="flex space-x-1 justify-center">
+                    <input type="number" name="cr_akhir_deg" value="{{ cr_awal_default.deg }}" class="w-16 border rounded text-center">
+                    <input type="number" name="cr_akhir_min" value="{{ cr_awal_default.min }}" class="w-12 border rounded text-center">
+                    <input type="number" name="cr_akhir_sec" value="{{ cr_awal_default.sec }}" class="w-14 border rounded text-center">
+                  </div>
+                </td>
+                <td class="p-2 border">
+                  <span class="block mb-1 font-medium">CL</span>
+                  <div class="flex space-x-1 justify-center">
+                    <input type="number" name="cl_akhir_deg" value="{{ cl_awal_default.deg }}" class="w-16 border rounded text-center">
+                    <input type="number" name="cl_akhir_min" value="{{ cl_awal_default.min }}" class="w-12 border rounded text-center">
+                    <input type="number" name="cl_akhir_sec" value="{{ cl_awal_default.sec }}" class="w-14 border rounded text-center">
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="flex justify-end"><button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700">Calculate & Save</button></div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const m1Field = document.getElementById('meridian_1');
+  const m2Field = document.getElementById('meridian_2');
+  const m1DmsDiv = document.getElementById('meridian_1_dms');
+  const m2DmsDiv = document.getElementById('meridian_2_dms');
+
+  /**
+   * Converts decimal degrees into a human-readable 
+   * Degree° Minute' Second" string.
+   */
+  function toDMS(decimal) {
+    const absDec = Math.abs(decimal);
+    const d = Math.floor(absDec);
+    const m = Math.floor((absDec - d) * 60);
+    const s = ((absDec - d - m / 60) * 3600).toFixed(1);
+    return `${decimal < 0 ? '-' : ''}${d}° ${m}' ${s}"`;
+  }
+
+  /**
+   * Aggregates the DMS inputs for Deklinasi (WU, ED, WD, EU),
+   * calculates the average (Meridian 2), and subtracts 180 (Meridian 1).
+   */
+  function calculateMeridians() {
+    let decimals = [];
+    const positions = ['wu', 'ed', 'wd', 'eu'];
+
+    positions.forEach(p => {
+      const d = parseFloat(document.querySelector(`[name="dek_${p}_deg"]`)?.value) || 0;
+      const m = parseFloat(document.querySelector(`[name="dek_${p}_min"]`)?.value) || 0;
+      const s = parseFloat(document.querySelector(`[name="dek_${p}_sec"]`)?.value) || 0;
+      
+      // Only include in average if at least one field is non-zero
+      if (d !== 0 || m !== 0 || s !== 0) {
+        decimals.push(d + (m / 60) + (s / 3600));
+      }
+    });
+
+    if (decimals.length === 4) {
+      const avg = decimals.reduce((a, b) => a + b, 0) / 4;
+      const m2Val = avg;
+      const m1Val = avg - 180;
+
+      // Update the readonly decimal fields
+      m2Field.value = m2Val.toFixed(4) + '°';
+      m1Field.value = m1Val.toFixed(4) + '°';
+
+      // Update the blue DMS display text
+      m2DmsDiv.textContent = toDMS(m2Val);
+      m1DmsDiv.textContent = toDMS(m1Val);
+    } else {
+      // Clear fields if data is incomplete
+      m1Field.value = '';
+      m2Field.value = '';
+      m1DmsDiv.textContent = '';
+      m2DmsDiv.textContent = '';
+    }
+  }
+
+  // 1. Listen for any typing/changes in Bartington DMS inputs
+  document.querySelectorAll('.bart-deg, .bart-min, .bart-sec').forEach(el => {
+    el.addEventListener('input', calculateMeridians);
+  });
+
+  // 2. RUN IMMEDIATELY ON PAGE LOAD
+  // This ensures the meridian calculates using the default values 
+  // provided by the Django context.
+  calculateMeridians();
+
+  // 3. UTC Clock Logic
+  setInterval(() => {
+    const n = new Date();
+    const clockBadge = document.getElementById('utc-clock-badge');
+    if (clockBadge) {
+      clockBadge.textContent = `UTC: ${String(n.getUTCHours()).padStart(2, '0')}:${String(n.getUTCMinutes()).padStart(2, '0')}:${String(n.getUTCSeconds()).padStart(2, '0')}`;
+    }
+  }, 1000);
+
+  // 4. Time Populator Logic
+  document.querySelectorAll('.time-populator').forEach(pop => {
+    pop.addEventListener('click', e => {
+      const prefix = e.target.dataset.prefix;
+      const n = new Date();
+      const hh = document.getElementById(prefix + '_hh');
+      const mm = document.getElementById(prefix + '_mm');
+      const ss = document.getElementById(prefix + '_ss');
+      
+      if (hh && mm && ss) {
+        hh.value = n.getUTCHours();
+        mm.value = n.getUTCMinutes();
+        ss.value = n.getUTCSeconds();
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

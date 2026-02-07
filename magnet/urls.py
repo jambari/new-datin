@@ -3,11 +3,13 @@ from django.urls import path
 from . import views
 from .views import (
     SummaryView, PrecursorCreateView, PrecursorUpdateView, 
-    PrecursorDeleteView, PrecursorDetailView, validate_single_precursor, update_magnet_availability, magnet_availability_query
+    PrecursorDeleteView, PrecursorDetailView, validate_single_precursor, update_magnet_availability, magnet_availability_query,
+    observation_bartington_form_view
 )
 # app_name = 'magnet'
 urlpatterns = [
     path('observation/', views.observation_form_view, name='observation_form'),
+    path('observation/bartington/', views.observation_bartington_form_view, name='observation_bartington'),
     path('records/', views.observation_list_view, name='observation_list'),
     path('result/', views.conversion_result_view, name='conversion_result'),
     path('records/<int:pk>/', views.observation_detail_view, name='observation_detail'),
@@ -29,5 +31,6 @@ urlpatterns = [
     path('precursor/<int:pk>/', PrecursorDetailView.as_view(), name='precursor_detail'),
     path('availability-query/', magnet_availability_query, name='magnet_availability_query'),
     path('api/update-availability/', update_magnet_availability, name='update_magnet_availability'),
+    path('observation/bartington/', views.observation_bartington_form_view, name='observation_bartington'),
     
 ]

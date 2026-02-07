@@ -211,47 +211,84 @@ def observation_edit_view(request, pk):
     observation = get_object_or_404(MagneticObservation, pk=pk)
     
     if request.method == 'POST':
-        # --- This is the new logic to save the changes ---
         post_data = request.POST
         
+        # Parse date
         try:
             date_str = post_data.get('observation_date')
             observation.observation_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            observation.observation_date = None # Handle case where date is cleared
+            observation.observation_date = None
             
-        # Update simple fields
+        # Check if record is Bartington (uses _deg suffix)
+        is_bart = 'cr_awal_deg' in post_data
+        
+        # Update Titik Tetap (Fix Marks)
+        if is_bart:
+            # We store the base degree in the decimal field for compatibility
+            observation.cr_awal = post_data.get('cr_awal_deg')
+            observation.cl_awal = post_data.get('cl_awal_deg')
+            observation.cr_akhir = post_data.get('cr_akhir_deg')
+            observation.cl_akhir = post_data.get('cl_akhir_deg')
+        else:
+            observation.cr_awal = post_data.get('cr_awal')
+            observation.cl_awal = post_data.get('cl_awal')
+            observation.cr_akhir = post_data.get('cr_akhir')
+            observation.cl_akhir = post_data.get('cl_akhir')
+
         observation.observer = post_data.get('observer')
         observation.session = post_data.get('session')
-        observation.cr_awal = post_data.get('cr_awal')
-        observation.cl_awal = post_data.get('cl_awal')
-        observation.cr_akhir = post_data.get('cr_akhir')
-        observation.cl_akhir = post_data.get('cl_akhir')
         observation.meridian_1 = post_data.get('meridian_1')
         observation.meridian_2 = post_data.get('meridian_2')
 
-        # Re-assemble the JSON data for readings
-        deklinasi_readings = ['WU', 'ED', 'WD', 'EU']
-        inklinasi_readings = ['NU', 'SD', 'ND', 'SU']
+        # Re-assemble readings JSON
+        dek_keys = ['WU', 'ED', 'WD', 'EU']
+        ink_keys = ['NU', 'SD', 'ND', 'SU']
 
-        observation.deklinasi_readings = {r: {'hh': post_data.get(f'dek_{r.lower()}_hh'), 'mm': post_data.get(f'dek_{r.lower()}_mm'), 'ss': post_data.get(f'dek_{r.lower()}_ss'), 'circ': post_data.get(f'dek_{r.lower()}_circ')} for r in deklinasi_readings}
-        observation.inklinasi_readings = {r: {'hh': post_data.get(f'ink_{r.lower()}_hh'), 'mm': post_data.get(f'ink_{r.lower()}_mm'), 'ss': post_data.get(f'ink_{r.lower()}_ss'), 'circ': post_data.get(f'ink_{r.lower()}_circ'), 'ftotal': post_data.get(f'ink_{r.lower()}_ftotal')} for r in inklinasi_readings}
+        if is_bart:
+            observation.deklinasi_readings = {r: {
+                'hh': post_data.get(f'dek_{r.lower()}_hh'),
+                'mm': post_data.get(f'dek_{r.lower()}_mm'),
+                'ss': post_data.get(f'dek_{r.lower()}_ss'),
+                'deg': post_data.get(f'dek_{r.lower()}_deg'),
+                'min': post_data.get(f'dek_{r.lower()}_min'),
+                'sec': post_data.get(f'dek_{r.lower()}_sec')
+            } for r in dek_keys}
+            observation.inklinasi_readings = {r: {
+                'hh': post_data.get(f'ink_{r.lower()}_hh'),
+                'mm': post_data.get(f'ink_{r.lower()}_mm'),
+                'ss': post_data.get(f'ink_{r.lower()}_ss'),
+                'deg': post_data.get(f'ink_{r.lower()}_deg'),
+                'min': post_data.get(f'ink_{r.lower()}_min'),
+                'sec': post_data.get(f'ink_{r.lower()}_sec'),
+                'ftotal': post_data.get(f'ink_{r.lower()}_ftotal')
+            } for r in ink_keys}
+        else:
+            observation.deklinasi_readings = {r: {
+                'hh': post_data.get(f'dek_{r.lower()}_hh'),
+                'mm': post_data.get(f'dek_{r.lower()}_mm'),
+                'ss': post_data.get(f'dek_{r.lower()}_ss'),
+                'circ': post_data.get(f'dek_{r.lower()}_circ')
+            } for r in dek_keys}
+            observation.inklinasi_readings = {r: {
+                'hh': post_data.get(f'ink_{r.lower()}_hh'),
+                'mm': post_data.get(f'ink_{r.lower()}_mm'),
+                'ss': post_data.get(f'ink_{r.lower()}_ss'),
+                'circ': post_data.get(f'ink_{r.lower()}_circ'),
+                'ftotal': post_data.get(f'ink_{r.lower()}_ftotal')
+            } for r in ink_keys}
 
-        # Save the updated object to the database
         observation.save()
-        
         return redirect('observation_list')
         
-    # This part for GET requests remains the same
+    # GET logic
     deklinasi_data = [{'name': k, 'data': v} for k, v in observation.deklinasi_readings.items()]
     inklinasi_data = [{'name': k, 'data': v} for k, v in observation.inklinasi_readings.items()]
         
     context = {
         'observation': observation,
-        'observer_names': ["Netty", "Lidya", "Jambari", "Berlian", "Achmad", "Alif", "Rivaldo"],
+        'observer_names': ["Netty", "Lidya", "Jambari", "Berlian", "Achmad", "Alif", "Rivaldo", "Donny", "Anas", "Richard", "Juan"],
         'sessions': ["Session 1", "Session 2"],
-        'deklinasi_readings': ['WU', 'ED', 'WD', 'EU'], # Still needed for new form template compatibility
-        'inklinasi_readings': ['NU', 'SD', 'ND', 'SU'], # Still needed for new form template compatibility
         'deklinasi_data': deklinasi_data,
         'inklinasi_data': inklinasi_data,
     }
@@ -259,31 +296,43 @@ def observation_edit_view(request, pk):
 
 @login_required
 def trigger_single_automation_view(request, pk):
+    """Prepares and triggers the Celery task for an existing record."""
     observation = get_object_or_404(MagneticObservation, pk=pk)
 
+    # Helper to check if record is Bartington (has 'deg') or MinGeo (needs 'grad_to_dms')
+    def get_dms(data_dict):
+        if 'deg' in data_dict:
+            # Data is already in DMS format
+            return {
+                'deg': data_dict.get('deg', 0), 
+                'min': data_dict.get('min', 0), 
+                'sec': data_dict.get('sec', 0)
+            }
+        # Data is in Gradian format, needs conversion
+        return grad_to_dms(data_dict.get('circ', 0))
+
     # Re-create the data structure needed by the Selenium task
-    # This uses the data already saved in the database
     selenium_data = {
         'pengamat': observation.observer,
         'datepicker': observation.observation_date.strftime('%Y-%m-%d'),
         'azimuth_tt': {'deg': 98, 'min': 45, 'sec': 31},
-        'CR1': grad_to_dms(observation.cr_awal),
-        'CL1': grad_to_dms(observation.cl_awal),
-        'CR2': grad_to_dms(observation.cr_akhir),
-        'CL2': grad_to_dms(observation.cl_akhir),
+        # Fix marks conversion
+        'CR1': get_dms({'circ': observation.cr_awal}) if not hasattr(observation.deklinasi_readings.get('WU'), 'deg') else {'deg': observation.cr_awal, 'min':0, 'sec':0},
+        'CL1': get_dms({'circ': observation.cl_awal}) if not hasattr(observation.deklinasi_readings.get('WU'), 'deg') else {'deg': observation.cl_awal, 'min':0, 'sec':0},
+        'CR2': get_dms({'circ': observation.cr_akhir}) if not hasattr(observation.deklinasi_readings.get('WU'), 'deg') else {'deg': observation.cr_akhir, 'min':0, 'sec':0},
+        'CL2': get_dms({'circ': observation.cl_akhir}) if not hasattr(observation.deklinasi_readings.get('WU'), 'deg') else {'deg': observation.cl_akhir, 'min':0, 'sec':0},
+        # Time and DMS values for readings
         'deklinasi_times': {r: f"{v['hh']}:{v['mm']}:{v['ss']}" for r, v in observation.deklinasi_readings.items()},
-        'deklinasi_dms': {r: grad_to_dms(v['circ']) for r, v in observation.deklinasi_readings.items()},
-        # Add Inklinasi data here if needed
+        'deklinasi_dms': {r: get_dms(v) for r, v in observation.deklinasi_readings.items()},
         'inklinasi_times': {r: f"{v['hh']}:{v['mm']}:{v['ss']}" for r, v in observation.inklinasi_readings.items()},
-        'inklinasi_dms': {r: grad_to_dms(v['circ']) for r, v in observation.inklinasi_readings.items()},
-        'inklinasi_ftotals': {r: v['ftotal'] for r, v in observation.inklinasi_readings.items()},
-        
+        'inklinasi_dms': {r: get_dms(v) for r, v in observation.inklinasi_readings.items()},
+        'inklinasi_ftotals': {r: v.get('ftotal', 0) for r, v in observation.inklinasi_readings.items()},
     }
 
-    # Trigger the background task
+    # Trigger the background Celery task
     fill_external_form.delay(selenium_data)
 
-    # Redirect back to the list
+    messages.success(request, f"Automation task started for ID {pk}. You can check the screenshot results in the app folder.")
     return redirect('observation_list')
 
 @login_required
@@ -585,3 +634,108 @@ def update_magnet_availability(request):
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# magnet/views.py
+
+@login_required
+def observation_bartington_form_view(request):
+    """Specific view for Bartington (Degrees) using dedicated template."""
+    observer_names = ["Netty", "Lidya", "Jambari", "Berlian", "Achmad", "Alif", "Rivaldo", "Donny", "Anas", "Richard", "Juan"]
+    sessions = ["Session 1", "Session 2"]
+    
+    if request.method == 'POST':
+        post_data = request.POST
+        
+        # 1. FIX ATTRIBUTE ERROR: Convert date string to object
+        try:
+            date_str = post_data.get('observation_date')
+            observation_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            observation_date_obj = None
+
+        # 2. FIX VALIDATION ERROR: Helper for empty decimals
+        def clean_dec(val):
+            if val is None or str(val).strip() == "":
+                return 0.0
+            try:
+                # Remove any unit symbols like '°' before converting
+                clean_val = str(val).replace('°', '').strip()
+                return float(clean_val)
+            except ValueError:
+                return 0.0
+
+        # Create the observation record
+        observation = MagneticObservation.objects.create(
+            observation_date=observation_date_obj, # Saved as object, not string
+            observer=post_data.get('observer'),
+            session=post_data.get('session'),
+            # Clean all numeric inputs to prevent ValidationError
+            cr_awal=clean_dec(post_data.get('cr_awal_deg')),
+            cl_awal=clean_dec(post_data.get('cl_awal_deg')),
+            cr_akhir=clean_dec(post_data.get('cr_akhir_deg')),
+            cl_akhir=clean_dec(post_data.get('cl_akhir_deg')),
+            meridian_1=clean_dec(post_data.get('meridian_1')),
+            meridian_2=clean_dec(post_data.get('meridian_2')),
+            deklinasi_readings={r: {
+                'hh': post_data.get(f'dek_{r.lower()}_hh'),
+                'mm': post_data.get(f'dek_{r.lower()}_mm'),
+                'ss': post_data.get(f'dek_{r.lower()}_ss'),
+                'deg': clean_dec(post_data.get(f'dek_{r.lower()}_deg')),
+                'min': clean_dec(post_data.get(f'dek_{r.lower()}_min')),
+                'sec': clean_dec(post_data.get(f'dek_{r.lower()}_sec')),
+            } for r in ['WU', 'ED', 'WD', 'EU']},
+            inklinasi_readings={r: {
+                'hh': post_data.get(f'ink_{r.lower()}_hh'),
+                'mm': post_data.get(f'ink_{r.lower()}_mm'),
+                'ss': post_data.get(f'ink_{r.lower()}_ss'),
+                'deg': clean_dec(post_data.get(f'ink_{r.lower()}_deg')),
+                'min': clean_dec(post_data.get(f'ink_{r.lower()}_min')),
+                'sec': clean_dec(post_data.get(f'ink_{r.lower()}_sec')),
+                'ftotal': clean_dec(post_data.get(f'ink_{r.lower()}_ftotal'))
+            } for r in ['NU', 'SD', 'ND', 'SU']}
+        )
+
+        # Map DMS directly for Selenium automation session
+        request.session['selenium_data'] = {
+            'pengamat': observation.observer,
+            'datepicker': observation.observation_date.strftime('%Y-%m-%d'), # Now works!
+            'azimuth_tt': {'deg': 98, 'min': 45, 'sec': 31},
+            'CR1': {'deg': post_data.get('cr_awal_deg'), 'min': post_data.get('cr_awal_min'), 'sec': post_data.get('cr_awal_sec')},
+            'CL1': {'deg': post_data.get('cl_awal_deg'), 'min': post_data.get('cl_awal_min'), 'sec': post_data.get('cl_awal_sec')},
+            'CR2': {'deg': post_data.get('cr_akhir_deg'), 'min': post_data.get('cr_akhir_min'), 'sec': post_data.get('cr_akhir_sec')},
+            'CL2': {'deg': post_data.get('cl_akhir_deg'), 'min': post_data.get('cl_akhir_min'), 'sec': post_data.get('cl_akhir_sec')},
+            'deklinasi_times': {r: f"{post_data.get(f'dek_{r.lower()}_hh')}:{post_data.get(f'dek_{r.lower()}_mm')}:{post_data.get(f'dek_{r.lower()}_ss')}" for r in ['WU', 'ED', 'WD', 'EU']},
+            'deklinasi_dms': {r: {
+                'deg': post_data.get(f'dek_{r.lower()}_deg'), 'min': post_data.get(f'dek_{r.lower()}_min'), 'sec': post_data.get(f'dek_{r.lower()}_sec')
+            } for r in ['WU', 'ED', 'WD', 'EU']},
+            'inklinasi_times': {r: f"{post_data.get(f'ink_{r.lower()}_hh')}:{post_data.get(f'ink_{r.lower()}_mm')}:{post_data.get(f'ink_{r.lower()}_ss')}" for r in ['NU', 'SD', 'ND', 'SU']},
+            'inklinasi_dms': {r: {
+                'deg': post_data.get(f'ink_{r.lower()}_deg'), 'min': post_data.get(f'ink_{r.lower()}_min'), 'sec': post_data.get(f'ink_{r.lower()}_sec')
+            } for r in ['NU', 'SD', 'ND', 'SU']},
+            'inklinasi_ftotals': {r: post_data.get(f'ink_{r.lower()}_ftotal') for r in ['NU', 'SD', 'ND', 'SU']},
+        }
+        return redirect('conversion_result')
+
+    # Default context for GET request
+    context = {
+        'observer_names': observer_names,
+        'sessions': sessions,
+        'is_bartington': True,
+        'unit_label': 'deg',
+        'cr_awal_default': {'deg': 98, 'min': 43, 'sec': 20},
+        'cl_awal_default': {'deg': 278, 'min': 43, 'sec': 20},
+        'deklinasi_data': [
+            {'name': 'WU', 'deg': 272, 'min': 15, 'sec': 10},
+            {'name': 'ED', 'deg': 273, 'min': 5, 'sec': 40},
+            {'name': 'WD', 'deg': 93, 'min': 12, 'sec': 30},
+            {'name': 'EU', 'deg': 92, 'min': 20, 'sec': 15},
+        ],
+        'inklinasi_data': [
+            {'name': 'NU', 'deg': 158, 'min': 10, 'sec': 0},
+            {'name': 'SD', 'deg': 338, 'min': 15, 'sec': 0},
+            {'name': 'ND', 'deg': 202, 'min': 5, 'sec': 0},
+            {'name': 'SU', 'deg': 22, 'min': 12, 'sec': 0},
+        ]
+    }
+    return render(request, 'magnet/observation_bartington_form.html', context)

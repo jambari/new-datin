@@ -7,50 +7,67 @@
     {% include 'partials/_topbar.html' %} 
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
       <h1 class="text-2xl font-bold text-gray-900">
-        {% if observation %}Edit Observation{% else %}Form Pengamatan Magnetik{% endif %}
+        Edit Absolut Observation (ID: {{ observation.id }})
       </h1>
 
       <div class="mt-6 p-6 bg-white rounded-lg shadow-md">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-6 border-b">
-          <div><h3 class="font-semibold text-gray-700">Observatorium</h3><p class="text-gray-600">Stasiun Geofisika Kelas I Jayapura</p></div>
-          <div><h3 class="font-semibold text-gray-700">Koordinat Observatorium</h3><p class="text-gray-600">2.5144 S, 140.704 E</p></div>
-          <div><h3 class="font-semibold text-gray-700">Peralatan Pengamatan</h3><p class="text-gray-600">1. Zeiss 010B + MinGeo <br> 2. GEM GSM-19T Magnetometer</p></div>
-        </div>
-
         <form method="POST">
           {% csrf_token %}
           <section class="mb-8">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label for="observation_date" class="block text-sm font-medium text-gray-700">Date</label>
-                <input type="date" name="observation_date" value="{{ observation.observation_date|date:'Y-m-d' }}" id="observation_date" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                <label class="block text-sm font-medium text-gray-700">Date</label>
+                <input type="date" name="observation_date" value="{{ observation.observation_date|date:'Y-m-d' }}" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
               </div>
               <div>
-                <label for="observer" class="block text-sm font-medium text-gray-700">Observer Name</label>
-                <select name="observer" id="observer" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
-                  <option value="">--- Select Observer ---</option>
-                  {% for name in observer_names %}<option value="{{ name }}" {% if observation.observer == name %}selected{% endif %}>{{ name }}</option>{% endfor %}
+                <label class="block text-sm font-medium text-gray-700">Observer</label>
+                <select name="observer" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                  {% for name in observer_names %}
+                    <option value="{{ name }}" {% if observation.observer == name %}selected{% endif %}>{{ name }}</option>
+                  {% endfor %}
                 </select>
               </div>
               <div>
-                <label for="session" class="block text-sm font-medium text-gray-700">Session</label>
-                <select name="session" id="session" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
-                  <option value="">--- Select Session ---</option>
-                  {% for s in sessions %}<option value="{{ s }}" {% if observation.session == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                <label class="block text-sm font-medium text-gray-700">Session</label>
+                <select name="session" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
+                  {% for s in sessions %}
+                    <option value="{{ s }}" {% if observation.session == s %}selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
                 </select>
               </div>
             </div>
           </section>
+
           <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
-            <thead class="bg-gray-100"><tr><th colspan="4" class="p-2 font-semibold border border-gray-300">Pembacaan titik tetap awal</th></tr></thead>
+            <thead class="bg-gray-100"><tr><th colspan="4" class="p-2 border border-gray-300">Pembacaan titik tetap awal</th></tr></thead>
             <tbody>
               <tr>
-                <td class="p-2 font-medium border border-gray-300">CR</td><td class="p-2 font-medium border border-gray-300">grad</td>
-                <td class="p-2 font-medium border border-gray-300">CL</td><td class="p-2 font-medium border border-gray-300">grad</td>
+                <td colspan="2" class="p-2 border border-gray-300">CR</td>
+                <td colspan="2" class="p-2 border border-gray-300">CL</td>
               </tr>
               <tr>
-                <td colspan="2" class="p-2 border border-gray-300"><input type="number" step="any" value="{{ observation.cr_awal }}" name="cr_awal" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td colspan="2" class="p-2 border border-gray-300"><input type="number" step="any" value="{{ observation.cr_akhir }}" name="cl_awal" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td colspan="2" class="p-2 border border-gray-300">
+                  {% if deklinasi_data.0.data.deg %}
+                    <div class="flex space-x-1 justify-center">
+                      <input type="number" name="cr_awal_deg" value="{{ observation.cr_awal|floatformat:0 }}" class="w-16 text-center border rounded">
+                      <input type="number" name="cr_awal_min" value="0" class="w-12 text-center border rounded">
+                      <input type="number" name="cr_awal_sec" value="0" class="w-14 text-center border rounded">
+                    </div>
+                  {% else %}
+                    <input type="number" step="any" name="cr_awal" value="{{ observation.cr_awal }}" class="w-full text-center border rounded">
+                  {% endif %}
+                </td>
+                <td colspan="2" class="p-2 border border-gray-300">
+                  {% if deklinasi_data.0.data.deg %}
+                    <div class="flex space-x-1 justify-center">
+                      <input type="number" name="cl_awal_deg" value="{{ observation.cl_awal|floatformat:0 }}" class="w-16 text-center border rounded">
+                      <input type="number" name="cl_awal_min" value="0" class="w-12 text-center border rounded">
+                      <input type="number" name="cl_awal_sec" value="0" class="w-14 text-center border rounded">
+                    </div>
+                  {% else %}
+                    <input type="number" step="any" name="cl_awal" value="{{ observation.cl_awal }}" class="w-full text-center border rounded">
+                  {% endif %}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -58,52 +75,41 @@
           <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
             <thead class="bg-gray-100"><tr><th colspan="5" class="p-2 font-semibold border border-gray-300">Deklinasi</th></tr></thead>
             <tbody>
-              <tr>
-                <td rowspan="2" class="p-2 font-medium border border-gray-300"></td>
-                <td colspan="3" class="p-2 font-medium border border-gray-300">Waktu (UTC)</td>
-                <td class="p-2 font-medium border border-gray-300">Circle</td>
-              </tr>
-              <tr>
-                <td class="p-2 font-medium border border-gray-300">HH</td><td class="p-2 font-medium border border-gray-300">MM</td><td class="p-2 font-medium border border-gray-300">SS</td>
-                <td class="p-2 font-medium border border-gray-300">grad</td>
-              </tr>
               {% for item in deklinasi_data %}
               <tr>
                 <td class="p-2 font-medium border border-gray-300">{{ item.name }}</td>
-                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_hh" value="{{ item.data.hh }}" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_mm" value="{{ item.data.mm }}" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_ss" value="{{ item.data.ss }}" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td class="p-2 border border-gray-300"><input type="number" step="any" name="dek_{{ item.name|lower }}_circ" value="{{ item.data.circ }}" class="w-full text-center border-gray-200 rounded-md dek-circle-input"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_hh" value="{{ item.data.hh }}" class="w-full text-center"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_mm" value="{{ item.data.mm }}" class="w-full text-center"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="dek_{{ item.name|lower }}_ss" value="{{ item.data.ss }}" class="w-full text-center"></td>
+                <td class="p-2 border border-gray-300">
+                  {% if item.data.deg %}
+                    <div class="flex space-x-1 justify-center bartington-input">
+                      <input type="number" name="dek_{{ item.name|lower }}_deg" value="{{ item.data.deg }}" class="w-12 text-center border rounded bart-deg">
+                      <input type="number" name="dek_{{ item.name|lower }}_min" value="{{ item.data.min }}" class="w-10 text-center border rounded bart-min">
+                      <input type="number" name="dek_{{ item.name|lower }}_sec" value="{{ item.data.sec }}" class="w-10 text-center border rounded bart-sec">
+                    </div>
+                  {% else %}
+                    <input type="number" step="any" name="dek_{{ item.name|lower }}_circ" value="{{ item.data.circ }}" class="w-full text-center border-gray-200 rounded-md dek-circle-input">
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
 
-          <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
+          <table class="w-full mb-8 border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="4" class="p-2 border text-red-600 border-gray-300">Reference Meridian</th></tr></thead>
             <tbody>
+              <tr><td colspan="2" class="p-2 border border-gray-300">Meridian 1</td><td colspan="2" class="p-2 border border-gray-300">Meridian 2</td></tr>
               <tr>
-                <td class="p-2 font-medium border border-gray-300">Meridian 1</td>
-                <td class="p-2 font-medium border border-gray-300">Rata-rata</td>
-                <td class="p-2 font-medium border border-gray-300">Meridian 2</td>
-                <td class="p-2 font-medium border border-gray-300">Rata-rata</td>
-              </tr>
-              <tr>
-                <td colspan="2" class="p-2 border border-gray-300"><input type="number" step="any" id="meridian_1" name="meridian_1" class="w-full text-center bg-gray-100 border-gray-200 rounded-md" readonly></td>
-                <td colspan="2" class="p-2 border border-gray-300"><input type="number" step="any" id="meridian_2" name="meridian_2" class="w-full text-center bg-gray-100 border-gray-200 rounded-md" readonly></td>
-              </tr>
-            </tbody>
-          </table>
-
-          <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
-            <thead class="bg-gray-100"><tr><th colspan="4" class="p-2 font-semibold border border-gray-300">Pembacaan titik tetap akhir</th></tr></thead>
-            <tbody>
-              <tr>
-                <td class="p-2 font-medium border border-gray-300">CR</td><td class="p-2 font-medium border border-gray-300">grad</td>
-                <td class="p-2 font-medium border border-gray-300">CL</td><td class="p-2 font-medium border border-gray-300">grad</td>
-              </tr>
-              <tr>
-                <td colspan="2" class="p-2 border border-gray-300"><input type="number" value="{{ observation.cr_akhir }}"  step="any" name="cr_akhir" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td colspan="2" class="p-2 border border-gray-300"><input type="number" value="{{ observation.cl_akhir }}" step="any" name="cl_akhir" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td colspan="2" class="p-2 border border-gray-300">
+                  <input type="text" id="meridian_1" name="meridian_1" value="{{ observation.meridian_1 }}" class="w-full text-center bg-gray-100 font-bold" readonly>
+                  <div id="meridian_1_dms" class="text-xs text-blue-600 font-semibold mt-1"></div>
+                </td>
+                <td colspan="2" class="p-2 border border-gray-300">
+                  <input type="text" id="meridian_2" name="meridian_2" value="{{ observation.meridian_2 }}" class="w-full text-center bg-gray-100 font-bold" readonly>
+                  <div id="meridian_2_dms" class="text-xs text-blue-600 font-semibold mt-1"></div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -111,32 +117,65 @@
           <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
             <thead class="bg-gray-100"><tr><th colspan="6" class="p-2 font-semibold border border-gray-300">Inklinasi</th></tr></thead>
             <tbody>
-              <tr>
-                <td rowspan="2" class="p-2 font-medium border border-gray-300"></td>
-                <td colspan="3" class="p-2 font-medium border border-gray-300">Waktu (UTC)</td>
-                <td class="p-2 font-medium border border-gray-300">Circle</td>
-                <td class="p-2 font-medium border border-gray-300">Ftotal</td>
-              </tr>
-              <tr>
-                <td class="p-2 font-medium border border-gray-300">HH</td><td class="p-2 font-medium border border-gray-300">MM</td><td class="p-2 font-medium border border-gray-300">SS</td>
-                <td class="p-2 font-medium border border-gray-300">grad</td>
-                <td class="p-2 font-medium border border-gray-300"></td>
-              </tr>
               {% for item in inklinasi_data %}
               <tr>
                 <td class="p-2 font-medium border border-gray-300">{{ item.name }}</td>
-                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_hh" value="{{ item.data.hh }}" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_mm" value="{{ item.data.mm }}" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_ss" value="{{ item.data.ss }}" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td class="p-2 border border-gray-300"><input type="number" step="any" name="ink_{{ item.name|lower }}_circ" value="{{ item.data.circ }}" class="w-full text-center border-gray-200 rounded-md"></td>
-                <td class="p-2 border border-gray-300"><input type="number" step="any" name="ink_{{ item.name|lower }}_ftotal" value="{{ item.data.ftotal }}" class="w-full text-center border-gray-200 rounded-md"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_hh" value="{{ item.data.hh }}" class="w-full text-center"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_mm" value="{{ item.data.mm }}" class="w-full text-center"></td>
+                <td class="p-2 border border-gray-300"><input type="number" name="ink_{{ item.name|lower }}_ss" value="{{ item.data.ss }}" class="w-full text-center"></td>
+                <td class="p-2 border border-gray-300">
+                  {% if item.data.deg %}
+                    <div class="flex space-x-1 justify-center">
+                      <input type="number" name="ink_{{ item.name|lower }}_deg" value="{{ item.data.deg }}" class="w-12 text-center border rounded">
+                      <input type="number" name="ink_{{ item.name|lower }}_min" value="{{ item.data.min }}" class="w-10 text-center border rounded">
+                      <input type="number" name="ink_{{ item.name|lower }}_sec" value="{{ item.data.sec }}" class="w-10 text-center border rounded">
+                    </div>
+                  {% else %}
+                    <input type="number" step="any" name="ink_{{ item.name|lower }}_circ" value="{{ item.data.circ }}" class="w-full text-center border-gray-200 rounded-md">
+                  {% endif %}
+                </td>
+                <td class="p-2 border border-gray-300"><input type="number" step="any" name="ink_{{ item.name|lower }}_ftotal" value="{{ item.data.ftotal }}" class="w-full text-center border rounded"></td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
-          
+
+          <table class="w-full mb-8 border-collapse border border-gray-300 text-center">
+            <thead class="bg-gray-100"><tr><th colspan="4" class="p-2 border border-gray-300">Pembacaan titik tetap akhir</th></tr></thead>
+            <tbody>
+              <tr>
+                <td colspan="2" class="p-2 border border-gray-300">CR</td>
+                <td colspan="2" class="p-2 border border-gray-300">CL</td>
+              </tr>
+              <tr>
+                <td colspan="2" class="p-2 border border-gray-300">
+                  {% if deklinasi_data.0.data.deg %}
+                    <div class="flex space-x-1 justify-center">
+                      <input type="number" name="cr_akhir_deg" value="{{ observation.cr_akhir|floatformat:0 }}" class="w-16 text-center border rounded">
+                      <input type="number" name="cr_akhir_min" value="0" class="w-12 text-center border rounded">
+                      <input type="number" name="cr_akhir_sec" value="0" class="w-14 text-center border rounded">
+                    </div>
+                  {% else %}
+                    <input type="number" step="any" name="cr_akhir" value="{{ observation.cr_akhir }}" class="w-full text-center border rounded">
+                  {% endif %}
+                </td>
+                <td colspan="2" class="p-2 border border-gray-300">
+                  {% if deklinasi_data.0.data.deg %}
+                    <div class="flex space-x-1 justify-center">
+                      <input type="number" name="cl_akhir_deg" value="{{ observation.cl_akhir|floatformat:0 }}" class="w-16 text-center border rounded">
+                      <input type="number" name="cl_akhir_min" value="0" class="w-12 text-center border rounded">
+                      <input type="number" name="cl_akhir_sec" value="0" class="w-14 text-center border rounded">
+                    </div>
+                  {% else %}
+                    <input type="number" step="any" name="cl_akhir" value="{{ observation.cl_akhir }}" class="w-full text-center border rounded">
+                  {% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
           <div class="mt-8 pt-6 border-t flex justify-end">
-            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700">Calculate & Save</button>
+            <button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700">Update Record</button>
           </div>
         </form>
       </div>
@@ -146,67 +185,56 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Select all four circle inputs from the Deklinasi section
-    const dekCircleInputs = document.querySelectorAll('.dek-circle-input');
-    
-    // Select the two Meridian output fields
-    const meridian1Field = document.getElementById('meridian_1');
-    const meridian2Field = document.getElementById('meridian_2');
+    // Detect if this is a Bartington record based on the template rendering
+    const isBartington = {% if deklinasi_data.0.data.deg %}true{% else %}false{% endif %};
+    const m1Field = document.getElementById('meridian_1');
+    const m2Field = document.getElementById('meridian_2');
+    const m1DmsDiv = document.getElementById('meridian_1_dms');
+    const m2DmsDiv = document.getElementById('meridian_2_dms');
 
-    // This function performs the calculation
+    function toDMS(decimal) {
+      const absDec = Math.abs(decimal);
+      const d = Math.floor(absDec);
+      const m = Math.floor((absDec - d) * 60);
+      const s = ((absDec - d - m / 60) * 3600).toFixed(1);
+      return `${decimal < 0 ? '-' : ''}${d}° ${m}' ${s}"`;
+    }
+
     function calculateMeridians() {
-      let sum = 0;
-      let count = 0;
-      const values = [];
-
-      // Get values from all four inputs
-      dekCircleInputs.forEach(input => {
-        if (input.value !== '') {
-          values.push(parseFloat(input.value));
-        }
-      });
-
-      // Check if all four fields are filled
-      if (values.length === 4) {
-        // Calculate the sum
-        sum = values.reduce((total, current) => total + current, 0);
-        
-        // Calculate Meridian 2 (the average)
-        const meridian2 = sum / 4;
-        
-        // Calculate Meridian 1 (average - 200)
-        const meridian1 = meridian2 - 200;
-
-        // Populate the fields, formatted to 4 decimal places
-        meridian2Field.value = meridian2.toFixed(4);
-        meridian1Field.value = meridian1.toFixed(4);
+      let decimals = [];
+      if (isBartington) {
+        ['wu','ed','wd','eu'].forEach(p => {
+          const d = parseFloat(document.querySelector(`[name="dek_${p}_deg"]`)?.value) || 0;
+          const m = parseFloat(document.querySelector(`[name="dek_${p}_min"]`)?.value) || 0;
+          const s = parseFloat(document.querySelector(`[name="dek_${p}_sec"]`)?.value) || 0;
+          if (d !== 0 || m !== 0 || s !== 0) decimals.push(d + (m/60) + (s/3600));
+        });
       } else {
-        // Clear the fields if not all inputs are filled
-        meridian1Field.value = '';
-        meridian2Field.value = '';
+        document.querySelectorAll('.dek-circle-input').forEach(i => {
+          if(i.value) decimals.push(parseFloat(i.value));
+        });
+      }
+
+      if (decimals.length === 4) {
+        const avg = decimals.reduce((a, b) => a + b, 0) / 4;
+        const offset = isBartington ? 180 : 200;
+        const m2Val = avg;
+        const m1Val = avg - offset;
+
+        m2Field.value = m2Val.toFixed(4);
+        m1Field.value = m1Val.toFixed(4);
+
+        if (isBartington) {
+          m2DmsDiv.textContent = toDMS(m2Val);
+          m1DmsDiv.textContent = toDMS(m1Val);
+        }
       }
     }
 
-    // Add an event listener to each input field
-    // It will trigger the calculation every time the user types
-    dekCircleInputs.forEach(input => {
-      input.addEventListener('input', calculateMeridians);
-    });
+    const listenerSelector = isBartington ? '.bart-deg, .bart-min, .bart-sec' : '.dek-circle-input';
+    document.querySelectorAll(listenerSelector).forEach(el => el.addEventListener('input', calculateMeridians));
 
-    // Run the calculation once on page load for the pre-filled data
-    calculateMeridians(); 
-  });
-
-  document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-
-    if (sidebarToggle) {
-      sidebarToggle.addEventListener('click', function() {
-        // This toggles the 'hidden' class on the sidebar for mobile
-        sidebar.classList.toggle('hidden');
-      });
-    }
+    calculateMeridians();
   });
 </script>
 {% endblock %}

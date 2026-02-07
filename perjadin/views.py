@@ -8,7 +8,7 @@ from django.db.models import Q
 def index_perjadin(request):
     if not request.user.is_authenticated or request.user.username != 'jambari':
         return HttpResponseForbidden("Akses Ditolak.")
-
+    
     today = date.today()
     # Mengambil bulan dan tahun dari URL, jika tidak ada gunakan bulan berjalan
     month = int(request.GET.get('month', today.month))
