@@ -308,15 +308,17 @@ class UploadNexStormView(View):
                         ))
 
                         if MIN_LAT <= lat_float <= MAX_LAT and MIN_LON <= lon_float <= MAX_LON:
-                            total_filtered += 1
-                            if type_int == 0:
-                                cg_plus += 1
-                            elif type_int == 1:
-                                cg_minus += 1
-                            elif type_int == 2:
-                                ic_count += 1
-                            else:
-                                other_count += 1
+                                # total_filtered += 1  <-- REMOVE THIS LINE
+                                if type_int == 0:
+                                    cg_plus += 1
+                                    total_filtered += 1 # Add this
+                                elif type_int == 1:
+                                    cg_minus += 1
+                                    total_filtered += 1 # Add this
+                                elif type_int == 2:
+                                    ic_count += 1
+                                else:
+                                    other_count += 1
 
                     except (ValueError, KeyError):
                         continue

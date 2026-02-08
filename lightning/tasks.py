@@ -109,11 +109,16 @@ def process_yesterday_nexstorm_file():
                         )
 
                         if is_within_bounds:
-                            file_total_count_filtered += 1
-                            if type_int == 0: file_cg_plus_count_filtered += 1
-                            elif type_int == 1: file_cg_minus_count_filtered += 1
-                            elif type_int == 2: file_ic_count_filtered += 1
-                            else: file_other_count_filtered += 1
+                            if type_int == 0: 
+                                file_cg_plus_count_filtered += 1
+                                file_total_count_filtered += 1 # Only count CG+
+                            elif type_int == 1: 
+                                file_cg_minus_count_filtered += 1
+                                file_total_count_filtered += 1 # Only count CG-
+                            elif type_int == 2: 
+                                file_ic_count_filtered += 1
+                            else: 
+                                file_other_count_filtered += 1
 
                     except (ValueError, TypeError, OverflowError) as e:
                         logger.warning(f"Skipping bad data row. Error: {e}. Data: {row_data}")
