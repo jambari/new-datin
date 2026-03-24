@@ -11,6 +11,8 @@ urlpatterns = [
     path('observation/', views.observation_form_view, name='observation_form'),
     path('observation/bartington/', views.observation_bartington_form_view, name='observation_bartington'),
     path('records/', views.observation_list_view, name='observation_list'),
+    path('records/mingeo/', views.observation_list_view, {'filter_type': 'mingeo'}, name='observation_list_mingeo'),
+    path('records/bartington/', views.observation_list_view, {'filter_type': 'bartington'}, name='observation_list_bartington'),
     path('result/', views.conversion_result_view, name='conversion_result'),
     path('records/<int:pk>/', views.observation_detail_view, name='observation_detail'),
     path('records/<int:pk>/edit/', views.observation_edit_view, name='observation_edit'), # Add this
@@ -32,5 +34,6 @@ urlpatterns = [
     path('availability-query/', magnet_availability_query, name='magnet_availability_query'),
     path('api/update-availability/', update_magnet_availability, name='update_magnet_availability'),
     path('observation/bartington/', views.observation_bartington_form_view, name='observation_bartington'),
+    path('observation/legacy/', views.observation_legacy_list_view, name='observation_legacy_list'),
     
 ]

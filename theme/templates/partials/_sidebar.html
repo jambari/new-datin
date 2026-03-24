@@ -95,20 +95,19 @@
         </button>
         <ul id="dropdown-magnet" class="hidden py-2 space-y-2 ml-4 bg-gray-900 rounded-lg">
             <li>
-                <a href="{% url 'observation_form' %}" class="flex items-center p-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700">
-                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                    <span class="ml-1">Absolut MinGeo (Grad)</span>
+                <a href="{% url 'observation_list_mingeo' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
+                    <span class="ml-3">Absolut MinGeo (Grad)</span>
                 </a>
             </li>
             <li>
-                <a href="{% url 'observation_bartington' %}" class="flex items-center p-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700">
-                    <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                    <span class="ml-1">Absolut Bartington (Deg)</span>
+                <a href="{% url 'observation_list_bartington' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">
+                    <span class="ml-3">Absolut Bartington (Deg)</span>
                 </a>
+            </li>
+            <li>
+            <a href="{% url 'observation_legacy_list' %}" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+            Arsip Absolut
+            </a>
             </li>
             <li>
                 <a href="{% url 'dim_calculator' %}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition duration-75 group pl-4">

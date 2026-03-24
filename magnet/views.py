@@ -2,6 +2,9 @@
 from django.contrib.auth.decorators import login_required
 from .models import MagneticObservation, MagnetDataAvailability
 from django.shortcuts import render, get_object_or_404,redirect
+import csv
+from django.http import HttpResponse
+from django.utils.dateparse import parse_date
 import json
 from datetime import datetime
 import math
@@ -143,8 +146,20 @@ def conversion_result_view(request):
     return render(request, 'magnet/conversion_result.html', context)
 
 @login_required
-def observation_list_view(request):
-    all_observations = MagneticObservation.objects.all().order_by('-observation_date') # Added ordering for consistency
+def observation_list_view(request, filter_type=None):
+    all_observations = MagneticObservation.objects.all().order_by('-observation_date')
+
+    # Filter by instrument type if specified
+    if filter_type == 'bartington':
+        # Bartington records have 'deg' key in deklinasi_readings JSON
+        all_observations = all_observations.filter(deklinasi_readings__WU__has_key='deg')
+        page_title = "Magnetic Observation Records — Bartington (Deg)"
+    elif filter_type == 'mingeo':
+        # MinGeo records have 'circ' key in deklinasi_readings JSON
+        all_observations = all_observations.filter(deklinasi_readings__WU__has_key='circ')
+        page_title = "Magnetic Observation Records — MinGeo (Grad)"
+    else:
+        page_title = "Magnetic Observation Records"
 
     # Set the number of records per page
     paginator = Paginator(all_observations, 10)
@@ -162,7 +177,9 @@ def observation_list_view(request):
         observations = paginator.page(paginator.num_pages)
 
     context = {
-        'observations': observations
+        'observations': observations,
+        'page_title': page_title,
+        'filter_type': filter_type,
     }
     return render(request, 'magnet/observation_list.html', context)
 
@@ -171,25 +188,50 @@ def observation_list_view(request):
 def observation_detail_view(request, pk):
     observation = get_object_or_404(MagneticObservation, pk=pk)
     
-    # --- NEW: Perform conversions for the detail page ---
-    converted_data = {
-        'cr_awal': grad_to_dms(observation.cr_awal),
-        'cl_awal': grad_to_dms(observation.cl_awal),
-        'cr_akhir': grad_to_dms(observation.cr_akhir),
-        'cl_akhir': grad_to_dms(observation.cl_akhir),
-        'deklinasi': {
-            key: grad_to_dms(value.get('circ'))
-            for key, value in observation.deklinasi_readings.items()
-        },
-        'inklinasi': {
-            key: grad_to_dms(value.get('circ'))
-            for key, value in observation.inklinasi_readings.items()
-        },
-    }
+    # Detect record type using the model property
+    is_bartington = observation.is_bartington
+
+    if is_bartington:
+        dek = observation.deklinasi_readings or {}
+        # Full DMS for titik tetap is stored under underscore-prefixed keys
+        def tt_dms(key):
+            d = dek.get(key, {})
+            return {'deg': int(d.get('deg', 0)), 'min': int(d.get('min', 0)), 'sec': d.get('sec', 0)}
+
+        converted_data = {
+            'cr_awal':  tt_dms('_cr_awal'),
+            'cl_awal':  tt_dms('_cl_awal'),
+            'cr_akhir': tt_dms('_cr_akhir'),
+            'cl_akhir': tt_dms('_cl_akhir'),
+            'deklinasi': {
+                key: {'deg': int(val.get('deg', 0)), 'min': int(val.get('min', 0)), 'sec': val.get('sec', 0)}
+                for key, val in dek.items() if not key.startswith('_')
+            },
+            'inklinasi': {
+                key: {'deg': int(val.get('deg', 0)), 'min': int(val.get('min', 0)), 'sec': val.get('sec', 0)}
+                for key, val in (observation.inklinasi_readings or {}).items()
+            },
+        }
+    else:
+        # MinGeo records store gradians — convert to DMS
+        converted_data = {
+            'cr_awal': grad_to_dms(observation.cr_awal),
+            'cl_awal': grad_to_dms(observation.cl_awal),
+            'cr_akhir': grad_to_dms(observation.cr_akhir),
+            'cl_akhir': grad_to_dms(observation.cl_akhir),
+            'deklinasi': {
+                key: grad_to_dms(value.get('circ'))
+                for key, value in observation.deklinasi_readings.items()
+            },
+            'inklinasi': {
+                key: grad_to_dms(value.get('circ'))
+                for key, value in observation.inklinasi_readings.items()
+            },
+        }
     
     context = {
         'observation': observation,
-        'converted_data': converted_data, # Add converted data to context
+        'converted_data': converted_data,
     }
     return render(request, 'magnet/observation_detail.html', context)
 
@@ -650,9 +692,13 @@ def observation_bartington_form_view(request):
         # 1. FIX ATTRIBUTE ERROR: Convert date string to object
         try:
             date_str = post_data.get('observation_date')
+            if not date_str:
+                raise ValueError("Tanggal kosong")
             observation_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            observation_date_obj = None
+            # Cegah aplikasi crash, kembalikan user ke form dengan pesan error
+            messages.error(request, "Tanggal observasi wajib diisi dengan format yang benar.")
+            return redirect('observation_bartington')
 
         # 2. FIX VALIDATION ERROR: Helper for empty decimals
         def clean_dec(val):
@@ -667,24 +713,30 @@ def observation_bartington_form_view(request):
 
         # Create the observation record
         observation = MagneticObservation.objects.create(
-            observation_date=observation_date_obj, # Saved as object, not string
+            observation_date=observation_date_obj,
             observer=post_data.get('observer'),
             session=post_data.get('session'),
-            # Clean all numeric inputs to prevent ValidationError
             cr_awal=clean_dec(post_data.get('cr_awal_deg')),
             cl_awal=clean_dec(post_data.get('cl_awal_deg')),
             cr_akhir=clean_dec(post_data.get('cr_akhir_deg')),
             cl_akhir=clean_dec(post_data.get('cl_akhir_deg')),
             meridian_1=clean_dec(post_data.get('meridian_1')),
             meridian_2=clean_dec(post_data.get('meridian_2')),
-            deklinasi_readings={r: {
-                'hh': post_data.get(f'dek_{r.lower()}_hh'),
-                'mm': post_data.get(f'dek_{r.lower()}_mm'),
-                'ss': post_data.get(f'dek_{r.lower()}_ss'),
-                'deg': clean_dec(post_data.get(f'dek_{r.lower()}_deg')),
-                'min': clean_dec(post_data.get(f'dek_{r.lower()}_min')),
-                'sec': clean_dec(post_data.get(f'dek_{r.lower()}_sec')),
-            } for r in ['WU', 'ED', 'WD', 'EU']},
+            deklinasi_readings={
+                **{r: {
+                    'hh': post_data.get(f'dek_{r.lower()}_hh'),
+                    'mm': post_data.get(f'dek_{r.lower()}_mm'),
+                    'ss': post_data.get(f'dek_{r.lower()}_ss'),
+                    'deg': clean_dec(post_data.get(f'dek_{r.lower()}_deg')),
+                    'min': clean_dec(post_data.get(f'dek_{r.lower()}_min')),
+                    'sec': clean_dec(post_data.get(f'dek_{r.lower()}_sec')),
+                } for r in ['WU', 'ED', 'WD', 'EU']},
+                # Store full DMS for titik tetap so detail view can display them correctly
+                '_cr_awal':  {'deg': clean_dec(post_data.get('cr_awal_deg')),  'min': clean_dec(post_data.get('cr_awal_min')),  'sec': clean_dec(post_data.get('cr_awal_sec'))},
+                '_cl_awal':  {'deg': clean_dec(post_data.get('cl_awal_deg')),  'min': clean_dec(post_data.get('cl_awal_min')),  'sec': clean_dec(post_data.get('cl_awal_sec'))},
+                '_cr_akhir': {'deg': clean_dec(post_data.get('cr_akhir_deg')), 'min': clean_dec(post_data.get('cr_akhir_min')), 'sec': clean_dec(post_data.get('cr_akhir_sec'))},
+                '_cl_akhir': {'deg': clean_dec(post_data.get('cl_akhir_deg')), 'min': clean_dec(post_data.get('cl_akhir_min')), 'sec': clean_dec(post_data.get('cl_akhir_sec'))},
+            },
             inklinasi_readings={r: {
                 'hh': post_data.get(f'ink_{r.lower()}_hh'),
                 'mm': post_data.get(f'ink_{r.lower()}_mm'),
@@ -723,8 +775,8 @@ def observation_bartington_form_view(request):
         'sessions': sessions,
         'is_bartington': True,
         'unit_label': 'deg',
-        'cr_awal_default': {'deg': 98, 'min': 43, 'sec': 20},
-        'cl_awal_default': {'deg': 278, 'min': 43, 'sec': 20},
+        'cr_awal_default': {'deg': 98, 'min': 45, 'sec': 31},
+        'cl_awal_default': {'deg': 278, 'min': 45, 'sec': 31},
         'deklinasi_data': [
             {'name': 'WU', 'deg': 272, 'min': 15, 'sec': 10},
             {'name': 'ED', 'deg': 273, 'min': 5, 'sec': 40},
@@ -739,3 +791,72 @@ def observation_bartington_form_view(request):
         ]
     }
     return render(request, 'magnet/observation_bartington_form.html', context)
+
+def observation_legacy_list_view(request):
+    """
+    Menampilkan khusus data observasi historis (Legacy Data) hasil import Excel,
+    dilengkapi dengan filter Date Range dan fitur Export CSV/Excel.
+    """
+    # 1. Ambil semua data legacy
+    queryset = MagneticObservation.objects.filter(
+        deklinasi_readings__is_legacy=True
+    ).order_by('-observation_date', '-session')
+    
+    # 2. Tangkap parameter filter dari URL (GET request)
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+
+    # 3. Terapkan filter ke database jika tanggalnya diisi
+    if start_date_str:
+        start_date = parse_date(start_date_str)
+        if start_date:
+            queryset = queryset.filter(observation_date__gte=start_date)
+            
+    if end_date_str:
+        end_date = parse_date(end_date_str)
+        if end_date:
+            queryset = queryset.filter(observation_date__lte=end_date)
+
+    # 4. Fitur EXPORT TO EXCEL/CSV
+    if request.GET.get('export') == 'xls':
+        # Setup HTTP response agar browser mengunduh file
+        response = HttpResponse(content_type='text/csv')
+        # Menambahkan BOM agar karakter terbaca sempurna di Microsoft Excel
+        response.write('\ufeff'.encode('utf8'))
+        response['Content-Disposition'] = 'attachment; filename="Data_Absolut.csv"'
+        
+        # Menggunakan koma (,) sebagai pemisah standar. Jika Excel Anda berantakan, ganti koma dengan titik koma (;)
+        writer = csv.writer(response, delimiter=',')
+        
+        # Tulis baris Header (Judul Kolom)
+        writer.writerow(['Date', 'Session', 'Observer', 'Declination (D)', 'Inclination (I)', 'F (nT)', 'H (nT)', 'Z (nT)', 'X (nT)', 'Y (nT)'])
+        
+        # Tulis isi datanya baris demi baris
+        for obs in queryset:
+            writer.writerow([
+                obs.observation_date,
+                obs.session,
+                obs.observer,
+                obs.declination,
+                obs.inclination,
+                obs.total_intensity,
+                obs.horizontal_intensity,
+                obs.vertical_intensity,
+                obs.north_component,
+                obs.east_component
+            ])
+        return response
+
+    # 5. Pagination untuk tampilan Web (20 data per halaman)
+    paginator = Paginator(queryset, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'observations': page_obj,
+        'page_title': 'Data Absolut Backup',
+        # Kirim kembali tanggal ke template agar menempel di input box
+        'start_date': start_date_str, 
+        'end_date': end_date_str,
+    }
+    return render(request, 'magnet/observation_legacy_list.html', context)

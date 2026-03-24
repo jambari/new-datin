@@ -142,24 +142,63 @@
             </tbody>
           </table>
 
-          <div class="flex justify-end"><button type="submit" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700">Calculate & Save</button></div>
+          <div class="flex justify-end"><button type="button" id="btn-submit-trigger" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700">Calculate & Save</button></div>
         </form>
       </div>
     </main>
   </div>
 </div>
 
+<!-- ===== CONFIRMATION MODAL ===== -->
+<!-- Appended to <body> via JS to avoid fixed positioning issues inside transformed containers -->
+<div id="confirm-modal" style="display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; background:rgba(0,0,0,0.55);">
+  <div style="background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3); width:100%; max-width:440px; margin:0 16px; padding:24px;">
+    <div style="display:flex; align-items:center; margin-bottom:16px;">
+      <div style="flex-shrink:0; width:40px; height:40px; border-radius:50%; background:#fef9c3; display:flex; align-items:center; justify-content:center; margin-right:12px;">
+        <svg style="width:24px;height:24px;color:#ca8a04;" fill="none" stroke="#ca8a04" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+      </div>
+      <h3 style="font-size:1.1rem; font-weight:700; color:#111827; margin:0;">Konfirmasi Simpan Data</h3>
+    </div>
+    <p style="color:#4b5563; margin-bottom:8px; font-size:0.95rem;">Data waktu pengamatan sudah terisi. Apakah Anda yakin ingin menyimpan dan memproses data ini?</p>
+    <pre id="modal-summary" style="background:#f9fafb; border-radius:8px; padding:12px; margin-bottom:20px; font-size:0.82rem; color:#374151; font-family:monospace; white-space:pre; overflow-x:auto;"></pre>
+    <div style="display:flex; justify-content:flex-end; gap:12px;">
+      <button id="modal-cancel" style="padding:8px 20px; border-radius:8px; background:#e5e7eb; color:#1f2937; font-weight:600; border:none; cursor:pointer; font-size:0.95rem;">Batal</button>
+      <button id="modal-confirm" style="padding:8px 20px; border-radius:8px; background:#4f46e5; color:#fff; font-weight:700; border:none; cursor:pointer; font-size:0.95rem;">Ya, Simpan</button>
+    </div>
+  </div>
+</div>
+
 <script>
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        // This toggles the 'hidden' class on the sidebar for mobile
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+
 document.addEventListener('DOMContentLoaded', function() {
-  const m1Field = document.getElementById('meridian_1');
-  const m2Field = document.getElementById('meridian_2');
+  const m1Field  = document.getElementById('meridian_1');
+  const m2Field  = document.getElementById('meridian_2');
   const m1DmsDiv = document.getElementById('meridian_1_dms');
   const m2DmsDiv = document.getElementById('meridian_2_dms');
+  const form     = document.getElementById('observation-form');
+  const modal    = document.getElementById('confirm-modal');
+  let formSubmitting = false;
 
-  /**
-   * Converts decimal degrees into a human-readable 
-   * Degree° Minute' Second" string.
-   */
+  // Teleport modal to <body> so position:fixed is never clipped by a parent transform/overflow
+  document.body.appendChild(modal);
+
+  function showModal() { modal.style.display = 'flex'; }
+  function hideModal() { modal.style.display = 'none'; }
+
   function toDMS(decimal) {
     const absDec = Math.abs(decimal);
     const d = Math.floor(absDec);
@@ -168,81 +207,118 @@ document.addEventListener('DOMContentLoaded', function() {
     return `${decimal < 0 ? '-' : ''}${d}° ${m}' ${s}"`;
   }
 
-  /**
-   * Aggregates the DMS inputs for Deklinasi (WU, ED, WD, EU),
-   * calculates the average (Meridian 2), and subtracts 180 (Meridian 1).
-   */
   function calculateMeridians() {
     let decimals = [];
     const positions = ['wu', 'ed', 'wd', 'eu'];
-
     positions.forEach(p => {
       const d = parseFloat(document.querySelector(`[name="dek_${p}_deg"]`)?.value) || 0;
       const m = parseFloat(document.querySelector(`[name="dek_${p}_min"]`)?.value) || 0;
       const s = parseFloat(document.querySelector(`[name="dek_${p}_sec"]`)?.value) || 0;
-      
-      // Only include in average if at least one field is non-zero
       if (d !== 0 || m !== 0 || s !== 0) {
         decimals.push(d + (m / 60) + (s / 3600));
       }
     });
-
     if (decimals.length === 4) {
-      const avg = decimals.reduce((a, b) => a + b, 0) / 4;
+      const avg  = decimals.reduce((a, b) => a + b, 0) / 4;
       const m2Val = avg;
       const m1Val = avg - 180;
-
-      // Update the readonly decimal fields
       m2Field.value = m2Val.toFixed(4) + '°';
       m1Field.value = m1Val.toFixed(4) + '°';
-
-      // Update the blue DMS display text
       m2DmsDiv.textContent = toDMS(m2Val);
       m1DmsDiv.textContent = toDMS(m1Val);
     } else {
-      // Clear fields if data is incomplete
-      m1Field.value = '';
-      m2Field.value = '';
-      m1DmsDiv.textContent = '';
-      m2DmsDiv.textContent = '';
+      m1Field.value = ''; m2Field.value = '';
+      m1DmsDiv.textContent = ''; m2DmsDiv.textContent = '';
     }
   }
 
-  // 1. Listen for any typing/changes in Bartington DMS inputs
   document.querySelectorAll('.bart-deg, .bart-min, .bart-sec').forEach(el => {
     el.addEventListener('input', calculateMeridians);
   });
-
-  // 2. RUN IMMEDIATELY ON PAGE LOAD
-  // This ensures the meridian calculates using the default values 
-  // provided by the Django context.
   calculateMeridians();
 
-  // 3. UTC Clock Logic
+  // UTC Clock
   setInterval(() => {
     const n = new Date();
     const clockBadge = document.getElementById('utc-clock-badge');
     if (clockBadge) {
-      clockBadge.textContent = `UTC: ${String(n.getUTCHours()).padStart(2, '0')}:${String(n.getUTCMinutes()).padStart(2, '0')}:${String(n.getUTCSeconds()).padStart(2, '0')}`;
+      clockBadge.textContent = `UTC: ${String(n.getUTCHours()).padStart(2,'0')}:${String(n.getUTCMinutes()).padStart(2,'0')}:${String(n.getUTCSeconds()).padStart(2,'0')}`;
     }
   }, 1000);
 
-  // 4. Time Populator Logic
+  // Time Populator with confirmation if already filled
   document.querySelectorAll('.time-populator').forEach(pop => {
     pop.addEventListener('click', e => {
       const prefix = e.target.dataset.prefix;
-      const n = new Date();
       const hh = document.getElementById(prefix + '_hh');
       const mm = document.getElementById(prefix + '_mm');
       const ss = document.getElementById(prefix + '_ss');
-      
-      if (hh && mm && ss) {
-        hh.value = n.getUTCHours();
-        mm.value = n.getUTCMinutes();
-        ss.value = n.getUTCSeconds();
+      if (hh.value || mm.value || ss.value) {
+        if (!confirm(`Waktu untuk ${prefix.replace('dek_','').replace('ink_','').toUpperCase()} sudah terisi (${String(hh.value).padStart(2,'0')}:${String(mm.value).padStart(2,'0')}:${String(ss.value).padStart(2,'0')} UTC).\nApakah Anda yakin ingin memperbarui waktu?`)) return;
       }
+      const n = new Date();
+      hh.value = n.getUTCHours();
+      mm.value = n.getUTCMinutes();
+      ss.value = n.getUTCSeconds();
     });
   });
+
+  // Check if any time field is filled
+  function hasTimeData() {
+    const timeInputs = form.querySelectorAll('input[id$="_hh"], input[id$="_mm"], input[id$="_ss"]');
+    return Array.from(timeInputs).some(el => el.value !== '' && el.value !== null);
+  }
+
+  // Warn on page close/navigate away
+  window.addEventListener('beforeunload', function(e) {
+    if (!formSubmitting && hasTimeData()) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // Build summary for modal
+  function buildSummary() {
+    const prefixes = ['dek_wu','dek_ed','dek_wd','dek_eu','ink_nu','ink_sd','ink_nd','ink_su'];
+    let lines = [];
+    prefixes.forEach(p => {
+      const hh = document.getElementById(p + '_hh')?.value;
+      const mm = document.getElementById(p + '_mm')?.value;
+      const ss = document.getElementById(p + '_ss')?.value;
+      if (hh || mm || ss) {
+        const label = p.replace('dek_','DEK ').replace('ink_','INK ').toUpperCase();
+        lines.push(`${label.padEnd(10)}: ${String(hh||'--').padStart(2,'0')}:${String(mm||'--').padStart(2,'0')}:${String(ss||'--').padStart(2,'0')} UTC`);
+      }
+    });
+    return lines.length ? lines.join('\n') : '(tidak ada data waktu terisi)';
+  }
+
+// Submit trigger → show modal if time data exists
+  document.getElementById('btn-submit-trigger').addEventListener('click', function() {
+    
+    // TAMBAHKAN BARIS INI: Cek validasi form bawaan HTML (required fields)
+    if (!form.reportValidity()) {
+        return; // Hentikan proses jika ada field wajib yang belum diisi
+    }
+
+    if (hasTimeData()) {
+      document.getElementById('modal-summary').innerText = buildSummary();
+      showModal();
+    } else {
+      formSubmitting = true;
+      form.submit();
+    }
+  });
+
+  document.getElementById('modal-cancel').addEventListener('click', () => hideModal());
+
+  document.getElementById('modal-confirm').addEventListener('click', function() {
+    formSubmitting = true;
+    hideModal();
+    form.submit();
+  });
+
+  modal.addEventListener('click', e => { if (e.target === modal) hideModal(); });
 });
 </script>
 {% endblock %}

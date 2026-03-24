@@ -12,64 +12,100 @@
       </div>
 
       <div class="mt-8 p-6 bg-white rounded-lg shadow-md">
-        <div class="grid grid-cols-3 gap-4 border-b pb-4 mb-4">
+        <div class="grid grid-cols-4 gap-4 border-b pb-4 mb-6">
             <div><p class="text-sm text-gray-500">Date</p><p class="font-semibold">{{ observation.observation_date }}</p></div>
             <div><p class="text-sm text-gray-500">Observer</p><p class="font-semibold">{{ observation.observer }}</p></div>
             <div><p class="text-sm text-gray-500">Session</p><p class="font-semibold">{{ observation.session }}</p></div>
+            <div>
+              <p class="text-sm text-gray-500">Instrument Type</p>
+              {% if observation.is_bartington %}
+                <span class="px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Bartington (Deg)</span>
+              {% else %}
+                <span class="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">MinGeo (Grad)</span>
+              {% endif %}
+            </div>
         </div>
         
-        <h2 class="text-xl font-semibold mb-4 text-gray-800">Raw Input Data</h2>
+        <div class="mb-10 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h2 class="text-xl font-bold text-blue-800 mb-4 border-b border-blue-200 pb-2">Nilai Komponen Magnetik Absolut</h2>
+          
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-lg shadow-sm text-center">
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Declination (D)</p>
+              <p class="text-2xl font-bold text-gray-800 mt-1">{{ observation.declination|default:"-" }}<span class="text-sm font-normal">°</span></p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm text-center">
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Inclination (I)</p>
+              <p class="text-2xl font-bold text-gray-800 mt-1">{{ observation.inclination|default:"-" }}<span class="text-sm font-normal">°</span></p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm text-center border-b-4 border-blue-500">
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Total (F)</p>
+              <p class="text-2xl font-bold text-blue-700 mt-1">{{ observation.total_intensity|default:"-" }} <span class="text-sm font-normal text-gray-500">nT</span></p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm text-center border-b-4 border-green-500">
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Horizontal (H)</p>
+              <p class="text-2xl font-bold text-green-700 mt-1">{{ observation.horizontal_intensity|default:"-" }} <span class="text-sm font-normal text-gray-500">nT</span></p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm text-center border-b-4 border-red-500">
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">Vertical (Z)</p>
+              <p class="text-2xl font-bold text-red-700 mt-1">{{ observation.vertical_intensity|default:"-" }} <span class="text-sm font-normal text-gray-500">nT</span></p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm text-center border-b-4 border-purple-500">
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">North (X)</p>
+              <p class="text-2xl font-bold text-purple-700 mt-1">{{ observation.north_component|default:"-" }} <span class="text-sm font-normal text-gray-500">nT</span></p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm text-center border-b-4 border-yellow-500">
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-wider">East (Y)</p>
+              <p class="text-2xl font-bold text-yellow-600 mt-1">{{ observation.east_component|default:"-" }} <span class="text-sm font-normal text-gray-500">nT</span></p>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="text-xl font-semibold mb-4 text-gray-800 border-t pt-6">Raw Input Data</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-                <h3 class="font-medium text-gray-700">Titik Tetap</h3>
-                <p>CR Awal: {{ observation.cr_awal }}</p>
-                <p>CL Awal: {{ observation.cl_awal }}</p>
-                <p>CR Akhir: {{ observation.cr_akhir }}</p>
-                <p>CL Akhir: {{ observation.cl_akhir }}</p>
+                <h3 class="font-medium text-gray-700 mb-2">Titik Tetap</h3>
+                {% if observation.is_bartington %}
+                  <p class="text-sm text-gray-600">CR Awal: {{ converted_data.cr_awal.deg }}° {{ converted_data.cr_awal.min }}' {{ converted_data.cr_awal.sec }}"</p>
+                  <p class="text-sm text-gray-600">CL Awal: {{ converted_data.cl_awal.deg }}° {{ converted_data.cl_awal.min }}' {{ converted_data.cl_awal.sec }}"</p>
+                  <p class="text-sm text-gray-600">CR Akhir: {{ converted_data.cr_akhir.deg }}° {{ converted_data.cr_akhir.min }}' {{ converted_data.cr_akhir.sec }}"</p>
+                  <p class="text-sm text-gray-600">CL Akhir: {{ converted_data.cl_akhir.deg }}° {{ converted_data.cl_akhir.min }}' {{ converted_data.cl_akhir.sec }}"</p>
+                {% else %}
+                  <p class="text-sm text-gray-600">CR Awal: {{ observation.cr_awal }}g</p>
+                  <p class="text-sm text-gray-600">CL Awal: {{ observation.cl_awal }}g</p>
+                  <p class="text-sm text-gray-600">CR Akhir: {{ observation.cr_akhir }}g</p>
+                  <p class="text-sm text-gray-600">CL Akhir: {{ observation.cl_akhir }}g</p>
+                {% endif %}
             </div>
             <div>
-                <h3 class="font-medium text-gray-700">Meridian Results</h3>
-                <p>Meridian 1: {{ observation.meridian_1 }}</p>
-                <p>Meridian 2: {{ observation.meridian_2 }}</p>
+                <h3 class="font-medium text-gray-700 mb-2">Meridian Results</h3>
+                <p class="text-sm text-gray-600">Meridian 1: {{ observation.meridian_1 }}</p>
+                <p class="text-sm text-gray-600">Meridian 2: {{ observation.meridian_2 }}</p>
             </div>
             <div>
-                <h3 class="font-medium text-gray-700">Deklinasi Readings</h3>
+                <h3 class="font-medium text-gray-700 mb-2">Deklinasi Readings</h3>
                 {% for key, value in observation.deklinasi_readings.items %}
-                    <p>{{ key }}: {{ value.hh }}:{{ value.mm }}:{{ value.ss }} - Circle: {{ value.circ }}</p>
+                  {% if not key|slice:":1" == "_" %}
+                    {% if value.deg is not None %}
+                      <p class="text-sm text-gray-600">{{ key }}: {{ value.hh|stringformat:"02d" }}:{{ value.mm|stringformat:"02d" }}:{{ value.ss|stringformat:"02d" }} — {{ value.deg|floatformat:0 }}° {{ value.min|floatformat:0 }}' {{ value.sec }}"</p>
+                    {% else %}
+                      <p class="text-sm text-gray-600">{{ key }}: {{ value.hh|stringformat:"02d" }}:{{ value.mm|stringformat:"02d" }}:{{ value.ss|stringformat:"02d" }} — {{ value.circ }}g</p>
+                    {% endif %}
+                  {% endif %}
                 {% endfor %}
             </div>
             <div>
-                <h3 class="font-medium text-gray-700">Inklinasi Readings</h3>
+                <h3 class="font-medium text-gray-700 mb-2">Inklinasi Readings</h3>
                 {% for key, value in observation.inklinasi_readings.items %}
-                    <p>{{ key }}: {{ value.hh }}:{{ value.mm }}:{{ value.ss }} - Circle: {{ value.circ }} - Ftotal: {{ value.ftotal }}</p>
+                  {% if value.deg is not None %}
+                    <p class="text-sm text-gray-600">{{ key }}: {{ value.hh|stringformat:"02d" }}:{{ value.mm|stringformat:"02d" }}:{{ value.ss|stringformat:"02d" }} — {{ value.deg|floatformat:0 }}° {{ value.min|floatformat:0 }}' {{ value.sec }}" <br><span class="text-blue-600 font-medium">Ftotal: {{ value.ftotal }}</span></p>
+                  {% else %}
+                    <p class="text-sm text-gray-600">{{ key }}: {{ value.hh|stringformat:"02d" }}:{{ value.mm|stringformat:"02d" }}:{{ value.ss|stringformat:"02d" }} — {{ value.circ }}g <br><span class="text-blue-600 font-medium">Ftotal: {{ value.ftotal }}</span></p>
+                  {% endif %}
                 {% endfor %}
             </div>
         </div>
 
-                <div class="mt-8 pt-6 border-t">
-          <h2 class="text-xl font-semibold mb-4 text-gray-800">Conversion Results (Degrees, Minutes, Seconds)</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                  <h3 class="font-medium text-gray-700">Titik Tetap (DMS)</h3>
-                  <p>CR Awal: {{ converted_data.cr_awal.deg }}° {{ converted_data.cr_awal.min }}' {{ converted_data.cr_awal.sec }}"</p>
-                  <p>CL Awal: {{ converted_data.cl_awal.deg }}° {{ converted_data.cl_awal.min }}' {{ converted_data.cl_awal.sec }}"</p>
-                  <p>CR Akhir: {{ converted_data.cr_akhir.deg }}° {{ converted_data.cr_akhir.min }}' {{ converted_data.cr_akhir.sec }}"</p>
-                  <p>CL Akhir: {{ converted_data.cl_akhir.deg }}° {{ converted_data.cl_akhir.min }}' {{ converted_data.cl_akhir.sec }}"</p>
-              </div>
-              <div>
-                  <h3 class="font-medium text-gray-700">Deklinasi Readings (DMS)</h3>
-                  {% for key, value in converted_data.deklinasi.items %}
-                      <p>{{ key }}: {{ value.deg }}° {{ value.min }}' {{ value.sec }}"</p>
-                  {% endfor %}
-              </div>
-              <div>
-                  <h3 class="font-medium text-gray-700">Inklinasi Readings (DMS)</h3>
-                  {% for key, value in converted_data.inklinasi.items %}
-                      <p>{{ key }}: {{ value.deg }}° {{ value.min }}' {{ value.sec }}"</p>
-                  {% endfor %}
-              </div>
-          </div>
-        </div>
       </div>
     </main>
   </div>
@@ -77,13 +113,10 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
-
     if (sidebarToggle) {
       sidebarToggle.addEventListener('click', function() {
-        // This toggles the 'hidden' class on the sidebar for mobile
-        sidebar.classList.toggle('hidden');
+        document.getElementById('sidebar').classList.toggle('hidden');
       });
     }
   });

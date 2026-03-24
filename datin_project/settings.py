@@ -181,7 +181,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'import-hujan-data-daily': {
         'task': 'hujan.tasks.import_today_hujan_data',
-        'schedule': crontab(minute=1, hour=1),
+        'schedule': crontab(minute=30, hour=23),
     },
     'process-shakemaps-daily': {
         'task': 'repository.tasks.run_process_shakemaps',

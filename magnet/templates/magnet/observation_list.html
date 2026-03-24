@@ -7,10 +7,22 @@
     {% include 'partials/_topbar.html' %} 
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
       <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold text-gray-900">Magnetic Observation Records</h1>
-        <a href="{% url 'observation_form' %}" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 text-sm">
-          + New Observation
-        </a>
+        <h1 class="text-3xl font-bold text-gray-900">
+          {{ page_title|default:"Magnetic Observation Records" }}
+        </h1>
+        {% if filter_type == 'bartington' %}
+          <a href="{% url 'observation_bartington' %}" class="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-purple-700 text-sm">
+            + New Bartington Observation
+          </a>
+        {% elif filter_type == 'mingeo' %}
+          <a href="{% url 'observation_form' %}" class="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-blue-700 text-sm">
+            + New MinGeo Observation
+          </a>
+        {% else %}
+          <a href="{% url 'observation_form' %}" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 text-sm">
+            + New Observation
+          </a>
+        {% endif %}
       </div>
 
       <div class="mt-8 bg-white shadow rounded-lg overflow-x-auto">
@@ -19,42 +31,56 @@
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Observer</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Session</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+              
+              <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">D (°)</th>
+              <th class="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">I (°)</th>
+              <th class="px-4 py-3 text-center text-xs font-bold text-blue-700 uppercase">F (nT)</th>
+              <th class="px-4 py-3 text-center text-xs font-bold text-green-700 uppercase">H (nT)</th>
+              <th class="px-4 py-3 text-center text-xs font-bold text-red-700 uppercase">Z (nT)</th>
+              <th class="px-4 py-3 text-center text-xs font-bold text-purple-700 uppercase">X (nT)</th>
+              <th class="px-4 py-3 text-center text-xs font-bold text-yellow-600 uppercase">Y (nT)</th>
+              
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             {% for obs in observations %}
             <tr class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ obs.observation_date }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ obs.observation_date }} <br><span class="text-xs text-gray-500">{{ obs.session }}</span></td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ obs.observer }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ obs.session }}</td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                {% if obs.deklinasi_readings.is_legacy %}
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">Legacy Data</span>
+                {% elif obs.is_bartington %}
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Bartington</span>
+                {% else %}
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">MinGeo</span>
+                {% endif %}
+              </td>
+              
+              <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-semibold text-gray-700">{{ obs.declination|default:"-" }}</td>
+              <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-semibold text-gray-700">{{ obs.inclination|default:"-" }}</td>
+              <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-bold text-blue-700">{{ obs.total_intensity|default:"-" }}</td>
+              <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-semibold text-green-700">{{ obs.horizontal_intensity|default:"-" }}</td>
+              <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-semibold text-red-700">{{ obs.vertical_intensity|default:"-" }}</td>
+              <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-semibold text-purple-700">{{ obs.north_component|default:"-" }}</td>
+              <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-semibold text-yellow-600">{{ obs.east_component|default:"-" }}</td>
+              
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                <a href="{% url 'observation_detail' pk=obs.pk %}"
-                class="px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition">
-                View
-                </a>
-
-                <a href="{% url 'observation_edit' pk=obs.pk %}"
-                class="px-3 py-1 rounded-md bg-green-600 text-white hover:bg-green-700 transition">
-                Edit
-                </a>
-
-                <a href="{% url 'trigger_single_automation' pk=obs.pk %}"
-                class="px-3 py-1 rounded-md text-white transition inline-block"
-                style="background-color: #f59e0b;">
-                Run Automation
-                </a>
-
-
-                <a href="{% url 'observation_delete' pk=obs.pk %}"
-                class="px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition">
-                Delete
-                </a>
-
+                <a href="{% url 'observation_detail' pk=obs.pk %}" class="px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition">View</a>
+                
+                {% if not obs.deklinasi_readings.is_legacy %}
+                  <a href="{% url 'observation_edit' pk=obs.pk %}" class="px-3 py-1 rounded-md bg-green-600 text-white hover:bg-green-700 transition">Edit</a>
+                  <a href="{% url 'trigger_single_automation' pk=obs.pk %}" class="px-3 py-1 rounded-md text-white transition inline-block" style="background-color: #f59e0b;">Run Auto</a>
+                {% endif %}
+                
+                <a href="{% url 'observation_delete' pk=obs.pk %}" class="px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700 transition">Del</a>
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" class="text-center py-10">No records found. Start by creating a new observation.</td></tr>
+            <tr><td colspan="11" class="text-center py-10">No records found. Start by creating a new observation.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -82,13 +108,10 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
-
     if (sidebarToggle) {
       sidebarToggle.addEventListener('click', function() {
-        // This toggles the 'hidden' class on the sidebar for mobile
-        sidebar.classList.toggle('hidden');
+        document.getElementById('sidebar').classList.toggle('hidden');
       });
     }
   });
