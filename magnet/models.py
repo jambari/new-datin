@@ -4,6 +4,7 @@ from django.contrib.gis.db import models as gis_models
 from repository.models import Gempa
 from django import forms
 import math
+from decimal import Decimal
 
 class MagneticObservation(models.Model):
     # Main observation details
@@ -58,15 +59,27 @@ class MagneticObservation(models.Model):
         """
         # Helper function untuk mengubah dict JSON (deg, min, sec) ke desimal
         def get_dec(data_dict):
-            if not data_dict: return 0.0
+            if not data_dict:
+                return Decimal('0')
+
+            def safe(val):
+                try:
+                    return float(str(val).strip())
+                except:
+                    return 0.0
+
             if 'deg' in data_dict:
-                d = float(data_dict.get('deg') or 0)
-                m = float(data_dict.get('min') or 0)
-                s = float(data_dict.get('sec') or 0)
-                return d + (m / 60.0) + (s / 3600.0)
+                d = safe(data_dict.get('deg'))
+                m = safe(data_dict.get('min'))
+                s = safe(data_dict.get('sec'))
+                result = d + (m / 60.0) + (s / 3600.0)
+                return Decimal(str(result))
+
             elif 'circ' in data_dict:
-                return float(data_dict.get('circ') or 0) * 0.9
-            return 0.0
+                result = safe(data_dict.get('circ')) * 0.9
+                return Decimal(str(result))
+
+            return Decimal('0')
 
         if self.is_bartington and self.deklinasi_readings and self.inklinasi_readings:
             # ==========================================================
@@ -78,9 +91,9 @@ class MagneticObservation(models.Model):
             wd = get_dec(self.deklinasi_readings.get('WD'))
             eu = get_dec(self.deklinasi_readings.get('EU'))
 
-            avg_dek = (wu + ed + wd + eu) / 4.0
-            d_val = avg_dek - 180.0
-            self.declination = round(d_val, 5)
+            avg_dek = (wu + ed + wd + eu) / Decimal('4')
+            d_val = avg_dek - Decimal('180')
+            self.declination = Decimal(str(round(d_val, 5)))
 
             # ==========================================================
             # 2. INKLINASI (I) - SOP BMKG (Hemisfer Selatan = Negatif)
@@ -90,13 +103,13 @@ class MagneticObservation(models.Model):
             nd = get_dec(self.inklinasi_readings.get('ND'))
             su = get_dec(self.inklinasi_readings.get('SU'))
 
-            i_nu = 180.0 - nu
-            i_sd = 360.0 - sd
-            i_nd = nd - 180.0
+            i_nu = Decimal('180') - nu
+            i_sd = Decimal('360') - sd
+            i_nd = nd - Decimal('180')
             i_su = su
-            
-            i_val = -((i_nu + i_sd + i_nd + i_su) / 4.0)
-            self.inclination = round(i_val, 5)
+
+            i_val = -((i_nu + i_sd + i_nd + i_su) / Decimal('4'))
+            self.inclination = Decimal(str(round(i_val, 5)))
 
             # ==========================================================
             # 3. TOTAL INTENSITY (F) RATA-RATA
@@ -109,8 +122,8 @@ class MagneticObservation(models.Model):
                     except ValueError: pass
             
             if len(f_totals) == 4:
-                f_avg = sum(f_totals) / 4.0
-                self.total_intensity = round(f_avg, 2)
+                f_avg = Decimal(str(sum(f_totals))) / Decimal('4')
+                self.total_intensity = Decimal(str(round(f_avg, 2)))
 
         # ==========================================================
         # 4. HITUNG KOMPONEN TURUNAN (H, Z, X, Y)
