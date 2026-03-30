@@ -30,6 +30,12 @@ from django.views.decorators.http import require_POST
 import calendar
 from django.db.models import Prefetch
 from django.utils import timezone
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from .models import JSONDataUpload
+import json
+from io import StringIO
+import re
 
 def station_map_view(request):
     return render(request, 'repository/station_map.html')
@@ -822,3 +828,204 @@ def shakemap_report_query(request):
     }
 
     return render(request, 'repository/shakemap_report_query.html', context)
+
+@login_required
+def json_upload_create(request):
+    """Handle JSON file upload"""
+    if request.method == 'POST':
+        json_file = request.FILES.get('json_file')
+        
+        if not json_file:
+            return render(request, 'repository/json_upload.html', 
+                         {'error': 'Silakan pilih file JSON'})
+        
+        try:
+            # Read and validate JSON
+            file_content = json_file.read().decode('utf-8')
+            data = json.loads(file_content)
+            
+            # Extract metadata
+            agency = data.get('agency', '')
+            region = data.get('regional', '')
+            bulan = data.get('bulan', '')
+            data_count = len(data.get('data', []))
+            
+            # Save upload record
+            upload = JSONDataUpload.objects.create(
+                user=request.user,
+                file_name=json_file.name,
+                agency=agency,
+                region=region,
+                bulan=bulan,
+                json_file=json_file,
+                data_count=data_count
+            )
+            
+            return redirect('json_analysis', pk=upload.pk)
+            
+        except json.JSONDecodeError:
+            return render(request, 'repository/json_upload.html',
+                         {'error': 'File JSON tidak valid'})
+        except Exception as e:
+            return render(request, 'repository/json_upload.html',
+                         {'error': f'Error: {str(e)}'})
+    
+    return render(request, 'repository/json_upload.html')
+ 
+ 
+@login_required
+def json_upload_list(request):
+    """List all user's uploads"""
+    uploads = JSONDataUpload.objects.filter(user=request.user).order_by('-uploaded_at')
+    context = {'uploads': uploads}
+    return render(request, 'repository/json_upload_list.html', context)
+ 
+ 
+@login_required
+def json_analysis(request, pk):
+    """Analyze uploaded JSON data"""
+    upload_obj = get_object_or_404(JSONDataUpload, pk=pk, user=request.user)
+    
+    # 1. Formatting Bulan Indonesia
+    bulan_str = upload_obj.bulan.strip() if upload_obj.bulan else ""
+    formatted_bulan = bulan_str.upper() # Fallback
+    
+    current_year = date.today().year
+    current_month = date.today().month
+    
+    # Ekstrak YYYYMM atau YYYY-MM
+    match = re.search(r'^(\d{4})[-_]?(\d{1,2})$', bulan_str)
+    if match:
+        current_year = int(match.group(1))
+        current_month = int(match.group(2))
+        daftar_bulan = ["", "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"]
+        if 1 <= current_month <= 12:
+            formatted_bulan = f"{daftar_bulan[current_month]} {current_year}"
+
+    # 2. Hitung jumlah hari dalam bulan untuk tabel dinamis
+    _, num_days = calendar.monthrange(current_year, current_month)
+    days_range = range(1, num_days + 1)
+
+    try:
+        # Read JSON file
+        json_file = upload_obj.json_file.read().decode('utf-8')
+        data = json.loads(json_file)
+        events = data.get('data', [])
+        
+        # 3. Ambil Data ShakemapEvent dari Database (Peta Dirasakan)
+        felt_events_query = ShakemapEvent.objects.filter(
+            event_time__year=current_year,
+            event_time__month=current_month
+        ).order_by('event_time')
+        
+        felt_map_data = []
+        for fe in felt_events_query:
+            felt_map_data.append({
+                'lat': float(fe.latitude),
+                'lon': float(fe.longitude),
+                'mag': float(fe.magnitude),
+                'place': fe.location_string,
+                'time': fe.event_time.strftime('%Y-%m-%d %H:%M')
+            })
+            
+        # 4. Daftar Perangkat SeisComP untuk Status Alat
+        seiscomp_components = [
+            "KOMPUTER MASTER PRO",
+            "MAP VIEW SEISCOMP4",
+            "TRACE VIEW SINYAL",
+            "ORIGIN LOCATION VIEW",
+            "EVENT SUMMARY VIEW",
+            "KOMPUTER DATA EXCHANGE"
+        ]
+            
+        # Calculate statistics
+        magnitudes = [e.get('magnitude', 0) for e in events]
+        depths = [e.get('depth_km', 0) for e in events]
+        
+        stats = {
+            'total': len(events),
+            'avg_magnitude': round(sum(magnitudes) / len(magnitudes), 2) if magnitudes else 0,
+            'min_magnitude': round(min(magnitudes), 2) if magnitudes else 0,
+            'max_magnitude': round(max(magnitudes), 2) if magnitudes else 0,
+            'avg_depth': round(sum(depths) / len(depths), 2) if depths else 0,
+            'min_depth': round(min(depths), 2) if depths else 0,
+            'max_depth': round(max(depths), 2) if depths else 0,
+        }
+        
+        mag_categories = {
+            'M<3': len([e for e in events if e.get('magnitude', 0) < 3]),
+            'M 3-5': len([e for e in events if 3 <= e.get('magnitude', 0) < 5]),
+            'M≥5': len([e for e in events if e.get('magnitude', 0) >= 5]),
+        }
+        
+        depth_categories = {
+            'D<60': len([e for e in events if e.get('depth_km', 0) < 60]),
+            'D 60-300': len([e for e in events if 60 <= e.get('depth_km', 0) < 300]),
+            'D>300': len([e for e in events if e.get('depth_km', 0) >= 300]),
+        }
+        
+        map_data = []
+        for event in events:
+            map_data.append({
+                'latitude': event.get('latitude', 0),
+                'longitude': event.get('longitude', 0),
+                'magnitude': event.get('magnitude', 0),
+                'depth': event.get('depth_km', 0),
+                'time': event.get('time', ''),
+                'event_id': event.get('event_id', ''),
+            })
+        
+        if map_data:
+            avg_lat = sum([e['latitude'] for e in map_data]) / len(map_data)
+            avg_lon = sum([e['longitude'] for e in map_data]) / len(map_data)
+        else:
+            avg_lat, avg_lon = 0, 0
+        
+        nama_upt = "STASIUN GEOFISIKA KELAS I JAYAPURA" 
+        context = {
+            'upload_obj': upload_obj,
+            'upt': nama_upt,
+            'formatted_bulan': formatted_bulan,
+            'days_range': days_range,
+            'num_days': num_days,
+            'felt_map_data': json.dumps(felt_map_data),
+            'felt_events': felt_events_query, # Data untuk list/tabel Dirasakan
+            'seiscomp_components': seiscomp_components, # Data monitoring Seiscomp
+            'stats': stats,
+            'mag_categories': mag_categories,
+            'mag_count_low': mag_categories.get('M<3', 0),
+            'mag_count_mid': mag_categories.get('M 3-5', 0),
+            'mag_count_high': mag_categories.get('M≥5', 0),
+            'depth_categories': depth_categories,
+            'depth_count_shallow': depth_categories.get('D<60', 0),
+            'depth_count_mid': depth_categories.get('D 60-300', 0),
+            'depth_count_deep': depth_categories.get('D>300', 0),
+            'map_data': json.dumps(map_data),
+            'avg_lat': avg_lat,
+            'avg_lon': avg_lon,
+            'events': events[:50],
+            'total_events': len(events),
+        }
+        
+        return render(request, 'repository/json_analysis.html', context)
+        
+    except Exception as e:
+        context = {'error': f'Error processing file: {str(e)}'}
+        return render(request, 'repository/json_analysis.html', context)
+ 
+ 
+@login_required
+def json_delete(request, pk):
+    """Delete uploaded JSON file"""
+    upload_obj = get_object_or_404(JSONDataUpload, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        # Delete file from storage
+        if upload_obj.json_file:
+            upload_obj.json_file.delete()
+        # Delete database record
+        upload_obj.delete()
+        return redirect('json_upload_list')
+    
+    context = {'upload_obj': upload_obj}
+    return render(request, 'repository/json_delete_confirm.html', context)

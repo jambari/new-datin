@@ -1,6 +1,7 @@
 # repository/models.py
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 class Gempa(models.Model):
     source_id = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="ID gabungan dari sumber API dan kode stasiun")
@@ -101,3 +102,24 @@ class StationReading(models.Model):
 
     def __str__(self):
         return f"{self.station_code} for event {self.event.event_id}"
+
+
+class JSONDataUpload(models.Model):
+    """
+    Model untuk menyimpan file JSON yang di-upload oleh user
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    file_name = models.CharField(max_length=255)
+    agency = models.CharField(max_length=50, blank=True, null=True)
+    region = models.CharField(max_length=100, blank=True, null=True)
+    bulan = models.CharField(max_length=10, blank=True, null=True)  # YYYYMM format
+    json_file = models.FileField(upload_to='json_uploads/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    data_count = models.IntegerField(default=0)  # Jumlah event dalam JSON
+    
+    class Meta:
+        db_table = 'json_data_uploads'
+        ordering = ['-uploaded_at']
+    
+    def __str__(self):
+        return f"{self.file_name} - {self.uploaded_at.strftime('%Y-%m-%d')}"

@@ -23,4 +23,8 @@ urlpatterns = [
     path('seismo-availability-query/', views.availability_matrix_view, {'sensor_type': 'seismo'}, name='seismo_availability_query'),
     path('accelero-availability-query/', views.availability_matrix_view, {'sensor_type': 'accelero'}, name='accelero_availability_query'),
     path('api/update-availability/', views.update_availability_cell, name='update_availability_cell'),
+    path('json/upload/', views.json_upload_create, name='json_upload_create'),
+    path('json/list/', views.json_upload_list, name='json_upload_list'),
+    path('json/analysis/<int:pk>/', views.json_analysis, name='json_analysis'),
+    path('json/delete/<int:pk>/', views.json_delete, name='json_delete'),
 ]

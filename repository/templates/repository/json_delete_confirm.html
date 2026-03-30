@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <div class="container mx-auto px-6">
+        
+        <div class="max-w-2xl mx-auto">
+          <div class="bg-white rounded-lg shadow-md p-8">
+            
+            <!-- Warning Icon -->
+            <div class="text-center mb-6">
+              <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2m0-14H8.5a2 2 0 00-2 2v10a2 2 0 002 2h7a2 2 0 002-2V7a2 2 0 00-2-2h-3.5m0 0H9m0 0V4a1 1 0 011-1h4a1 1 0 011 1v2m0 0h3.5"></path>
+                </svg>
+              </div>
+              <h1 class="text-3xl font-bold text-gray-900 mb-2">Hapus Upload JSON</h1>
+              <p class="text-gray-600">Tindakan ini tidak dapat dibatalkan</p>
+            </div>
+
+            <!-- File Information -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-8">
+              <div class="space-y-4">
+                <div>
+                  <p class="text-sm text-gray-600 uppercase tracking-wide font-semibold mb-1">File Name</p>
+                  <p class="text-lg font-medium text-gray-900">{{ upload_obj.file_name }}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <p class="text-sm text-gray-600 uppercase tracking-wide font-semibold mb-1">Agency</p>
+                    <p class="text-gray-900">{{ upload_obj.agency }}</p>
+                  </div>
+                  <div>
+                    <p class="text-sm text-gray-600 uppercase tracking-wide font-semibold mb-1">Region</p>
+                    <p class="text-gray-900">{{ upload_obj.region }}</p>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <p class="text-sm text-gray-600 uppercase tracking-wide font-semibold mb-1">Period</p>
+                    <p class="text-gray-900">{{ upload_obj.bulan }}</p>
+                  </div>
+                  <div>
+                    <p class="text-sm text-gray-600 uppercase tracking-wide font-semibold mb-1">Data Count</p>
+                    <p class="text-gray-900">{{ upload_obj.data_count }} events</p>
+                  </div>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600 uppercase tracking-wide font-semibold mb-1">Uploaded At</p>
+                  <p class="text-gray-900">{{ upload_obj.uploaded_at|date:"d M Y, H:i" }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Warning Message -->
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-8 rounded">
+              <p class="text-red-700">
+                <strong>Perhatian:</strong> Menghapus file ini akan menghapus semua data yang terkait. Data yang telah dihapus tidak dapat dipulihkan.
+              </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <form method="post" class="space-y-3">
+              {% csrf_token %}
+              <div class="grid grid-cols-2 gap-4">
+                <a href="{% url 'json_upload_list' %}" class="inline-flex justify-center items-center px-6 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition">
+                  <i class="bi bi-arrow-left mr-2"></i>Batal
+                </a>
+                <button type="submit" class="inline-flex justify-center items-center px-6 py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition">
+                  <i class="bi bi-trash mr-2"></i>Hapus File
+                </button>
+              </div>
+            </form>
+
+            <!-- Back Link -->
+            <div class="text-center mt-6">
+              <a href="{% url 'json_upload_list' %}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                Kembali ke Riwayat Upload
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('hidden');
+      });
+    }
+  });
+</script>
+{% endblock %}
