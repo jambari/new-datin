@@ -117,7 +117,8 @@
                   <hr>
                   <div class="small">
                     <div class="mb-3"><label class="form-label fw-bold">Basemap</label><select id="selB" class="form-select form-select-sm" onchange="changeBasemap()"><option value="Oceans">Esri Ocean</option><option value="Topographic">Esri Topographic</option><option value="Imagery">Esri Imagery</option><option value="Gray">Esri Light Gray</option></select></div>
-                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleSlab()"><label class="form-check-label small">Tampilkan Slab</label></div>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleSlab()"><label class="form-check-label small">Tampilkan Slab (Peta 1)</label></div>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlabFelt" checked onchange="toggleSlabFelt()"><label class="form-check-label small">Tampilkan Slab (Peta 2)</label></div>
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="swFaults" checked onchange="toggleFaults()"><label class="form-check-label small">Tampilkan Patahan</label></div>
                   </div>
                 </div>
@@ -172,7 +173,18 @@
                     <div id="mapFelt"></div>
 
                     <div class="legend-grid">
-                        <div class="legend-box"><img src="{% static 'repository/images/legenda.png' %}"></div>
+                        <div class="legend-box">
+                            <span class="legend-t">Legenda</span>
+                              <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="margin-top: 8px;">
+                                <!-- Black outline star (underneath) -->
+                                <polygon points="50,15 61,40 88,40 67,57 78,82 50,65 22,82 33,57 12,40 39,40" 
+                                         fill="#000000" stroke="none"/>
+                                <!-- Red star (on top) -->
+                                <polygon points="50,17 59,38 86,38 68,55 76,80 50,63 24,80 32,55 14,38 42,38" 
+                                         fill="#FF0000" stroke="none"/>
+                              </svg>
+                            <div style="font-size: 0.7rem; margin-top: 5px;">Pusat Gempa Dirasakan</div>
+                        </div>
                         <div class="legend-box"><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
                         <div class="legend-box">
                             <div class="fw-bold mt-2" style="font-size: 0.85rem;"><span>{{ upt }}</span></div>
@@ -436,6 +448,20 @@
     if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } }).addTo(mapFeltInstance);
     if (typeof batas_laut_indonesia !== 'undefined') L.geoJSON(batas_laut_indonesia, { style: { color: "#3b82f6", weight: 1, dashArray: '5, 5' } }).addTo(mapFeltInstance);
 
+    // Tambahkan slab layer ke peta dirasakan
+    let slabLayerFelt = L.layerGroup().addTo(mapFeltInstance);
+    const slabColors = [[0,20,'rgb(245,0,0)'],[20,40,'rgb(250,75,0)'],[40,60,'rgb(252,118,0)'],[60,80,'rgb(253,160,0)'],[80,100,'rgb(250,160,0)'],[100,120,'rgb(245,245,0)'],[120,200,'rgb(210,247,0)'],[200,300,'rgb(169,247,0)'],[300,400,'rgb(128,247,0)'],[400,500,'rgb(86,247,0)'],[500,660,'rgb(0,245,0)']];
+
+    try {
+      d3.json("{% static 'repository/js/slab_indonesia_usgs.json' %}").then(data => {
+        if (data) L.geoJSON(data, { style: function(f) {
+            let d = f.properties.DEPTH || 0; let c = 'transparent';
+            for (let r of slabColors) if (d >= r[0] && d <= r[1]) { c = r[2]; break; }
+            return { color: c, weight: 1.5, opacity: 0.8, fillOpacity: 0 };
+        }}).addTo(slabLayerFelt);
+      });
+    } catch(e) {}
+
     // Plot awal ke Peta dan simpan ke Object feltMarkers berdasakan ID loop
     feltData.forEach((item, index) => {
         let rowId = (index + 1).toString();
@@ -545,6 +571,7 @@
   function changeBasemap() { if(mapInstance) { mapInstance.removeLayer(baseLayer); baseLayer = L.esri.basemapLayer(document.getElementById('selB').value).addTo(mapInstance); } }
   function toggleSlab() { if(mapInstance && slabLayer) { if(document.getElementById('swSlab').checked) mapInstance.addLayer(slabLayer); else mapInstance.removeLayer(slabLayer); } }
   function toggleFaults() { if(mapInstance && faultsLayer) { if(document.getElementById('swFaults').checked) mapInstance.addLayer(faultsLayer); else mapInstance.removeLayer(faultsLayer); } }
+  function toggleSlabFelt() { if(mapFeltInstance && slabLayer) { if(document.getElementById('swSlabFelt').checked) mapFeltInstance.addLayer(slabLayer); else mapFeltInstance.removeLayer(slabLayer); } }
 
   // --- CHARTS ---
   Chart.register(ChartDataLabels);

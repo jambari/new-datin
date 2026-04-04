@@ -173,29 +173,40 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 
 
-
+HUJAN_API_URL = 'http://36.91.166.188/api/hujans/today'
 CELERY_BEAT_SCHEDULE = {
     'import-earthquake-data-every-minute': {
         'task': 'repository.tasks.sync_earthquake_data_task',
         'schedule': crontab(minute='*'),
     },
+    
+    # PRIMARY IMPORT: Run at 00:15 UTC = 09:15 WIT
+    # This gives users 45 minutes after 08:30 WIT input time to ensure data is ready
     'import-hujan-data-daily': {
         'task': 'hujan.tasks.import_today_hujan_data',
-        'schedule': crontab(minute=30, hour=23),
+        'schedule': crontab(minute=15, hour=0),  # 00:15 UTC = 09:15 WIT
     },
+    
+    # RETRY IMPORT: Run at 02:15 UTC = 11:15 WIT
+    # Catches any delayed data updates or API availability issues
+    'import-hujan-data-retry': {
+        'task': 'hujan.tasks.import_hujan_data_retry',
+        'schedule': crontab(minute=15, hour=2),  # 02:15 UTC = 11:15 WIT
+    },
+    
     'process-shakemaps-daily': {
         'task': 'repository.tasks.run_process_shakemaps',
-        'schedule': crontab(minute=15, hour=23), # Runs every day at 11:15 PM
+        'schedule': crontab(minute=15, hour=23),  # Runs every day at 23:15 PM
     },
-
-    # --- TAMBAHKAN JADWAL BARU INI ---
+    
     'process-yesterday-nexstorm-db3': {
-        'task': 'lightning.tasks.process_yesterday_nexstorm_file', # Nama task dari @shared_task
-        'schedule': crontab(minute=5, hour=0), # Berjalan setiap hari pukul 00:05
+        'task': 'lightning.tasks.process_yesterday_nexstorm_file',
+        'schedule': crontab(minute=5, hour=0),   # Berjalan setiap hari pukul 00:05
     },
+    
     'export-gmt-history-daily': {
         'task': 'monitor.tasks.export_and_sync_gmt_history',
-        'schedule': crontab(minute=53, hour=21), # Runs every day at 21:37
+        'schedule': crontab(minute=53, hour=21),  # Runs every day at 21:37
     },
 }
 

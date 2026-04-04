@@ -24,3 +24,19 @@ eloquent-env-*.json
 # --- Virtual Environment (Wajib di-ignore) ---
 # Folder ini berisi library python, bukan kode Anda
 datin/
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.pyc
+__pycache__/
+
+# Django
+*.log
+db.sqlite3
+/staticfiles/
+/media/
