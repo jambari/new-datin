@@ -13,22 +13,35 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 from celery.schedules import crontab
+from decouple import config           # ✅ config comes from decouple
+from dotenv import load_dotenv        # ✅ load_dotenv comes from dotenv
+
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Auto-detect environment and load correct .env file
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development').lower()
+
+if ENVIRONMENT == 'production':
+    env_file = BASE_DIR / '.env.production'
+else:
+    env_file = BASE_DIR / '.env.local'
+    if not env_file.exists():
+        env_file = BASE_DIR / '.env'
+
+if env_file.exists():
+    load_dotenv(env_file)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-5)ywvh!%rto_a6qs4ry9di5(g-qvs3!io6@8dcwn7^2$x^-z_q'
+SECRET_KEY = config('SECRET_KEY')
 
-ALLOWED_HOSTS = [
-    "36.91.166.189",
-    "127.0.0.1",
-    "localhost",
-]
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
 
 # Application definition
@@ -100,12 +113,12 @@ WSGI_APPLICATION = 'datin_project.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'datin',
-        'USER': 'jambari',
-        'PASSWORD': 'Jay97696',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': config('DB_ENGINE', default='django.contrib.gis.db.backends.postgis'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
     }
 }
 
@@ -163,11 +176,10 @@ LOGIN_REDIRECT_URL = 'dashboard'
 
 LOGOUT_REDIRECT_URL = 'login'
 
-DEBUG = False
-# DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
@@ -251,25 +263,21 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 
 # --- Telegram Configuration ---
-# Get this from @BotFather
-TELEGRAM_BOT_TOKEN = '8558923741:AAGND-p6Xfvk-F62xNj_pYXS3G7NYhIoVh4' 
-
-# Get this by adding the bot to the group and checking API updates, 
-# or use a bot like @getidsbot to find the group ID (starts with -100...)
-TELEGRAM_CHAT_ID = '-1003332108158'
+TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
+TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default='')
 
 # If using Gmail, you need an "App Password"
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'mikrotremor91@gmail.com'
-EMAIL_HOST_PASSWORD = 'Palau2025!@' 
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 # --- SCP / Remote Server Configuration ---
-BACKUP_REMOTE_HOST = '36.91.166.188'     # IP of the other server
-BACKUP_REMOTE_USER = 'jamz'             # User on remote server
-BACKUP_REMOTE_PATH = '/var/backups/datin/' # Path on remote server
+BACKUP_REMOTE_HOST = config('BACKUP_REMOTE_HOST', default='')
+BACKUP_REMOTE_USER = config('BACKUP_REMOTE_USER', default='')
+BACKUP_REMOTE_PATH = config('BACKUP_REMOTE_PATH', default='/var/backups/datin/') # Path on remote server
 
 # settings.py
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
