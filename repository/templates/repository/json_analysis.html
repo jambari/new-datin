@@ -10,7 +10,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
 
 <script src="{% static 'repository/js/indofaults.js' %}"></script>
 <script src="{% static 'repository/js/batas_laut_indonesia.js' %}"></script>
@@ -116,7 +115,7 @@
                   <button onclick="window.print()" class="btn btn-success btn-sm w-100 mb-3"><i class="bi bi-printer me-1"></i>Cetak PDF</button>
                   <hr>
                   <div class="small">
-                    <div class="mb-3"><label class="form-label fw-bold">Basemap</label><select id="selB" class="form-select form-select-sm" onchange="changeBasemap()"><option value="Oceans">Esri Ocean</option><option value="Topographic">Esri Topographic</option><option value="Imagery">Esri Imagery</option><option value="Gray">Esri Light Gray</option></select></div>
+                    <div class="mb-3"><label class="form-label fw-bold">Basemap</label><select id="selB" class="form-select form-select-sm" onchange="changeBasemap()"><option value="osm">OpenStreetMap</option><option value="osmDark">OpenStreetMap Dark</option><option value="topoSVG">Topography SVG</option><option value="sat">Satellite (USGS)</option></select></div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleSlab()"><label class="form-check-label small">Tampilkan Slab (Peta 1)</label></div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlabFelt" checked onchange="toggleSlabFelt()"><label class="form-check-label small">Tampilkan Slab (Peta 2)</label></div>
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="swFaults" checked onchange="toggleFaults()"><label class="form-check-label small">Tampilkan Patahan</label></div>
@@ -163,7 +162,7 @@
                     <div class="header-grid">
                         <div class="text-start"><img src="{% static 'repository/images/logo-bmkg.png' %}" style="height: 75px;"></div>
                         <div class="title-box">
-                            <span class="t-main">PETA GEMPA DIRASAKAN (SHAKEMAP)</span>
+                            <span class="t-main">PETA GEMPABUMI DIRASAKAN DI PAPUA DAN SEKITARNYA</span>
                             <span class="t-sub">PERIODE {{ formatted_bulan }}</span>
                             <div id="scaleContFelt" class="mt-2 d-flex justify-content-center"></div>
                         </div>
@@ -175,14 +174,14 @@
                     <div class="legend-grid">
                         <div class="legend-box">
                             <span class="legend-t">Legenda</span>
-                              <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="margin-top: 8px;">
+                            <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="margin-top: 8px;">
                                 <!-- Black outline star (underneath) -->
                                 <polygon points="50,15 61,40 88,40 67,57 78,82 50,65 22,82 33,57 12,40 39,40" 
                                          fill="#000000" stroke="none"/>
                                 <!-- Red star (on top) -->
                                 <polygon points="50,17 59,38 86,38 68,55 76,80 50,63 24,80 32,55 14,38 42,38" 
                                          fill="#FF0000" stroke="none"/>
-                              </svg>
+                            </svg>
                             <div style="font-size: 0.7rem; margin-top: 5px;">Pusat Gempa Dirasakan</div>
                         </div>
                         <div class="legend-box"><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
@@ -401,7 +400,13 @@
   function initMap() {
     if (mapInstance) { mapInstance.invalidateSize(); return; }
     mapInstance = L.map('map', { zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
-    baseLayer = L.esri.basemapLayer('Oceans').addTo(mapInstance);
+    
+    // Gunakan OpenStreetMap sebagai basemap (tanpa masalah CORS)
+    baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(mapInstance);
+    
     if (typeof newPng !== 'undefined') L.geoJSON(newPng, { style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5, pane: 'tilePane' } }).addTo(mapInstance);
     
     faultsLayer = L.layerGroup().addTo(mapInstance);
@@ -440,7 +445,12 @@
   function initMapFelt() {
     if (mapFeltInstance) { mapFeltInstance.invalidateSize(); return; }
     mapFeltInstance = L.map('mapFelt', { zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
-    L.esri.basemapLayer('Oceans').addTo(mapFeltInstance);
+    
+    // Gunakan OpenStreetMap sebagai basemap (tanpa masalah CORS)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(mapFeltInstance);
 
     if (typeof newPng !== 'undefined') L.geoJSON(newPng, { style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5, pane: 'tilePane' } }).addTo(mapFeltInstance);
     if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { style: { color: "#000", weight: 0.8 } }).addTo(mapFeltInstance);
@@ -568,7 +578,41 @@
     document.getElementById('outP').textContent = 'PERIODE ' + (document.getElementById('inP').value || '');
     document.getElementById('outW').textContent = document.getElementById('inW').value || '';
   }
-  function changeBasemap() { if(mapInstance) { mapInstance.removeLayer(baseLayer); baseLayer = L.esri.basemapLayer(document.getElementById('selB').value).addTo(mapInstance); } }
+  function changeBasemap() { 
+    if(!mapInstance) return;
+    mapInstance.removeLayer(baseLayer);
+    const value = document.getElementById('selB').value;
+    let newLayer;
+    
+    switch(value) {
+      case 'osm':
+        newLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors', maxZoom: 19
+        });
+        break;
+      case 'osmDark':
+        newLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap, © CartoDB', maxZoom: 19
+        });
+        break;
+      case 'topoSVG':
+        newLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenTopoMap', maxZoom: 17
+        });
+        break;
+      case 'sat':
+        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '© Esri, DigitalGlobe, Earthstar Geographics', maxZoom: 18
+        });
+        break;
+      default:
+        newLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors', maxZoom: 19
+        });
+    }
+    
+    baseLayer = newLayer.addTo(mapInstance);
+  }
   function toggleSlab() { if(mapInstance && slabLayer) { if(document.getElementById('swSlab').checked) mapInstance.addLayer(slabLayer); else mapInstance.removeLayer(slabLayer); } }
   function toggleFaults() { if(mapInstance && faultsLayer) { if(document.getElementById('swFaults').checked) mapInstance.addLayer(faultsLayer); else mapInstance.removeLayer(faultsLayer); } }
   function toggleSlabFelt() { if(mapFeltInstance && slabLayer) { if(document.getElementById('swSlabFelt').checked) mapFeltInstance.addLayer(slabLayer); else mapFeltInstance.removeLayer(slabLayer); } }
