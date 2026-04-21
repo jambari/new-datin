@@ -1,5 +1,6 @@
 import calendar
 from datetime import date
+from itertools import groupby
 from django.shortcuts import render, get_object_or_404,redirect
 from .models import Pegawai, PerjalananDinas, JenisPerjadin
 from django.http import HttpResponseForbidden, HttpResponse
@@ -32,33 +33,72 @@ def index_perjadin(request):
     # -----------------------------
 
     pegawai_list = Pegawai.objects.filter(tanggal_keluar__isnull=True).order_by('urutan')
-    
+
+    ytd_end = date(year, month, num_days)
+    ytd_start = date(year, 1, 1)
+
     rekap_data = []
     for p in pegawai_list:
         status_per_hari = []
-        # Filter perjalanan yang bersinggungan dengan bulan yang dipilih
+        # Trips that overlap with the selected month
         trips_this_month = p.perjadins.filter(
-            Q(tgl_mulai__month=month, tgl_mulai__year=year) | 
+            Q(tgl_mulai__month=month, tgl_mulai__year=year) |
             Q(tgl_selesai__month=month, tgl_selesai__year=year)
         )
-        
+
         for d in days:
             curr_date = date(year, month, d)
             is_dinas = trips_this_month.filter(tgl_mulai__lte=curr_date, tgl_selesai__gte=curr_date).exists()
             status_per_hari.append('PD' if is_dinas else '')
-        
-        total_uang = sum(t.total_biaya for t in trips_this_month)
-        
+
+        trips_list = list(trips_this_month)
+        total_uang = sum(t.total_biaya for t in trips_list)
+        total_hari = sum(t.durasi_hari for t in trips_list)
+
+        # YTD: all trips from Jan 1 to last day of selected month
+        trips_ytd = list(p.perjadins.filter(
+            tgl_mulai__gte=ytd_start,
+            tgl_mulai__lte=ytd_end,
+        ).select_related('jenis'))
+        ytd_uang  = float(sum(t.total_biaya for t in trips_ytd))
+        ytd_hari  = sum(t.durasi_hari for t in trips_ytd)
+        ytd_trips = len(trips_ytd)
+
         rekap_data.append({
             'pegawai': p,
             'status_hari': status_per_hari,
-            'total_trips': trips_this_month.count(),
-            'total_uang': total_uang
+            'total_trips': len(trips_list),
+            'total_hari': total_hari,
+            'total_uang': float(total_uang),
+            'ytd_uang': ytd_uang,
+            'ytd_hari': ytd_hari,
+            'ytd_trips': ytd_trips,
+        })
+
+    trips_raw = list(PerjalananDinas.objects.filter(
+        tgl_mulai__gte=ytd_start,
+        tgl_mulai__lte=ytd_end,
+    ).select_related('pegawai', 'jenis').order_by('tgl_mulai', 'tgl_selesai', 'tujuan', 'kegiatan', 'pegawai__urutan'))
+
+    grouped_trips = []
+    key_fn = lambda t: (t.tgl_mulai, t.tgl_selesai, t.tujuan, t.kegiatan or '')
+    for _, grp in groupby(trips_raw, key=key_fn):
+        grp = list(grp)
+        grouped_trips.append({
+            'tgl_mulai': grp[0].tgl_mulai,
+            'tgl_selesai': grp[0].tgl_selesai,
+            'tujuan': grp[0].tujuan,
+            'kegiatan': grp[0].kegiatan or '-',
+            'jenis': grp[0].jenis,
+            'durasi_hari': grp[0].durasi_hari,
+            'pegawai_list': [t.pegawai for t in grp],
+            'total_biaya': float(sum(t.total_biaya for t in grp)),
         })
 
     context = {
         'days': days,
         'rekap_data': rekap_data,
+        'grouped_trips': grouped_trips,
         'month_name': calendar.month_name[month],
         'current_month': month,
         'current_year': year,

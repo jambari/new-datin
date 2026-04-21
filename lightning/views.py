@@ -345,6 +345,42 @@ class UploadNexStormView(View):
         return True
     
 
+class StrikeMapDataAPIView(APIView):
+    """
+    Returns individual strike coordinates (lat/lon/type) for map display.
+    Limited to 5000 points. type 0 = CG+, type 1 = CG-.
+    """
+    def get(self, request, *args, **kwargs):
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+
+        if not start_date_str or not end_date_str:
+            end_date = timezone.now().date()
+            start_date = end_date - timedelta(days=1)
+        else:
+            try:
+                start_date = parse_date(start_date_str)
+                end_date = parse_date(end_date_str)
+            except (ValueError, TypeError):
+                return Response({"error": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        start_dt = datetime(start_date.year, start_date.month, start_date.day, tzinfo=dt_timezone.utc)
+        end_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=dt_timezone.utc)
+
+        MIN_LAT, MAX_LAT = -3.014833, -2.014833
+        MIN_LON, MAX_LON = 140.204667, 141.204667
+
+        strikes = Strike.objects.filter(
+            timestamp__range=[start_dt, end_dt],
+            strike_type__in=[0, 1],
+            latitude__gte=MIN_LAT, latitude__lte=MAX_LAT,
+            longitude__gte=MIN_LON, longitude__lte=MAX_LON,
+        ).values('latitude', 'longitude', 'strike_type')[:5000]
+
+        data = [{'lat': s['latitude'], 'lon': s['longitude'], 'type': s['strike_type']} for s in strikes]
+        return Response({'strikes': data, 'count': len(data)})
+
+
 class LightningInfographicView(View):
     template_name = 'lightning/infographic.html'
 

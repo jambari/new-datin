@@ -3,11 +3,11 @@ from django.urls import path
 from .views import (
     NexStormQueryView,
     NexStormQueryAPIView,
+    StrikeMapDataAPIView,
     lightning_availability_query,
     update_lightning_availability,
     DeleteAllStrikesView,
     UploadNexStormView,
-    #LightningInfographicView,  # <--- TAMBAHKAN INI
 )
 
 app_name = 'lightning'
@@ -24,6 +24,7 @@ urlpatterns = [
 
     # --- API ENDPOINTS ---
     path('api/query/', NexStormQueryAPIView.as_view(), name='nexstorm_query_api'),
+    path('api/map-data/', StrikeMapDataAPIView.as_view(), name='strike_map_data'),
     path('api/update-availability/', update_lightning_availability, name='update_lightning_availability'),
 
     # --- MAINTENANCE ---
