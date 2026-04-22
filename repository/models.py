@@ -80,28 +80,33 @@ class ShakemapEvent(models.Model):
     depth = models.FloatField()
     event_time = models.DateTimeField(default=timezone.now)
     location_string = models.CharField(max_length=255)
-    shakemap_image = models.ImageField(upload_to='shakemaps/')
+    shakemap_image = models.ImageField(upload_to='shakemaps/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.event_id} - M{self.magnitude} at {self.location_string}"
 
-class StationReading(models.Model):
-    # Updated the ForeignKey to point to the new model name
-    event = models.ForeignKey(ShakemapEvent, related_name='stations', on_delete=models.CASCADE)
-    station_code = models.CharField(max_length=10, db_index=True)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
-    distance_km = models.FloatField()
-    intensity = models.FloatField(help_text="Instrumental Intensity")
-    pga_ew = models.FloatField(null=True, blank=True, help_text="East-West component")
-    pga_ns = models.FloatField(null=True, blank=True, help_text="North-South component")
-    pga_ud = models.FloatField(null=True, blank=True, help_text="Up-Down (Vertical) component")
+
+class FeltEarthquake(models.Model):
+    """Gempabumi dirasakan di wilayah Papua, diambil dari API BMKG."""
+    event_datetime  = models.DateTimeField(unique=True, db_index=True)
+    latitude        = models.FloatField()
+    longitude       = models.FloatField()
+    magnitude       = models.FloatField()
+    depth_km        = models.FloatField()
+    wilayah         = models.CharField(max_length=300)
+    dirasakan       = models.CharField(max_length=500, blank=True)
+    fetched_at      = models.DateTimeField(auto_now_add=True)
+    img_stationlist = models.ImageField(upload_to='felt_earthquakes/stationlist/', null=True, blank=True)
+    img_impact_list = models.ImageField(upload_to='felt_earthquakes/impact/', null=True, blank=True)
+    img_loc_map     = models.ImageField(upload_to='felt_earthquakes/locmap/', null=True, blank=True)
+    img_report_1    = models.ImageField(upload_to='felt_earthquakes/reports/', null=True, blank=True)
+    img_report_2    = models.ImageField(upload_to='felt_earthquakes/reports/', null=True, blank=True)
 
     class Meta:
-        unique_together = ('event', 'station_code')
+        ordering = ['-event_datetime']
 
     def __str__(self):
-        return f"{self.station_code} for event {self.event.event_id}"
+        return f"M{self.magnitude} {self.wilayah} ({self.event_datetime:%Y-%m-%d %H:%M} UTC)"
 
 
 class JSONDataUpload(models.Model):

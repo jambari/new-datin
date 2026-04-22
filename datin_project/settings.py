@@ -78,7 +78,6 @@ INTERNAL_IPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -161,8 +160,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 STATICFILES_DIRS = [BASE_DIR / 'theme/static']
 
 # Default primary key field type
@@ -177,6 +174,10 @@ LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
 DEBUG = config('DEBUG', default=False, cast=bool)
+
+if not DEBUG:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
@@ -209,6 +210,11 @@ CELERY_BEAT_SCHEDULE = {
     'process-shakemaps-daily': {
         'task': 'repository.tasks.run_process_shakemaps',
         'schedule': crontab(minute=15, hour=23),  # Runs every day at 23:15 PM
+    },
+
+    'fetch-bmkg-felt-every-3h': {
+        'task': 'repository.tasks.fetch_bmkg_felt_task',
+        'schedule': crontab(minute=0, hour='*/3'),  # Every 3 hours: 00:00, 03:00, 06:00 ... UTC
     },
     
     'process-yesterday-nexstorm-db3': {
@@ -244,11 +250,6 @@ SUNMOON_CITIES = [
     {"name": "Sorong",        "lat": -0.867, "lon": 131.250},
     {"name": "Fakfak",        "lat": -2.923, "lon": 132.296},
     {"name": "Raja Ampat",    "lat": -0.233, "lon": 130.517},   # Waisai
-]
-
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
 ]
 
 # --- ADD THE MEDIA FILE CONFIGURATION BELOW ---

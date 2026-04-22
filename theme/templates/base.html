@@ -1,6 +1,6 @@
 {% load static tailwind_tags %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,17 +16,6 @@
     {% block extra_scripts %}{% endblock %}
 
 
-<script>
-(function() {
-  const hour = new Date().getHours();
-  const root = document.documentElement;
-  if (hour >= 6 && hour < 18) {
-    root.classList.remove('dark'); // Light mode
-  } else {
-    root.classList.add('dark');    // Dark mode
-  }
-})();
-</script>
 
 </body>
 </html>

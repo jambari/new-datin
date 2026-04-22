@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import DataAvailabilitySerializer
 from datetime import datetime
-from .models import AcceleroDataAvailability, StationReading
+from .models import AcceleroDataAvailability
 from .serializers import AcceleroDataAvailabilitySerializer
 from rest_framework import generics
 from .serializers import GempaSerializer
@@ -32,7 +32,7 @@ from django.db.models import Prefetch
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from .models import JSONDataUpload
+from .models import JSONDataUpload, FeltEarthquake
 import json
 from io import StringIO
 import re
@@ -337,30 +337,29 @@ class GempaCreateAPIView(generics.CreateAPIView):
     serializer_class = GempaSerializer
 
 class ShakemapListView(generic.ListView):
-    model = ShakemapEvent
+    model = FeltEarthquake
     context_object_name = 'shakemap_list'
     template_name = 'repository/shakemapevent_list.html'
-    ordering = ['-event_time']
+    ordering = ['-event_datetime']
     paginate_by = 10
-    
+
     def get_context_data(self, **kwargs):
-        """
-        Overrides the default context to add the total record count.
-        """
-        # Call the base implementation first to get the existing context
         context = super().get_context_data(**kwargs)
-    
-        # Add the total number of records to the context
-        # context['paginator'].count is efficient as it's already calculated for pagination
         context['record_count'] = context['paginator'].count
-        
         return context
 
 
-# Renamed class and updated model and template
 class ShakemapDetailView(generic.DetailView):
-    model = ShakemapEvent
+    model = FeltEarthquake
     template_name = 'repository/shakemapevent_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        fe = self.object
+        _WIB = dt_timezone(timedelta(hours=7))
+        wib_ts = fe.event_datetime.astimezone(_WIB).strftime("%Y%m%d%H%M%S")
+        context['shk_event'] = ShakemapEvent.objects.filter(event_id=wib_ts).first()
+        return context
 
 @login_required
 def query_seismo_availability(request):
@@ -475,14 +474,8 @@ def query_seismo_availability(request):
     return render(request, 'repository/data_availability_query.html', context)
 
 class ShakemapEventDeleteView(DeleteView):
-    """
-    Handles the deletion of a single ShakemapEvent.
-    It will render a confirmation page before deleting.
-    """
-    model = ShakemapEvent
+    model = FeltEarthquake
     template_name = 'repository/shakemapevent_confirm_delete.html'
-    
-    # After a successful deletion, redirect the user to the shakemap list page
     success_url = reverse_lazy('shakemap-list')
 
 # Add this new view to your views.py
@@ -727,9 +720,8 @@ def update_availability_cell(request):
 @login_required
 def shakemap_report_query(request):
     """
-    View khusus untuk Laporan Shakemap Bulanan.
-    Menampilkan Event dan Station Reading dalam format list/tabel untuk dicetak.
-    Ditambah dengan Rekapitulasi Matriks per Jam (3-jam) vs Tanggal.
+    Laporan Shakemap Bulanan — primary model is FeltEarthquake.
+    ShakemapEvent is looked up per-event to attach the MMI image and station readings.
     """
     today = datetime.now()
     try:
@@ -739,91 +731,87 @@ def shakemap_report_query(request):
         selected_month = today.month
         selected_year = today.year
 
-    # Helper nama bulan
-    daftar_bulan_indo = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+    daftar_bulan_indo = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                         "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
     month_name = daftar_bulan_indo[selected_month]
 
-    # Hitung jumlah hari dalam bulan terpilih
     _, num_days = calendar.monthrange(selected_year, selected_month)
     days_range_list = list(range(1, num_days + 1))
 
-    # Query Events
-    events = ShakemapEvent.objects.filter(
-        event_time__year=selected_year,
-        event_time__month=selected_month
-    ).order_by('-event_time').prefetch_related('stations')
+    # Primary queryset: FeltEarthquake
+    _WIB = dt_timezone(timedelta(hours=7))
+    events = list(
+        FeltEarthquake.objects.filter(
+            event_datetime__year=selected_year,
+            event_datetime__month=selected_month,
+        ).order_by('-event_datetime')
+    )
 
-    # --- LOGIKA REKAPITULASI (MATRIX) ---
-    # Slot waktu UTC (Start, End, Label)
+    # Build wib_ts → ShakemapEvent map for this month so we can attach the MMI shakemap image
+    shk_map = {
+        shk.event_id: shk
+        for shk in ShakemapEvent.objects.filter(
+            event_time__year=selected_year,
+            event_time__month=selected_month,
+        )
+    }
+
+    for fe in events:
+        wib_ts = fe.event_datetime.astimezone(_WIB).strftime("%Y%m%d%H%M%S")
+        fe.wib_ts   = wib_ts
+        fe.shk_event = shk_map.get(wib_ts)
+
+    # --- Recap matrix (UTC slots) ---
     time_slots = [
-        (0, 3, "00 - 03"),
-        (3, 6, "03 - 06"),
-        (6, 9, "06 - 09"),
+        (0, 3,  "00 - 03"),
+        (3, 6,  "03 - 06"),
+        (6, 9,  "06 - 09"),
         (9, 12, "09 - 12"),
-        (12, 15, "12 - 15"),
-        (15, 18, "15 - 18"),
-        (18, 21, "18 - 21"),
-        (21, 24, "21 - 00"),
+        (12, 15,"12 - 15"),
+        (15, 18,"15 - 18"),
+        (18, 21,"18 - 21"),
+        (21, 24,"21 - 00"),
     ]
 
-    # Inisialisasi Matriks Kosong: matrix[slot_index][day] = count
     recap_matrix = {i: {d: 0 for d in days_range_list} for i in range(len(time_slots))}
-    row_totals = {i: 0 for i in range(len(time_slots))}
-    day_totals = {d: 0 for d in days_range_list}
-    grand_total = 0
+    row_totals   = {i: 0 for i in range(len(time_slots))}
+    day_totals   = {d: 0 for d in days_range_list}
+    grand_total  = 0
 
-    for event in events:
-        # Pastikan waktu dalam UTC agar sesuai dengan label tabel
-        dt = event.event_time
+    for fe in events:
+        dt = fe.event_datetime
         if timezone.is_aware(dt):
             dt = dt.astimezone(dt_timezone.utc)
-        
-        day = dt.day
+        day  = dt.day
         hour = dt.hour
-        
-        # Tentukan masuk slot mana
-        slot_idx = -1
         for idx, (start, end, label) in enumerate(time_slots):
             if start <= hour < end:
-                slot_idx = idx
+                recap_matrix[idx][day] += 1
+                row_totals[idx] += 1
+                day_totals[day] += 1
+                grand_total += 1
                 break
-        
-        # Update counter jika slot ditemukan
-        if slot_idx != -1:
-            recap_matrix[slot_idx][day] += 1
-            row_totals[slot_idx] += 1
-            day_totals[day] += 1
-            grand_total += 1
 
-    # Siapkan data untuk dilempar ke template
-    recap_data = []
-    for idx, (start, end, label) in enumerate(time_slots):
-        row_days = []
-        for d in days_range_list:
-            count = recap_matrix[idx][d]
-            # Gunakan "-" jika 0 agar tabel lebih bersih, atau angka 0 sesuai selera
-            display_val = count if count > 0 else "-" 
-            row_days.append(display_val)
-        
-        recap_data.append({
+    recap_data = [
+        {
             'label': label,
-            'days': row_days,
-            'total': row_totals[idx]
-        })
+            'days':  [recap_matrix[idx][d] if recap_matrix[idx][d] > 0 else "-" for d in days_range_list],
+            'total': row_totals[idx],
+        }
+        for idx, (start, end, label) in enumerate(time_slots)
+    ]
 
     context = {
-        'events': events,
+        'events':         events,
         'selected_month': selected_month,
-        'selected_year': selected_year,
-        'month_name': month_name,
-        'years_range': range(2020, 2030),
-        'months_range': range(1, 13),
-        'page_title': f"Laporan Bulanan Shakemap - {month_name} {selected_year}",
-        
-        # Context Baru untuk Tabel Rekap
-        'recap_data': recap_data,
-        'day_totals': [day_totals[d] for d in days_range_list],
-        'grand_total': grand_total,
+        'selected_year':  selected_year,
+        'month_name':     month_name,
+        'years_range':    range(2020, 2030),
+        'months_range':   range(1, 13),
+        'page_title':     f"Laporan Bulanan Shakemap - {month_name} {selected_year}",
+        'recap_data':     recap_data,
+        'day_totals':     [day_totals[d] for d in days_range_list],
+        'grand_total':    grand_total,
         'days_range_list': days_range_list,
     }
 
@@ -912,20 +900,35 @@ def json_analysis(request, pk):
         data = json.loads(json_file)
         events = data.get('data', [])
         
-        # 3. Ambil Data ShakemapEvent dari Database (Peta Dirasakan)
-        felt_events_query = ShakemapEvent.objects.filter(
-            event_time__year=current_year,
-            event_time__month=current_month
-        ).order_by('event_time')
-        
+        # 3. Ambil Data FeltEarthquake dari Database (Peta Dirasakan)
+        _WIB = dt_timezone(timedelta(hours=7))
+        felt_events_query = list(
+            FeltEarthquake.objects.filter(
+                event_datetime__year=current_year,
+                event_datetime__month=current_month
+            ).order_by('event_datetime')
+        )
+
+        # Attach ShakemapEvent (MMI image) to each FeltEarthquake
+        shk_map = {
+            shk.event_id: shk
+            for shk in ShakemapEvent.objects.filter(
+                event_time__year=current_year,
+                event_time__month=current_month,
+            )
+        }
+        for fe in felt_events_query:
+            wib_ts = fe.event_datetime.astimezone(_WIB).strftime("%Y%m%d%H%M%S")
+            fe.shk_event = shk_map.get(wib_ts)
+
         felt_map_data = []
         for fe in felt_events_query:
             felt_map_data.append({
                 'lat': float(fe.latitude),
                 'lon': float(fe.longitude),
                 'mag': float(fe.magnitude),
-                'place': fe.location_string,
-                'time': fe.event_time.strftime('%Y-%m-%d %H:%M')
+                'place': fe.wilayah,
+                'time': fe.event_datetime.strftime('%Y-%m-%d %H:%M')
             })
             
         # 4. Daftar Perangkat SeisComP untuk Status Alat

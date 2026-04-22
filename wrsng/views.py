@@ -127,11 +127,27 @@ def wrsng_availability_query(request):
     daftar_bulan_indo = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
     month_name = daftar_bulan_indo[selected_month]
 
-    station_list = [
-        "Stageof Jayapura", "RRI Jayapura", "MAKO LANTAMAL X", "BPBD Kota Jayapura", 
-        "BBMKG V Jayapura", "BPBD Provinsi Papua", "BASARNAS Papua", "BPBD Kab. Jayapura", 
-        "BPBD Biak Numfor", "BPBD Waropen", "BASARNAS Merauke", "BPBD Kab. Mimika"
-    ]
+    # Maps display name -> list of actual wrs_code values in the DB
+    WRS_CODE_MAP = {
+        "Stageof Jayapura":   ["stageof_JAY", "JAYAPURA_01"],
+        "RRI Jayapura":       ["rri_kojay"],
+        "MAKO LANTAMAL X":    ["kodaeral_x"],
+        "BPBD Kota Jayapura": ["bpbd_kojay"],
+        "BBMKG V Jayapura":   ["bbmkgv"],
+        "BPBD Provinsi Papua":["BPBD_PROV", "BPBDProv_01"],
+        "BASARNAS Papua":     ["basarnas_jay"],
+        "BPBD Kab. Jayapura": ["bpbd_kabjay"],
+        "BPBD Biak Numfor":   ["bpbd biak", "BPBD_BIAK"],
+        "BPBD Waropen":       [],
+        "BASARNAS Merauke":   ["BASARNAS_MERAUKE"],
+        "BPBD Kab. Mimika":   ["bpbd-mimika"],
+    }
+    station_list = list(WRS_CODE_MAP.keys())
+
+    # Flat list of all actual codes for DB queries
+    all_wrs_codes = [code for codes in WRS_CODE_MAP.values() for code in codes]
+    # Reverse map: actual DB code -> display name
+    CODE_TO_STATION = {code: name for name, codes in WRS_CODE_MAP.items() for code in codes}
 
     # Date Range
     start_date = datetime.datetime(selected_year, selected_month, 1, tzinfo=datetime.timezone.utc)
@@ -139,7 +155,7 @@ def wrsng_availability_query(request):
         next_month = datetime.datetime(selected_year + 1, 1, 1, tzinfo=datetime.timezone.utc)
     else:
         next_month = datetime.datetime(selected_year, selected_month + 1, 1, tzinfo=datetime.timezone.utc)
-    
+
     # Range Tanggal Biasa (untuk query manual)
     start_date_date = start_date.date()
     end_date_date = (next_month - datetime.timedelta(seconds=1)).date()
@@ -156,19 +172,21 @@ def wrsng_availability_query(request):
         # Format key: (station, day_integer)
         manual_map[(item['station'], item['date'].day)] = item['percentage']
 
-    # 2. AMBIL DATA LOG (Otomatis)
+    # 2. AMBIL DATA LOG (Otomatis) — query dengan actual wrs_code dari DB
     logs = WRSNGStatus.objects.filter(
         status_datetime__gte=start_date,
         status_datetime__lt=next_month,
-        wrs_code__in=station_list
+        wrs_code__in=all_wrs_codes
     ).values('wrs_code', 'status_datetime', 'display_status')
 
     auto_map = defaultdict(lambda: defaultdict(list))
     for log in logs:
-        d_day = log['status_datetime'].day 
-        code = log['wrs_code']
-        status_val = log['display_status'] 
-        auto_map[code][d_day].append(status_val)
+        d_day = log['status_datetime'].day
+        # Map actual DB code back to display name
+        station_name = CODE_TO_STATION.get(log['wrs_code'])
+        if station_name:
+            status_val = log['display_status']
+            auto_map[station_name][d_day].append(status_val)
 
     # 3. GABUNGKAN (Prioritas: Manual > Auto > Default 100)
     tabel_data = []
@@ -177,7 +195,7 @@ def wrsng_availability_query(request):
         total_pct = 0
         
         for d in list_tanggal:
-            val = 100.0 # Default Value 100 (Jika tidak ada data)
+            val = 0.0  # Default: 0 jika tidak ada data log maupun manual
 
             # Cek Manual dulu
             if (stasiun, d) in manual_map:
@@ -191,7 +209,7 @@ def wrsng_availability_query(request):
                     count_total = len(status_list)
                     val = (count_on / count_total) * 100
             
-            # Jika tidak ada keduanya, val tetap 100.0
+            # Jika tidak ada keduanya, val tetap 0.0
             
             val = float(val)
             total_pct += val

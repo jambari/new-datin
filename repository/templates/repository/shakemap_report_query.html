@@ -49,47 +49,98 @@
 
     /* Bagian Kanan: Gambar Shakemap */
     .event-map-side {
-        width: 200px; 
+        width: 420px;
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
+        gap: 6px;
+        height: fit-content;
+    }
+
+    .img-block {
         border: 1px solid #ccc;
         padding: 4px;
         background-color: #fff;
-        height: fit-content; 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 
-    .event-map-side img {
+    .img-block img {
         width: 100%;
         height: auto;
         object-fit: contain;
         display: block;
+        cursor: zoom-in;
+        transition: opacity .15s;
     }
-    
+    .img-block img:hover { opacity: .85; }
+
+    .img-block .img-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        width: 100%;
+    }
+
+    .img-block .img-grid img {
+        width: 100%;
+    }
+
     .map-caption {
         font-size: 9px;
         margin-top: 3px;
         text-align: center;
         color: #555;
+        width: 100%;
     }
 
-    /* Tabel Laporan Compact */
+    /* Lightbox */
+    #rpt-lb {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0,0,0,.88);
+        align-items: center;
+        justify-content: center;
+    }
+    #rpt-lb.active { display: flex; }
+    #rpt-lb-img {
+        max-width: 90vw;
+        max-height: 90vh;
+        object-fit: contain;
+        border-radius: 4px;
+        transform-origin: center;
+        transition: transform .1s;
+        cursor: grab;
+        user-select: none;
+    }
+    #rpt-lb-img.grabbing { cursor: grabbing; }
+    #rpt-lb-close { position:fixed;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;opacity:.8; }
+    #rpt-lb-close:hover { opacity:1; }
+    .rpt-lb-nav { position:fixed;top:50%;transform:translateY(-50%);color:#fff;font-size:36px;cursor:pointer;opacity:.6;padding:0 14px;user-select:none; }
+    .rpt-lb-nav:hover { opacity:1; }
+    #rpt-lb-prev { left:8px; }
+    #rpt-lb-next { right:8px; }
+    #rpt-lb-zoom { position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px; }
+    .rpt-lb-zbtn { background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 12px;font-size:18px;cursor:pointer; }
+    .rpt-lb-zbtn:hover { background:rgba(255,255,255,.3); }
+    #rpt-lb-caption { position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:4px 14px;border-radius:999px;pointer-events:none;white-space:nowrap; }
+
+    /* Tabel Parameter Gempa */
     .report-table {
-        width: auto; 
+        width: auto;
         border-collapse: collapse;
         font-size: 10px;
-        table-layout: fixed; 
+        table-layout: fixed;
     }
 
-    .report-table th, .report-table td {
+    .report-table td {
         border: 1px solid #000;
-        padding: 2px 4px; 
-        height: 18px; 
-        overflow: hidden; 
-        white-space: nowrap; 
-        text-overflow: ellipsis; 
+        padding: 4px 6px;
+        white-space: normal;
+        word-wrap: break-word;
     }
 
     /* Tabel Rekapitulasi (Style Baru) */
@@ -118,29 +169,12 @@
         text-transform: uppercase;
     }
 
-    /* Override white-space untuk kolom tertentu jika perlu wrap (misal Header Event) */
     .event-row td {
-        white-space: normal; 
-        word-wrap: break-word;
-    }
-
-    /* Baris Parameter Gempa (Header Event) */
-    .event-row {
         background-color: #d1d5db;
         font-weight: bold;
-        text-align: left;
         font-size: 11px;
     }
 
-    /* Baris Header Kolom Stasiun */
-    .station-header-row {
-        background-color: #f3f4f6;
-        font-weight: bold;
-        text-align: center;
-        font-size: 10px;
-    }
-
-    .text-center { text-align: center; }
     .no-data {
         text-align: center;
         padding: 20px;
@@ -206,71 +240,98 @@
                 <!-- WRAPPER PER EVENT (Flexbox) -->
                 <div class="event-wrapper">
                     
-                    <!-- KIRI: TABEL DATA -->
+                    <!-- KIRI: PARAMETER GEMPA -->
                     <div class="event-table-side">
                         <table class="report-table">
-                            <!-- Definisi Lebar Kolom FIX (Pixel) -->
                             <colgroup>
-                                <col style="width: 30px;">  <!-- No -->
-                                <col style="width: 60px;">  <!-- Kode -->
-                                <col style="width: 60px;">  <!-- Jarak -->
-                                <col style="width: 90px;">  <!-- Intensitas -->
-                                <col style="width: 90px;">  <!-- PGA EW -->
-                                <col style="width: 90px;">  <!-- PGA NS -->
-                                <col style="width: 90px;">  <!-- PGA UD -->
+                                <col style="width: 420px;">
                             </colgroup>
-
-                            <!-- BARIS 1: PARAMETER GEMPA -->
                             <tr class="event-row">
-                                <td colspan="7">
-                                    {{ event.event_time|date:"d-m-Y H:i:s" }} UTC | 
-                                    {{ event.latitude|floatformat:4 }}, {{ event.longitude|floatformat:4 }} | 
-                                    M {{ event.magnitude }} | 
-                                    Kedalaman: {{ event.depth }} km | 
-                                    {{ event.location_string }}
+                                <td>
+                                    {{ event.event_datetime|date:"d-m-Y H:i:s" }} UTC |
+                                    {{ event.latitude|floatformat:4 }}, {{ event.longitude|floatformat:4 }} |
+                                    M {{ event.magnitude }} |
+                                    Kedalaman: {{ event.depth_km }} km |
+                                    {{ event.wilayah }}
+                                    {% if event.dirasakan %} | Dirasakan: {{ event.dirasakan }}{% endif %}
                                 </td>
                             </tr>
-
-                            <!-- BARIS 2: HEADER STASIUN -->
-                            <tr class="station-header-row">
-                                <th>No</th>
-                                <th>Kode</th>
-                                <th>Jarak (km)</th>
-                                <th>Intensitas (MMI)</th>
-                                <th>PGA EW (gal)</th>
-                                <th>PGA NS (gal)</th>
-                                <th>PGA UD (gal)</th>
-                            </tr>
-
-                            <!-- BARIS 3 dst: DATA STASIUN -->
-                            {% for station in event.stations.all %}
-                            <tr>
-                                <td class="text-center">{{ forloop.counter }}</td>
-                                <td class="text-center"><b>{{ station.station_code }}</b></td>
-                                <td class="text-center">{{ station.distance_km|floatformat:1 }}</td>
-                                <td class="text-center">{{ station.intensity|floatformat:1 }}</td>
-                                <td class="text-center">{{ station.pga_ew|floatformat:4 }}</td>
-                                <td class="text-center">{{ station.pga_ns|floatformat:4 }}</td>
-                                <td class="text-center">{{ station.pga_ud|floatformat:4 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="text-center" style="color: red;">Tidak ada data stasiun untuk event ini.</td>
-                            </tr>
-                            {% endfor %}
                         </table>
                     </div>
 
-                    <!-- KANAN: GAMBAR SHAKEMAP -->
+                    <!-- KANAN: GAMBAR SHAKEMAP + GCS IMAGES -->
                     <div class="event-map-side">
-                        {% if event.shakemap_image %}
-                            <img src="{{ event.shakemap_image.url }}" alt="Shakemap {{ event.event_id }}">
-                            <!-- <div class="map-caption">ID: {{ event.event_id }}</div> -->
-                        {% else %}
-                            <div style="padding: 20px; text-align: center; color: #999; font-size: 10px;">
-                                [No Image]
+
+                        <!-- Row 1: MMI Shakemap + Peta Lokasi -->
+                        <div class="img-block" style="padding: 4px;">
+                            <div class="img-grid">
+                                <div>
+                                    {% if event.shk_event and event.shk_event.shakemap_image %}
+                                        <img src="{{ event.shk_event.shakemap_image.url }}" alt="MMI Shakemap"
+                                             class="rpt-gallery-img" data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Peta MMI">
+                                        <div class="map-caption">Peta MMI</div>
+                                    {% else %}
+                                        <div style="height:80px; display:flex; align-items:center; justify-content:center; color:#aaa; font-size:9px; border:1px dashed #ccc;">[No MMI]</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% if event.img_loc_map %}
+                                        <img src="{{ event.img_loc_map.url }}" alt="Loc Map"
+                                             class="rpt-gallery-img" data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Peta Lokasi">
+                                        <div class="map-caption">Peta Lokasi</div>
+                                    {% else %}
+                                        <div style="height:80px; display:flex; align-items:center; justify-content:center; color:#aaa; font-size:9px; border:1px dashed #ccc;">[No Loc Map]</div>
+                                    {% endif %}
+                                </div>
                             </div>
+                        </div>
+
+                        <!-- Row 2: Station List MMI + Impact List -->
+                        <div class="img-block" style="padding: 4px;">
+                            <div class="img-grid">
+                                <div>
+                                    {% if event.img_stationlist %}
+                                        <img src="{{ event.img_stationlist.url }}" alt="Station List MMI"
+                                             class="rpt-gallery-img" data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Daftar Stasiun MMI">
+                                        <div class="map-caption">Daftar Stasiun MMI</div>
+                                    {% else %}
+                                        <div style="height:80px; display:flex; align-items:center; justify-content:center; color:#aaa; font-size:9px; border:1px dashed #ccc;">[No Station List]</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% if event.img_impact_list %}
+                                        <img src="{{ event.img_impact_list.url }}" alt="Impact List"
+                                             class="rpt-gallery-img" data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Daftar Dampak">
+                                        <div class="map-caption">Daftar Dampak</div>
+                                    {% else %}
+                                        <div style="height:80px; display:flex; align-items:center; justify-content:center; color:#aaa; font-size:9px; border:1px dashed #ccc;">[No Impact List]</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Reports (only shown if at least one exists) -->
+                        {% if event.img_report_1 or event.img_report_2 %}
+                        <div class="img-block" style="padding: 4px;">
+                            <div class="img-grid">
+                                <div>
+                                    {% if event.img_report_1 %}
+                                        <img src="{{ event.img_report_1.url }}" alt="Report 1"
+                                             class="rpt-gallery-img" data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Laporan 1">
+                                        <div class="map-caption">Laporan 1</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% if event.img_report_2 %}
+                                        <img src="{{ event.img_report_2.url }}" alt="Report 2"
+                                             class="rpt-gallery-img" data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Laporan 2">
+                                        <div class="map-caption">Laporan 2</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                         {% endif %}
+
                     </div>
 
                 </div>
@@ -331,17 +392,104 @@
   </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
+<!-- Lightbox -->
+<div id="rpt-lb">
+  <span id="rpt-lb-close">&times;</span>
+  <div id="rpt-lb-zoom">
+    <button class="rpt-lb-zbtn" id="rpt-lb-zin">+</button>
+    <button class="rpt-lb-zbtn" id="rpt-lb-zout">−</button>
+    <button class="rpt-lb-zbtn" id="rpt-lb-zreset" style="font-size:13px;padding:4px 10px;">Reset</button>
+  </div>
+  <span class="rpt-lb-nav" id="rpt-lb-prev">&#8249;</span>
+  <img id="rpt-lb-img" src="" alt="">
+  <span class="rpt-lb-nav" id="rpt-lb-next">&#8250;</span>
+  <div id="rpt-lb-caption"></div>
+</div>
 
-    if (sidebarToggle) {
-      sidebarToggle.addEventListener('click', function() {
-        // This toggles the 'hidden' class on the sidebar for mobile
-        sidebar.classList.toggle('hidden');
-      });
-    }
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Sidebar toggle
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  if (sidebarToggle) sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
+
+  // Lightbox
+  const images = Array.from(document.querySelectorAll('.rpt-gallery-img'));
+  const lb = document.getElementById('rpt-lb');
+  const lbImg = document.getElementById('rpt-lb-img');
+  const lbCaption = document.getElementById('rpt-lb-caption');
+  let currentIdx = 0, scale = 1, panX = 0, panY = 0;
+  let dragging = false, startX = 0, startY = 0, originPanX = 0, originPanY = 0;
+
+  function applyTransform() {
+    lbImg.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
+  }
+
+  function openAt(idx) {
+    currentIdx = idx;
+    scale = 1; panX = 0; panY = 0;
+    lbImg.src = images[idx].src;
+    lbCaption.textContent = images[idx].dataset.caption || '';
+    applyTransform();
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function close() {
+    lb.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function navigate(dir) {
+    let next = currentIdx + dir;
+    if (next < 0) next = images.length - 1;
+    if (next >= images.length) next = 0;
+    openAt(next);
+  }
+
+  images.forEach((img, i) => img.addEventListener('click', () => openAt(i)));
+
+  document.getElementById('rpt-lb-close').addEventListener('click', close);
+  document.getElementById('rpt-lb-prev').addEventListener('click', () => navigate(-1));
+  document.getElementById('rpt-lb-next').addEventListener('click', () => navigate(1));
+
+  document.getElementById('rpt-lb-zin').addEventListener('click', () => { scale = Math.min(scale + 0.25, 5); applyTransform(); });
+  document.getElementById('rpt-lb-zout').addEventListener('click', () => { scale = Math.max(scale - 0.25, 0.5); applyTransform(); });
+  document.getElementById('rpt-lb-zreset').addEventListener('click', () => { scale = 1; panX = 0; panY = 0; applyTransform(); });
+
+  lbImg.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    scale = Math.min(Math.max(scale + (e.deltaY < 0 ? 0.15 : -0.15), 0.5), 5);
+    applyTransform();
+  }, { passive: false });
+
+  lbImg.addEventListener('mousedown', function (e) {
+    if (scale <= 1) return;
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    originPanX = panX; originPanY = panY;
+    lbImg.classList.add('grabbing');
   });
+  document.addEventListener('mousemove', function (e) {
+    if (!dragging) return;
+    panX = originPanX + (e.clientX - startX);
+    panY = originPanY + (e.clientY - startY);
+    applyTransform();
+  });
+  document.addEventListener('mouseup', function () {
+    dragging = false; lbImg.classList.remove('grabbing');
+  });
+
+  lb.addEventListener('click', function (e) { if (e.target === lb) close(); });
+
+  document.addEventListener('keydown', function (e) {
+    if (!lb.classList.contains('active')) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowRight') navigate(1);
+    if (e.key === 'ArrowLeft') navigate(-1);
+    if (e.key === '+') { scale = Math.min(scale + 0.25, 5); applyTransform(); }
+    if (e.key === '-') { scale = Math.max(scale - 0.25, 0.5); applyTransform(); }
+  });
+});
 </script>
 {% endblock %}

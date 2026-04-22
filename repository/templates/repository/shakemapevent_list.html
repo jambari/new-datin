@@ -6,42 +6,43 @@
   <div class="flex-1 flex flex-col overflow-hidden">
     {% include 'partials/_topbar.html' %} 
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
-      <h1 class="text-3xl font-bold text-gray-900">{{ record_count }} Shakemap Events </h1>
-      
+      <h1 class="text-3xl font-bold text-gray-900">{{ record_count }} Felt Earthquake Events</h1>
+
       <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Time (WIB)</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Magnitude</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depth (km)</th>
-              <th scope="col" class="relative px-6 py-3">
-                <span class="sr-only">Details</span>
-              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Time (UTC)</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wilayah</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">M</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depth (km)</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
+              <th class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             {% for event in shakemap_list %}
             <tr>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ event.event_time|date:"d M Y, H:i" }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ event.location_string }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ event.magnitude|floatformat:1 }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ event.depth|floatformat:1 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ event.event_datetime|date:"d M Y, H:i" }} UTC</td>
+              <td class="px-6 py-4 text-sm text-gray-500">{{ event.wilayah }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">{{ event.magnitude|floatformat:1 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ event.depth_km|floatformat:0 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                {% if event.img_stationlist %}<span class="mr-1 text-green-600" title="Station List">S</span>{% endif %}
+                {% if event.img_impact_list %}<span class="mr-1 text-green-600" title="Impact List">I</span>{% endif %}
+                {% if event.img_loc_map %}<span class="mr-1 text-green-600" title="Loc Map">L</span>{% endif %}
+                {% if event.img_report_1 %}<span class="mr-1 text-green-600" title="Report">R</span>{% endif %}
+              </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div class="flex items-center justify-end space-x-4">
-                      <a href="{% url 'shakemap-detail' event.pk %}" class="text-indigo-600 hover:text-indigo-900">View Details</a>
-                      
-                      <!-- Add this new delete link -->
-                      <a href="{% url 'shakemap-delete' event.pk %}" class="text-red-600 hover:text-red-900">Delete</a>
-                  </div>
+                <div class="flex items-center justify-end space-x-4">
+                  <a href="{% url 'shakemap-detail' event.pk %}" class="text-indigo-600 hover:text-indigo-900">Detail</a>
+                  <a href="{% url 'shakemap-delete' event.pk %}" class="text-red-600 hover:text-red-900">Delete</a>
+                </div>
               </td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                No Shakemap data available.
-              </td>
+              <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No felt earthquake data available.</td>
             </tr>
             {% endfor %}
           </tbody>

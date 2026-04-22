@@ -278,6 +278,8 @@ def observation_detail_view(request, pk):
     context = {
         'observation': observation,
         'converted_data': converted_data,
+        'meridian_1_dms': dec_to_dms(observation.meridian_1),
+        'meridian_2_dms': dec_to_dms(observation.meridian_2),
     }
     return render(request, 'magnet/observation_detail.html', context)
 

@@ -100,7 +100,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         # Add dependency on the previous migration (the one that created Strike model)
-        ('lightning', '0001_initial'), 
+        ('lightning', '0002_strike'),
     ]
 
     operations = [

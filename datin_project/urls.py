@@ -33,7 +33,6 @@ urlpatterns = [
     path('', include('almanac.urls')),
     path('lightning/', include('lightning.urls')),
     path('wrsng/', include('wrsng.urls')),
-    path('api/', include('wrsng.urls')),
     path('logbook/', include('logbook.urls')),
     path('jadwal/', include('jadwal.urls')),
     path('maintenance/', include('maintenance.urls')),

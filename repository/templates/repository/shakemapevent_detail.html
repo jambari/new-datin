@@ -1,117 +1,314 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShakeMap Detail - M {{ object.magnitude|floatformat:1 }} {{ object.location_string }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <style>
-        .header-metadata {
-            font-family: Georgia, 'Times New Roman', Times, serif;
-        }
-        .shakemap-img {
-            max-height: 650px;
-            object-fit: contain;
-        }
-        /* Custom media query to align the table with the image on large screens.
-           Calculated offset: 80px (logo height) + approx 24px (mb-4 margin) = 104px.
-        */
-        @media (min-width: 992px) {
-            .shakemap-offset-lg {
-                margin-top: 104px;
-            }
-        }
-    </style>
-</head>
-<body class="bg-light">
+{% extends "base.html" %}
 
-    <main class="container py-5">
-        
-        <div class="row mb-5">
-            <div class="col-12">
-                <p class="fs-5 header-metadata mb-0 color-dark">
-                    {{ object.event_time|date:"j F , Y" }}, {{ object.event_time|date:"H:i:s" }} WIB, 
-                    {{ object.latitude }}&deg;, {{ object.longitude }}&deg;, 
-                    Depth: {{ object.depth|floatformat:1 }} km, 
-                    M {{ object.magnitude|floatformat:1 }}, 
-                    {{ object.location_string }}
-                </p>
-            </div>
+{% block content %}
+<style>
+  .gallery-img {
+    cursor: zoom-in;
+    transition: opacity 0.15s ease;
+  }
+  .gallery-img:hover { opacity: 0.85; }
+
+  /* Lightbox overlay */
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.88);
+    align-items: center;
+    justify-content: center;
+  }
+  #lightbox.active { display: flex; }
+
+  #lightbox-img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    transform-origin: center center;
+    transition: transform 0.1s ease;
+    cursor: grab;
+    user-select: none;
+  }
+  #lightbox-img.grabbing { cursor: grabbing; }
+
+  #lightbox-caption {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+  #lightbox-close {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0.8;
+  }
+  #lightbox-close:hover { opacity: 1; }
+
+  .lb-nav {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 36px;
+    cursor: pointer;
+    opacity: 0.6;
+    padding: 0 14px;
+    user-select: none;
+  }
+  .lb-nav:hover { opacity: 1; }
+  #lb-prev { left: 8px; }
+  #lb-next { right: 8px; }
+
+  #lb-zoom {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+  }
+  .lb-zoom-btn {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .lb-zoom-btn:hover { background: rgba(255,255,255,0.3); }
+</style>
+
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+
+      <!-- Header -->
+      <div class="mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">
+          M{{ object.magnitude|floatformat:1 }} — {{ object.wilayah }}
+        </h1>
+        <p class="text-sm text-gray-500 mt-1">
+          {{ object.event_datetime|date:"d F Y, H:i:s" }} UTC &nbsp;|&nbsp;
+          {{ object.latitude }}&deg;, {{ object.longitude }}&deg; &nbsp;|&nbsp;
+          Kedalaman {{ object.depth_km|floatformat:0 }} km
+          {% if object.dirasakan %}&nbsp;|&nbsp; Dirasakan: {{ object.dirasakan }}{% endif %}
+        </p>
+      </div>
+
+      <!-- Image Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="gallery">
+
+        {% if shk_event and shk_event.shakemap_image %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Peta MMI</p>
+          <img src="{{ shk_event.shakemap_image.url }}" alt="Peta MMI"
+               class="gallery-img w-full h-48 object-contain rounded" data-caption="Peta MMI">
         </div>
-
-        <div class="row align-items-start g-4">
-            
-            <div class="col-lg-5 d-flex flex-column align-items-center">
-                {% if object.shakemap_image %}
-                    <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG Logo" class="mb-4" style="height: 80px; width: auto;">
-                    <img src="{{ object.shakemap_image.url }}" 
-                         class="img-fluid rounded shadow-sm shakemap-img"
-                         alt="ShakeMap for {{ object.location_string }}">
-                {% else %}
-                    <div class="card shadow-sm w-100 text-center">
-                        <div class="card-body">
-                             <h5 class="card-title">ShakeMap</h5>
-                             <p class="card-text text-muted">No shakemap image available for this event.</p>
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="col-lg-7 {% if object.shakemap_image %}shakemap-offset-lg{% endif %}">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white py-3 font-weight-bold">
-                        <h5 class="mb-0">Station Readings</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover mb-0 align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th scope="col" class="px-4 text-muted small text-uppercase">Station Code</th>
-                                        <th scope="col" class="px-4 text-muted small text-uppercase">Distance (Km)</th>
-                                        <th scope="col" class="px-4 text-muted small text-uppercase">Intensity</th>
-                                        <th scope="col" class="px-4 text-muted small">PGA E-W <span style="font-variant: small-caps;">(gal)</span></th>
-                                        <th scope="col" class="px-4 text-muted small">PGA N-S <span style="font-variant: small-caps;">(gal)</span></th>
-                                        <th scope="col" class="px-4 text-muted small">PGA U-D <span style="font-variant: small-caps;">(gal)</span></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for station in object.stations.all %}
-                                    <tr>
-                                        <td class="px-4 fw-bold">{{ station.station_code }}</td>
-                                        <td class="px-4 text-secondary">{{ station.distance_km|floatformat:2 }}</td>
-                                        <td class="px-4 text-secondary">{{ station.intensity|floatformat:1 }}</td>
-                                        <td class="px-4 text-secondary">{{ station.pga_ew|floatformat:4 }}</td>
-                                        <td class="px-4 text-secondary">{{ station.pga_ns|floatformat:4 }}</td>
-                                        <td class="px-4 text-secondary">{{ station.pga_ud|floatformat:4 }}</td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="6" class="px-4 py-5 text-center text-muted">
-                                            No station readings available for this event.
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> <div class="row mt-5 mb-5">
-            <div class="col-12">
-                <a href="{% url 'shakemap-list' %}" class="btn btn-secondary d-inline-flex align-items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left me-2" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
-                    </svg>
-                    Back to List
-                </a>
-            </div>
+        {% else %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Peta MMI</p>
+          <div class="flex-1 flex items-center justify-center text-gray-300 text-sm border border-dashed rounded h-48">Tidak tersedia</div>
         </div>
+        {% endif %}
+
+        {% if object.img_loc_map %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Peta Lokasi</p>
+          <img src="{{ object.img_loc_map.url }}" alt="Peta Lokasi"
+               class="gallery-img w-full h-48 object-contain rounded" data-caption="Peta Lokasi">
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Peta Lokasi</p>
+          <div class="flex-1 flex items-center justify-center text-gray-300 text-sm border border-dashed rounded h-48">Tidak tersedia</div>
+        </div>
+        {% endif %}
+
+        {% if object.img_stationlist %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Daftar Stasiun MMI</p>
+          <img src="{{ object.img_stationlist.url }}" alt="Daftar Stasiun MMI"
+               class="gallery-img w-full h-48 object-contain rounded" data-caption="Daftar Stasiun MMI">
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Daftar Stasiun MMI</p>
+          <div class="flex-1 flex items-center justify-center text-gray-300 text-sm border border-dashed rounded h-48">Tidak tersedia</div>
+        </div>
+        {% endif %}
+
+        {% if object.img_impact_list %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Daftar Dampak</p>
+          <img src="{{ object.img_impact_list.url }}" alt="Daftar Dampak"
+               class="gallery-img w-full h-48 object-contain rounded" data-caption="Daftar Dampak">
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Daftar Dampak</p>
+          <div class="flex-1 flex items-center justify-center text-gray-300 text-sm border border-dashed rounded h-48">Tidak tersedia</div>
+        </div>
+        {% endif %}
+
+        {% if object.img_report_1 %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Laporan 1</p>
+          <img src="{{ object.img_report_1.url }}" alt="Laporan 1"
+               class="gallery-img w-full h-48 object-contain rounded" data-caption="Laporan 1">
+        </div>
+        {% endif %}
+
+        {% if object.img_report_2 %}
+        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Laporan 2</p>
+          <img src="{{ object.img_report_2.url }}" alt="Laporan 2"
+               class="gallery-img w-full h-48 object-contain rounded" data-caption="Laporan 2">
+        </div>
+        {% endif %}
+
+      </div>
+
+      <!-- Back -->
+      <div class="mt-6">
+        <a href="{% url 'shakemap-list' %}" class="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800">
+          &larr; Kembali ke daftar
+        </a>
+      </div>
 
     </main>
+  </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-</body>
-</html>
+<!-- Lightbox -->
+<div id="lightbox">
+  <span id="lightbox-close">&times;</span>
+  <div id="lb-zoom">
+    <button class="lb-zoom-btn" id="lb-zoom-in">+</button>
+    <button class="lb-zoom-btn" id="lb-zoom-out">−</button>
+    <button class="lb-zoom-btn" id="lb-zoom-reset" style="font-size:13px;padding:4px 10px;">Reset</button>
+  </div>
+  <span class="lb-nav" id="lb-prev">&#8249;</span>
+  <img id="lightbox-img" src="" alt="">
+  <span class="lb-nav" id="lb-next">&#8250;</span>
+  <div id="lightbox-caption"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const images = Array.from(document.querySelectorAll('.gallery-img'));
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCaption = document.getElementById('lightbox-caption');
+  let currentIdx = 0;
+  let scale = 1;
+  let panX = 0, panY = 0;
+  let dragging = false, startX = 0, startY = 0, originPanX = 0, originPanY = 0;
+
+  function applyTransform() {
+    lbImg.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+  }
+
+  function openAt(idx) {
+    currentIdx = idx;
+    scale = 1; panX = 0; panY = 0;
+    lbImg.src = images[idx].src;
+    lbCaption.textContent = images[idx].dataset.caption || '';
+    applyTransform();
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function close() {
+    lb.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function navigate(dir) {
+    let next = currentIdx + dir;
+    if (next < 0) next = images.length - 1;
+    if (next >= images.length) next = 0;
+    openAt(next);
+  }
+
+  images.forEach((img, i) => img.addEventListener('click', () => openAt(i)));
+
+  document.getElementById('lightbox-close').addEventListener('click', close);
+  document.getElementById('lb-prev').addEventListener('click', () => navigate(-1));
+  document.getElementById('lb-next').addEventListener('click', () => navigate(1));
+
+  // Zoom buttons
+  document.getElementById('lb-zoom-in').addEventListener('click', () => {
+    scale = Math.min(scale + 0.25, 5); applyTransform();
+  });
+  document.getElementById('lb-zoom-out').addEventListener('click', () => {
+    scale = Math.max(scale - 0.25, 0.5); applyTransform();
+  });
+  document.getElementById('lb-zoom-reset').addEventListener('click', () => {
+    scale = 1; panX = 0; panY = 0; applyTransform();
+  });
+
+  // Scroll to zoom
+  lbImg.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.15 : -0.15;
+    scale = Math.min(Math.max(scale + delta, 0.5), 5);
+    applyTransform();
+  }, { passive: false });
+
+  // Drag to pan
+  lbImg.addEventListener('mousedown', function (e) {
+    if (scale <= 1) return;
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    originPanX = panX; originPanY = panY;
+    lbImg.classList.add('grabbing');
+  });
+  document.addEventListener('mousemove', function (e) {
+    if (!dragging) return;
+    panX = originPanX + (e.clientX - startX);
+    panY = originPanY + (e.clientY - startY);
+    applyTransform();
+  });
+  document.addEventListener('mouseup', function () {
+    dragging = false; lbImg.classList.remove('grabbing');
+  });
+
+  // Close on backdrop click (not on image/controls)
+  lb.addEventListener('click', function (e) {
+    if (e.target === lb) close();
+  });
+
+  // Keyboard nav
+  document.addEventListener('keydown', function (e) {
+    if (!lb.classList.contains('active')) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowRight') navigate(1);
+    if (e.key === 'ArrowLeft') navigate(-1);
+    if (e.key === '+') { scale = Math.min(scale + 0.25, 5); applyTransform(); }
+    if (e.key === '-') { scale = Math.max(scale - 0.25, 0.5); applyTransform(); }
+  });
+
+  // Sidebar toggle
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  if (sidebarToggle) sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
+});
+</script>
+{% endblock %}

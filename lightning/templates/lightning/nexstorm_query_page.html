@@ -283,7 +283,7 @@
         lightningMap     = L.map('lightningMap', { layers: [] }).setView([-2.5, 140.7], 9);
         currentBaseLayer = baseLayers.imagery;
         currentBaseLayer.addTo(lightningMap);
-        strikeLayerGroup = L.layerGroup().addTo(lightningMap);
+        strikeLayerGroup = L.featureGroup().addTo(lightningMap);
         L.control.scale({ imperial: false }).addTo(lightningMap);
     }
 

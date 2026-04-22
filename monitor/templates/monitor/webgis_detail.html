@@ -116,10 +116,14 @@
         // Inisialisasi Peta
         var map = L.map('map').setView([lat, lon], 7);
 
-        // Layer Peta Dasar (OpenStreetMap)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+        // Esri Basemaps
+        var esriOcean    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ', maxZoom: 13 });
+        var esriImagery  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China, Esri (Thailand), TomTom' });
+        var esriStreet   = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China, Esri (Thailand), TomTom' });
+        var esriTopo     = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China, GIS User Community' });
+        var esriDarkGray = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ', maxZoom: 16 });
+        esriOcean.addTo(map);
+        L.control.layers({ '🌊 Ocean': esriOcean, '🛰️ Imagery': esriImagery, '🗺️ Street': esriStreet, '🏔️ Topography': esriTopo, '🌑 Dark Gray': esriDarkGray }, null, { position: 'topright', collapsed: false }).addTo(map);
 
         // Marker Gempa (Lingkaran Merah Berdenyut sederhana)
         var earthquakeMarker = L.circleMarker([lat, lon], {

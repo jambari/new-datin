@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
-from repository.models import ShakemapEvent, StationReading # <-- UPDATED: Uses your app name 'repository'
+from repository.models import ShakemapEvent
 
 # IMPORTANT: Create these directories on your server and update the paths if needed
 INCOMING_DIR = '/home/sysop/new-datin/incoming_shakemaps/'
@@ -60,21 +60,3 @@ class Command(BaseCommand):
         with open(image_path, 'rb') as f:
             event.shakemap_image.save(os.path.basename(image_path), ContentFile(f.read()), save=True)
 
-        station_list = root.find('stationlist')
-        for station_elem in station_list.findall('station'):
-            pga_values = {}
-            for comp_elem in station_elem.findall('comp'):
-                comp_name = comp_elem.get('name')
-                acc_elem = comp_elem.find('acc')
-                if acc_elem is not None:
-                    acc_value = float(acc_elem.get('value'))
-                    if 'HNE' in comp_name: pga_values['pga_ew'] = acc_value
-                    elif 'HNN' in comp_name: pga_values['pga_ns'] = acc_value
-                    elif 'HNZ' in comp_name: pga_values['pga_ud'] = acc_value
-            
-            StationReading.objects.update_or_create(
-                event=event, station_code=station_elem.get('code'),
-                defaults={ 'latitude': float(station_elem.get('lat')), 'longitude': float(station_elem.get('lon')),
-                           'distance_km': float(station_elem.get('dist')), 'intensity': float(station_elem.get('intensity')),
-                           **pga_values }
-            )
