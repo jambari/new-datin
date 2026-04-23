@@ -259,6 +259,10 @@ MEDIA_URL = '/media/'
 # The absolute path to the folder where media files will be stored
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Absolute path to the directory where NexStorm .db3 files are placed.
+# Override in .env / .env.production so it stays correct regardless of BASE_DIR.
+LIGHTNING_DB3_DIR = config('LIGHTNING_DB3_DIR', default=str(BASE_DIR / 'lightning' / 'db3'))
+
 # Matikan header COOP agar warning di console hilang
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 

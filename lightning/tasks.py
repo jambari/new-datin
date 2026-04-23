@@ -35,7 +35,7 @@ def process_yesterday_nexstorm_file():
         
         logger.info(f"Task started: processing file for 'yesterday' ({yesterday_date_str_iso}) -> {filename}")
         
-        db3_directory = os.path.join(settings.BASE_DIR, 'lightning', 'db3')
+        db3_directory = settings.LIGHTNING_DB3_DIR
         file_path = os.path.join(db3_directory, filename)
 
         if not os.path.exists(file_path):
