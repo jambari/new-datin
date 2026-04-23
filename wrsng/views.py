@@ -129,7 +129,7 @@ def wrsng_availability_query(request):
 
     # Maps display name -> list of actual wrs_code values in the DB
     WRS_CODE_MAP = {
-        "Stageof Jayapura":   ["stageof_JAY", "JAYAPURA_01"],
+        "Stageof Jayapura":   ["stageof_JAY"],
         "RRI Jayapura":       ["rri_kojay"],
         "MAKO LANTAMAL X":    ["kodaeral_x"],
         "BPBD Kota Jayapura": ["bpbd_kojay"],
