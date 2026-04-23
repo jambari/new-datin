@@ -46,6 +46,31 @@ def dashboard(request):
     from logbook.models import Logbook
     recent_logbook = Logbook.objects.order_by('-tanggal', '-waktu_dibuat')[:5]
 
+    # --- Next shift from jadwal ---
+    from jadwal.models import JadwalHarian
+    from collections import defaultdict
+    tomorrow = today + datetime.timedelta(days=1)
+    # Look for schedules today then tomorrow; pick the nearest date that has data
+    next_shift_date = None
+    next_shift_by_pola = []
+    for check_date in [today, tomorrow]:
+        schedules = (
+            JadwalHarian.objects
+            .filter(tanggal=check_date, pola__isnull=False, pola__is_libur=False)
+            .select_related('pegawai', 'pola')
+            .order_by('pola__jam_mulai', 'pegawai__urutan')
+        )
+        if schedules.exists():
+            next_shift_date = check_date
+            grouped = defaultdict(list)
+            for s in schedules:
+                grouped[s.pola].append(s.pegawai.nama)
+            next_shift_by_pola = [
+                {'pola': pola, 'names': names}
+                for pola, names in sorted(grouped.items(), key=lambda x: x[0].jam_mulai)
+            ]
+            break
+
     # --- Lightning chart data (7 days) ---
     chart_labels = []
     chart_data   = []
@@ -67,6 +92,8 @@ def dashboard(request):
         'wrsng_online':        wrsng_online,
         'wrsng_total':         wrsng_statuses.count(),
         'recent_logbook':      recent_logbook,
+        'next_shift_date':     next_shift_date,
+        'next_shift_by_pola':  next_shift_by_pola,
         'chart_labels':        chart_labels,
         'chart_data':          chart_data,
         'gempa_merusak_total': GempaMemusak.objects.count(),

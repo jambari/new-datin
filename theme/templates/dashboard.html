@@ -74,13 +74,40 @@
           {% endif %}
         </div>
 
-        <!-- Recent Logbook -->
+        <!-- Logbook + Next Shift -->
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
-          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:16px;">Logbook Terkini</h2>
+
+          <!-- Next Shift -->
+          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:10px;">Jadwal Shift Berikutnya</h2>
+          {% if next_shift_by_pola %}
+          <p style="font-size:11px;color:#9ca3af;margin-bottom:8px;">{{ next_shift_date|date:"l, d M Y" }}</p>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+            {% for item in next_shift_by_pola %}
+            <div style="padding:10px 12px;border-radius:6px;border:1px solid #e5e7eb;background:#f9fafb;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:12px;font-weight:700;color:#111827;">
+                  <span style="display:inline-block;padding:2px 8px;border-radius:4px;color:#fff;background:#4f46e5;margin-right:6px;">{{ item.pola.kode }}</span>
+                  {{ item.pola.nama }}
+                </span>
+                <span style="font-size:11px;color:#9ca3af;">{{ item.pola.jam_mulai|time:"H:i" }} – {{ item.pola.jam_selesai|time:"H:i" }}</span>
+              </div>
+              <p style="font-size:12px;color:#374151;margin:0;">{{ item.names|join:", " }}</p>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p style="font-size:13px;color:#9ca3af;font-style:italic;margin-bottom:16px;">Belum ada jadwal shift yang tersedia.</p>
+          {% endif %}
+
+          <!-- Divider -->
+          <hr style="border:none;border-top:1px solid #f3f4f6;margin-bottom:14px;">
+
+          <!-- Recent Logbook -->
+          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:10px;">Logbook Terkini</h2>
           {% if recent_logbook %}
-          <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;flex-direction:column;gap:8px;">
             {% for log in recent_logbook %}
-            <div style="padding:10px 12px;border-radius:6px;background:#f9fafb;border-left:3px solid {% if log.status_absen == 'Hadir' %}#059669{% else %}#6b7280{% endif %};">
+            <div style="padding:8px 12px;border-radius:6px;background:#f9fafb;border-left:3px solid {% if log.status_absen == 'Hadir' %}#059669{% else %}#6b7280{% endif %};">
               <p style="font-size:13px;font-weight:600;color:#111827;">{{ log.petugas }}</p>
               <p style="font-size:11px;color:#6b7280;">{{ log.tanggal|date:"d M Y" }} &mdash; {{ log.shift }}</p>
               <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
@@ -91,7 +118,7 @@
             </div>
             {% endfor %}
           </div>
-          <a href="{% url 'logbook:logbook_list' %}" style="display:block;margin-top:12px;font-size:12px;color:#4f46e5;text-decoration:none;text-align:right;">Lihat semua &rarr;</a>
+          <a href="{% url 'logbook:logbook_list' %}" style="display:block;margin-top:10px;font-size:12px;color:#4f46e5;text-decoration:none;text-align:right;">Lihat semua &rarr;</a>
           {% else %}
           <p style="font-size:13px;color:#9ca3af;font-style:italic;">Belum ada logbook.</p>
           {% endif %}
