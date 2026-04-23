@@ -867,17 +867,34 @@ def json_upload_create(request):
             bulan = data.get('bulan', '')
             data_count = len(data.get('data', []))
             
-            # Save upload record
-            upload = JSONDataUpload.objects.create(
+            # Replace existing upload for same user+bulan+agency, or create new
+            existing = JSONDataUpload.objects.filter(
                 user=request.user,
-                file_name=json_file.name,
-                agency=agency,
-                region=region,
                 bulan=bulan,
-                json_file=json_file,
-                data_count=data_count
-            )
-            
+                agency=agency,
+            ).first()
+
+            if existing:
+                if existing.json_file:
+                    existing.json_file.delete(save=False)
+                json_file.seek(0)
+                existing.file_name = json_file.name
+                existing.region = region
+                existing.data_count = data_count
+                existing.json_file = json_file
+                existing.save()
+                upload = existing
+            else:
+                upload = JSONDataUpload.objects.create(
+                    user=request.user,
+                    file_name=json_file.name,
+                    agency=agency,
+                    region=region,
+                    bulan=bulan,
+                    json_file=json_file,
+                    data_count=data_count
+                )
+
             return redirect('json_analysis', pk=upload.pk)
             
         except json.JSONDecodeError:

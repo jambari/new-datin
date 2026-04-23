@@ -94,7 +94,7 @@
           </a>
         </div>
 
-        <ul class="nav nav-pills mb-4" id="reportTabs" role="tablist">
+        <ul class="nav nav-pills mb-3" id="reportTabs" role="tablist">
           <li class="nav-item">
             <button class="nav-link active" id="tab-map-btn" data-bs-toggle="pill" data-bs-target="#pane-map">
               <i class="bi bi-geo me-2"></i>Peta Laporan
@@ -116,6 +116,17 @@
             </button>
           </li>
         </ul>
+
+        <!-- Date range filter — affects all tabs -->
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-4 p-2 bg-white border rounded no-print" id="dateFilterBar">
+          <span class="small fw-bold text-muted"><i class="bi bi-funnel me-1"></i>Filter Tanggal:</span>
+          <input type="date" id="filterStart" class="form-control form-control-sm" style="width:145px" title="Dari tanggal">
+          <span class="small text-muted">s/d</span>
+          <input type="date" id="filterEnd" class="form-control form-control-sm" style="width:145px" title="Sampai tanggal">
+          <button class="btn btn-primary btn-sm" onclick="applyDateFilter()"><i class="bi bi-check2 me-1"></i>Terapkan</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="resetDateFilter()"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+          <span class="badge bg-secondary ms-1" id="filterInfoBadge"></span>
+        </div>
 
         <div class="tab-content">
           
@@ -155,7 +166,7 @@
                     <div class="legend-box"><img src="{% static 'repository/images/legenda.png' %}"></div>
                     <div class="legend-box"><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
                     <div class="legend-box"><div class="fw-bold mt-2" style="font-size: 0.85rem;"><span id="outW">{{ upt }}</span></div><div><span class="">{{ formatted_bulan }}</span></div></div>
-                    <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1" style="font-size: 0.8rem;">Total Gempa: <strong>{{ stats.total }}</strong><br>M ≥ 5: <strong>{{ mag_count_high|default:0 }}</strong></div></div>
+                    <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1" style="font-size: 0.8rem;">Total Gempa: <strong id="legendTotal">{{ stats.total }}</strong><br>M ≥ 5: <strong id="legendHighMag">{{ mag_count_high|default:0 }}</strong></div></div>
                   </div>
                 </div>
               </div>
@@ -521,20 +532,22 @@
 
 <script>
   // --- KONFIGURASI UMUM ---
-  const mapData = {{ map_data|safe }};
-  const feltData = {{ felt_map_data|safe }};
+  // Master data (never reassigned; deleteEventRow mutates these arrays)
+  const allMapData  = {{ map_data|safe }};
+  const allFeltData = {{ felt_map_data|safe }};
   const avgLat = {{ avg_lat }};
   const avgLon = {{ avg_lon }};
-  
-  const statTotal = {{ stats.total|default:0 }};
-  const statMag = [{{ mag_count_low|default:0 }}, {{ mag_count_mid|default:0 }}, {{ mag_count_high|default:0 }}];
-  const statDepth = [{{ depth_count_shallow|default:0 }}, {{ depth_count_mid|default:0 }}, {{ depth_count_deep|default:0 }}];
+
+  // Active (filtered) working set — all rendering functions read from these
+  let mapData  = allMapData;
+  let feltData = allFeltData;
 
   let mapInstance = null;
   let mapFeltInstance = null;
   let slabLayer = null;
   let faultsLayer = null;
   let baseLayer = null;
+  let markersLayer = null;   // seismicity circle markers
   let cmbInst = null, cmpInst = null, cdbInst = null, cdpInst = null;
   let feltMarkers = {}; // Menyimpan marker peta dirasakan agar bisa disinkronisasi
 
@@ -582,16 +595,23 @@
       });
     } catch(e) {}
 
-    mapData.forEach(event => {
+    markersLayer = L.layerGroup().addTo(mapInstance);
+    plotSeismicityMarkers(mapData);
+
+    let scaleControl = L.control.scale({ imperial: false }).addTo(mapInstance);
+    document.getElementById('scaleCont').appendChild(scaleControl.getContainer());
+  }
+
+  function plotSeismicityMarkers(data) {
+    if (!mapInstance || !markersLayer) return;
+    markersLayer.clearLayers();
+    data.forEach(event => {
       L.circleMarker([event.latitude, event.longitude], {
         radius: Math.max(4, event.magnitude * 2.5),
         fillColor: getColorByDepth(event.depth),
         color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
-      }).addTo(mapInstance).bindPopup(`<strong>M${event.magnitude.toFixed(1)}</strong><br>D: ${event.depth.toFixed(1)} km<br>${event.time}`);
+      }).addTo(markersLayer).bindPopup(`<strong>M${event.magnitude.toFixed(1)}</strong><br>D: ${event.depth.toFixed(1)} km<br>${event.time}`);
     });
-
-    let scaleControl = L.control.scale({ imperial: false }).addTo(mapInstance);
-    document.getElementById('scaleCont').appendChild(scaleControl.getContainer());
   }
 
   // --- INISIALISASI PETA DIRASAKAN (SINKRON DENGAN TABEL) ---
@@ -626,17 +646,24 @@
       });
     } catch(e) {}
 
-    // Plot awal ke Peta dan simpan ke Object feltMarkers berdasakan ID loop
-    feltData.forEach((item, index) => {
-        let rowId = (index + 1).toString();
-        let marker = L.marker([item.lat, item.lon], { icon: starIcon })
-         .addTo(mapFeltInstance)
-         .bindPopup(`<b>${item.place}</b><br>Mag: ${item.mag}<br>${item.time}`);
-        feltMarkers[rowId] = marker;
-    });
+    // Plot awal ke Peta
+    plotFeltMarkers(feltData);
 
     let scaleControlFelt = L.control.scale({ imperial: false }).addTo(mapFeltInstance);
     document.getElementById('scaleContFelt').appendChild(scaleControlFelt.getContainer());
+  }
+
+  function plotFeltMarkers(data) {
+    if (!mapFeltInstance) return;
+    Object.values(feltMarkers).forEach(m => mapFeltInstance.removeLayer(m));
+    feltMarkers = {};
+    data.forEach((item, index) => {
+        let rowId = (index + 1).toString();
+        let marker = L.marker([item.lat, item.lon], { icon: starIcon })
+            .addTo(mapFeltInstance)
+            .bindPopup(`<b>${item.place}</b><br>Mag: ${item.mag}<br>${item.time}`);
+        feltMarkers[rowId] = marker;
+    });
   }
 
   // --- LOGIKA SINKRONISASI TABEL KE PETA ---
@@ -756,16 +783,22 @@
   function renderCharts() {
     if (cmbInst) cmbInst.destroy(); if (cmpInst) cmpInst.destroy();
     if (cdbInst) cdbInst.destroy(); if (cdpInst) cdpInst.destroy();
-    
+
+    // Compute stats from the currently filtered mapData
+    const mags   = mapData.map(e => e.magnitude);
+    const depths = mapData.map(e => e.depth);
+    const curMag   = [mags.filter(m => m < 3).length, mags.filter(m => m >= 3 && m < 5).length, mags.filter(m => m >= 5).length];
+    const curDepth = [depths.filter(d => d < 60).length, depths.filter(d => d >= 60 && d < 300).length, depths.filter(d => d >= 300).length];
+
     const baseOpt = { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { datalabels: { anchor: 'end', align: 'top', font: { size: 9, weight: 'bold' } }, legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } } };
     const barOpt = { ...baseOpt, plugins: { ...baseOpt.plugins, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } };
 
     const magColors   = ['#6ee7b7', '#fbbf24', '#f87171'];
     const depthColors = ['#f87171', '#fbbf24', '#6ee7b7'];
-    cmbInst = new Chart("cMB", { type: 'bar',      data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: statMag,   backgroundColor: magColors   }] }, options: barOpt  });
-    cmpInst = new Chart("cMP", { type: 'doughnut', data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: statMag,   backgroundColor: magColors   }] }, options: baseOpt });
-    cdbInst = new Chart("cDB", { type: 'bar',      data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: statDepth, backgroundColor: depthColors }] }, options: barOpt  });
-    cdpInst = new Chart("cDP", { type: 'doughnut', data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: statDepth, backgroundColor: depthColors }] }, options: baseOpt });
+    cmbInst = new Chart("cMB", { type: 'bar',      data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: curMag,   backgroundColor: magColors   }] }, options: barOpt  });
+    cmpInst = new Chart("cMP", { type: 'doughnut', data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: curMag,   backgroundColor: magColors   }] }, options: baseOpt });
+    cdbInst = new Chart("cDB", { type: 'bar',      data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: curDepth, backgroundColor: depthColors }] }, options: barOpt  });
+    cdpInst = new Chart("cDP", { type: 'doughnut', data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: curDepth, backgroundColor: depthColors }] }, options: baseOpt });
   }
 
   // --- LISTENERS ---
@@ -774,6 +807,14 @@
   document.getElementById('tab-stats-btn').addEventListener('shown.bs.tab', () => { renderCharts(); generateDailyFrequencyTable(); initEventsTable(); });
 
   document.addEventListener('DOMContentLoaded', () => {
+      // Initialise date filter inputs to cover the full range of uploaded data
+      if (allMapData.length > 0) {
+        const dates = allMapData.map(ev => ev.time.substring(0, 10)).sort();
+        document.getElementById('filterStart').value = dates[0];
+        document.getElementById('filterEnd').value   = dates[dates.length - 1];
+      }
+      _updateFilterBadge();
+
       if (document.getElementById('tab-map-btn').classList.contains('active')) initMap();
       const sidebarToggle = document.getElementById('sidebar-toggle');
       if (sidebarToggle) {
@@ -875,9 +916,16 @@
   function deleteEventRow(btn) {
     const tr = btn.closest('tr');
     const idx = parseInt(tr.getAttribute('data-idx'));
-    mapData.splice(idx, 1);
+    const target = mapData[idx];
+    const masterIdx = allMapData.indexOf(target);
+    if (masterIdx !== -1) allMapData.splice(masterIdx, 1);
+    // Re-apply current filter so mapData stays consistent
+    _applyCurrentFilter();
     renderEventsPage(eventsCurrentPage);
     generateDailyFrequencyTable();
+    if (mapInstance && markersLayer) plotSeismicityMarkers(mapData);
+    _updateMapLegend();
+    _updateFilterBadge();
   }
 
   function updateEventsCount() {
@@ -923,6 +971,93 @@
       columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 32 }, 2: { cellWidth: 18 }, 3: { cellWidth: 18 }, 4: { cellWidth: 18 }, 5: { cellWidth: 22 }, 6: { cellWidth: 'auto' } },
     });
     doc.save('gempa_{{ formatted_bulan|slugify }}.pdf');
+  }
+
+  // --- DATE FILTER ---
+  function _applyCurrentFilter() {
+    const s = document.getElementById('filterStart').value;
+    const e = document.getElementById('filterEnd').value;
+    if (!s && !e) {
+      mapData  = allMapData;
+      feltData = allFeltData;
+    } else {
+      const start = s ? new Date(s + 'T00:00:00') : null;
+      const end   = e ? new Date(e + 'T23:59:59') : null;
+      mapData  = allMapData.filter(ev => {
+        const t = new Date(ev.time.replace(' ', 'T'));
+        return (!start || t >= start) && (!end || t <= end);
+      });
+      feltData = allFeltData.filter(ev => {
+        const t = new Date(ev.time.replace(' ', 'T'));
+        return (!start || t >= start) && (!end || t <= end);
+      });
+    }
+  }
+
+  function _refreshAllViews() {
+    if (mapInstance && markersLayer) plotSeismicityMarkers(mapData);
+    if (mapFeltInstance) plotFeltMarkers(feltData);
+    // Only re-render charts/table if they've been opened at least once
+    if (cmbInst) {
+      renderCharts();
+      generateDailyFrequencyTable();
+      eventsTableInit = false;
+      initEventsTable();
+    }
+    _filterFeltTableRows();
+    _updateMapLegend();
+    _updateFilterBadge();
+  }
+
+  function applyDateFilter() {
+    _applyCurrentFilter();
+    _refreshAllViews();
+  }
+
+  function resetDateFilter() {
+    if (allMapData.length > 0) {
+      const dates = allMapData.map(ev => ev.time.substring(0, 10)).sort();
+      document.getElementById('filterStart').value = dates[0];
+      document.getElementById('filterEnd').value   = dates[dates.length - 1];
+    } else {
+      document.getElementById('filterStart').value = '';
+      document.getElementById('filterEnd').value   = '';
+    }
+    mapData  = allMapData;
+    feltData = allFeltData;
+    _refreshAllViews();
+  }
+
+  function _updateMapLegend() {
+    const total = mapData.length;
+    const high  = mapData.filter(e => e.magnitude >= 5).length;
+    const elT = document.getElementById('legendTotal');
+    const elH = document.getElementById('legendHighMag');
+    if (elT) elT.textContent = total;
+    if (elH) elH.textContent = high;
+  }
+
+  function _updateFilterBadge() {
+    const badge = document.getElementById('filterInfoBadge');
+    if (badge) badge.textContent = mapData.length + ' / ' + allMapData.length + ' events';
+  }
+
+  function _filterFeltTableRows() {
+    const s = document.getElementById('filterStart').value;
+    const e = document.getElementById('filterEnd').value;
+    const start = s ? new Date(s + 'T00:00:00') : null;
+    const end   = e ? new Date(e + 'T23:59:59') : null;
+    let visible = 0;
+    document.querySelectorAll('#feltTableBody tr').forEach(row => {
+      const tc = row.querySelector('.edit-time');
+      if (!tc) { row.style.display = ''; visible++; return; }
+      const t = new Date(tc.textContent.trim().replace(' ', 'T'));
+      const show = (!start || t >= start) && (!end || t <= end);
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    const badge = document.getElementById('stat-total-dirasakan');
+    if (badge) badge.innerHTML = `Total Dirasakan: <strong>${visible}</strong>`;
   }
 
   function addFeltRow() {
