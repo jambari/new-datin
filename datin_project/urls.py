@@ -37,6 +37,7 @@ urlpatterns = [
     path('jadwal/', include('jadwal.urls')),
     path('maintenance/', include('maintenance.urls')),
     path('perjadin/', include('perjadin.urls')),
+    path('', include('arsip.urls')),
     path('station-map/', station_map_view, name='station_map'), 
 ]
 

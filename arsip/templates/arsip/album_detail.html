@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+
+      <!-- breadcrumb -->
+      <div class="flex items-center gap-2 mb-4 text-sm text-gray-500">
+        <a href="{% url 'arsip:album_list' %}" class="hover:text-blue-600">Arsip Foto</a>
+        <span>/</span>
+        <span class="text-gray-800 font-semibold">{{ album.name }}</span>
+      </div>
+
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">{{ album.name }}</h1>
+          {% if album.description %}
+            <p class="text-sm text-gray-500 mt-0.5">{{ album.description }}</p>
+          {% endif %}
+        </div>
+        <span class="text-sm text-gray-400">{{ fotos|length }} foto</span>
+      </div>
+
+      {% if not fotos %}
+        <div class="bg-white rounded-xl shadow p-10 text-center text-gray-400">
+          Album ini kosong.
+        </div>
+      {% else %}
+        <!-- photo grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" id="photoGrid">
+          {% for foto in fotos %}
+          <button type="button"
+                  onclick="openLightbox({{ forloop.counter0 }})"
+                  class="group relative focus:outline-none overflow-hidden rounded-lg bg-gray-200"
+                  style="padding-bottom:75%;">
+            <img src="{{ foto.thumb_url }}"
+                 data-full="{{ foto.full_url }}"
+                 data-caption="{{ foto.caption }}"
+                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                 loading="lazy" alt="{{ foto.caption }}">
+          </button>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+    </main>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lb" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-black bg-opacity-90"
+     onclick="closeLightbox(event)">
+  <div class="relative max-w-5xl max-h-full flex flex-col items-center" onclick="event.stopPropagation()">
+    <!-- nav buttons -->
+    <button onclick="moveLb(-1)"
+      class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 text-white text-4xl font-light leading-none px-3 py-2 hover:text-gray-300 focus:outline-none">
+      &#8249;
+    </button>
+    <button onclick="moveLb(1)"
+      class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 text-white text-4xl font-light leading-none px-3 py-2 hover:text-gray-300 focus:outline-none">
+      &#8250;
+    </button>
+    <!-- image -->
+    <img id="lbImg" src="" alt="" class="max-h-screen max-w-full rounded shadow-2xl" style="max-height:85vh;">
+    <!-- caption + counter -->
+    <div class="mt-2 text-center">
+      <span id="lbCaption" class="text-gray-300 text-sm"></span>
+      <span id="lbCounter" class="text-gray-500 text-xs ml-3"></span>
+    </div>
+    <!-- close -->
+    <button onclick="closeLightbox()"
+      class="absolute top-0 right-0 translate-x-10 -translate-y-4 text-white text-2xl leading-none px-2 hover:text-gray-300 focus:outline-none">
+      &times;
+    </button>
+  </div>
+</div>
+
+<script>
+const photos = [
+  {% for foto in fotos %}
+  { full: "{{ foto.full_url }}", caption: "{{ foto.caption|escapejs }}" },
+  {% endfor %}
+];
+let lbIdx = 0;
+
+function openLightbox(idx) {
+  lbIdx = idx;
+  _renderLb();
+  document.getElementById('lb').classList.remove('hidden');
+  document.getElementById('lb').classList.add('flex');
+  document.addEventListener('keydown', _lbKey);
+}
+function closeLightbox(e) {
+  if (e && e.currentTarget !== e.target) return;
+  document.getElementById('lb').classList.add('hidden');
+  document.getElementById('lb').classList.remove('flex');
+  document.removeEventListener('keydown', _lbKey);
+}
+function moveLb(dir) {
+  lbIdx = (lbIdx + dir + photos.length) % photos.length;
+  _renderLb();
+}
+function _renderLb() {
+  const p = photos[lbIdx];
+  document.getElementById('lbImg').src = p.full;
+  document.getElementById('lbCaption').textContent = p.caption;
+  document.getElementById('lbCounter').textContent = `${lbIdx + 1} / ${photos.length}`;
+}
+function _lbKey(e) {
+  if (e.key === 'ArrowRight') moveLb(1);
+  else if (e.key === 'ArrowLeft') moveLb(-1);
+  else if (e.key === 'Escape') closeLightbox();
+}
+</script>
+{% endblock %}

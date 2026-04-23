@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'jadwal',
     'maintenance',
     'perjadin',
+    'arsip',
 ]
 
 # Add this to the bottom of the file
