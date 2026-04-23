@@ -1,34 +1,191 @@
 {% extends "base.html" %}
-
+{% load tz %}
 {% block content %}
 <div class="flex h-screen bg-gray-100">
-    <!-- Sidebar -->
-    {% include 'partials/_sidebar.html' %}
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-        {% include 'partials/_topbar.html' %}
+      <h1 style="font-size:22px;font-weight:700;color:#111827;margin-bottom:20px;">Dashboard</h1>
 
-        <main class="p-8 flex-1">
-            <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <div class="mt-8 border-4 border-dashed border-gray-200 rounded-lg h-96"></div>
-        </main>
-    </div>
+      <!-- ── Stat Cards ─────────────────────────────────────────────────── -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #4f46e5;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Gempa 7 Hari</p>
+          <p style="font-size:32px;font-weight:700;color:#111827;line-height:1;">{{ gempa_7d }}</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Total: {{ gempa_total }} kejadian</p>
+        </div>
+
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #0891b2;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Gempa 30 Hari</p>
+          <p style="font-size:32px;font-weight:700;color:#111827;line-height:1;">{{ gempa_30d }}</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Dirasakan: {{ felt_30d }} kejadian</p>
+        </div>
+
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #f59e0b;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Sambaran Petir Kemarin</p>
+          <p style="font-size:32px;font-weight:700;color:#111827;line-height:1;">{{ lightning_today }}</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Total CG dalam area</p>
+        </div>
+
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #059669;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">WRSNG Online</p>
+          <p style="font-size:32px;font-weight:700;color:#111827;line-height:1;">{{ wrsng_online }}<span style="font-size:18px;color:#9ca3af;">/{{ wrsng_total }}</span></p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Status terakhir per stasiun</p>
+        </div>
+      </div>
+
+      <!-- ── Row 2: Latest Gempa + Logbook ─────────────────────────────── -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px;">
+
+        <!-- Latest Earthquake -->
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
+          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:16px;">Gempa Terkini</h2>
+          {% if latest_gempa %}
+          <div style="display:flex;align-items:center;gap:20px;padding:16px;background:#f9fafb;border-radius:8px;margin-bottom:12px;">
+            <div style="text-align:center;background:#4f46e5;color:#fff;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span style="font-size:22px;font-weight:700;">M{{ latest_gempa.magnitudo|floatformat:1 }}</span>
+            </div>
+            <div>
+              <p style="font-size:15px;font-weight:600;color:#111827;margin-bottom:4px;">{{ latest_gempa.remark }}</p>
+              <p style="font-size:13px;color:#6b7280;">{{ latest_gempa.origin_datetime|timezone:"Asia/Jayapura"|date:"d M Y, H:i:s" }} WIT</p>
+              <p style="font-size:13px;color:#6b7280;">Kedalaman {{ latest_gempa.depth }} km &nbsp;|&nbsp; {{ latest_gempa.latitude }}&deg;, {{ latest_gempa.longitude }}&deg;</p>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Recent felt earthquakes -->
+          <p style="font-size:12px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Gempa Dirasakan (30 hari)</p>
+          {% if recent_felt %}
+          <table style="width:100%;font-size:12px;border-collapse:collapse;">
+            {% for eq in recent_felt %}
+            <tr style="border-bottom:1px solid #f3f4f6;">
+              <td style="padding:6px 4px;font-weight:600;color:#4f46e5;">M{{ eq.magnitude|floatformat:1 }}</td>
+              <td style="padding:6px 4px;color:#374151;">{{ eq.wilayah }}</td>
+              <td style="padding:6px 4px;color:#9ca3af;white-space:nowrap;">{{ eq.event_datetime|timezone:"Asia/Jayapura"|date:"d/m/Y H:i" }}</td>
+              {% if eq.dirasakan %}<td style="padding:6px 4px;color:#6b7280;font-size:11px;">{{ eq.dirasakan }}</td>{% endif %}
+            </tr>
+            {% endfor %}
+          </table>
+          {% else %}
+          <p style="font-size:13px;color:#9ca3af;font-style:italic;">Tidak ada gempa dirasakan 30 hari terakhir.</p>
+          {% endif %}
+        </div>
+
+        <!-- Recent Logbook -->
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
+          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:16px;">Logbook Terkini</h2>
+          {% if recent_logbook %}
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            {% for log in recent_logbook %}
+            <div style="padding:10px 12px;border-radius:6px;background:#f9fafb;border-left:3px solid {% if log.status_absen == 'Hadir' %}#059669{% else %}#6b7280{% endif %};">
+              <p style="font-size:13px;font-weight:600;color:#111827;">{{ log.petugas }}</p>
+              <p style="font-size:11px;color:#6b7280;">{{ log.tanggal|date:"d M Y" }} &mdash; {{ log.shift }}</p>
+              <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+                {% for label, val in log.seiscomp_seismik|yesno:"Seismik,"|add:":" items %}{% endfor %}
+                <span style="font-size:10px;padding:1px 6px;border-radius:999px;background:{% if log.seiscomp_seismik == 'ON' %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">Seismik {{ log.seiscomp_seismik }}</span>
+                <span style="font-size:10px;padding:1px 6px;border-radius:999px;background:{% if log.esdx == 'ON' %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">ESDX {{ log.esdx }}</span>
+                <span style="font-size:10px;padding:1px 6px;border-radius:999px;background:{% if log.petir == 'ON' %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">Petir {{ log.petir }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <a href="{% url 'logbook:logbook_list' %}" style="display:block;margin-top:12px;font-size:12px;color:#4f46e5;text-decoration:none;text-align:right;">Lihat semua &rarr;</a>
+          {% else %}
+          <p style="font-size:13px;color:#9ca3af;font-style:italic;">Belum ada logbook.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── Row 3: Lightning Chart + WRSNG Status ──────────────────────── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+
+        <!-- Lightning 7-day bar chart -->
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
+          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:16px;">Sambaran Petir — 7 Hari Terakhir</h2>
+          <div id="lightning-chart" style="display:flex;align-items:flex-end;gap:8px;height:120px;padding-bottom:20px;position:relative;">
+            {% for i in "0123456"|make_list %}{% endfor %}
+          </div>
+          <canvas id="lightningCanvas" width="0" height="140" style="width:100%;"></canvas>
+          <script>
+            (function(){
+              const labels = {{ chart_labels|safe }};
+              const data   = {{ chart_data|safe }};
+              const max    = Math.max(...data, 1);
+              const canvas = document.getElementById('lightningCanvas');
+              const parent = canvas.parentElement;
+              canvas.width = parent.offsetWidth - 40;
+              const ctx = canvas.getContext('2d');
+              const W = canvas.width, H = 140;
+              const barW = Math.floor((W - (data.length-1)*8) / data.length);
+              ctx.clearRect(0,0,W,H);
+              data.forEach((val, i) => {
+                const barH = Math.max(4, Math.round((val/max) * (H-30)));
+                const x = i*(barW+8), y = H-30-barH;
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.roundRect(x, y, barW, barH, 3);
+                ctx.fill();
+                ctx.fillStyle = '#374151';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(val > 0 ? val.toLocaleString() : '0', x+barW/2, y-4);
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(labels[i], x+barW/2, H-10);
+              });
+            })();
+          </script>
+        </div>
+
+        <!-- WRSNG Status Grid -->
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
+          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:16px;">Status WRSNG</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            {% for s in wrsng_statuses %}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:6px;background:#f9fafb;font-size:12px;">
+              <span style="font-weight:500;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px;" title="{{ s.wrs_code }}">{{ s.wrs_code }}</span>
+              <span style="padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;flex-shrink:0;
+                background:{% if s.display_status == 1 %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">
+                {% if s.display_status == 1 %}OK{% else %}OFF{% endif %}
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+          <a href="{% url 'wrsng:status_list' %}" style="display:block;margin-top:12px;font-size:12px;color:#4f46e5;text-decoration:none;text-align:right;">Log lengkap &rarr;</a>
+        </div>
+      </div>
+
+      <!-- ── Row 4: Quick Links ─────────────────────────────────────────── -->
+      <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
+        <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:16px;">Akses Cepat</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          {% for label, url in quick_links %}
+          <a href="{{ url }}" style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">{{ label }}</a>
+          {% endfor %}
+          <a href="{% url 'gempa_list' %}"           style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Repository Gempa</a>
+          <a href="{% url 'gempa_merusak_list' %}"   style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Gempa Merusak ({{ gempa_merusak_total }})</a>
+          <a href="{% url 'shakemap-list' %}"         style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Shakemap</a>
+          <a href="{% url 'wrsng:status_list' %}"    style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">WRSNG Status</a>
+          <a href="{% url 'logbook:logbook_list' %}" style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Logbook</a>
+          <a href="{% url 'lightning:upload_nexstorm' %}" style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Hitung Sambaran</a>
+          <a href="{% url 'sunmoon_report' %}"       style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Almanak</a>
+          <a href="{% url 'daftar_hujan' %}"         style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Data Hujan</a>
+          <a href="{% url 'json_upload_create' %}"   style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Upload Laporan Gempa</a>
+        </div>
+      </div>
+
+    </main>
+  </div>
 </div>
 
-
-
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-
-    if (sidebarToggle) {
-      sidebarToggle.addEventListener('click', function() {
-        // This toggles the 'hidden' class on the sidebar for mobile
-        sidebar.classList.toggle('hidden');
-      });
-    }
-  });
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  if (sidebarToggle) sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
+});
 </script>
 {% endblock %}
