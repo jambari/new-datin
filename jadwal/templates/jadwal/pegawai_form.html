@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+
+      <div style="margin-bottom:20px;">
+        <a href="{% url 'pegawai_list' %}" style="font-size:13px;color:#4f46e5;text-decoration:none;">&larr; Kembali ke daftar</a>
+        <h1 style="font-size:22px;font-weight:700;color:#111827;margin-top:6px;">{{ title }}</h1>
+      </div>
+
+      <form method="post" style="max-width:600px;">
+        {% csrf_token %}
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:24px;display:flex;flex-direction:column;gap:16px;">
+
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Nama Lengkap *</label>
+            <input type="text" name="nama" value="{{ object.nama|default:'' }}" required
+                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">NIP *</label>
+            <input type="text" name="nip" value="{{ object.nip|default:'' }}" required
+                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;font-family:monospace;">
+          </div>
+
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Pangkat</label>
+            <input type="text" name="pangkat" value="{{ object.pangkat|default:'' }}" placeholder="mis. Penata Muda Tk.I (III/b)"
+                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Jabatan</label>
+            <input type="text" name="jabatan" value="{{ object.jabatan|default:'' }}" placeholder="mis. PMG Pertama"
+                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Urutan Tampil</label>
+              <input type="number" name="urutan" value="{{ object.urutan|default:'0' }}" min="0"
+                     style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Pola Kerja</label>
+              <select name="is_reguler" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                <option value="0" {% if not object.is_reguler %}selected{% endif %}>Shift</option>
+                <option value="1" {% if object.is_reguler %}selected{% endif %}>Reguler (Senin–Jumat)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Tanggal Keluar</label>
+            <input type="date" name="tanggal_keluar" value="{{ object.tanggal_keluar|default:'' }}"
+                   style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            <p style="font-size:11px;color:#9ca3af;margin-top:4px;">Kosongkan jika masih aktif. Pegawai otomatis disembunyikan dari jadwal setelah tanggal ini.</p>
+          </div>
+
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button type="submit" style="background:#4f46e5;color:#fff;padding:10px 24px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Simpan</button>
+          <a href="{% url 'pegawai_list' %}" style="background:#f3f4f6;color:#374151;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">Batal</a>
+        </div>
+      </form>
+
+    </main>
+  </div>
+</div>
+{% endblock %}

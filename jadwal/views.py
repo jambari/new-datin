@@ -453,3 +453,50 @@ def approve_all_jadwal(request):
         return redirect(f'/jadwal/?month={month}&year={year}')
     
     return JsonResponse({'status': 'error', 'message': 'Parameter tidak lengkap'})
+
+# ── Pegawai CRUD ──────────────────────────────────────────────────────────────
+
+@login_required
+def pegawai_list(request):
+    pegawai = Pegawai.objects.all()
+    return render(request, 'jadwal/pegawai_list.html', {'pegawai_list': pegawai})
+
+
+@login_required
+def pegawai_create(request):
+    if request.method == 'POST':
+        _save_pegawai(request, Pegawai())
+        return redirect('pegawai_list')
+    return render(request, 'jadwal/pegawai_form.html', {'title': 'Tambah Pegawai'})
+
+
+@login_required
+def pegawai_update(request, pk):
+    obj = get_object_or_404(Pegawai, pk=pk)
+    if request.method == 'POST':
+        _save_pegawai(request, obj)
+        return redirect('pegawai_list')
+    return render(request, 'jadwal/pegawai_form.html', {'object': obj, 'title': 'Edit Pegawai'})
+
+
+@login_required
+def pegawai_delete(request, pk):
+    obj = get_object_or_404(Pegawai, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+        return redirect('pegawai_list')
+    return render(request, 'jadwal/pegawai_confirm_delete.html', {'object': obj})
+
+
+def _save_pegawai(request, obj):
+    p = request.POST
+    obj.nama           = p.get('nama', '').strip()
+    obj.nip            = p.get('nip', '').strip()
+    obj.pangkat        = p.get('pangkat', '').strip()
+    obj.jabatan        = p.get('jabatan', '').strip()
+    obj.is_reguler     = p.get('is_reguler') == '1'
+    obj.urutan         = int(p.get('urutan') or 0)
+    tanggal_keluar     = p.get('tanggal_keluar', '').strip()
+    obj.tanggal_keluar = tanggal_keluar if tanggal_keluar else None
+    obj.save()
+    return obj
