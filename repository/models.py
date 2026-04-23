@@ -26,6 +26,18 @@ class Gempa(models.Model):
         return f"Gempa on {self.origin_datetime} - M{self.magnitudo}"
     
 
+class ReferenceLocation(models.Model):
+    name = models.CharField(max_length=100)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+
+    class Meta:
+        db_table = 'reference_locations'
+
+    def __str__(self):
+        return self.name
+
+
 class Station(models.Model):
     code = models.CharField(max_length=10, unique=True)
     network = models.CharField(max_length=10)

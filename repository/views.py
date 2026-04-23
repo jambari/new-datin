@@ -33,9 +33,11 @@ from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from .models import JSONDataUpload, FeltEarthquake, GempaMemusak, GempaMemusakMedia
+from .utils import calculate_remark
 import json
 from io import StringIO
 import re
+from dateutil import parser as dateutil_parser
 
 def station_map_view(request):
     return render(request, 'repository/station_map.html')
@@ -899,7 +901,34 @@ def json_analysis(request, pk):
         json_file = upload_obj.json_file.read().decode('utf-8')
         data = json.loads(json_file)
         events = data.get('data', [])
-        
+
+        # --- Save events to Gempa model ---
+        agency = upload_obj.agency or 'UNKNOWN'
+        saved_count = 0
+        for ev in events:
+            try:
+                ev_time_str = ev.get('time', '')
+                ev_dt = dateutil_parser.parse(ev_time_str)
+                source_id = f"{ev_dt.strftime('%Y%m%d%H%M%S')}_{agency}"
+                lat = float(ev.get('latitude', 0))
+                lon = float(ev.get('longitude', 0))
+                remark = calculate_remark(lat, lon)
+                Gempa.objects.update_or_create(
+                    source_id=source_id,
+                    defaults={
+                        'station_code': agency,
+                        'origin_datetime': ev_dt,
+                        'latitude': lat,
+                        'longitude': lon,
+                        'magnitudo': float(ev.get('magnitude', 0)),
+                        'depth': int(ev.get('depth_km', 0)),
+                        'remark': remark,
+                    }
+                )
+                saved_count += 1
+            except Exception:
+                continue
+
         # 3. Ambil Data FeltEarthquake dari Database (Peta Dirasakan)
         _WIB = dt_timezone(timedelta(hours=7))
         felt_events_query = list(
