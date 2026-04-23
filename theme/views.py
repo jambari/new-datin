@@ -20,6 +20,14 @@ def dashboard(request):
     felt_30d = FeltEarthquake.objects.filter(event_datetime__date__gte=month_ago).count()
     recent_felt = FeltEarthquake.objects.order_by('-event_datetime')[:5]
 
+    # --- Terbit Terbenam Matahari (Jayapura) ---
+    from almanac.models import SunMoonEvent
+    import zoneinfo as _zi
+    _WIT = _zi.ZoneInfo("Asia/Jayapura")
+    sunmoon_today = SunMoonEvent.objects.filter(date=today, city='Jayapura').first()
+    sun_rise_wit = sunmoon_today.sun_rise.astimezone(_WIT) if sunmoon_today and sunmoon_today.sun_rise else None
+    sun_set_wit  = sunmoon_today.sun_set.astimezone(_WIT)  if sunmoon_today and sunmoon_today.sun_set  else None
+
     # --- Lightning ---
     from lightning.models import DailyStrikeSummary
     lightning_7d = DailyStrikeSummary.objects.filter(summary_date__gte=week_ago).order_by('summary_date')
@@ -127,5 +135,7 @@ def dashboard(request):
         'chart_labels':        chart_labels,
         'chart_data':          chart_data,
         'gempa_merusak_total': GempaMemusak.objects.count(),
+        'sun_rise_wit':        sun_rise_wit,
+        'sun_set_wit':         sun_set_wit,
     }
     return render(request, 'dashboard.html', context)

@@ -31,7 +31,7 @@
       </div>
 
       <!-- ── Stat Cards ─────────────────────────────────────────────────── -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;">
 
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #4f46e5;">
           <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Gempa 7 Hari</p>
@@ -55,6 +55,20 @@
           <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">WRSNG Online</p>
           <p style="font-size:32px;font-weight:700;color:#111827;line-height:1;">{{ wrsng_online }}<span style="font-size:18px;color:#9ca3af;">/{{ wrsng_total }}</span></p>
           <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Status terakhir per stasiun</p>
+        </div>
+
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #f97316;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Matahari — Jayapura</p>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span style="font-size:16px;">🌅</span>
+            <span style="font-size:13px;color:#6b7280;">Terbit</span>
+            <span style="font-size:16px;font-weight:700;color:#111827;margin-left:auto;">{% if sun_rise_wit %}{{ sun_rise_wit|time:"H:i" }} WIT{% else %}—{% endif %}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:16px;">🌇</span>
+            <span style="font-size:13px;color:#6b7280;">Terbenam</span>
+            <span style="font-size:16px;font-weight:700;color:#111827;margin-left:auto;">{% if sun_set_wit %}{{ sun_set_wit|time:"H:i" }} WIT{% else %}—{% endif %}</span>
+          </div>
         </div>
       </div>
 
@@ -155,7 +169,7 @@
           <div id="lightning-chart" style="display:flex;align-items:flex-end;gap:8px;height:120px;padding-bottom:20px;position:relative;">
             {% for i in "0123456"|make_list %}{% endfor %}
           </div>
-          <canvas id="lightningCanvas" width="0" height="140" style="width:100%;"></canvas>
+          <canvas id="lightningCanvas" width="0" height="160" style="width:100%;"></canvas>
           <script>
             (function(){
               const labels = {{ chart_labels|safe }};
@@ -165,12 +179,14 @@
               const parent = canvas.parentElement;
               canvas.width = parent.offsetWidth - 40;
               const ctx = canvas.getContext('2d');
-              const W = canvas.width, H = 140;
+              const W = canvas.width, H = 160;
+              const TOP_PAD = 20, BOT_PAD = 24;
+              const barArea = H - TOP_PAD - BOT_PAD;
               const barW = Math.floor((W - (data.length-1)*8) / data.length);
               ctx.clearRect(0,0,W,H);
               data.forEach((val, i) => {
-                const barH = Math.max(4, Math.round((val/max) * (H-30)));
-                const x = i*(barW+8), y = H-30-barH;
+                const barH = Math.max(4, Math.round((val/max) * barArea));
+                const x = i*(barW+8), y = TOP_PAD + barArea - barH;
                 ctx.fillStyle = '#f59e0b';
                 ctx.beginPath();
                 ctx.roundRect(x, y, barW, barH, 3);
@@ -178,10 +194,9 @@
                 ctx.fillStyle = '#374151';
                 ctx.font = '10px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(val > 0 ? val.toLocaleString() : '0', x+barW/2, y-4);
+                ctx.fillText(val > 0 ? val.toLocaleString() : '0', x+barW/2, y - 4);
                 ctx.fillStyle = '#9ca3af';
-                ctx.font = '10px sans-serif';
-                ctx.fillText(labels[i], x+barW/2, H-10);
+                ctx.fillText(labels[i], x+barW/2, H - 8);
               });
             })();
           </script>
