@@ -41,20 +41,20 @@
         </ul>
       </li>
 
-      <!-- SEISMIK -->
+      <!-- DIREKTORAT GEMPA TSUNAMI -->
       <li>
-        <button type="button" onclick="document.getElementById('dropdown-seismik-group').classList.toggle('hidden')"
+        <button type="button" onclick="document.getElementById('dropdown-gempa-tsunami').classList.toggle('hidden')"
           class="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 rounded-lg">
           <span style="display:flex;align-items:center;gap:8px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 12h2l2-7 4 14 3-9 2 4 2-2h3" />
             </svg>
-            Seismik
+            Direktorat Gempa Tsunami
           </span>
           <span class="text-gray-400 text-xs">&#9660;</span>
         </button>
-        <ul id="dropdown-seismik-group" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
-          <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Gempa bumi</li>
+        <ul id="dropdown-gempa-tsunami" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
+          <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Gempa Bumi</li>
           <li>
             <a href="{% url 'gempa_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
               Repository
@@ -76,45 +76,28 @@
               Ketersediaan Data
             </a>
           </li>
-          <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Akselerograf</li>
-          <li>
-            <a href="{% url 'accelero_availability_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
-              Channel
-            </a>
-          </li>
-          <li>
-            <a href="{% url 'accelero_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
-              Ketersediaan Data
-            </a>
-          </li>
           <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">WRSNG</li>
           <li>
             <a href="{% url 'wrsng:status_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
               Status Log
             </a>
           </li>
-          <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Shakemap</li>
-          <li>
-            <a href="{% url 'shakemap-list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
-              Shakemap List
-            </a>
-          </li>
         </ul>
       </li>
 
-      <!-- GEOPOT -->
+      <!-- DIREKTORAT SGT -->
       <li>
-        <button type="button" onclick="document.getElementById('dropdown-geopot').classList.toggle('hidden')"
+        <button type="button" onclick="document.getElementById('dropdown-sgt').classList.toggle('hidden')"
           class="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 rounded-lg">
           <span style="display:flex;align-items:center;gap:8px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Geopot
+            Direktorat SGT
           </span>
           <span class="text-gray-400 text-xs">&#9660;</span>
         </button>
-        <ul id="dropdown-geopot" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
+        <ul id="dropdown-sgt" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
           <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Almanak</li>
           <li>
             <a href="{% url 'event_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
@@ -161,6 +144,23 @@
           <li>
             <a href="{% url 'lightning:upload_nexstorm' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
               Hitung Sambaran
+            </a>
+          </li>
+          <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Akselerograf</li>
+          <li>
+            <a href="{% url 'accelero_availability_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Channel
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'accelero_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Ketersediaan Data
+            </a>
+          </li>
+          <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Shakemap</li>
+          <li>
+            <a href="{% url 'shakemap-list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Shakemap List
             </a>
           </li>
         </ul>
@@ -234,19 +234,20 @@
         </ul>
       </li>
 
-      <!-- HUJAN -->
+      <!-- KUALITAS UDARA -->
       <li>
-        <button type="button" onclick="document.getElementById('dropdown-hujan').classList.toggle('hidden')"
+        <button type="button" onclick="document.getElementById('dropdown-kualitas-udara').classList.toggle('hidden')"
           class="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 rounded-lg">
           <span style="display:flex;align-items:center;gap:8px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
             </svg>
-            Hujan
+            Kualitas Udara
           </span>
           <span class="text-gray-400 text-xs">&#9660;</span>
         </button>
-        <ul id="dropdown-hujan" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
+        <ul id="dropdown-kualitas-udara" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
+          <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Hujan</li>
           <li>
             <a href="{% url 'daftar_hujan' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
               Data Hujan
