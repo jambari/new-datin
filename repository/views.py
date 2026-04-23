@@ -1023,17 +1023,37 @@ def json_analysis(request, pk):
             'D>300': len([e for e in events if e.get('depth_km', 0) >= 300]),
         }
         
+        # Build map_data from saved Gempa records (has remark/lokasi)
+        gempa_qs = Gempa.objects.filter(
+            station_code=agency,
+            origin_datetime__year=current_year,
+            origin_datetime__month=current_month,
+        ).order_by('origin_datetime')
+
         map_data = []
-        for event in events:
+        for g in gempa_qs:
             map_data.append({
-                'latitude': event.get('latitude', 0),
-                'longitude': event.get('longitude', 0),
-                'magnitude': event.get('magnitude', 0),
-                'depth': event.get('depth_km', 0),
-                'time': event.get('time', ''),
-                'event_id': event.get('event_id', ''),
+                'latitude': float(g.latitude),
+                'longitude': float(g.longitude),
+                'magnitude': float(g.magnitudo),
+                'depth': float(g.depth),
+                'time': g.origin_datetime.strftime('%Y-%m-%dT%H:%M:%S'),
+                'event_id': g.source_id or '',
+                'location': g.remark,
             })
-        
+
+        if not map_data:
+            for event in events:
+                map_data.append({
+                    'latitude': event.get('latitude', 0),
+                    'longitude': event.get('longitude', 0),
+                    'magnitude': event.get('magnitude', 0),
+                    'depth': event.get('depth_km', 0),
+                    'time': event.get('time', ''),
+                    'event_id': event.get('event_id', ''),
+                    'location': '',
+                })
+
         if map_data:
             avg_lat = sum([e['latitude'] for e in map_data]) / len(map_data)
             avg_lon = sum([e['longitude'] for e in map_data]) / len(map_data)
