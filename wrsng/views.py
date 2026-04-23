@@ -137,7 +137,7 @@ def wrsng_availability_query(request):
         "BPBD Provinsi Papua":["BPBD_PROV", "BPBDProv_01"],
         "BASARNAS Papua":     ["basarnas_jay"],
         "BPBD Kab. Jayapura": ["bpbd_kabjay"],
-        "BPBD Biak Numfor":   ["bpbd biak", "BPBD_BIAK"],
+        "BPBD Biak Numfor":   ["BPBD_BIAK"],
         "BPBD Waropen":       [],
         "BASARNAS Merauke":   ["BASARNAS_MERAUKE"],
         "BPBD Kab. Mimika":   ["bpbd-mimika"],
