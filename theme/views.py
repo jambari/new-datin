@@ -25,8 +25,8 @@ def dashboard(request):
     import zoneinfo as _zi
     _WIT = _zi.ZoneInfo("Asia/Jayapura")
     sunmoon_today = SunMoonEvent.objects.filter(date=today, city='Jayapura').first()
-    sun_rise_wit = sunmoon_today.sun_rise.astimezone(_WIT) if sunmoon_today and sunmoon_today.sun_rise else None
-    sun_set_wit  = sunmoon_today.sun_set.astimezone(_WIT)  if sunmoon_today and sunmoon_today.sun_set  else None
+    sun_rise_wit = sunmoon_today.sun_rise.astimezone(_WIT).strftime('%H:%M') if sunmoon_today and sunmoon_today.sun_rise else None
+    sun_set_wit  = sunmoon_today.sun_set.astimezone(_WIT).strftime('%H:%M')  if sunmoon_today and sunmoon_today.sun_set  else None
 
     # --- Lightning ---
     from lightning.models import DailyStrikeSummary
