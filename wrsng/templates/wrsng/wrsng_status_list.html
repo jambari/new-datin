@@ -13,35 +13,35 @@
         <h1 class="text-3xl font-bold text-gray-900 mb-6">WRSNG Status Log</h1>
 
         <!-- === FORM FILTER === -->
-        <form method="get" action="{% url 'wrsng:status_list' %}" class="bg-white p-4 rounded-lg shadow-md mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                
+        <form method="get" action="{% url 'wrsng:status_list' %}" style="background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);margin-bottom:24px;">
+            <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+
                 <!-- Filter WRS Code (Dropdown) -->
-                <div>
-                    <label for="wrs_code" class="block text-sm font-medium text-gray-700 mb-1">WRS Code:</label>
-                    <select id="wrs_code" name="wrs_code" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label for="wrs_code" style="font-size:13px;font-weight:500;color:#374151;">WRS Code:</label>
+                    <select id="wrs_code" name="wrs_code" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:160px;">
                         <option value="">All Codes</option>
                         {% for code in wrs_code_options %}
                             <option value="{{ code }}" {% if code == filter_wrs_code %}selected{% endif %}>{{ code }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <!-- Filter Start Date -->
-                <div>
-                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date:</label>
-                    <input type="date" id="start_date" name="start_date" value="{{ filter_start_date }}" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label for="start_date" style="font-size:13px;font-weight:500;color:#374151;">Start Date:</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ filter_start_date }}" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
                 </div>
-                
+
                 <!-- Filter End Date -->
-                <div>
-                    <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date:</label>
-                    <input type="date" id="end_date" name="end_date" value="{{ filter_end_date }}" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label for="end_date" style="font-size:13px;font-weight:500;color:#374151;">End Date:</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ filter_end_date }}" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
                 </div>
-                
+
                 <!-- Tombol Submit -->
-                <div class="pt-2 md:pt-0">
-                    <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50">
+                <div>
+                    <button type="submit" style="background:#4f46e5;color:#fff;padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">
                         Filter
                     </button>
                 </div>
