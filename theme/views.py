@@ -88,10 +88,11 @@ def dashboard(request):
     from jadwal.models import JadwalHarian
     from collections import defaultdict
     tomorrow = today + datetime.timedelta(days=1)
-    # Look for schedules today then tomorrow; pick the nearest date that has data
+    day_after = today + datetime.timedelta(days=2)
+    # Start from tomorrow — today is already shown in Logbook terkini
     next_shift_date = None
     next_shift_by_pola = []
-    for check_date in [today, tomorrow]:
+    for check_date in [tomorrow, day_after]:
         schedules = (
             JadwalHarian.objects
             .filter(tanggal=check_date, pola__isnull=False, pola__is_libur=False)
