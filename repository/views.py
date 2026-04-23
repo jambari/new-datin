@@ -32,7 +32,7 @@ from django.db.models import Prefetch
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from .models import JSONDataUpload, FeltEarthquake
+from .models import JSONDataUpload, FeltEarthquake, GempaMemusak, GempaMemusakMedia
 import json
 from io import StringIO
 import re
@@ -1032,3 +1032,108 @@ def json_delete(request, pk):
     
     context = {'upload_obj': upload_obj}
     return render(request, 'repository/json_delete_confirm.html', context)
+
+# ── Gempa Merusak CRUD ────────────────────────────────────────────────────────
+
+@login_required
+def gempa_merusak_list(request):
+    qs = GempaMemusak.objects.prefetch_related('media').all()
+    q = request.GET.get('q', '').strip()
+    provinsi = request.GET.get('provinsi', '').strip()
+    tsunami = request.GET.get('tsunami', '').strip()
+    if q:
+        qs = qs.filter(Q(tanggal_text__icontains=q) | Q(wilayah__icontains=q) | Q(korban_kerusakan__icontains=q))
+    if provinsi:
+        qs = qs.filter(provinsi=provinsi)
+    if tsunami == '1':
+        qs = qs.filter(tsunami=True)
+    elif tsunami == '0':
+        qs = qs.filter(tsunami=False)
+    return render(request, 'repository/gempa_merusak_list.html', {
+        'object_list': qs,
+        'province_choices': GempaMemusak.PROVINCE_CHOICES,
+        'filter_q': q,
+        'filter_provinsi': provinsi,
+        'filter_tsunami': tsunami,
+    })
+
+
+@login_required
+def gempa_merusak_detail(request, pk):
+    obj = get_object_or_404(GempaMemusak, pk=pk)
+    return render(request, 'repository/gempa_merusak_detail.html', {'object': obj})
+
+
+@login_required
+def gempa_merusak_create(request):
+    if request.method == 'POST':
+        obj = _save_gempa_merusak(request, GempaMemusak())
+        _handle_media_uploads(request, obj)
+        return redirect('gempa_merusak_list')
+    return render(request, 'repository/gempa_merusak_form.html', {
+        'province_choices': GempaMemusak.PROVINCE_CHOICES,
+        'lokasi_choices': GempaMemusak.LOKASI_CHOICES,
+        'title': 'Tambah Gempa Merusak',
+    })
+
+
+@login_required
+def gempa_merusak_update(request, pk):
+    obj = get_object_or_404(GempaMemusak, pk=pk)
+    if request.method == 'POST':
+        _save_gempa_merusak(request, obj)
+        _handle_media_uploads(request, obj)
+        # handle media deletions
+        delete_ids = request.POST.getlist('delete_media')
+        if delete_ids:
+            for m in GempaMemusakMedia.objects.filter(pk__in=delete_ids, event=obj):
+                m.file.delete(save=False)
+                m.delete()
+        return redirect('gempa_merusak_detail', pk=obj.pk)
+    return render(request, 'repository/gempa_merusak_form.html', {
+        'object': obj,
+        'province_choices': GempaMemusak.PROVINCE_CHOICES,
+        'lokasi_choices': GempaMemusak.LOKASI_CHOICES,
+        'title': 'Edit Gempa Merusak',
+    })
+
+
+@login_required
+def gempa_merusak_delete(request, pk):
+    obj = get_object_or_404(GempaMemusak, pk=pk)
+    if request.method == 'POST':
+        for m in obj.media.all():
+            m.file.delete(save=False)
+        obj.delete()
+        return redirect('gempa_merusak_list')
+    return render(request, 'repository/gempa_merusak_confirm_delete.html', {'object': obj})
+
+
+def _save_gempa_merusak(request, obj):
+    p = request.POST
+    obj.no               = int(p.get('no', 0))
+    obj.tanggal_text     = p.get('tanggal_text', '').strip()
+    obj.tanggal          = p.get('tanggal') or None
+    obj.wilayah          = p.get('wilayah', '').strip()
+    obj.provinsi         = p.get('provinsi', '').strip()
+    obj.origin_time      = p.get('origin_time') or None
+    obj.latitude         = float(p['latitude']) if p.get('latitude') else None
+    obj.longitude        = float(p['longitude']) if p.get('longitude') else None
+    obj.depth_km         = float(p['depth_km']) if p.get('depth_km') else None
+    obj.magnitude        = float(p['magnitude']) if p.get('magnitude') else None
+    obj.lokasi           = p.get('lokasi', '').strip()
+    tsunami_val          = p.get('tsunami', '')
+    obj.tsunami          = True if tsunami_val == '1' else (False if tsunami_val == '0' else None)
+    obj.wilayah_merasakan = p.get('wilayah_merasakan', '').strip()
+    obj.korban_kerusakan = p.get('korban_kerusakan', '').strip()
+    obj.sumber           = p.get('sumber', '').strip()
+    obj.save()
+    return obj
+
+
+def _handle_media_uploads(request, obj):
+    files = request.FILES.getlist('media_files')
+    media_type = request.POST.get('media_type_new', GempaMemusakMedia.TYPE_IMAGE)
+    caption    = request.POST.get('caption_new', '')
+    for f in files:
+        GempaMemusakMedia.objects.create(event=obj, file=f, media_type=media_type, caption=caption)

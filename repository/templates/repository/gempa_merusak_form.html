@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+
+      <div style="margin-bottom:20px;">
+        <a href="{% if object %}{% url 'gempa_merusak_detail' object.pk %}{% else %}{% url 'gempa_merusak_list' %}{% endif %}" style="font-size:13px;color:#4f46e5;text-decoration:none;">&larr; Kembali</a>
+        <h1 style="font-size:22px;font-weight:700;color:#111827;margin-top:6px;">{{ title }}</h1>
+      </div>
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+          <!-- Kolom Kiri -->
+          <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;display:flex;flex-direction:column;gap:14px;">
+            <h2 style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Data Gempa</h2>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">No *</label>
+                <input type="number" name="no" value="{{ object.no|default:'' }}" required style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Tanggal (teks) *</label>
+                <input type="text" name="tanggal_text" value="{{ object.tanggal_text|default:'' }}" required placeholder="mis. 23 Mei 1864" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Tanggal (date)</label>
+                <input type="date" name="tanggal" value="{{ object.tanggal|default:'' }}" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Origin Time</label>
+                <input type="time" name="origin_time" value="{{ object.origin_time|default:'' }}" step="1" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Wilayah</label>
+              <input type="text" name="wilayah" value="{{ object.wilayah|default:'' }}" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            </div>
+
+            <div>
+              <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Provinsi</label>
+              <select name="provinsi" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                <option value="">-- Pilih --</option>
+                {% for val, label in province_choices %}
+                <option value="{{ val }}" {% if object.provinsi == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Latitude</label>
+                <input type="number" name="latitude" value="{{ object.latitude|default:'' }}" step="any" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Longitude</label>
+                <input type="number" name="longitude" value="{{ object.longitude|default:'' }}" step="any" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Kedalaman (km)</label>
+                <input type="number" name="depth_km" value="{{ object.depth_km|default:'' }}" step="any" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Magnitudo</label>
+                <input type="number" name="magnitude" value="{{ object.magnitude|default:'' }}" step="0.1" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Lokasi</label>
+                <select name="lokasi" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                  <option value="">-</option>
+                  {% for val, label in lokasi_choices %}
+                  <option value="{{ val }}" {% if object.lokasi == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Tsunami</label>
+                <select name="tsunami" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                  <option value="" {% if object.tsunami is None %}selected{% endif %}>Tidak diketahui</option>
+                  <option value="1" {% if object.tsunami is True %}selected{% endif %}>Ya</option>
+                  <option value="0" {% if object.tsunami is False %}selected{% endif %}>Tidak</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Sumber</label>
+                <input type="text" name="sumber" value="{{ object.sumber|default:'' }}" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Kolom Kanan -->
+          <div style="display:flex;flex-direction:column;gap:20px;">
+            <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;display:flex;flex-direction:column;gap:14px;">
+              <h2 style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Dampak</h2>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Wilayah Merasakan</label>
+                <textarea name="wilayah_merasakan" rows="5" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;">{{ object.wilayah_merasakan|default:'' }}</textarea>
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Korban / Kerusakan</label>
+                <textarea name="korban_kerusakan" rows="6" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;">{{ object.korban_kerusakan|default:'' }}</textarea>
+              </div>
+            </div>
+
+            <!-- Upload Media -->
+            <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
+              <h2 style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;">Upload Media Baru</h2>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div>
+                  <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">File (bisa pilih banyak)</label>
+                  <input type="file" name="media_files" multiple accept="image/*,video/*" style="font-size:13px;">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <div>
+                    <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Tipe</label>
+                    <select name="media_type_new" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                      <option value="image">Image</option>
+                      <option value="video">Video</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:12px;font-weight:500;color:#374151;display:block;margin-bottom:4px;">Caption</label>
+                    <input type="text" name="caption_new" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                  </div>
+                </div>
+              </div>
+
+              {% if object %}
+              {% with existing=object.media.all %}
+              {% if existing %}
+              <hr style="margin:16px 0;border-color:#e5e7eb;">
+              <h3 style="font-size:12px;font-weight:600;color:#6b7280;margin-bottom:10px;">Media yang sudah ada</h3>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                {% for m in existing %}
+                <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#374151;">
+                  <input type="checkbox" name="delete_media" value="{{ m.pk }}" id="del_{{ m.pk }}">
+                  <label for="del_{{ m.pk }}" style="cursor:pointer;">
+                    {% if m.media_type == 'image' %}
+                      <img src="{{ m.file.url }}" style="width:40px;height:40px;object-fit:cover;border-radius:3px;vertical-align:middle;margin-right:6px;">
+                    {% else %}
+                      <span style="display:inline-block;width:40px;height:40px;background:#f3f4f6;border-radius:3px;text-align:center;line-height:40px;margin-right:6px;">▶</span>
+                    {% endif %}
+                    {{ m.caption|default:m.file.name }} <span style="color:#dc2626;">(centang untuk hapus)</span>
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% endwith %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:10px;">
+          <button type="submit" style="background:#4f46e5;color:#fff;padding:10px 24px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Simpan</button>
+          <a href="{% if object %}{% url 'gempa_merusak_detail' object.pk %}{% else %}{% url 'gempa_merusak_list' %}{% endif %}" style="background:#f3f4f6;color:#374151;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">Batal</a>
+        </div>
+      </form>
+
+    </main>
+  </div>
+</div>
+{% endblock %}

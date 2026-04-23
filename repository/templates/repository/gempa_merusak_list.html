@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h1 style="font-size:22px;font-weight:700;color:#111827;">Katalog Gempa Merusak Papua</h1>
+        <a href="{% url 'gempa_merusak_create' %}" style="background:#4f46e5;color:#fff;padding:8px 16px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">+ Tambah</a>
+      </div>
+
+      <!-- Filter -->
+      <form method="get" style="background:#fff;padding:14px 16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:500;color:#6b7280;">Cari</label>
+          <input type="text" name="q" value="{{ filter_q }}" placeholder="tanggal, wilayah, keterangan…" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:220px;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:500;color:#6b7280;">Provinsi</label>
+          <select name="provinsi" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+            <option value="">Semua</option>
+            {% for val, label in province_choices %}
+            <option value="{{ val }}" {% if val == filter_provinsi %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;font-weight:500;color:#6b7280;">Tsunami</label>
+          <select name="tsunami" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+            <option value="">Semua</option>
+            <option value="1" {% if filter_tsunami == '1' %}selected{% endif %}>Ya</option>
+            <option value="0" {% if filter_tsunami == '0' %}selected{% endif %}>Tidak</option>
+          </select>
+        </div>
+        <button type="submit" style="background:#4f46e5;color:#fff;padding:7px 18px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Filter</button>
+        <a href="{% url 'gempa_merusak_list' %}" style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;">Reset</a>
+      </form>
+
+      <!-- Table -->
+      <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#f9fafb;">
+              <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:600;">No</th>
+              <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:600;">Tanggal</th>
+              <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:600;">Wilayah</th>
+              <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:600;">Provinsi</th>
+              <th style="padding:10px 12px;text-align:center;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:600;">Mag</th>
+              <th style="padding:10px 12px;text-align:center;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:600;">Tsunami</th>
+              <th style="padding:10px 12px;text-align:center;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:600;">Media</th>
+              <th style="padding:10px 12px;text-align:center;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:600;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for obj in object_list %}
+            <tr style="border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+              <td style="padding:9px 12px;color:#374151;">{{ obj.no }}</td>
+              <td style="padding:9px 12px;color:#374151;white-space:nowrap;">{{ obj.tanggal_text }}</td>
+              <td style="padding:9px 12px;color:#374151;">{{ obj.wilayah|default:"-" }}</td>
+              <td style="padding:9px 12px;color:#374151;">{{ obj.provinsi|default:"-" }}</td>
+              <td style="padding:9px 12px;text-align:center;color:#374151;">{{ obj.magnitude|default:"-" }}</td>
+              <td style="padding:9px 12px;text-align:center;">
+                {% if obj.tsunami is True %}
+                  <span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;">Ya</span>
+                {% elif obj.tsunami is False %}
+                  <span style="background:#f0fdf4;color:#166534;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;">Tidak</span>
+                {% else %}
+                  <span style="color:#9ca3af;font-size:12px;">-</span>
+                {% endif %}
+              </td>
+              <td style="padding:9px 12px;text-align:center;color:#6b7280;font-size:12px;">{{ obj.media.count }}</td>
+              <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
+                <a href="{% url 'gempa_merusak_detail' obj.pk %}" style="color:#4f46e5;font-size:12px;margin-right:8px;">Detail</a>
+                <a href="{% url 'gempa_merusak_update' obj.pk %}" style="color:#059669;font-size:12px;margin-right:8px;">Edit</a>
+                <a href="{% url 'gempa_merusak_delete' obj.pk %}" style="color:#dc2626;font-size:12px;">Hapus</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" style="padding:32px;text-align:center;color:#9ca3af;font-style:italic;">Tidak ada data gempa merusak.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+</div>
+{% endblock %}
