@@ -1049,6 +1049,25 @@ def gempa_merusak_list(request):
         qs = qs.filter(tsunami=True)
     elif tsunami == '0':
         qs = qs.filter(tsunami=False)
+
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename="gempa_merusak.csv"'
+        response.write('﻿')  # BOM for Excel UTF-8
+        writer = csv.writer(response)
+        writer.writerow(['No', 'Tanggal', 'Wilayah', 'Provinsi', 'Origin Time',
+                         'Latitude', 'Longitude', 'Kedalaman (km)', 'Magnitudo',
+                         'Lokasi', 'Tsunami', 'Wilayah Merasakan', 'Korban/Kerusakan', 'Sumber'])
+        for obj in qs:
+            tsunami_val = 'Ya' if obj.tsunami is True else ('Tidak' if obj.tsunami is False else '')
+            writer.writerow([
+                obj.no, obj.tanggal_text, obj.wilayah, obj.provinsi,
+                obj.origin_time or '', obj.latitude or '', obj.longitude or '',
+                obj.depth_km or '', obj.magnitude or '', obj.lokasi,
+                tsunami_val, obj.wilayah_merasakan, obj.korban_kerusakan, obj.sumber,
+            ])
+        return response
+
     return render(request, 'repository/gempa_merusak_list.html', {
         'object_list': qs,
         'province_choices': GempaMemusak.PROVINCE_CHOICES,
