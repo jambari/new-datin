@@ -143,6 +143,14 @@
                   <hr>
                   <div class="small">
                     <div class="mb-3"><label class="form-label fw-bold">Basemap</label><select id="selB" class="form-select form-select-sm" onchange="changeBasemap()"><option value="ocean">🌊 Ocean (Default)</option><option value="imagery">🛰️ Imagery</option><option value="street">🗺️ Street</option><option value="topo">🏔️ Topography</option><option value="darkgray">🌑 Dark Gray</option></select></div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">North Arrow</label>
+                      <select id="selNorthArrow" class="form-select form-select-sm" onchange="changeNorthArrow()">
+                        <option value="{% static 'repository/images/gpt_north_arrow.svg' %}">GPT Arrow (Default)</option>
+                        <option value="{% static 'repository/images/claude_north_arrow.svg' %}">Claude Arrow</option>
+                        <option value="{% static 'repository/images/north-arrow-2.jpg' %}">Classic Arrow</option>
+                      </select>
+                    </div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleSlab()"><label class="form-check-label small">Tampilkan Slab (Peta 1)</label></div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlabFelt" checked onchange="toggleSlabFelt()"><label class="form-check-label small">Tampilkan Slab (Peta 2)</label></div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swFaults" checked onchange="toggleFaults()"><label class="form-check-label small">Tampilkan Patahan</label></div>
@@ -776,6 +784,10 @@
     }
     
     baseLayer = newLayer.addTo(mapInstance);
+  }
+  function changeNorthArrow() {
+    const url = document.getElementById('selNorthArrow').value;
+    document.getElementById('outA').src = url;
   }
   function toggleSlab() { if(mapInstance && slabLayer) { if(document.getElementById('swSlab').checked) mapInstance.addLayer(slabLayer); else mapInstance.removeLayer(slabLayer); } }
   function toggleFaults() { if(mapInstance && faultsLayer) { if(document.getElementById('swFaults').checked) mapInstance.addLayer(faultsLayer); else mapInstance.removeLayer(faultsLayer); } }
