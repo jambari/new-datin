@@ -421,9 +421,9 @@
                           <button class="btn btn-sm btn-danger no-print" onclick="exportEventsPDF()" title="Export ke PDF"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
                         </div>
                       </div>
-                      <div style="max-height: 480px; overflow-y: auto; overflow-x: auto;">
+                      <div style="overflow-x: auto;">
                         <table class="table table-bordered table-sm mb-0 table-compact" style="background: white; width: 100%;">
-                          <thead class="table-dark" style="position: sticky; top: 0; z-index: 1;">
+                          <thead class="table-dark">
                             <tr>
                               <th style="width: 32px;">No</th>
                               <th style="width: 130px;">Waktu (UTC)</th>
@@ -437,6 +437,14 @@
                           </thead>
                           <tbody id="eventsTableBody" spellcheck="false"></tbody>
                         </table>
+                      </div>
+                      <div class="d-flex justify-content-between align-items-center mt-2 no-print" id="eventsPagination" style="font-size:13px;">
+                        <span id="eventsPageInfo" class="text-muted"></span>
+                        <div class="d-flex gap-1">
+                          <button class="btn btn-sm btn-outline-secondary" id="eventsPrevBtn" onclick="eventsChangePage(-1)">&#8249;</button>
+                          <span id="eventsPageNum" style="padding:4px 10px;"></span>
+                          <button class="btn btn-sm btn-outline-secondary" id="eventsNextBtn" onclick="eventsChangePage(1)">&#8250;</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -654,7 +662,7 @@
   function generateDailyFrequencyTable() {
     const dailyData = {};
     mapData.forEach(event => {
-      const date = event.time.split(' ')[0];
+      const date = event.time.split('T')[0].split(' ')[0];
       if (!dailyData[date]) dailyData[date] = { total: 0, m_lt3: 0, m_35: 0, m_gte5: 0, d_lt60: 0, d_mid: 0, d_deep: 0 };
       dailyData[date].total++;
       if (event.magnitude < 3) dailyData[date].m_lt3++; else if (event.magnitude < 5) dailyData[date].m_35++; else dailyData[date].m_gte5++;
@@ -810,17 +818,32 @@
       calculateSeiscomp();
   });
 
+  const EVENTS_PER_PAGE = 25;
+  let eventsCurrentPage = 1;
   let eventsTableInit = false;
+
   function initEventsTable() {
     if (eventsTableInit) return;
     eventsTableInit = true;
+    renderEventsPage(1);
+  }
+
+  function renderEventsPage(page) {
+    eventsCurrentPage = page;
+    const total = mapData.length;
+    const totalPages = Math.max(1, Math.ceil(total / EVENTS_PER_PAGE));
+    eventsCurrentPage = Math.min(Math.max(1, page), totalPages);
+    const start = (eventsCurrentPage - 1) * EVENTS_PER_PAGE;
+    const slice = mapData.slice(start, start + EVENTS_PER_PAGE);
+
     const tbody = document.getElementById('eventsTableBody');
     tbody.innerHTML = '';
-    mapData.forEach((ev, i) => {
+    slice.forEach((ev, i) => {
+      const globalIdx = start + i;
       const tr = document.createElement('tr');
-      tr.setAttribute('data-idx', i);
+      tr.setAttribute('data-idx', globalIdx);
       tr.innerHTML = `
-        <td class="ev-no">${i + 1}</td>
+        <td class="ev-no">${globalIdx + 1}</td>
         <td contenteditable="true" spellcheck="false">${ev.time}</td>
         <td contenteditable="true" spellcheck="false">${ev.latitude.toFixed(4)}</td>
         <td contenteditable="true" spellcheck="false">${ev.longitude.toFixed(4)}</td>
@@ -831,38 +854,46 @@
       `;
       tbody.appendChild(tr);
     });
+
+    const pageInfo = document.getElementById('eventsPageInfo');
+    const pageNum = document.getElementById('eventsPageNum');
+    const prevBtn = document.getElementById('eventsPrevBtn');
+    const nextBtn = document.getElementById('eventsNextBtn');
+    if (pageInfo) pageInfo.textContent = `${start + 1}–${Math.min(start + EVENTS_PER_PAGE, total)} dari ${total}`;
+    if (pageNum) pageNum.textContent = `${eventsCurrentPage} / ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = eventsCurrentPage <= 1;
+    if (nextBtn) nextBtn.disabled = eventsCurrentPage >= totalPages;
     updateEventsCount();
+  }
+
+  function eventsChangePage(delta) {
+    renderEventsPage(eventsCurrentPage + delta);
   }
 
   function deleteEventRow(btn) {
-    btn.closest('tr').remove();
-    document.querySelectorAll('#eventsTableBody tr').forEach((row, i) => {
-      row.querySelector('.ev-no').textContent = i + 1;
-    });
-    updateEventsCount();
+    const tr = btn.closest('tr');
+    const idx = parseInt(tr.getAttribute('data-idx'));
+    mapData.splice(idx, 1);
+    renderEventsPage(eventsCurrentPage);
+    generateDailyFrequencyTable();
   }
 
   function updateEventsCount() {
-    const n = document.querySelectorAll('#eventsTableBody tr').length;
     const el = document.getElementById('eventsCount');
-    if (el) el.textContent = n + ' events';
+    if (el) el.textContent = mapData.length + ' events';
   }
 
   function getEventsTableData() {
     const headers = ['No', 'Waktu (UTC)', 'Lintang', 'Bujur', 'Magnitudo', 'Kedalaman (km)', 'Lokasi'];
-    const rows = [];
-    document.querySelectorAll('#eventsTableBody tr').forEach(tr => {
-      const cells = tr.querySelectorAll('td');
-      rows.push([
-        cells[0].textContent.trim(),
-        cells[1].textContent.trim(),
-        cells[2].textContent.trim(),
-        cells[3].textContent.trim(),
-        cells[4].textContent.trim(),
-        cells[5].textContent.trim(),
-        cells[6].textContent.trim(),
-      ]);
-    });
+    const rows = mapData.map((ev, i) => [
+      i + 1,
+      ev.time,
+      ev.latitude.toFixed(4),
+      ev.longitude.toFixed(4),
+      ev.magnitude.toFixed(1),
+      ev.depth.toFixed(1),
+      ev.location || '',
+    ]);
     return { headers, rows };
   }
 
