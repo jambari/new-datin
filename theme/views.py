@@ -46,6 +46,27 @@ def dashboard(request):
     from logbook.models import Logbook
     recent_logbook = Logbook.objects.order_by('-tanggal', '-waktu_dibuat')[:5]
 
+    # --- Daily reminders ---
+    from jadwal.models import JadwalHVSampler
+    import zoneinfo
+    now_wit = timezone.now().astimezone(zoneinfo.ZoneInfo("Asia/Jayapura"))
+    today_wit = now_wit.date()
+    dow = today_wit.weekday()  # 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun
+
+    hv_sampler_today = JadwalHVSampler.objects.filter(tanggal=today_wit).first()
+    reminders = []
+    if hv_sampler_today:
+        reminders.append({
+            'label': hv_sampler_today.get_tipe_display(),
+            'color': '#f59e0b',
+            'text': '#fff',
+        })
+    if dow in (0, 3):  # Senin, Kamis
+        reminders.append({'label': 'Pengamatan Absolut 09:00', 'color': '#7c3aed', 'text': '#fff'})
+        reminders.append({'label': 'Buat Prekursor 09:00',     'color': '#0891b2', 'text': '#fff'})
+    if dow == 4:       # Jumat
+        reminders.append({'label': 'Buat Infografis',          'color': '#059669', 'text': '#fff'})
+
     # --- Next shift from jadwal ---
     from jadwal.models import JadwalHarian
     from collections import defaultdict
@@ -94,6 +115,7 @@ def dashboard(request):
         'recent_logbook':      recent_logbook,
         'next_shift_date':     next_shift_date,
         'next_shift_by_pola':  next_shift_by_pola,
+        'reminders':           reminders,
         'chart_labels':        chart_labels,
         'chart_data':          chart_data,
         'gempa_merusak_total': GempaMemusak.objects.count(),
