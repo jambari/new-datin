@@ -600,7 +600,13 @@
   function initMap() {
     if (mapInstance) { mapInstance.invalidateSize(); return; }
     mapInstance = L.map('map', { zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
-    
+
+    mapInstance.createPane('pBg');        mapInstance.getPane('pBg').style.zIndex        = 250;
+    mapInstance.createPane('pKabupaten'); mapInstance.getPane('pKabupaten').style.zIndex  = 260;
+    mapInstance.createPane('pFaults');    mapInstance.getPane('pFaults').style.zIndex     = 270;
+    mapInstance.createPane('pSubduksi');  mapInstance.getPane('pSubduksi').style.zIndex   = 280;
+    mapInstance.createPane('pEvents');    mapInstance.getPane('pEvents').style.zIndex     = 290;
+
     var esriOcean    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ', maxZoom: 13 });
     var esriImagery  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS' });
     var esriStreet   = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS' });
@@ -609,26 +615,25 @@
     baseLayer = esriOcean;
     esriOcean.addTo(mapInstance);
     
-    if (typeof newPng !== 'undefined') L.geoJSON(newPng, { style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5, pane: 'tilePane' } }).addTo(mapInstance);
-    
+    if (typeof newPng !== 'undefined') L.geoJSON(newPng, { pane: 'pBg', style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5 } }).addTo(mapInstance);
+    if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { pane: 'pBg', style: { color: "#00FFFF", weight: 1 } }).addTo(mapInstance);
+    if (typeof batas_laut_indonesia !== 'undefined') L.geoJSON(batas_laut_indonesia, { pane: 'pBg', style: { color: "#3b82f6", weight: 1, dashArray: '5, 5' } }).addTo(mapInstance);
+
     faultsLayer = L.layerGroup().addTo(mapInstance);
-    if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
-    else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
+    if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { pane: 'pFaults', style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
+    else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { pane: 'pFaults', style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
 
     if (typeof subDuksi !== 'undefined') {
       subLayer = L.layerGroup().addTo(mapInstance);
-      subDuksi.forEach(fc => L.geoJSON(fc, { style: { color: '#8b5cf6', weight: 1.5 } }).addTo(subLayer));
+      subDuksi.forEach(fc => L.geoJSON(fc, { pane: 'pSubduksi', style: { color: '#8b5cf6', weight: 1.5 } }).addTo(subLayer));
     }
-
-    if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } }).addTo(mapInstance);
-    if (typeof batas_laut_indonesia !== 'undefined') L.geoJSON(batas_laut_indonesia, { style: { color: "#3b82f6", weight: 1, dashArray: '5, 5' } }).addTo(mapInstance);
 
     slabLayer = L.layerGroup().addTo(mapInstance);
     const slabColors = [[0,20,'rgb(245,0,0)'],[20,40,'rgb(250,75,0)'],[40,60,'rgb(252,118,0)'],[60,80,'rgb(253,160,0)'],[80,100,'rgb(250,160,0)'],[100,120,'rgb(245,245,0)'],[120,200,'rgb(210,247,0)'],[200,300,'rgb(169,247,0)'],[300,400,'rgb(128,247,0)'],[400,500,'rgb(86,247,0)'],[500,660,'rgb(0,245,0)']];
 
     try {
       d3.json("{% static 'repository/js/slab_indonesia_usgs.json' %}").then(data => {
-        if (data) L.geoJSON(data, { style: function(f) {
+        if (data) L.geoJSON(data, { pane: 'pBg', style: function(f) {
             let d = f.properties.DEPTH || 0; let c = 'transparent';
             for (let r of slabColors) if (d >= r[0] && d <= r[1]) { c = r[2]; break; }
             return { color: c, weight: 1.5, opacity: 0.8, fillOpacity: 0 };
@@ -648,6 +653,7 @@
     markersLayer.clearLayers();
     data.forEach(event => {
       L.circleMarker([event.latitude, event.longitude], {
+        pane: 'pEvents',
         radius: Math.max(4, event.magnitude * 2.5),
         fillColor: getColorByDepth(event.depth),
         color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
@@ -847,6 +853,7 @@
     const entry = shpLayers[key];
     const showLabel = document.getElementById('swShpLabel').checked;
     return L.geoJSON(entry.data, {
+      pane: 'pKabupaten',
       style: _shpStyle(),
       onEachFeature: function(feature, layer) {
         const name = feature.properties[entry.labelKey] || '';
