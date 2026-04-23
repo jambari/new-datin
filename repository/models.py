@@ -136,10 +136,20 @@ class GempaMemusak(models.Model):
         ('Laut', 'Laut'),
     ]
 
+    PROVINCE_CHOICES = [
+        ('Papua',           'Papua'),
+        ('Papua Barat',     'Papua Barat'),
+        ('Papua Tengah',    'Papua Tengah'),
+        ('Papua Selatan',   'Papua Selatan'),
+        ('Papua Pegunungan','Papua Pegunungan'),
+        ('Papua Barat Daya','Papua Barat Daya'),
+    ]
+
     no             = models.PositiveIntegerField(unique=True, help_text="Nomor urut dari katalog")
     tanggal_text   = models.CharField(max_length=60, help_text="Tanggal sesuai tulisan asli, mis. '23 Mei 1864'")
     tanggal        = models.DateField(null=True, blank=True, db_index=True)
     wilayah        = models.CharField(max_length=255, blank=True, default='', help_text="Nama wilayah/daerah")
+    provinsi       = models.CharField(max_length=50, choices=PROVINCE_CHOICES, blank=True, default='')
     origin_time    = models.TimeField(null=True, blank=True)
     latitude       = models.FloatField(null=True, blank=True)
     longitude      = models.FloatField(null=True, blank=True)
@@ -158,3 +168,26 @@ class GempaMemusak(models.Model):
 
     def __str__(self):
         return f"[{self.no}] {self.tanggal_text} M{self.magnitude} {self.wilayah}"
+
+
+class GempaMemusakMedia(models.Model):
+    TYPE_IMAGE = 'image'
+    TYPE_VIDEO = 'video'
+    TYPE_CHOICES = [
+        (TYPE_IMAGE, 'Image'),
+        (TYPE_VIDEO, 'Video'),
+    ]
+
+    event      = models.ForeignKey(GempaMemusak, on_delete=models.CASCADE, related_name='media')
+    file       = models.FileField(upload_to='gempa_merusak/')
+    media_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=TYPE_IMAGE)
+    caption    = models.CharField(max_length=255, blank=True, default='')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['uploaded_at']
+        verbose_name = 'Gempa Merusak Media'
+        verbose_name_plural = 'Gempa Merusak Media'
+
+    def __str__(self):
+        return f"{self.event} — {self.media_type} ({self.file.name})"
