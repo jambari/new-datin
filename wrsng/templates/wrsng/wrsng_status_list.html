@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
-{% load tz %} {# Muat filter timezone #}
+{% load tz %}
+{% load wrsng_tags %}
 
 {% block content %}
 <div class="flex h-screen bg-gray-100">
@@ -20,9 +21,9 @@
                 <div style="display:flex;flex-direction:column;gap:4px;">
                     <label for="wrs_code" style="font-size:13px;font-weight:500;color:#374151;">WRS Code:</label>
                     <select id="wrs_code" name="wrs_code" style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:160px;">
-                        <option value="">All Codes</option>
-                        {% for code in wrs_code_options %}
-                            <option value="{{ code }}" {% if code == filter_wrs_code %}selected{% endif %}>{{ code }}</option>
+                        <option value="">All Stations</option>
+                        {% for name in wrs_code_options %}
+                            <option value="{{ name }}" {% if name == filter_wrs_code %}selected{% endif %}>{{ name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -87,7 +88,7 @@
                             {{ status.status_datetime|timezone:"Asia/Jayapura"|date:"Y-m-d H:i:s" }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            {{ status.wrs_code }}
+                            {{ status.wrs_code|station_display }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                             {# Tampilkan teks status, beri warna berdasarkan nilai #}

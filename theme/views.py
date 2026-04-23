@@ -28,6 +28,7 @@ def dashboard(request):
 
     # --- WRSNG: latest status per station ---
     from wrsng.models import WRSNGStatus
+    from wrsng.constants import CODE_TO_STATION
     from django.db.models import Subquery, OuterRef
     latest_per_station = (
         WRSNGStatus.objects
@@ -35,12 +36,16 @@ def dashboard(request):
         .order_by('-status_datetime')
         .values('id')[:1]
     )
-    wrsng_statuses = (
+    wrsng_statuses_qs = (
         WRSNGStatus.objects
         .filter(id__in=Subquery(latest_per_station))
         .order_by('wrs_code')
     )
-    wrsng_online = sum(1 for s in wrsng_statuses if s.display_status == 1)
+    wrsng_statuses = [
+        {'name': CODE_TO_STATION.get(s.wrs_code, s.wrs_code), 'display_status': s.display_status}
+        for s in wrsng_statuses_qs
+    ]
+    wrsng_online = sum(1 for s in wrsng_statuses if s['display_status'] == 1)
 
     # --- Logbook: last 5 entries ---
     from logbook.models import Logbook
@@ -114,7 +119,7 @@ def dashboard(request):
         'lightning_today':     lightning_today_count,
         'wrsng_statuses':      wrsng_statuses,
         'wrsng_online':        wrsng_online,
-        'wrsng_total':         wrsng_statuses.count(),
+        'wrsng_total':         len(wrsng_statuses),
         'recent_logbook':      recent_logbook,
         'next_shift_date':     next_shift_date,
         'next_shift_by_pola':  next_shift_by_pola,

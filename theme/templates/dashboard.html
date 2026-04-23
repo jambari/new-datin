@@ -193,7 +193,7 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             {% for s in wrsng_statuses %}
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:6px;background:#f9fafb;font-size:12px;">
-              <span style="font-weight:500;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px;" title="{{ s.wrs_code }}">{{ s.wrs_code }}</span>
+              <span style="font-weight:500;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;" title="{{ s.name }}">{{ s.name }}</span>
               <span style="padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;flex-shrink:0;
                 background:{% if s.display_status == 1 %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">
                 {% if s.display_status == 1 %}OK{% else %}OFF{% endif %}

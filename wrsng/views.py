@@ -3,20 +3,21 @@ from django.contrib.auth.decorators import login_required
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny 
+from rest_framework.permissions import AllowAny
 from .models import WRSNGStatus, WRSNGDataAvailability
 from .serializers import WRSNGStatusSerializer
-from django.views.generic import ListView 
-from django.utils.dateparse import parse_date 
-from django.db.models import Q 
-from django.utils import timezone 
-import datetime # Import module datetime standard
+from django.views.generic import ListView
+from django.utils.dateparse import parse_date
+from django.db.models import Q
+from django.utils import timezone
+import datetime
 import calendar
 from collections import defaultdict
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 import json
 from django.http import JsonResponse
+from .constants import WRS_CODE_MAP, CODE_TO_STATION
 
 class WRSNGStatusUpdateAPI(APIView):
     """
@@ -62,7 +63,11 @@ class WRSNGStatusListView(ListView):
         filters = Q()
 
         if wrs_code_filter and wrs_code_filter.strip() != '':
-            filters &= Q(wrs_code__icontains=wrs_code_filter.strip())
+            raw_codes = WRS_CODE_MAP.get(wrs_code_filter.strip())
+            if raw_codes is not None:
+                filters &= Q(wrs_code__in=raw_codes)
+            else:
+                filters &= Q(wrs_code__icontains=wrs_code_filter.strip())
             
         if start_date_str:
             start_date = parse_date(start_date_str)
@@ -93,8 +98,8 @@ class WRSNGStatusListView(ListView):
             context['filter_start_date'] = self.request.GET.get('start_date', '')
             context['filter_end_date'] = self.request.GET.get('end_date', '')
             
-            # Opsi dropdown
-            context['wrs_code_options'] = WRSNGStatus.objects.values_list('wrs_code', flat=True).distinct().order_by('wrs_code')
+            # Opsi dropdown: display names from map
+            context['wrs_code_options'] = [name for name in WRS_CODE_MAP.keys() if WRS_CODE_MAP[name]]
             
             # --- LOGIKA PAGINASI BARU (ELIDED) ---
             # Ini membuat list halaman seperti: [1, 2, '...', 5, 6, 7, '...', 20]
@@ -127,21 +132,6 @@ def wrsng_availability_query(request):
     daftar_bulan_indo = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
     month_name = daftar_bulan_indo[selected_month]
 
-    # Maps display name -> list of actual wrs_code values in the DB
-    WRS_CODE_MAP = {
-        "STAGEOF JAYAPURA":   ["stageof_JAY"],
-        "RRI JAYAPURA":       ["rri_kojay"],
-        "MAKO LANTAMAL X":    ["kodaeral_x"],
-        "BPBD KOTA JAYAPURA": ["bpbd_kojay"],
-        "BBMKG V JAYAPURA":   ["bbmkgv"],
-        "BPBD PROVINSI PAPUA":["BPBD_PROV", "BPBDProv_01"],
-        "BASARNAS PAPUA":     ["basarnas_jay"],
-        "BPBD KAB. JAYAPURA": ["bpbd_kabjay"],
-        "BPBD BIAK NUMFOR":   ["BPBD_BIAK"],
-        "BPBD WAROPEN":       [],
-        "BASARNAS MERAUKE":   ["BASARNAS_MERAUKE"],
-        "BPBD KAB. MIMIKA":   ["bpbd-mimika"],
-    }
     station_list = list(WRS_CODE_MAP.keys())
 
     # Flat list of all actual codes for DB queries
