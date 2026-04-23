@@ -31,8 +31,9 @@ def dashboard(request):
     # --- Lightning ---
     from lightning.models import DailyStrikeSummary
     lightning_7d = DailyStrikeSummary.objects.filter(summary_date__gte=week_ago).order_by('summary_date')
-    lightning_today = DailyStrikeSummary.objects.filter(summary_date=today).first()
-    lightning_today_count = lightning_today.total_count if lightning_today else 0
+    yesterday = today - datetime.timedelta(days=1)
+    lightning_yesterday = DailyStrikeSummary.objects.filter(summary_date=yesterday).first()
+    lightning_today_count = lightning_yesterday.total_count if lightning_yesterday else 0
 
     # --- WRSNG: latest status per station ---
     from wrsng.models import WRSNGStatus
