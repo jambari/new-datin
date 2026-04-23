@@ -134,7 +134,9 @@
               <td class="px-6 py-4 ...">{% if gempa.felt %}Yes{% else %}No{% endif %}</td>
               <td class="px-6 py-4 ...">{{ gempa.impact|default:"-" }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-              <a href="{% url 'gempa_detail' pk=gempa.pk %}" class="px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition">Detail</a>
+                <a href="{% url 'gempa_detail' pk=gempa.pk %}" style="padding:4px 10px;border-radius:5px;background:#4f46e5;color:#fff;text-decoration:none;font-size:12px;">Detail</a>
+                <a href="{% url 'gempa_edit' pk=gempa.pk %}" style="padding:4px 10px;border-radius:5px;background:#059669;color:#fff;text-decoration:none;font-size:12px;">Edit</a>
+                <a href="{% url 'gempa_delete' pk=gempa.pk %}" style="padding:4px 10px;border-radius:5px;background:#dc2626;color:#fff;text-decoration:none;font-size:12px;">Hapus</a>
               </td>
             </tr>
             {% endfor %}

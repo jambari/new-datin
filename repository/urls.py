@@ -6,6 +6,8 @@ urlpatterns = [
     # This remains the main page for the app
     path('', views.gempa_list, name='gempa_list'),
     path('detail/<int:pk>/', views.gempa_detail_view, name='gempa_detail'),
+    path('edit/<int:pk>/', views.gempa_edit, name='gempa_edit'),
+    path('delete/<int:pk>/', views.gempa_delete, name='gempa_delete'),
     
     # -- SHAKEMAP URLS MODIFIED BELOW --
     path('shakemap/', ShakemapListView.as_view(), name='shakemap-list'),

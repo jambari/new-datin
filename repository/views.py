@@ -160,6 +160,33 @@ def gempa_detail_view(request, pk):
     return render(request, 'repository/gempa_detail.html', context)
 
 
+@login_required
+def gempa_edit(request, pk):
+    gempa = get_object_or_404(Gempa, pk=pk)
+    if request.method == 'POST':
+        gempa.station_code = request.POST.get('station_code', gempa.station_code)
+        gempa.origin_datetime = request.POST.get('origin_datetime', gempa.origin_datetime)
+        gempa.latitude = request.POST.get('latitude', gempa.latitude)
+        gempa.longitude = request.POST.get('longitude', gempa.longitude)
+        gempa.magnitudo = request.POST.get('magnitudo', gempa.magnitudo)
+        gempa.depth = request.POST.get('depth', gempa.depth)
+        gempa.remark = request.POST.get('remark', gempa.remark)
+        gempa.felt = request.POST.get('felt') == 'true'
+        gempa.impact = request.POST.get('impact', gempa.impact) or None
+        gempa.save()
+        return redirect('gempa_list')
+    return render(request, 'repository/gempa_form.html', {'gempa': gempa})
+
+
+@login_required
+def gempa_delete(request, pk):
+    gempa = get_object_or_404(Gempa, pk=pk)
+    if request.method == 'POST':
+        gempa.delete()
+        return redirect('gempa_list')
+    return render(request, 'repository/gempa_confirm_delete.html', {'gempa': gempa})
+
+
 def station_geojson_api(request):
     """
     API view to provide station data in GeoJSON format.
