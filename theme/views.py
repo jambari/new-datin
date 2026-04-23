@@ -61,8 +61,9 @@ def dashboard(request):
             'color': '#f59e0b',
             'text': '#fff',
         })
-    if dow in (0, 3):  # Senin, Kamis
+    if dow in (2, 4):  # Rabu, Jumat
         reminders.append({'label': 'Pengamatan Absolut 09:00', 'color': '#7c3aed', 'text': '#fff'})
+    if dow in (0, 3):  # Senin, Kamis
         reminders.append({'label': 'Buat Prekursor 09:00',     'color': '#0891b2', 'text': '#fff'})
     if dow == 4:       # Jumat
         reminders.append({'label': 'Buat Infografis',          'color': '#059669', 'text': '#fff'})
