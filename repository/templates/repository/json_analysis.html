@@ -544,8 +544,8 @@
       className: 'star-marker', iconSize: [24, 24], iconAnchor: [12, 12]
   });
 
-  function getColorByMagnitude(mag) { return mag >= 5 ? '#FF0000' : (mag >= 3 ? '#FFFF00' : '#00FF00'); }
-  function getColorByDepth(depth) { return depth < 60 ? '#FF0000' : (depth < 300 ? '#FFFF00' : '#00FF00'); }
+  function getColorByMagnitude(mag) { return mag >= 5 ? '#f87171' : (mag >= 3 ? '#fbbf24' : '#6ee7b7'); }
+  function getColorByDepth(depth) { return depth < 60 ? '#f87171' : (depth < 300 ? '#fbbf24' : '#6ee7b7'); }
 
   // --- INISIALISASI PETA UTAMA ---
   function initMap() {
@@ -760,10 +760,12 @@
     const baseOpt = { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { datalabels: { anchor: 'end', align: 'top', font: { size: 9, weight: 'bold' } }, legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } } };
     const barOpt = { ...baseOpt, plugins: { ...baseOpt.plugins, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } };
 
-    cmbInst = new Chart("cMB", { type: 'bar', data: { labels: ['M<3', '3-5', '≥5'], datasets: [{ data: statMag, backgroundColor: ['#00FF00', '#FFFF00', '#FF0000'] }] }, options: barOpt });
-    cmpInst = new Chart("cMP", { type: 'doughnut', data: { labels: ['M<3', '3-5', '≥5'], datasets: [{ data: statMag, backgroundColor: ['#00FF00', '#FFFF00', '#FF0000'] }] }, options: baseOpt });
-    cdbInst = new Chart("cDB", { type: 'bar', data: { labels: ['<60', '60-300', '>300'], datasets: [{ data: statDepth, backgroundColor: ['#FF0000', '#FFFF00', '#00FF00'] }] }, options: barOpt });
-    cdpInst = new Chart("cDP", { type: 'doughnut', data: { labels: ['<60', '60-300', '>300'], datasets: [{ data: statDepth, backgroundColor: ['#FF0000', '#FFFF00', '#00FF00'] }] }, options: baseOpt });
+    const magColors   = ['#6ee7b7', '#fbbf24', '#f87171'];
+    const depthColors = ['#f87171', '#fbbf24', '#6ee7b7'];
+    cmbInst = new Chart("cMB", { type: 'bar',      data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: statMag,   backgroundColor: magColors   }] }, options: barOpt  });
+    cmpInst = new Chart("cMP", { type: 'doughnut', data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: statMag,   backgroundColor: magColors   }] }, options: baseOpt });
+    cdbInst = new Chart("cDB", { type: 'bar',      data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: statDepth, backgroundColor: depthColors }] }, options: barOpt  });
+    cdpInst = new Chart("cDP", { type: 'doughnut', data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: statDepth, backgroundColor: depthColors }] }, options: baseOpt });
   }
 
   // --- LISTENERS ---
