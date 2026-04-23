@@ -129,18 +129,18 @@ def wrsng_availability_query(request):
 
     # Maps display name -> list of actual wrs_code values in the DB
     WRS_CODE_MAP = {
-        "Stageof Jayapura":   ["stageof_JAY"],
-        "RRI Jayapura":       ["rri_kojay"],
+        "STAGEOF JAYAPURA":   ["stageof_JAY"],
+        "RRI JAYAPURA":       ["rri_kojay"],
         "MAKO LANTAMAL X":    ["kodaeral_x"],
-        "BPBD Kota Jayapura": ["bpbd_kojay"],
-        "BBMKG V Jayapura":   ["bbmkgv"],
-        "BPBD Provinsi Papua":["BPBD_PROV", "BPBDProv_01"],
-        "BASARNAS Papua":     ["basarnas_jay"],
-        "BPBD Kab. Jayapura": ["bpbd_kabjay"],
-        "BPBD Biak Numfor":   ["BPBD_BIAK"],
-        "BPBD Waropen":       [],
-        "BASARNAS Merauke":   ["BASARNAS_MERAUKE"],
-        "BPBD Kab. Mimika":   ["bpbd-mimika"],
+        "BPBD KOTA JAYAPURA": ["bpbd_kojay"],
+        "BBMKG V JAYAPURA":   ["bbmkgv"],
+        "BPBD PROVINSI PAPUA":["BPBD_PROV", "BPBDProv_01"],
+        "BASARNAS PAPUA":     ["basarnas_jay"],
+        "BPBD KAB. JAYAPURA": ["bpbd_kabjay"],
+        "BPBD BIAK NUMFOR":   ["BPBD_BIAK"],
+        "BPBD WAROPEN":       [],
+        "BASARNAS MERAUKE":   ["BASARNAS_MERAUKE"],
+        "BPBD KAB. MIMIKA":   ["bpbd-mimika"],
     }
     station_list = list(WRS_CODE_MAP.keys())
 
