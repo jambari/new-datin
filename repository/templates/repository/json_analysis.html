@@ -131,25 +131,16 @@
           <span class="badge bg-secondary ms-1" id="filterInfoBadge"></span>
 
           <span class="text-muted mx-1">|</span>
-          <span class="small fw-bold text-muted">Batas Wilayah:</span>
-          <div class="d-flex align-items-center gap-1">
-            <input class="form-check-input m-0" type="checkbox" id="swProvinsi" onchange="toggleShpLayer('Provinsi')">
-            <label class="small mb-0" for="swProvinsi">Provinsi</label>
-            <input type="color" id="colorProvinsi" value="#e53e3e" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpColor('Provinsi')">
-          </div>
-          <div class="d-flex align-items-center gap-1">
-            <input class="form-check-input m-0" type="checkbox" id="swKabupaten" onchange="toggleShpLayer('Kabupaten')">
-            <label class="small mb-0" for="swKabupaten">Kabupaten</label>
-            <input type="color" id="colorKabupaten" value="#3182ce" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpColor('Kabupaten')">
-          </div>
-          <div class="d-flex align-items-center gap-1">
-            <input class="form-check-input m-0" type="checkbox" id="swKecamatan" onchange="toggleShpLayer('Kecamatan')">
-            <label class="small mb-0" for="swKecamatan">Kecamatan</label>
-            <input type="color" id="colorKecamatan" value="#38a169" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpColor('Kecamatan')">
-          </div>
-          <div class="d-flex align-items-center gap-1">
+          <input class="form-check-input m-0" type="checkbox" id="swKabupaten" onchange="toggleShpLayer('Kabupaten')">
+          <label class="small mb-0 fw-bold text-muted" for="swKabupaten">Kab/Kota</label>
+          <input type="color" id="fillKabupaten" value="#3182ce" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
+          <input type="color" id="outlineKabupaten" value="#1e40af" title="Warna garis" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
+          <label class="small mb-0 text-muted ms-1">Opacity</label>
+          <input type="range" id="opacityKabupaten" min="0" max="100" value="20" style="width:70px;" oninput="updateShpStyle(); document.getElementById('opacityKabupatenVal').textContent=this.value+'%'">
+          <span class="small text-muted" id="opacityKabupatenVal">20%</span>
+          <div class="d-flex align-items-center gap-1 ms-1">
             <input class="form-check-input m-0" type="checkbox" id="swShpLabel" onchange="toggleShpLabels()">
-            <label class="small mb-0" for="swShpLabel">Label</label>
+            <label class="small mb-0 text-muted" for="swShpLabel">Label</label>
           </div>
         </div>
 
@@ -815,23 +806,23 @@
     document.getElementById('outA').src = url;
   }
 
-  // --- SHP OVERLAY LAYERS (fetched on demand as GeoJSON) ---
+  // --- SHP OVERLAY LAYER: Kabupaten/Kota only ---
   const shpLayers = {
-    Provinsi:  { url: "{% static 'repository/js/batas_provinsi_indo.geojson' %}",  data: null, layer: null, labelKey: 'PROVINSI' },
     Kabupaten: { url: "{% static 'repository/js/batas_kabupaten_indo.geojson' %}", data: null, layer: null, labelKey: 'KAB_KOTA' },
-    Kecamatan: { url: "{% static 'repository/js/batas_kecamatan_indo.geojson' %}", data: null, layer: null, labelKey: 'KECAMATAN' },
   };
 
-  function _shpStyle(color) {
-    return { color: color, weight: 1, fillColor: color, fillOpacity: 0.2, opacity: 0.8 };
+  function _shpStyle() {
+    const fill    = document.getElementById('fillKabupaten').value;
+    const outline = document.getElementById('outlineKabupaten').value;
+    const opacity = parseInt(document.getElementById('opacityKabupaten').value) / 100;
+    return { color: outline, weight: 1, fillColor: fill, fillOpacity: opacity, opacity: 0.9 };
   }
 
   function _buildShpLayer(key) {
     const entry = shpLayers[key];
-    const color = document.getElementById('color' + key).value;
     const showLabel = document.getElementById('swShpLabel').checked;
     return L.geoJSON(entry.data, {
-      style: _shpStyle(color),
+      style: _shpStyle(),
       onEachFeature: function(feature, layer) {
         const name = feature.properties[entry.labelKey] || '';
         layer.bindTooltip(name, { permanent: showLabel, sticky: !showLabel, className: 'shp-label', direction: 'center' });
@@ -857,20 +848,17 @@
     }
   }
 
-  function updateShpColor(key) {
-    const entry = shpLayers[key];
-    if (entry.layer) entry.layer.setStyle(_shpStyle(document.getElementById('color' + key).value));
+  function updateShpStyle() {
+    const entry = shpLayers['Kabupaten'];
+    if (entry.layer) entry.layer.setStyle(_shpStyle());
   }
 
   function toggleShpLabels() {
-    // Rebuild all active layers so tooltip permanent mode updates
-    Object.keys(shpLayers).forEach(key => {
-      const entry = shpLayers[key];
-      if (entry.layer && entry.data) {
-        mapInstance.removeLayer(entry.layer);
-        entry.layer = _buildShpLayer(key).addTo(mapInstance);
-      }
-    });
+    const entry = shpLayers['Kabupaten'];
+    if (entry.layer && entry.data) {
+      mapInstance.removeLayer(entry.layer);
+      entry.layer = _buildShpLayer('Kabupaten').addTo(mapInstance);
+    }
   }
   function toggleSlab() { if(mapInstance && slabLayer) { if(document.getElementById('swSlab').checked) mapInstance.addLayer(slabLayer); else mapInstance.removeLayer(slabLayer); } }
   function toggleFaults() { if(mapInstance && faultsLayer) { if(document.getElementById('swFaults').checked) mapInstance.addLayer(faultsLayer); else mapInstance.removeLayer(faultsLayer); } }
