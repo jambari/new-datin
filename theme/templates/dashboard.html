@@ -84,7 +84,6 @@
               <p style="font-size:13px;font-weight:600;color:#111827;">{{ log.petugas }}</p>
               <p style="font-size:11px;color:#6b7280;">{{ log.tanggal|date:"d M Y" }} &mdash; {{ log.shift }}</p>
               <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
-                {% for label, val in log.seiscomp_seismik|yesno:"Seismik,"|add:":" items %}{% endfor %}
                 <span style="font-size:10px;padding:1px 6px;border-radius:999px;background:{% if log.seiscomp_seismik == 'ON' %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">Seismik {{ log.seiscomp_seismik }}</span>
                 <span style="font-size:10px;padding:1px 6px;border-radius:999px;background:{% if log.esdx == 'ON' %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">ESDX {{ log.esdx }}</span>
                 <span style="font-size:10px;padding:1px 6px;border-radius:999px;background:{% if log.petir == 'ON' %}#d1fae5;color:#065f46{% else %}#fee2e2;color:#991b1b{% endif %};">Petir {{ log.petir }}</span>
