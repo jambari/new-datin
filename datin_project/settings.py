@@ -188,11 +188,6 @@ CELERY_TASK_SERIALIZER = 'json'
 
 HUJAN_API_URL = 'http://36.91.166.188/api/hujans/today'
 CELERY_BEAT_SCHEDULE = {
-    'import-earthquake-data-every-minute': {
-        'task': 'repository.tasks.sync_earthquake_data_task',
-        'schedule': crontab(minute='*'),
-    },
-    
     # PRIMARY IMPORT: Run at 00:15 UTC = 09:15 WIT
     # This gives users 45 minutes after 08:30 WIT input time to ensure data is ready
     'import-hujan-data-daily': {
