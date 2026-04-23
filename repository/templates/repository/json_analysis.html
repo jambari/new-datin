@@ -152,7 +152,6 @@
                 <div class="report-card">
                   <h6 class="fw-bold border-bottom pb-2 mb-3">Parameter Peta</h6>
                   <div class="mb-3"><label class="form-label small fw-bold">Judul Peta</label><input type="text" id="inT" class="form-control form-control-sm" value="PETA SEISMISITAS" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
-                  <div class="mb-3"><label class="form-label small fw-bold">Nama UPT</label><input type="text" id="inW" class="form-control form-control-sm" value="{{ upt }}" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
                   <div class="mb-3"><label class="form-label small fw-bold">Periode</label><input type="text" id="inP" class="form-control form-control-sm" value="{{ formatted_bulan }}" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
                   <button class="btn btn-primary btn-sm w-100 mb-2" onclick="updateMapDisplay()"><i class="bi bi-arrow-clockwise me-1"></i>Update</button>
                   <button onclick="window.print()" class="btn btn-success btn-sm w-100 mb-3"><i class="bi bi-printer me-1"></i>Cetak PDF</button>
@@ -169,7 +168,16 @@
                     </div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleSlab()"><label class="form-check-label small">Tampilkan Slab (Peta 1)</label></div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlabFelt" checked onchange="toggleSlabFelt()"><label class="form-check-label small">Tampilkan Slab (Peta 2)</label></div>
-                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swFaults" checked onchange="toggleFaults()"><label class="form-check-label small">Tampilkan Patahan</label></div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <input class="form-check-input m-0" type="checkbox" id="swFaults" checked onchange="toggleFaults()">
+                      <label class="form-check-label small flex-grow-1" for="swFaults">Tampilkan Patahan</label>
+                      <input type="color" id="colorFaults" value="#000000" title="Warna patahan" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateFaultsColor()">
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <input class="form-check-input m-0" type="checkbox" id="swSubduksi" checked onchange="toggleSubduksi()">
+                      <label class="form-check-label small flex-grow-1" for="swSubduksi">Tampilkan Subduksi</label>
+                      <input type="color" id="colorSubduksi" value="#8b5cf6" title="Warna subduksi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateSubduksiColor()">
+                    </div>
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="swFeltOverlay" onchange="toggleFeltOverlay()"><label class="form-check-label small">Overlay Gempa Dirasakan</label></div>
                   </div>
                 </div>
@@ -573,6 +581,7 @@
   let faultsLayer = null;
   let baseLayer = null;
   let markersLayer = null;          // seismicity circle markers
+  let subLayer = null;              // subduction lines layer
   let feltOverlayLayer = null;      // felt-event star overlay on main map
   let feltOverlayLegendCtrl = null; // Leaflet control for the overlay legend
   let cmbInst = null, cmpInst = null, cdbInst = null, cdpInst = null;
@@ -605,6 +614,11 @@
     faultsLayer = L.layerGroup().addTo(mapInstance);
     if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
     else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
+
+    if (typeof subDuksi !== 'undefined') {
+      subLayer = L.layerGroup().addTo(mapInstance);
+      subDuksi.forEach(fc => L.geoJSON(fc, { style: { color: '#8b5cf6', weight: 1.5 } }).addTo(subLayer));
+    }
 
     if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } }).addTo(mapInstance);
     if (typeof batas_laut_indonesia !== 'undefined') L.geoJSON(batas_laut_indonesia, { style: { color: "#3b82f6", weight: 1, dashArray: '5, 5' } }).addTo(mapInstance);
@@ -764,7 +778,18 @@
   function updateMapDisplay() {
     document.getElementById('outT').textContent = document.getElementById('inT').value || 'PETA SEISMISITAS';
     document.getElementById('outP').textContent = 'PERIODE ' + (document.getElementById('inP').value || '');
-    document.getElementById('outW').textContent = document.getElementById('inW').value || '';
+  }
+  function updateFaultsColor() {
+    const c = document.getElementById('colorFaults').value;
+    if (faultsLayer) faultsLayer.eachLayer(l => l.setStyle({ color: c, weight: 0.8 }));
+  }
+  function updateSubduksiColor() {
+    const c = document.getElementById('colorSubduksi').value;
+    if (subLayer) subLayer.eachLayer(l => l.setStyle({ color: c, weight: 1.5 }));
+  }
+  function toggleSubduksi() {
+    if (!mapInstance || !subLayer) return;
+    document.getElementById('swSubduksi').checked ? mapInstance.addLayer(subLayer) : mapInstance.removeLayer(subLayer);
   }
   function changeBasemap() { 
     if(!mapInstance) return;
