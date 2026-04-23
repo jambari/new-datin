@@ -4,7 +4,7 @@ WRS_CODE_MAP = {
     "MAKO LANTAMAL X":     ["kodaeral_x"],
     "BPBD KOTA JAYAPURA":  ["bpbd_kojay"],
     "BBMKG V JAYAPURA":    ["bbmkgv"],
-    "BPBD PROVINSI PAPUA": ["BPBD_PROV", "BPBDProv_01"],
+    "BPBD PROVINSI PAPUA": ["BPBD_PROV"],
     "BASARNAS PAPUA":      ["basarnas_jay"],
     "BPBD KAB. JAYAPURA":  ["bpbd_kabjay"],
     "BPBD BIAK NUMFOR":    ["BPBD_BIAK"],
