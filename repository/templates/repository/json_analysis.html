@@ -284,14 +284,14 @@
                             </div>
                             <div class="felt-img-pair">
                                 <div>
-                                    {% if event.shk_event and event.shk_event.shakemap_image %}
-                                        <img src="{{ event.shk_event.shakemap_image.url }}" alt="MMI"
-                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Peta MMI"
+                                    {% if event.img_report_1 %}
+                                        <img src="{{ event.img_report_1.url }}" alt="Report 1"
+                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Report 1"
                                              class="felt-gallery-img">
                                     {% else %}
-                                        <div class="felt-no-img">No MMI</div>
+                                        <div class="felt-no-img">No Report</div>
                                     {% endif %}
-                                    <div class="felt-img-label">Peta MMI</div>
+                                    <div class="felt-img-label">Report 1</div>
                                 </div>
                                 <div>
                                     {% if event.img_stationlist %}
