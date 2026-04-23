@@ -113,73 +113,73 @@
       </div>
 
       <!-- Image Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="gallery">
+      <div id="gallery" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
 
         {% if shk_event and shk_event.shakemap_image %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Peta MMI</p>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Peta MMI</p>
           <img src="{{ shk_event.shakemap_image.url }}" alt="Peta MMI"
-               class="gallery-img w-full h-48 object-contain rounded" data-caption="Peta MMI">
+               class="gallery-img" style="width:100%;height:192px;object-fit:contain;border-radius:4px;cursor:zoom-in;" data-caption="Peta MMI">
         </div>
         {% else %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Peta MMI</p>
-          <div class="flex-1 flex items-center justify-center text-gray-300 text-sm border border-dashed rounded h-48">Tidak tersedia</div>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Peta MMI</p>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:13px;border:1px dashed #d1d5db;border-radius:4px;height:192px;">Tidak tersedia</div>
         </div>
         {% endif %}
 
         {% if object.img_loc_map %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Peta Lokasi</p>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Peta Lokasi</p>
           <img src="{{ object.img_loc_map.url }}" alt="Peta Lokasi"
-               class="gallery-img w-full h-48 object-contain rounded" data-caption="Peta Lokasi">
+               class="gallery-img" style="width:100%;height:192px;object-fit:contain;border-radius:4px;cursor:zoom-in;" data-caption="Peta Lokasi">
         </div>
         {% else %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Peta Lokasi</p>
-          <div class="flex-1 flex items-center justify-center text-gray-300 text-sm border border-dashed rounded h-48">Tidak tersedia</div>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Peta Lokasi</p>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:13px;border:1px dashed #d1d5db;border-radius:4px;height:192px;">Tidak tersedia</div>
         </div>
         {% endif %}
 
         {% if object.img_stationlist %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Daftar Stasiun MMI</p>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Daftar Stasiun MMI</p>
           <img src="{{ object.img_stationlist.url }}" alt="Daftar Stasiun MMI"
-               class="gallery-img w-full h-48 object-contain rounded" data-caption="Daftar Stasiun MMI">
+               class="gallery-img" style="width:100%;height:192px;object-fit:contain;border-radius:4px;cursor:zoom-in;" data-caption="Daftar Stasiun MMI">
         </div>
         {% else %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Daftar Stasiun MMI</p>
-          <div class="flex-1 flex items-center justify-center text-gray-300 text-sm border border-dashed rounded h-48">Tidak tersedia</div>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Daftar Stasiun MMI</p>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:13px;border:1px dashed #d1d5db;border-radius:4px;height:192px;">Tidak tersedia</div>
         </div>
         {% endif %}
 
         {% if object.img_impact_list %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Daftar Dampak</p>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Daftar Dampak</p>
           <img src="{{ object.img_impact_list.url }}" alt="Daftar Dampak"
-               class="gallery-img w-full h-48 object-contain rounded" data-caption="Daftar Dampak">
+               class="gallery-img" style="width:100%;height:192px;object-fit:contain;border-radius:4px;cursor:zoom-in;" data-caption="Daftar Dampak">
         </div>
         {% else %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Daftar Dampak</p>
-          <div class="flex-1 flex items-center justify-center text-gray-300 text-sm border border-dashed rounded h-48">Tidak tersedia</div>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Daftar Dampak</p>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:13px;border:1px dashed #d1d5db;border-radius:4px;height:192px;">Tidak tersedia</div>
         </div>
         {% endif %}
 
         {% if object.img_report_1 %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Laporan 1</p>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Laporan 1</p>
           <img src="{{ object.img_report_1.url }}" alt="Laporan 1"
-               class="gallery-img w-full h-48 object-contain rounded" data-caption="Laporan 1">
+               class="gallery-img" style="width:100%;height:192px;object-fit:contain;border-radius:4px;cursor:zoom-in;" data-caption="Laporan 1">
         </div>
         {% endif %}
 
         {% if object.img_report_2 %}
-        <div class="bg-white rounded-lg shadow p-3 flex flex-col">
-          <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Laporan 2</p>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:12px;display:flex;flex-direction:column;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin:0 0 8px;">Laporan 2</p>
           <img src="{{ object.img_report_2.url }}" alt="Laporan 2"
-               class="gallery-img w-full h-48 object-contain rounded" data-caption="Laporan 2">
+               class="gallery-img" style="width:100%;height:192px;object-fit:contain;border-radius:4px;cursor:zoom-in;" data-caption="Laporan 2">
         </div>
         {% endif %}
 
