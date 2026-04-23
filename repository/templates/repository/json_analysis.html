@@ -20,6 +20,9 @@
 <script src="{% static 'repository/js/garis_pantai_papua.js' %}"></script>
 <script src="{% static 'repository/js/subduksi.js' %}"></script>
 <script src="{% static 'repository/js/newpng.js' %}"></script>
+<script src="{% static 'repository/js/batas_provinsi_indo.js' %}"></script>
+<script src="{% static 'repository/js/batas_kabupaten_indo.js' %}"></script>
+<script src="{% static 'repository/js/batas_kecamatan_indo.js' %}"></script>
 
 <style>
     :root { --bmkg-blue: #1e293b; }
@@ -155,7 +158,25 @@
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleSlab()"><label class="form-check-label small">Tampilkan Slab (Peta 1)</label></div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlabFelt" checked onchange="toggleSlabFelt()"><label class="form-check-label small">Tampilkan Slab (Peta 2)</label></div>
                     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swFaults" checked onchange="toggleFaults()"><label class="form-check-label small">Tampilkan Patahan</label></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="swFeltOverlay" onchange="toggleFeltOverlay()"><label class="form-check-label small">Overlay Gempa Dirasakan</label></div>
+                    <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="swFeltOverlay" onchange="toggleFeltOverlay()"><label class="form-check-label small">Overlay Gempa Dirasakan</label></div>
+                    <div class="border-top pt-2">
+                      <div class="fw-bold mb-2" style="font-size:0.75rem;text-transform:uppercase;color:#6b7280;">Overlay Batas Wilayah</div>
+                      <div class="d-flex align-items-center gap-2 mb-1">
+                        <input class="form-check-input" type="checkbox" id="swProvinsi" onchange="toggleShpLayer('Provinsi')">
+                        <label class="small flex-grow-1" for="swProvinsi">Provinsi</label>
+                        <input type="color" id="colorProvinsi" value="#e53e3e" class="p-0 border-0 rounded" style="width:24px;height:22px;cursor:pointer;" oninput="updateShpColor('Provinsi')">
+                      </div>
+                      <div class="d-flex align-items-center gap-2 mb-1">
+                        <input class="form-check-input" type="checkbox" id="swKabupaten" onchange="toggleShpLayer('Kabupaten')">
+                        <label class="small flex-grow-1" for="swKabupaten">Kabupaten/Kota</label>
+                        <input type="color" id="colorKabupaten" value="#3182ce" class="p-0 border-0 rounded" style="width:24px;height:22px;cursor:pointer;" oninput="updateShpColor('Kabupaten')">
+                      </div>
+                      <div class="d-flex align-items-center gap-2">
+                        <input class="form-check-input" type="checkbox" id="swKecamatan" onchange="toggleShpLayer('Kecamatan')">
+                        <label class="small flex-grow-1" for="swKecamatan">Kecamatan</label>
+                        <input type="color" id="colorKecamatan" value="#38a169" class="p-0 border-0 rounded" style="width:24px;height:22px;cursor:pointer;" oninput="updateShpColor('Kecamatan')">
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -789,6 +810,41 @@
   function changeNorthArrow() {
     const url = document.getElementById('selNorthArrow').value;
     document.getElementById('outA').src = url;
+  }
+
+  // --- SHP OVERLAY LAYERS ---
+  const shpLayers = {
+    Provinsi:  { varName: 'batas_provinsi_indo',  layer: null },
+    Kabupaten: { varName: 'batas_kabupaten_indo', layer: null },
+    Kecamatan: { varName: 'batas_kecamatan_indo', layer: null },
+  };
+
+  function _shpStyle(color) {
+    return { color: color, weight: 1, fillColor: color, fillOpacity: 0.05, opacity: 0.8 };
+  }
+
+  function toggleShpLayer(key) {
+    if (!mapInstance) return;
+    const entry = shpLayers[key];
+    const checked = document.getElementById('sw' + key).checked;
+    if (checked) {
+      if (!entry.layer) {
+        const data = window[entry.varName];
+        if (!data) return;
+        const color = document.getElementById('color' + key).value;
+        entry.layer = L.geoJSON(data, { style: _shpStyle(color) }).addTo(mapInstance);
+      } else {
+        mapInstance.addLayer(entry.layer);
+      }
+    } else {
+      if (entry.layer) mapInstance.removeLayer(entry.layer);
+    }
+  }
+
+  function updateShpColor(key) {
+    const entry = shpLayers[key];
+    const color = document.getElementById('color' + key).value;
+    if (entry.layer) entry.layer.setStyle(_shpStyle(color));
   }
   function toggleSlab() { if(mapInstance && slabLayer) { if(document.getElementById('swSlab').checked) mapInstance.addLayer(slabLayer); else mapInstance.removeLayer(slabLayer); } }
   function toggleFaults() { if(mapInstance && faultsLayer) { if(document.getElementById('swFaults').checked) mapInstance.addLayer(faultsLayer); else mapInstance.removeLayer(faultsLayer); } }
