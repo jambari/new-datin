@@ -128,3 +128,33 @@ class JSONDataUpload(models.Model):
     
     def __str__(self):
         return f"{self.file_name} - {self.uploaded_at.strftime('%Y-%m-%d')}"
+
+
+class GempaMemusak(models.Model):
+    LOKASI_CHOICES = [
+        ('Darat', 'Darat'),
+        ('Laut', 'Laut'),
+    ]
+
+    no             = models.PositiveIntegerField(unique=True, help_text="Nomor urut dari katalog")
+    tanggal_text   = models.CharField(max_length=60, help_text="Tanggal sesuai tulisan asli, mis. '23 Mei 1864'")
+    tanggal        = models.DateField(null=True, blank=True, db_index=True)
+    wilayah        = models.CharField(max_length=255, blank=True, default='', help_text="Nama wilayah/daerah")
+    origin_time    = models.TimeField(null=True, blank=True)
+    latitude       = models.FloatField(null=True, blank=True)
+    longitude      = models.FloatField(null=True, blank=True)
+    depth_km       = models.FloatField(null=True, blank=True)
+    magnitude      = models.FloatField(null=True, blank=True)
+    lokasi         = models.CharField(max_length=10, choices=LOKASI_CHOICES, blank=True, default='')
+    tsunami        = models.BooleanField(null=True, blank=True)
+    wilayah_merasakan = models.TextField(blank=True, default='')
+    korban_kerusakan  = models.TextField(blank=True, default='')
+    sumber         = models.CharField(max_length=100, blank=True, default='')
+
+    class Meta:
+        ordering = ['no']
+        verbose_name = 'Gempa Merusak'
+        verbose_name_plural = 'Gempa Merusak'
+
+    def __str__(self):
+        return f"[{self.no}] {self.tanggal_text} M{self.magnitude} {self.wilayah}"
