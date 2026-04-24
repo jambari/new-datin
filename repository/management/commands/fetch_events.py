@@ -15,7 +15,7 @@ import datetime
 import time
 
 import requests
-from lxml import etree
+from lxml import html as lhtml
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -53,10 +53,9 @@ def fetch_day(date):
         return None
 
 
-def parse_html(html):
+def parse_html(content):
     """Return list of dicts with raw event data."""
-    parser = etree.HTMLParser()
-    tree = etree.fromstring(html.encode(), parser)
+    tree = lhtml.fromstring(content.encode('utf-8'))
     rows = tree.xpath('//table[@id="list"]/tbody/tr')
     events = []
     for row in rows:
