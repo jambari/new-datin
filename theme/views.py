@@ -11,12 +11,12 @@ def dashboard(request):
     week_ago  = today - datetime.timedelta(days=7)
     month_ago = today - datetime.timedelta(days=30)
 
-    # --- Gempa stats ---
-    from repository.models import Gempa, FeltEarthquake, GempaMemusak
-    gempa_7d    = Gempa.objects.filter(origin_datetime__date__gte=week_ago).count()
-    gempa_30d   = Gempa.objects.filter(origin_datetime__date__gte=month_ago).count()
-    gempa_total = Gempa.objects.count()
-    latest_gempa = Gempa.objects.order_by('-origin_datetime').first()
+    # --- Gempa stats (from EventBrowser — QuakeLink-sourced) ---
+    from repository.models import EventBrowser, FeltEarthquake, GempaMemusak
+    gempa_7d    = EventBrowser.objects.filter(origin_time__date__gte=week_ago).count()
+    gempa_30d   = EventBrowser.objects.filter(origin_time__date__gte=month_ago).count()
+    gempa_total = EventBrowser.objects.count()
+    latest_gempa = EventBrowser.objects.order_by('-origin_time').first()
     felt_30d = FeltEarthquake.objects.filter(event_datetime__date__gte=month_ago).count()
     recent_felt = FeltEarthquake.objects.order_by('-event_datetime')[:5]
 
