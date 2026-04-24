@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 from arsip.models import Album, Foto
 
 SUPPORTED = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
-THUMB_SIZE = (400, 400)
+THUMB_SIZE = (220, 220)
 
 
 class Command(BaseCommand):

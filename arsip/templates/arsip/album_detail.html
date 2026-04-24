@@ -6,7 +6,6 @@
     {% include 'partials/_topbar.html' %}
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
 
-      <!-- breadcrumb -->
       <div class="flex items-center gap-2 mb-4 text-sm text-gray-500">
         <a href="{% url 'arsip:album_list' %}" class="hover:text-blue-600">Arsip Foto</a>
         <span>/</span>
@@ -16,31 +15,24 @@
       <div class="flex items-center justify-between mb-4">
         <div>
           <h1 class="text-2xl font-bold text-gray-800">{{ album.name }}</h1>
-          {% if album.description %}
-            <p class="text-sm text-gray-500 mt-0.5">{{ album.description }}</p>
-          {% endif %}
+          {% if album.description %}<p class="text-sm text-gray-500 mt-0.5">{{ album.description }}</p>{% endif %}
         </div>
         <span class="text-sm text-gray-400">{{ fotos|length }} foto</span>
       </div>
 
       {% if not fotos %}
-        <div class="bg-white rounded-xl shadow p-10 text-center text-gray-400">
-          Album ini kosong.
-        </div>
+        <div class="bg-white rounded-xl shadow p-10 text-center text-gray-400">Album ini kosong.</div>
       {% else %}
-        <!-- photo grid -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" id="photoGrid">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;">
           {% for foto in fotos %}
-          <button type="button"
-                  onclick="openLightbox({{ forloop.counter0 }})"
-                  class="group relative focus:outline-none overflow-hidden rounded-lg bg-gray-200"
-                  style="padding-bottom:75%;">
+          <div onclick="openLightbox({{ forloop.counter0 }})"
+               style="cursor:pointer;overflow:hidden;border-radius:6px;background:#e5e7eb;aspect-ratio:4/3;">
             <img src="{{ foto.thumb_url }}"
-                 data-full="{{ foto.full_url }}"
-                 data-caption="{{ foto.caption }}"
-                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                 style="width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s;"
+                 onmouseover="this.style.transform='scale(1.06)'"
+                 onmouseout="this.style.transform='scale(1)'"
                  loading="lazy" alt="{{ foto.caption }}">
-          </button>
+          </div>
           {% endfor %}
         </div>
       {% endif %}
@@ -50,31 +42,38 @@
 </div>
 
 <!-- Lightbox -->
-<div id="lb" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-black bg-opacity-90"
-     onclick="closeLightbox(event)">
-  <div class="relative max-w-5xl max-h-full flex flex-col items-center" onclick="event.stopPropagation()">
-    <!-- nav buttons -->
-    <button onclick="moveLb(-1)"
-      class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 text-white text-4xl font-light leading-none px-3 py-2 hover:text-gray-300 focus:outline-none">
-      &#8249;
-    </button>
-    <button onclick="moveLb(1)"
-      class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 text-white text-4xl font-light leading-none px-3 py-2 hover:text-gray-300 focus:outline-none">
-      &#8250;
-    </button>
-    <!-- image -->
-    <img id="lbImg" src="" alt="" class="max-h-screen max-w-full rounded shadow-2xl" style="max-height:85vh;">
-    <!-- caption + counter -->
-    <div class="mt-2 text-center">
-      <span id="lbCaption" class="text-gray-300 text-sm"></span>
-      <span id="lbCounter" class="text-gray-500 text-xs ml-3"></span>
+<div id="lb" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);flex-direction:column;align-items:center;justify-content:center;">
+
+  <!-- top bar -->
+  <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.4);">
+    <span id="lbCounter" style="color:#aaa;font-size:13px;"></span>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button onclick="zoomLb(-0.25)" title="Zoom out" style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#8722;</button>
+      <span id="lbZoomLabel" style="color:#aaa;font-size:12px;min-width:38px;text-align:center;">100%</span>
+      <button onclick="zoomLb(0.25)"  title="Zoom in"  style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#43;</button>
+      <button onclick="resetZoom()"   title="Reset"    style="color:#ccc;background:rgba(255,255,255,.08);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:12px;">1:1</button>
+      <button onclick="closeLightbox()" title="Tutup"  style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 12px;font-size:20px;line-height:1;">&times;</button>
     </div>
-    <!-- close -->
-    <button onclick="closeLightbox()"
-      class="absolute top-0 right-0 translate-x-10 -translate-y-4 text-white text-2xl leading-none px-2 hover:text-gray-300 focus:outline-none">
-      &times;
-    </button>
   </div>
+
+  <!-- prev -->
+  <button onclick="moveLb(-1)"
+    style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#fff;background:rgba(255,255,255,.1);border:none;cursor:pointer;border-radius:50%;width:44px;height:44px;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;">&#8249;</button>
+
+  <!-- image container (overflow hidden for zoom) -->
+  <div id="lbImgWrap" style="overflow:hidden;max-width:90vw;max-height:80vh;display:flex;align-items:center;justify-content:center;margin-top:44px;">
+    <img id="lbImg" src="" alt=""
+         style="max-width:90vw;max-height:80vh;object-fit:contain;transform-origin:center;transition:transform .15s;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);">
+  </div>
+
+  <!-- caption -->
+  <div style="margin-top:10px;text-align:center;">
+    <span id="lbCaption" style="color:#bbb;font-size:13px;"></span>
+  </div>
+
+  <!-- next -->
+  <button onclick="moveLb(1)"
+    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#fff;background:rgba(255,255,255,.1);border:none;cursor:pointer;border-radius:50%;width:44px;height:44px;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;">&#8250;</button>
 </div>
 
 <script>
@@ -84,34 +83,61 @@ const photos = [
   {% endfor %}
 ];
 let lbIdx = 0;
+let lbZoom = 1;
 
 function openLightbox(idx) {
   lbIdx = idx;
+  lbZoom = 1;
   _renderLb();
-  document.getElementById('lb').classList.remove('hidden');
-  document.getElementById('lb').classList.add('flex');
+  document.getElementById('lb').style.display = 'flex';
   document.addEventListener('keydown', _lbKey);
+  document.getElementById('lb').addEventListener('wheel', _lbWheel, { passive: false });
 }
-function closeLightbox(e) {
-  if (e && e.currentTarget !== e.target) return;
-  document.getElementById('lb').classList.add('hidden');
-  document.getElementById('lb').classList.remove('flex');
+function closeLightbox() {
+  document.getElementById('lb').style.display = 'none';
   document.removeEventListener('keydown', _lbKey);
+  document.getElementById('lb').removeEventListener('wheel', _lbWheel);
 }
 function moveLb(dir) {
   lbIdx = (lbIdx + dir + photos.length) % photos.length;
+  lbZoom = 1;
   _renderLb();
+}
+function zoomLb(delta) {
+  lbZoom = Math.min(5, Math.max(0.25, lbZoom + delta));
+  _applyZoom();
+}
+function resetZoom() {
+  lbZoom = 1;
+  _applyZoom();
+}
+function _applyZoom() {
+  document.getElementById('lbImg').style.transform = `scale(${lbZoom})`;
+  document.getElementById('lbZoomLabel').textContent = Math.round(lbZoom * 100) + '%';
 }
 function _renderLb() {
   const p = photos[lbIdx];
   document.getElementById('lbImg').src = p.full;
+  document.getElementById('lbImg').style.transform = 'scale(1)';
   document.getElementById('lbCaption').textContent = p.caption;
   document.getElementById('lbCounter').textContent = `${lbIdx + 1} / ${photos.length}`;
+  document.getElementById('lbZoomLabel').textContent = '100%';
 }
 function _lbKey(e) {
   if (e.key === 'ArrowRight') moveLb(1);
   else if (e.key === 'ArrowLeft') moveLb(-1);
   else if (e.key === 'Escape') closeLightbox();
+  else if (e.key === '+' || e.key === '=') zoomLb(0.25);
+  else if (e.key === '-') zoomLb(-0.25);
 }
+function _lbWheel(e) {
+  e.preventDefault();
+  zoomLb(e.deltaY < 0 ? 0.15 : -0.15);
+}
+
+// click backdrop to close
+document.getElementById('lb').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
 </script>
 {% endblock %}
