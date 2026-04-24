@@ -123,7 +123,7 @@ class Command(BaseCommand):
                             thumbnail_path=thumb_rel,
                             caption=media_path.stem.replace('_', ' '),
                             taken_at=taken_at,
-                            file_size=media_path.stat().st_size,
+                            file_size=min(media_path.stat().st_size, 2_147_483_647),
                             width=w,
                             height=h,
                             is_video=is_vid,
