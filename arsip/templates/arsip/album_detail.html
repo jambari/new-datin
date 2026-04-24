@@ -55,10 +55,13 @@
   <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.4);">
     <span id="lbCounter" style="color:#aaa;font-size:13px;"></span>
     <div style="display:flex;gap:10px;align-items:center;">
-      <button onclick="zoomLb(-0.25)" title="Zoom out" style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#8722;</button>
-      <span id="lbZoomLabel" style="color:#aaa;font-size:12px;min-width:38px;text-align:center;">100%</span>
-      <button onclick="zoomLb(0.25)"  title="Zoom in"  style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#43;</button>
-      <button onclick="resetZoom()"   title="Reset"    style="color:#ccc;background:rgba(255,255,255,.08);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:12px;">1:1</button>
+      <span id="lbZoomControls" style="display:flex;gap:10px;align-items:center;">
+        <button onclick="zoomLb(-0.25)" title="Zoom out" style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#8722;</button>
+        <span id="lbZoomLabel" style="color:#aaa;font-size:12px;min-width:38px;text-align:center;">100%</span>
+        <button onclick="zoomLb(0.25)"  title="Zoom in"  style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#43;</button>
+        <button onclick="resetZoom()"   title="Reset"    style="color:#ccc;background:rgba(255,255,255,.08);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:12px;">1:1</button>
+      </span>
+      <a id="lbDownload" href="" download style="display:none;color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 12px;font-size:13px;text-decoration:none;">&#8595; Download</a>
       <button onclick="closeLightbox()" title="Tutup"  style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 12px;font-size:20px;line-height:1;">&times;</button>
     </div>
   </div>
@@ -68,16 +71,19 @@
     style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#fff;background:rgba(255,255,255,.1);border:none;cursor:pointer;border-radius:50%;width:44px;height:44px;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;">&#8249;</button>
 
   <!-- media container -->
-  <div id="lbImgWrap" style="overflow:hidden;max-width:90vw;max-height:80vh;display:flex;align-items:center;justify-content:center;margin-top:44px;">
+  <div id="lbImgWrap" style="overflow:hidden;max-width:90vw;max-height:75vh;display:flex;align-items:center;justify-content:center;margin-top:44px;">
     <img id="lbImg" src="" alt=""
-         style="max-width:90vw;max-height:80vh;object-fit:contain;transform-origin:center;transition:transform .15s;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);">
+         style="max-width:90vw;max-height:75vh;object-fit:contain;transform-origin:center;transition:transform .15s;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);">
     <video id="lbVideo" src="" controls
-           style="display:none;max-width:90vw;max-height:80vh;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);"></video>
+           style="display:none;max-width:90vw;max-height:75vh;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);"></video>
   </div>
 
-  <!-- caption -->
-  <div style="margin-top:10px;text-align:center;">
+  <!-- caption + video notice -->
+  <div style="margin-top:8px;text-align:center;">
     <span id="lbCaption" style="color:#bbb;font-size:13px;"></span>
+    <div id="lbVideoNotice" style="display:none;margin-top:6px;font-size:11px;color:#f59e0b;">
+      &#9888; Video tidak tampil? Format HEVC/H.265 tidak didukung browser. Gunakan tombol Download untuk putar di VLC.
+    </div>
   </div>
 
   <!-- next -->
@@ -125,24 +131,34 @@ function _applyZoom() {
   document.getElementById('lbZoomLabel').textContent = Math.round(lbZoom * 100) + '%';
 }
 function _renderLb() {
-  const p = photos[lbIdx];
-  const img   = document.getElementById('lbImg');
-  const video = document.getElementById('lbVideo');
+  const p       = photos[lbIdx];
+  const img     = document.getElementById('lbImg');
+  const video   = document.getElementById('lbVideo');
+  const zoom    = document.getElementById('lbZoomControls');
+  const dl      = document.getElementById('lbDownload');
+  const notice  = document.getElementById('lbVideoNotice');
   document.getElementById('lbCaption').textContent = p.caption;
   document.getElementById('lbCounter').textContent = `${lbIdx + 1} / ${photos.length}`;
   document.getElementById('lbZoomLabel').textContent = '100%';
   if (p.is_video) {
-    img.style.display   = 'none';
-    video.style.display = 'block';
+    img.style.display    = 'none';
+    zoom.style.display   = 'none';
+    dl.style.display     = 'inline-block';
+    dl.href              = p.full;
+    notice.style.display = 'block';
+    video.style.display  = 'block';
     video.src = p.full;
     video.load();
   } else {
-    video.style.display = 'none';
+    video.style.display  = 'none';
     video.pause();
-    video.src = '';
-    img.style.display     = 'block';
-    img.src               = p.full;
-    img.style.transform   = 'scale(1)';
+    video.src            = '';
+    zoom.style.display   = 'flex';
+    dl.style.display     = 'none';
+    notice.style.display = 'none';
+    img.style.display    = 'block';
+    img.src              = p.full;
+    img.style.transform  = 'scale(1)';
   }
 }
 function _lbKey(e) {
