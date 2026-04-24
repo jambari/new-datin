@@ -65,7 +65,9 @@
     /* Bootstrap loaded on this page overrides sidebar styles — restore them */
     #sidebar a { color: inherit !important; text-decoration: none !important; }
     #sidebar a:hover { color: inherit !important; text-decoration: none !important; }
-    #sidebar ul, #sidebar ol { padding-left: 0 !important; list-style: none !important; margin-bottom: 0 !important; }
+    /* Zero out Bootstrap's ul padding on the root nav list only; preserve sub-ul Tailwind pl-* classes */
+    #sidebar > nav > ul { padding-left: 0 !important; list-style: none !important; margin: 0 !important; }
+    #sidebar li { list-style: none !important; }
 
     @media print {
         .no-print { display: none !important; } 
