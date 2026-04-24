@@ -1271,19 +1271,40 @@ def event_browser(request):
         origin_time__date__lte=end,
     ).order_by('-origin_time')
 
-    map_data = list(qs.values(
-        'event_id', 'latitude', 'longitude', 'magnitude',
-        'depth_km', 'origin_time', 'location', 'nearest_city', 'distance_km',
-    ))
-    for ev in map_data:
-        ev['time'] = ev.pop('origin_time').strftime('%Y-%m-%d %H:%M:%S UTC')
+    map_data = []
+    lats, lons = [], []
+    for ev in qs.values('event_id', 'latitude', 'longitude', 'magnitude', 'depth_km', 'origin_time', 'location', 'nearest_city', 'distance_km'):
+        map_data.append({
+            'event_id':    ev['event_id'],
+            'latitude':    ev['latitude'],
+            'longitude':   ev['longitude'],
+            'magnitude':   ev['magnitude'],
+            'depth':       ev['depth_km'],       # json_analysis uses 'depth'
+            'time':        ev['origin_time'].strftime('%Y-%m-%d %H:%M:%S UTC'),
+            'location':    ev['location'],
+            'nearest_city': ev['nearest_city'],
+            'distance_km': ev['distance_km'],
+        })
+        lats.append(ev['latitude'])
+        lons.append(ev['longitude'])
+
+    avg_lat = round(sum(lats) / len(lats), 4) if lats else -2.5
+    avg_lon = round(sum(lons) / len(lons), 4) if lons else 137.5
+    formatted_period = f"{start.strftime('%d %B %Y')} s/d {end.strftime('%d %B %Y')}"
 
     context = {
-        'map_data': json.dumps(map_data, cls=DjangoJSONEncoder),
-        'events':   qs[:500],
-        'start':    start.isoformat(),
-        'end':      end.isoformat(),
-        'count':    qs.count(),
-        'total_db': EventBrowser.objects.count(),
+        'map_data':       json.dumps(map_data, cls=DjangoJSONEncoder),
+        'felt_map_data':  '[]',
+        'avg_lat':        avg_lat,
+        'avg_lon':        avg_lon,
+        'formatted_bulan': formatted_period,
+        'start':          start.isoformat(),
+        'end':            end.isoformat(),
+        'count':          len(map_data),
+        'total_db':       EventBrowser.objects.count(),
+        'stats': {
+            'total': len(map_data),
+            'max_mag': max((e['magnitude'] for e in map_data), default=0),
+        },
     }
     return render(request, 'repository/event_browser.html', context)

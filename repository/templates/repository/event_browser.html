@@ -1,175 +1,1154 @@
 {% extends "base.html" %}
 {% load static %}
+
 {% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+<script src="{% static 'repository/js/indofaults.js' %}"></script>
+<script src="{% static 'repository/js/batas_laut_indonesia.js' %}"></script>
+<script src="{% static 'repository/js/batas_provinsi_papua.js' %}"></script>
+<script src="{% static 'repository/js/garis_pantai_papua.js' %}"></script>
+<script src="{% static 'repository/js/subduksi.js' %}"></script>
+<script src="{% static 'repository/js/newpng.js' %}"></script>
+
+<style>
+    :root { --bmkg-blue: #1e293b; }
+    body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: #000; }
+    .navbar { background-color: var(--bmkg-blue) !important; padding: 0.7rem; }
+    .formal-frame { background: white; border: 2.5px solid #000; padding: 20px; width: 100%; }
+    .header-grid { display: grid; grid-template-columns: 120px 1fr 120px; align-items: center; border-bottom: 2.5px solid #000; padding-bottom: 15px; margin-bottom: 15px; gap: 20px; }
+    .title-box { text-align: center; }
+    .t-main { font-weight: 900; font-size: 1.3rem; text-transform: uppercase; line-height: 1.1; display: block; }
+    .t-sub { font-weight: 400; font-style: italic; font-size: 0.95rem; margin-top: 5px; display: block; color: #333; }
+    #map { height: 600px; border: 2px solid #000; width: 100%; z-index: 1; margin-bottom: 0; }
+    #mapFelt { height: 540px; border: 2px solid #000; width: 100%; z-index: 1; margin-bottom: 0; }
+    .legend-grid { display: grid; grid-template-columns: 1.2fr 1.2fr 1fr 1fr; border: 2px solid #000; border-top: none; background: white; }
+    .legend-box { border-right: 1px solid #000; padding: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .legend-box:last-child { border-right: none; }
+    .legend-box img { max-width: 100%; height: auto; display: block; max-height: 100px; }
+    .legend-t { font-weight: bold; font-size: 0.65rem; border-bottom: 1px solid #000; width: 100%; margin-bottom: 8px; text-transform: uppercase; padding-bottom: 2px; display: block; }
+    .report-card { background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .chart-box { height: 160px; width: 100%; position: relative; }
+    
+    /* CSS Tabel Compact */
+    .table-compact { font-size: 0.75rem; border-collapse: collapse; }
+    .table-compact th, .table-compact td { padding: 4px 6px !important; text-align: center; vertical-align: middle; }
+    .table-compact-alat td { min-width: 25px; height: 25px; padding: 0 !important; }
+    
+    #scaleCont .leaflet-control-scale-line, #scaleContFelt .leaflet-control-scale-line { border: 2px solid #000; border-top: none; background: white; font-weight: bold; font-size: 11px; margin: 0 auto; box-sizing: border-box; }
+    
+    /* Hover Effects untuk Kolom yang Bisa Diedit */
+    td[contenteditable="true"] { transition: background-color 0.2s; outline: none; }
+    td[contenteditable="true"]:hover { background-color: #f8fafc; cursor: text; }
+    td[contenteditable="true"]:focus { background-color: #e2e8f0; box-shadow: inset 0 0 0 1px #cbd5e1; }
+
+    /* DaisyUI globally sets .tab-content { display:none } for its own tab component.
+       Override here so Bootstrap's pill tabs render correctly. */
+    .tab-content { display: block !important; }
+    .tab-pane { display: none; }
+    .tab-pane.show { display: block; }
+    .lb-zoom-btn { background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 12px;font-size:18px;cursor:pointer;line-height:1; }
+    .lb-zoom-btn:hover { background:rgba(255,255,255,.3); }
+
+    .shp-label { background: transparent; border: none; box-shadow: none; font-size: 9px; font-weight: bold; color: #1e293b; white-space: nowrap; }
+    .shp-label::before { display: none; }
+    /* Bootstrap loaded on this page overrides sidebar styles — restore them */
+    #sidebar a { color: inherit !important; text-decoration: none !important; }
+    #sidebar a:hover { color: inherit !important; text-decoration: none !important; }
+    #sidebar ul, #sidebar ol { padding-left: 0 !important; list-style: none !important; margin-bottom: 0 !important; }
+
+    @media print {
+        .no-print { display: none !important; } 
+        .formal-frame { border: none; padding: 0; } 
+        body { background: white; } 
+        select { appearance: none; -webkit-appearance: none; border: none; }
+        td[contenteditable="true"] { background-color: transparent !important; box-shadow: none !important; }
+    }
+</style>
+
 <div class="flex h-screen bg-gray-100">
   {% include 'partials/_sidebar.html' %}
   <div class="flex-1 flex flex-col overflow-hidden">
     {% include 'partials/_topbar.html' %}
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
-
-      <!-- header + date filter -->
-      <div class="bg-white border-b px-6 py-3 flex flex-wrap items-center gap-3">
-        <h1 class="text-lg font-bold text-gray-800 mr-2">Event Browser</h1>
-        <form method="get" class="flex flex-wrap items-center gap-2">
-          <label class="text-sm text-gray-500">Dari</label>
-          <input type="date" name="start" value="{{ start }}"
-                 class="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
-          <label class="text-sm text-gray-500">s/d</label>
-          <input type="date" name="end" value="{{ end }}"
-                 class="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
-          <button type="submit"
-                  class="bg-blue-600 text-white text-sm px-3 py-1 rounded hover:bg-blue-700">Tampilkan</button>
-          <span class="text-sm text-gray-400 ml-2">{{ count }} event</span>
-          <span class="text-xs text-gray-300">/ {{ total_db }} total di DB</span>
-        </form>
-      </div>
-
-      <!-- map -->
-      <div id="map" style="height:420px;width:100%;"></div>
-
-      <!-- stats bar -->
-      <div class="bg-white border-b px-6 py-2 flex flex-wrap gap-6 text-sm" id="statsBar">
-        <span>Total: <strong id="sTot">{{ count }}</strong></span>
-        <span>M≥5: <strong id="sM5">—</strong></span>
-        <span>M≥4: <strong id="sM4">—</strong></span>
-        <span>M≥3: <strong id="sM3">—</strong></span>
-        <span>Maks: <strong id="sMax">—</strong></span>
-      </div>
-
-      <!-- events table -->
-      <div class="px-6 py-4">
-        <div class="bg-white rounded-xl shadow overflow-auto" style="max-height:380px;">
-          <table class="w-full text-xs">
-            <thead class="bg-gray-50 sticky top-0">
-              <tr>
-                <th class="px-3 py-2 text-left text-gray-500 font-semibold">Event ID</th>
-                <th class="px-3 py-2 text-left text-gray-500 font-semibold">Waktu (UTC)</th>
-                <th class="px-3 py-2 text-center text-gray-500 font-semibold">Mag</th>
-                <th class="px-3 py-2 text-center text-gray-500 font-semibold">Depth (km)</th>
-                <th class="px-3 py-2 text-right text-gray-500 font-semibold">Lat</th>
-                <th class="px-3 py-2 text-right text-gray-500 font-semibold">Lon</th>
-                <th class="px-3 py-2 text-left text-gray-500 font-semibold">Lokasi</th>
-                <th class="px-3 py-2 text-left text-gray-500 font-semibold">Kota Terdekat</th>
-                <th class="px-3 py-2 text-right text-gray-500 font-semibold">Jarak (km)</th>
-              </tr>
-            </thead>
-            <tbody id="evtBody">
-              {% for e in events %}
-              <tr class="border-t hover:bg-blue-50 cursor-pointer" onclick="focusEvent('{{ e.event_id }}')">
-                <td class="px-3 py-1.5 font-mono text-gray-600">{{ e.event_id }}</td>
-                <td class="px-3 py-1.5 whitespace-nowrap">{{ e.origin_time|date:"Y-m-d H:i:s" }}</td>
-                <td class="px-3 py-1.5 text-center font-bold
-                  {% if e.magnitude >= 5 %}text-red-600{% elif e.magnitude >= 4 %}text-orange-500{% elif e.magnitude >= 3 %}text-yellow-600{% else %}text-green-600{% endif %}">
-                  {{ e.magnitude }}</td>
-                <td class="px-3 py-1.5 text-center">{{ e.depth_km|floatformat:0 }}</td>
-                <td class="px-3 py-1.5 text-right font-mono">{{ e.latitude|floatformat:3 }}</td>
-                <td class="px-3 py-1.5 text-right font-mono">{{ e.longitude|floatformat:3 }}</td>
-                <td class="px-3 py-1.5 text-gray-600">{{ e.location }}</td>
-                <td class="px-3 py-1.5 text-gray-500">{{ e.nearest_city }}</td>
-                <td class="px-3 py-1.5 text-right text-gray-500">
-                  {% if e.distance_km %}{{ e.distance_km|floatformat:0 }}{% endif %}
-                </td>
-              </tr>
-              {% empty %}
-              <tr><td colspan="9" class="px-3 py-6 text-center text-gray-400">
-                Tidak ada event dalam rentang tanggal ini. Jalankan <code>python manage.py fetch_events</code> terlebih dahulu.
-              </td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4">
+      <div class="container-fluid">
+        
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+          <div>
+            <h2 class="h3 fw-bold mb-0">Infografis Gempa</h2>
+            <small class="text-muted">{{ start }} s/d {{ end }} &mdash; <strong>{{ stats.total }}</strong> events &nbsp;|&nbsp; DB: {{ total_db }}</small>
+          </div>
+          <form method="get" class="d-flex align-items-center gap-2 no-print">
+            <label class="small text-muted mb-0">Dari</label>
+            <input type="date" name="start" value="{{ start }}" class="form-control form-control-sm" style="width:145px">
+            <label class="small text-muted mb-0">s/d</label>
+            <input type="date" name="end" value="{{ end }}" class="form-control form-control-sm" style="width:145px">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Tampilkan</button>
+          </form>
         </div>
-      </div>
 
+        <ul class="nav nav-pills mb-3" id="reportTabs" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active" id="tab-map-btn" data-bs-toggle="pill" data-bs-target="#pane-map">
+              <i class="bi bi-geo me-2"></i>Peta Seismisitas
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" id="tab-stats-btn" data-bs-toggle="pill" data-bs-target="#pane-stats">
+              <i class="bi bi-bar-chart me-2"></i>Statistik & Rekap
+            </button>
+          </li>
+        </ul>
+
+        <!-- Filter bar + SHP overlay controls -->
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-4 p-2 bg-white border rounded no-print" id="dateFilterBar">
+          <span class="small fw-bold text-muted"><i class="bi bi-funnel me-1"></i>Filter Tanggal:</span>
+          <input type="date" id="filterStart" class="form-control form-control-sm" style="width:145px" title="Dari tanggal">
+          <span class="small text-muted">s/d</span>
+          <input type="date" id="filterEnd" class="form-control form-control-sm" style="width:145px" title="Sampai tanggal">
+          <button class="btn btn-primary btn-sm" onclick="applyDateFilter()"><i class="bi bi-check2 me-1"></i>Terapkan</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="resetDateFilter()"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+          <span class="badge bg-secondary ms-1" id="filterInfoBadge"></span>
+
+          <span class="text-muted mx-1">|</span>
+          <input class="form-check-input m-0" type="checkbox" id="swKabupaten" onchange="toggleShpLayer('Kabupaten')">
+          <label class="small mb-0 fw-bold text-muted" for="swKabupaten">Kab/Kota</label>
+          <input type="color" id="fillKabupaten" value="#3182ce" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
+          <input type="color" id="outlineKabupaten" value="#1e40af" title="Warna garis" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
+          <label class="small mb-0 text-muted ms-1">Opacity</label>
+          <input type="range" id="opacityKabupaten" min="0" max="100" value="20" style="width:70px;" oninput="updateShpStyle(); document.getElementById('opacityKabupatenVal').textContent=this.value+'%'">
+          <span class="small text-muted" id="opacityKabupatenVal">20%</span>
+          <div class="d-flex align-items-center gap-1 ms-1">
+            <input class="form-check-input m-0" type="checkbox" id="swShpLabel" onchange="toggleShpLabels()">
+            <label class="small mb-0 text-muted" for="swShpLabel">Label</label>
+          </div>
+        </div>
+
+        <div class="tab-content">
+          
+          <div class="tab-pane fade show active" id="pane-map" role="tabpanel">
+            <div class="row">
+              <div class="col-lg-3 mb-4 no-print">
+                <div class="report-card">
+                  <h6 class="fw-bold border-bottom pb-2 mb-3">Parameter Peta</h6>
+                  <div class="mb-3"><label class="form-label small fw-bold">Judul Peta</label><input type="text" id="inT" class="form-control form-control-sm" value="PETA SEISMISITAS" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
+                  <div class="mb-3"><label class="form-label small fw-bold">Periode</label><input type="text" id="inP" class="form-control form-control-sm" value="{{ start }} s/d {{ end }}" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
+                  <button class="btn btn-primary btn-sm w-100 mb-2" onclick="updateMapDisplay()"><i class="bi bi-arrow-clockwise me-1"></i>Update</button>
+                  <button onclick="window.print()" class="btn btn-success btn-sm w-100 mb-3"><i class="bi bi-printer me-1"></i>Cetak PDF</button>
+                  <hr>
+                  <div class="small">
+                    <div class="mb-3"><label class="form-label fw-bold">Basemap</label><select id="selB" class="form-select form-select-sm" onchange="changeBasemap()"><option value="ocean">🌊 Ocean (Default)</option><option value="imagery">🛰️ Imagery</option><option value="street">🗺️ Street</option><option value="topo">🏔️ Topography</option><option value="darkgray">🌑 Dark Gray</option></select></div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">North Arrow</label>
+                      <select id="selNorthArrow" class="form-select form-select-sm" onchange="changeNorthArrow()">
+                        <option value="{% static 'repository/images/gpt_north_arrow.svg' %}">GPT Arrow (Default)</option>
+                        <option value="{% static 'repository/images/claude_north_arrow.svg' %}">Claude Arrow</option>
+                        <option value="{% static 'repository/images/north-arrow-2.jpg' %}">Classic Arrow</option>
+                      </select>
+                    </div>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleSlab()"><label class="form-check-label small">Tampilkan Slab (Peta 1)</label></div>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlabFelt" checked onchange="toggleSlabFelt()"><label class="form-check-label small">Tampilkan Slab (Peta 2)</label></div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <input class="form-check-input m-0" type="checkbox" id="swFaults" checked onchange="toggleFaults()">
+                      <label class="form-check-label small flex-grow-1" for="swFaults">Tampilkan Patahan</label>
+                      <input type="color" id="colorFaults" value="#000000" title="Warna patahan" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateFaultsColor()">
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <input class="form-check-input m-0" type="checkbox" id="swSubduksi" checked onchange="toggleSubduksi()">
+                      <label class="form-check-label small flex-grow-1" for="swSubduksi">Tampilkan Subduksi</label>
+                      <input type="color" id="colorSubduksi" value="#8b5cf6" title="Warna subduksi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateSubduksiColor()">
+                    </div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="swFeltOverlay" onchange="toggleFeltOverlay()"><label class="form-check-label small">Overlay Gempa Dirasakan</label></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-9">
+                <div class="formal-frame shadow-sm">
+                  <div class="header-grid">
+                    <div class="text-start"><img src="{% static 'repository/images/logo-bmkg.png' %}" style="height: 75px;"></div>
+                    <div class="title-box">
+                      <span id="outT" class="t-main">PETA SEISMISITAS PROVINSI PAPUA DAN SEKITARNYA</span>
+                      <span id="outP" class="t-sub">PERIODE {{ start }} s/d {{ end }}</span>
+                      <div id="scaleCont" class="mt-2 d-flex justify-content-center"></div>
+                    </div>
+                    <div class="text-end"><img id="outA" src="{% static 'repository/images/gpt_north_arrow.svg' %}" style="width:70px;" alt="North Arrow"></div>
+                  </div>
+                  <div id="map"></div>
+                  <div class="legend-grid">
+                    <div class="legend-box"><img src="{% static 'repository/images/legenda.png' %}"></div>
+                    <div class="legend-box"><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
+                    <div class="legend-box"><div class="fw-bold mt-2" style="font-size: 0.85rem;"><span id="outW">BMKG Jayapura</span></div><div><span class="">{{ start }} s/d {{ end }}</span></div></div>
+                    <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1" style="font-size: 0.8rem;">Total Gempa: <strong id="legendTotal">{{ stats.total }}</strong><br>M ≥ 5: <strong id="legendHighMag">{{ mag_count_high|default:0 }}</strong></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+                    <div class="legend-grid">
+                        <div class="legend-box">
+                            <span class="legend-t">Legenda</span>
+                            <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="margin-top: 8px;">
+                                <!-- Black outline star (underneath) -->
+                                <polygon points="50,15 61,40 88,40 67,57 78,82 50,65 22,82 33,57 12,40 39,40" 
+                                         fill="#000000" stroke="none"/>
+                                <!-- Red star (on top) -->
+                                <polygon points="50,17 59,38 86,38 68,55 76,80 50,63 24,80 32,55 14,38 42,38" 
+                                         fill="#FF0000" stroke="none"/>
+                            </svg>
+                            <div style="font-size: 0.7rem; margin-top: 5px;">Pusat Gempa Dirasakan</div>
+                        </div>
+                        <div class="legend-box"><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
+                        <div class="legend-box">
+                            <div class="fw-bold mt-2" style="font-size: 0.85rem;"><span>BMKG Jayapura</span></div>
+                            <div><span>{{ start }} s/d {{ end }}</span></div>
+                        </div>
+                        <div class="legend-box">
+                            <span class="legend-t">STATISTIK</span>
+                            <div class="small mt-1" style="font-size: 0.8rem;" id="stat-total-dirasakan">
+                                Total Dirasakan: <strong>{{ felt_events|length }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-card shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h6 class="fw-bold mb-0">Daftar Kejadian Gempabumi Dirasakan</h6>
+                        <button type="button" class="btn btn-sm btn-primary no-print" onclick="addFeltRow()"><i class="bi bi-plus-lg"></i> Tambah Baris</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm text-center align-middle" style="font-size: 0.8rem;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 40px;">No</th>
+                                    <th>Waktu Kejadian (UTC)</th>
+                                    <th>Lintang</th>
+                                    <th>Bujur</th>
+                                    <th>Mag</th>
+                                    <th>Kedalaman (km)</th>
+                                    <th>Keterangan / Lokasi</th>
+                                    <th>Intensitas (MMI)</th>
+                                    <th class="no-print" style="width: 50px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feltTableBody" spellcheck="false">
+                                {% for event in felt_events %}
+                                <tr data-id="{{ forloop.counter }}">
+                                    <td class="row-number">{{ forloop.counter }}</td>
+                                    <td contenteditable="true" class="edit-time">{{ event.event_datetime|date:"Y-m-d H:i:s" }}</td>
+                                    <td contenteditable="true" class="edit-lat">{{ event.latitude }}</td>
+                                    <td contenteditable="true" class="edit-lon">{{ event.longitude }}</td>
+                                    <td contenteditable="true" class="edit-mag">{{ event.magnitude }}</td>
+                                    <td contenteditable="true">{{ event.depth_km }}</td>
+                                    <td contenteditable="true" class="text-start edit-place">{{ event.wilayah }}</td>
+                                    <td contenteditable="true" class="text-start">{{ event.dirasakan }}</td>
+                                    <td class="no-print">
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteFeltRow(this)" title="Hapus"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted fst-italic no-print">* Klik pada teks tabel untuk mengedit langsung. Mengubah koordinat atau menghapus baris akan otomatis tersinkron dengan Ikon Bintang pada peta di atas.</small>
+                </div>
+
+                {% if felt_events %}
+                <!-- Shakemap & Stationlist Images -->
+                <div class="report-card shadow-sm mt-4">
+                    <h6 class="fw-bold border-bottom pb-2 mb-3">Shakemap &amp; Daftar Stasiun MMI</h6>
+                    <style>
+                        .felt-img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+                        .felt-img-card { border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; background: #fff; }
+                        .felt-img-card .felt-card-header { background: #f8f9fa; padding: 6px 10px; font-size: 0.75rem; font-weight: 600; color: #495057; border-bottom: 1px solid #dee2e6; }
+                        .felt-img-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+                        .felt-img-pair > div { padding: 6px; }
+                        .felt-img-pair > div:first-child { border-right: 1px solid #dee2e6; }
+                        .felt-img-pair img { width: 100%; height: auto; object-fit: contain; cursor: zoom-in; border-radius: 3px; transition: opacity .15s; }
+                        .felt-img-pair img:hover { opacity: 0.85; }
+                        .felt-img-label { font-size: 0.65rem; color: #6c757d; text-align: center; margin-top: 3px; text-transform: uppercase; letter-spacing: .04em; }
+                        .felt-no-img { height: 80px; display: flex; align-items: center; justify-content: center; color: #ced4da; font-size: 0.75rem; border: 1px dashed #dee2e6; border-radius: 3px; }
+                    </style>
+                    <div class="felt-img-grid" id="feltImgGrid">
+                        {% for event in felt_events %}
+                        <div class="felt-img-card">
+                            <div class="felt-card-header">
+                                #{{ forloop.counter }} — M{{ event.magnitude }} &nbsp;{{ event.event_datetime|date:"d M Y H:i" }} UTC
+                                <div style="font-weight:400; color:#6c757d;">{{ event.wilayah|truncatechars:60 }}</div>
+                            </div>
+                            <div class="felt-img-pair">
+                                <div>
+                                    {% if event.img_report_1 %}
+                                        <img src="{{ event.img_report_1.url }}" alt="Report 1"
+                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Report 1"
+                                             class="felt-gallery-img">
+                                    {% else %}
+                                        <div class="felt-no-img">No Report</div>
+                                    {% endif %}
+                                    <div class="felt-img-label">Report 1</div>
+                                </div>
+                                <div>
+                                    {% if event.img_stationlist %}
+                                        <img src="{{ event.img_stationlist.url }}" alt="Station List"
+                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Daftar Stasiun MMI"
+                                             class="felt-gallery-img">
+                                    {% else %}
+                                        <div class="felt-no-img">No Station List</div>
+                                    {% endif %}
+                                    <div class="felt-img-label">Daftar Stasiun</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Lightbox for felt images -->
+                <div id="feltLightbox" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;">
+                    <span id="feltLbClose" style="position:fixed;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;opacity:.8;">&times;</span>
+                    <div style="position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;" id="feltLbZoomBar">
+                        <button class="lb-zoom-btn" id="feltLbZoomIn">+</button>
+                        <button class="lb-zoom-btn" id="feltLbZoomOut">−</button>
+                        <button class="lb-zoom-btn" id="feltLbZoomReset" style="font-size:13px;padding:4px 10px;">Reset</button>
+                    </div>
+                    <span id="feltLbPrev" style="position:fixed;top:50%;left:8px;transform:translateY(-50%);color:#fff;font-size:36px;cursor:pointer;opacity:.6;padding:0 14px;">&#8249;</span>
+                    <img id="feltLbImg" src="" alt="" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:4px;transform-origin:center;transition:transform .1s;cursor:grab;">
+                    <span id="feltLbNext" style="position:fixed;top:50%;right:8px;transform:translateY(-50%);color:#fff;font-size:36px;cursor:pointer;opacity:.6;padding:0 14px;">&#8250;</span>
+                    <div id="feltLbCaption" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:4px 14px;border-radius:999px;pointer-events:none;"></div>
+                </div>
+                <script>
+                (function(){
+                    let imgs = [], idx = 0, scale = 1, px = 0, py = 0, drag = false, sx, sy, opx, opy;
+                    const lb = document.getElementById('feltLightbox');
+                    const lbImg = document.getElementById('feltLbImg');
+                    const lbCap = document.getElementById('feltLbCaption');
+                    function applyT(){ lbImg.style.transform = `translate(${px}px,${py}px) scale(${scale})`; }
+                    function openAt(i){
+                        idx = i; scale=1; px=0; py=0;
+                        lbImg.src = imgs[i].src;
+                        lbCap.textContent = imgs[i].dataset.caption || '';
+                        applyT(); lb.style.display='flex'; document.body.style.overflow='hidden';
+                    }
+                    function close(){ lb.style.display='none'; document.body.style.overflow=''; }
+                    function nav(d){ openAt((idx+d+imgs.length)%imgs.length); }
+                    document.addEventListener('DOMContentLoaded', function(){
+                        imgs = Array.from(document.querySelectorAll('.felt-gallery-img'));
+                        imgs.forEach((img,i) => img.addEventListener('click', ()=>openAt(i)));
+                        document.getElementById('feltLbClose').onclick = close;
+                        document.getElementById('feltLbPrev').onclick = ()=>nav(-1);
+                        document.getElementById('feltLbNext').onclick = ()=>nav(1);
+                        document.getElementById('feltLbZoomIn').onclick = ()=>{ scale=Math.min(scale+.25,5); applyT(); };
+                        document.getElementById('feltLbZoomOut').onclick = ()=>{ scale=Math.max(scale-.25,.5); applyT(); };
+                        document.getElementById('feltLbZoomReset').onclick = ()=>{ scale=1;px=0;py=0; applyT(); };
+                        lbImg.addEventListener('wheel', e=>{ e.preventDefault(); scale=Math.min(Math.max(scale+(e.deltaY<0?.15:-.15),.5),5); applyT(); },{passive:false});
+                        lbImg.addEventListener('mousedown', e=>{ if(scale<=1)return; drag=true;sx=e.clientX;sy=e.clientY;opx=px;opy=py;lbImg.style.cursor='grabbing'; });
+                        document.addEventListener('mousemove', e=>{ if(!drag)return; px=opx+(e.clientX-sx); py=opy+(e.clientY-sy); applyT(); });
+                        document.addEventListener('mouseup', ()=>{ drag=false; lbImg.style.cursor='grab'; });
+                        lb.addEventListener('click', e=>{ if(e.target===lb) close(); });
+                        document.addEventListener('keydown', e=>{
+                            if(lb.style.display!=='flex') return;
+                            if(e.key==='Escape') close();
+                            if(e.key==='ArrowRight') nav(1);
+                            if(e.key==='ArrowLeft') nav(-1);
+                            if(e.key==='+'){scale=Math.min(scale+.25,5);applyT();}
+                            if(e.key==='-'){scale=Math.max(scale-.25,.5);applyT();}
+                        });
+                    });
+                })();
+                </script>
+                {% endif %}
+
+              </div>
+             </div>
+          </div>
+
+          <div class="tab-pane fade" id="pane-stats" role="tabpanel">
+            <div class="row">
+              <div class="col-lg-12">
+                <div class="row mb-4 g-3">
+                  <div class="col-md-6">
+                    <div class="report-card h-100">
+                      <h6 class="fw-bold mb-3 text-center border-bottom pb-2">Distribusi Magnitudo</h6>
+                      <div class="row align-items-center">
+                        <div class="col-6"><div class="chart-box"><canvas id="cMB"></canvas></div></div>
+                        <div class="col-6"><div class="chart-box"><canvas id="cMP"></canvas></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="report-card h-100">
+                      <h6 class="fw-bold mb-3 text-center border-bottom pb-2">Distribusi Kedalaman</h6>
+                      <div class="row align-items-center">
+                        <div class="col-6"><div class="chart-box"><canvas id="cDB"></canvas></div></div>
+                        <div class="col-6"><div class="chart-box"><canvas id="cDP"></canvas></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-lg-6">
+                    <div class="report-card h-100">
+                      <div class="border-bottom pb-2 mb-3">
+                          <h6 class="fw-bold mb-0">Rekapitulasi Frekuensi Harian</h6>
+                      </div>
+                      <div style="overflow-x: auto;">
+                        <table class="table table-bordered mb-0 table-compact" style="background: white; width: 100%;">
+                          <thead class="table-light">
+                            <tr>
+                              <th rowspan="2" style="background: #e2e8f0; width: 62px;">Tanggal</th>
+                              <th rowspan="2" style="background: #e2e8f0; width: 36px;">Tot</th>
+                              <th colspan="3" style="background: #dbeafe;">Magnitudo</th>
+                              <th colspan="3" style="background: #fee2e2;">Kedalaman (km)</th>
+                            </tr>
+                            <tr>
+                              <th style="background: #dbeafe; color: #16a34a; width: 38px;">M&lt;3</th>
+                              <th style="background: #dbeafe; color: #ca8a04; width: 44px;">3-5</th>
+                              <th style="background: #dbeafe; color: #dc2626; width: 38px;">≥5</th>
+                              <th style="background: #fee2e2; color: #dc2626; width: 38px;">&lt;60</th>
+                              <th style="background: #fee2e2; color: #ca8a04; width: 44px;">60-300</th>
+                              <th style="background: #fee2e2; color: #16a34a; width: 38px;">&gt;300</th>
+                            </tr>
+                          </thead>
+                          <tbody id="freqTableBody"></tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-lg-6">
+                    <div class="report-card h-100">
+                      <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h6 class="fw-bold mb-0">Daftar Semua Kejadian Gempabumi</h6>
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="badge bg-secondary" id="eventsCount"></span>
+                          <button class="btn btn-sm btn-success no-print" onclick="exportEventsExcel()" title="Export ke Excel"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
+                          <button class="btn btn-sm btn-danger no-print" onclick="exportEventsPDF()" title="Export ke PDF"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
+                        </div>
+                      </div>
+                      <div style="overflow-x: auto;">
+                        <table class="table table-bordered table-sm mb-0 table-compact" style="background: white; width: 100%;">
+                          <thead class="table-dark">
+                            <tr>
+                              <th style="width: 32px;">No</th>
+                              <th style="width: 130px;">Waktu (UTC)</th>
+                              <th style="width: 60px;">Lintang</th>
+                              <th style="width: 60px;">Bujur</th>
+                              <th style="width: 40px;">Mag</th>
+                              <th style="width: 50px;">Kedlm (km)</th>
+                              <th>Lokasi</th>
+                              <th class="no-print" style="width: 36px;">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody id="eventsTableBody" spellcheck="false"></tbody>
+                        </table>
+                      </div>
+                      <div class="d-flex justify-content-between align-items-center mt-2 no-print" id="eventsPagination" style="font-size:13px;">
+                        <span id="eventsPageInfo" class="text-muted"></span>
+                        <div class="d-flex gap-1">
+                          <button class="btn btn-sm btn-outline-secondary" id="eventsPrevBtn" onclick="eventsChangePage(-1)">&#8249;</button>
+                          <span id="eventsPageNum" style="padding:4px 10px;"></span>
+                          <button class="btn btn-sm btn-outline-secondary" id="eventsNextBtn" onclick="eventsChangePage(1)">&#8250;</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </main>
   </div>
 </div>
 
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- static GeoJSON layers -->
-<script src="{% static 'repository/js/GarisPantaiPapua.js' %}"></script>
-<script src="{% static 'repository/js/batas_laut_indonesia.js' %}"></script>
-<script src="{% static 'repository/js/indofaults.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-const allEvents = {{ map_data|safe }};
+  // --- KONFIGURASI UMUM ---
+  // Master data (never reassigned; deleteEventRow mutates these arrays)
+  const allMapData  = {{ map_data|safe }};
+  const allFeltData = {{ felt_map_data|safe }};
+  const avgLat = {{ avg_lat }};
+  const avgLon = {{ avg_lon }};
 
-// --- Map setup ---
-const map = L.map('map', { zoomSnap: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
+  // Active (filtered) working set — all rendering functions read from these
+  let mapData  = allMapData;
+  let feltData = allFeltData;
 
-map.createPane('pFaults'); map.getPane('pFaults').style.zIndex = 270;
-map.createPane('pEvents'); map.getPane('pEvents').style.zIndex = 290;
+  let mapInstance = null;
+  let mapFeltInstance = null;
+  let slabLayer = null;
+  let faultsLayer = null;
+  let baseLayer = null;
+  let markersLayer = null;          // seismicity circle markers
+  let subLayer = null;              // subduction lines layer
+  let feltOverlayLayer = null;      // felt-event star overlay on main map
+  let feltOverlayLegendCtrl = null; // Leaflet control for the overlay legend
+  let cmbInst = null, cmpInst = null, cdbInst = null, cdpInst = null;
+  let feltMarkers = {}; // Menyimpan marker peta dirasakan agar bisa disinkronisasi
 
-const esriOcean = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
-  attribution: 'Tiles &copy; Esri', maxZoom: 13
-}).addTo(map);
-
-if (typeof GarisPantaiPapua !== 'undefined')
-  L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } }).addTo(map);
-if (typeof batas_laut_indonesia !== 'undefined')
-  L.geoJSON(batas_laut_indonesia, { style: { color: "#3b82f6", weight: 1, dashArray: '5,5' } }).addTo(map);
-if (typeof indoFaults !== 'undefined')
-  L.geoJSON(indoFaults, { pane: 'pFaults', style: { color: '#555', weight: 0.7 } }).addTo(map);
-else if (typeof indofaults !== 'undefined')
-  L.geoJSON(indofaults, { pane: 'pFaults', style: { color: '#555', weight: 0.7 } }).addTo(map);
-
-function magColor(m) { return m >= 5 ? '#ef4444' : m >= 4 ? '#f97316' : m >= 3 ? '#eab308' : '#22c55e'; }
-function depthColor(d) { return d < 60 ? '#ef4444' : d < 300 ? '#eab308' : '#22c55e'; }
-
-let markersLayer = L.layerGroup().addTo(map);
-const markerMap  = {};   // event_id → marker
-
-function plotEvents() {
-  markersLayer.clearLayers();
-  Object.keys(markerMap).forEach(k => delete markerMap[k]);
-
-  allEvents.forEach(ev => {
-    const m = L.circleMarker([ev.latitude, ev.longitude], {
-      pane: 'pEvents',
-      radius: Math.max(4, ev.magnitude * 2.5),
-      fillColor: depthColor(ev.depth_km),
-      color: '#000', weight: 0.6, opacity: 0.9, fillOpacity: 0.8,
-    }).addTo(markersLayer).bindPopup(
-      `<strong>${ev.event_id}</strong><br>` +
-      `M${ev.magnitude.toFixed(1)} | D: ${ev.depth_km.toFixed(0)} km<br>` +
-      `${ev.time}<br>${ev.location}<br>` +
-      `<em>${ev.nearest_city} (${ev.distance_km} km)</em>`
-    );
-    markerMap[ev.event_id] = m;
+  // Ikon Bintang MERAH SVG Global
+  const starIcon = L.divIcon({
+      html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#FF0000" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
+      className: 'star-marker', iconSize: [24, 24], iconAnchor: [12, 12]
   });
-  updateStats();
-}
 
-function focusEvent(id) {
-  const m = markerMap[id];
-  if (m) { map.setView(m.getLatLng(), 8); m.openPopup(); }
-}
+  function getColorByMagnitude(mag) { return mag >= 5 ? '#f87171' : (mag >= 3 ? '#fbbf24' : '#6ee7b7'); }
+  function getColorByDepth(depth) { return depth < 60 ? '#f87171' : (depth < 300 ? '#fbbf24' : '#6ee7b7'); }
 
-function updateStats() {
-  const mags = allEvents.map(e => e.magnitude);
-  document.getElementById('sTot').textContent = allEvents.length;
-  document.getElementById('sM5').textContent  = mags.filter(m => m >= 5).length;
-  document.getElementById('sM4').textContent  = mags.filter(m => m >= 4).length;
-  document.getElementById('sM3').textContent  = mags.filter(m => m >= 3).length;
-  document.getElementById('sMax').textContent  = mags.length ? Math.max(...mags).toFixed(1) : '—';
-}
+  // --- INISIALISASI PETA UTAMA ---
+  function initMap() {
+    if (mapInstance) { mapInstance.invalidateSize(); return; }
+    mapInstance = L.map('map', { zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
 
-// legend
-const legend = L.control({ position: 'bottomright' });
-legend.onAdd = () => {
-  const d = L.DomUtil.create('div');
-  d.style.cssText = 'background:rgba(255,255,255,.9);padding:8px 12px;border-radius:6px;font-size:11px;line-height:1.8;box-shadow:0 1px 5px rgba(0,0,0,.3)';
-  d.innerHTML =
-    '<strong>Kedalaman</strong><br>' +
-    '<span style="color:#ef4444">●</span> Dangkal (&lt;60 km)<br>' +
-    '<span style="color:#eab308">●</span> Menengah (60–300 km)<br>' +
-    '<span style="color:#22c55e">●</span> Dalam (&gt;300 km)';
-  return d;
-};
-legend.addTo(map);
+    mapInstance.createPane('pBg');        mapInstance.getPane('pBg').style.zIndex        = 250;
+    mapInstance.createPane('pKabupaten'); mapInstance.getPane('pKabupaten').style.zIndex  = 260;
+    mapInstance.createPane('pFaults');    mapInstance.getPane('pFaults').style.zIndex     = 270;
+    mapInstance.createPane('pSubduksi');  mapInstance.getPane('pSubduksi').style.zIndex   = 280;
+    mapInstance.createPane('pEvents');    mapInstance.getPane('pEvents').style.zIndex     = 290;
 
-plotEvents();
+    var esriOcean    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ', maxZoom: 13 });
+    var esriImagery  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS' });
+    var esriStreet   = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS' });
+    var esriTopo     = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom' });
+    var esriDarkGray = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ', maxZoom: 16 });
+    baseLayer = esriOcean;
+    esriOcean.addTo(mapInstance);
+    
+    if (typeof newPng !== 'undefined') L.geoJSON(newPng, { pane: 'pBg', style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5 } }).addTo(mapInstance);
+    if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { pane: 'pBg', style: { color: "#00FFFF", weight: 1 } }).addTo(mapInstance);
+    if (typeof batas_laut_indonesia !== 'undefined') L.geoJSON(batas_laut_indonesia, { pane: 'pBg', style: { color: "#3b82f6", weight: 1, dashArray: '5, 5' } }).addTo(mapInstance);
+
+    faultsLayer = L.layerGroup().addTo(mapInstance);
+    if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { pane: 'pFaults', style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
+    else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { pane: 'pFaults', style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
+
+    if (typeof subDuksi !== 'undefined') {
+      subLayer = L.layerGroup().addTo(mapInstance);
+      subDuksi.forEach(fc => L.geoJSON(fc, { pane: 'pSubduksi', style: { color: '#8b5cf6', weight: 1.5 } }).addTo(subLayer));
+    }
+
+    slabLayer = L.layerGroup().addTo(mapInstance);
+    const slabColors = [[0,20,'rgb(245,0,0)'],[20,40,'rgb(250,75,0)'],[40,60,'rgb(252,118,0)'],[60,80,'rgb(253,160,0)'],[80,100,'rgb(250,160,0)'],[100,120,'rgb(245,245,0)'],[120,200,'rgb(210,247,0)'],[200,300,'rgb(169,247,0)'],[300,400,'rgb(128,247,0)'],[400,500,'rgb(86,247,0)'],[500,660,'rgb(0,245,0)']];
+
+    try {
+      d3.json("{% static 'repository/js/slab_indonesia_usgs.json' %}").then(data => {
+        if (data) L.geoJSON(data, { pane: 'pBg', style: function(f) {
+            let d = f.properties.DEPTH || 0; let c = 'transparent';
+            for (let r of slabColors) if (d >= r[0] && d <= r[1]) { c = r[2]; break; }
+            return { color: c, weight: 1.5, opacity: 0.8, fillOpacity: 0 };
+        }}).addTo(slabLayer);
+      });
+    } catch(e) {}
+
+    markersLayer = L.layerGroup().addTo(mapInstance);
+    plotSeismicityMarkers(mapData);
+
+    let scaleControl = L.control.scale({ imperial: false }).addTo(mapInstance);
+    document.getElementById('scaleCont').appendChild(scaleControl.getContainer());
+  }
+
+  function plotSeismicityMarkers(data) {
+    if (!mapInstance || !markersLayer) return;
+    markersLayer.clearLayers();
+    data.forEach(event => {
+      L.circleMarker([event.latitude, event.longitude], {
+        pane: 'pEvents',
+        radius: Math.max(4, event.magnitude * 2.5),
+        fillColor: getColorByDepth(event.depth),
+        color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
+      }).addTo(markersLayer).bindPopup(`<strong>M${event.magnitude.toFixed(1)}</strong><br>D: ${event.depth.toFixed(1)} km<br>${event.time}`);
+    });
+  }
+
+  // --- INISIALISASI PETA DIRASAKAN (SINKRON DENGAN TABEL) ---
+  function initMapFelt() {
+    if (mapFeltInstance) { mapFeltInstance.invalidateSize(); return; }
+    mapFeltInstance = L.map('mapFelt', { zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
+    
+    var esriOceanFelt    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ', maxZoom: 13 });
+    var esriImageryFelt  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS' });
+    var esriStreetFelt   = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS' });
+    var esriTopoFelt     = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom' });
+    var esriDarkGrayFelt = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ', maxZoom: 16 });
+    esriOceanFelt.addTo(mapFeltInstance);
+
+    if (typeof newPng !== 'undefined') L.geoJSON(newPng, { style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5, pane: 'tilePane' } }).addTo(mapFeltInstance);
+    if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { style: { color: "#000", weight: 0.8 } }).addTo(mapFeltInstance);
+    else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { style: { color: "#000", weight: 0.8 } }).addTo(mapFeltInstance);
+    if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } }).addTo(mapFeltInstance);
+    if (typeof batas_laut_indonesia !== 'undefined') L.geoJSON(batas_laut_indonesia, { style: { color: "#3b82f6", weight: 1, dashArray: '5, 5' } }).addTo(mapFeltInstance);
+
+    // Tambahkan slab layer ke peta dirasakan
+    let slabLayerFelt = L.layerGroup().addTo(mapFeltInstance);
+    const slabColors = [[0,20,'rgb(245,0,0)'],[20,40,'rgb(250,75,0)'],[40,60,'rgb(252,118,0)'],[60,80,'rgb(253,160,0)'],[80,100,'rgb(250,160,0)'],[100,120,'rgb(245,245,0)'],[120,200,'rgb(210,247,0)'],[200,300,'rgb(169,247,0)'],[300,400,'rgb(128,247,0)'],[400,500,'rgb(86,247,0)'],[500,660,'rgb(0,245,0)']];
+
+    try {
+      d3.json("{% static 'repository/js/slab_indonesia_usgs.json' %}").then(data => {
+        if (data) L.geoJSON(data, { style: function(f) {
+            let d = f.properties.DEPTH || 0; let c = 'transparent';
+            for (let r of slabColors) if (d >= r[0] && d <= r[1]) { c = r[2]; break; }
+            return { color: c, weight: 1.5, opacity: 0.8, fillOpacity: 0 };
+        }}).addTo(slabLayerFelt);
+      });
+    } catch(e) {}
+
+    // Plot awal ke Peta
+    plotFeltMarkers(feltData);
+
+    let scaleControlFelt = L.control.scale({ imperial: false }).addTo(mapFeltInstance);
+    document.getElementById('scaleContFelt').appendChild(scaleControlFelt.getContainer());
+  }
+
+  function plotFeltMarkers(data) {
+    if (!mapFeltInstance) return;
+    Object.values(feltMarkers).forEach(m => mapFeltInstance.removeLayer(m));
+    feltMarkers = {};
+    data.forEach((item, index) => {
+        let rowId = (index + 1).toString();
+        let marker = L.marker([item.lat, item.lon], { icon: starIcon })
+            .addTo(mapFeltInstance)
+            .bindPopup(`<b>${item.place}</b><br>Mag: ${item.mag}<br>${item.time}`);
+        feltMarkers[rowId] = marker;
+    });
+  }
+
+  // --- LOGIKA SINKRONISASI TABEL KE PETA ---
+  function updateFeltRowNumbers() {
+      document.querySelectorAll('#feltTableBody tr').forEach((row, index) => {
+          row.querySelector('.row-number').textContent = index + 1;
+      });
+      document.getElementById('stat-total-dirasakan').innerHTML = `Total Dirasakan: <strong>${document.querySelectorAll('#feltTableBody tr').length}</strong>`;
+  }
+
+  function deleteFeltRow(btn) {
+      const row = btn.closest('tr');
+      const rowId = row.getAttribute('data-id');
+      if (feltMarkers[rowId] && mapFeltInstance) {
+          mapFeltInstance.removeLayer(feltMarkers[rowId]);
+          delete feltMarkers[rowId];
+      }
+      row.remove();
+      updateFeltRowNumbers();
+  }
+
+  // --- REKAPITULASI TABEL FREKUENSI (PETA UTAMA) ---
+  function generateDailyFrequencyTable() {
+    const dailyData = {};
+    mapData.forEach(event => {
+      const date = event.time.split('T')[0].split(' ')[0];
+      if (!dailyData[date]) dailyData[date] = { total: 0, m_lt3: 0, m_35: 0, m_gte5: 0, d_lt60: 0, d_mid: 0, d_deep: 0 };
+      dailyData[date].total++;
+      if (event.magnitude < 3) dailyData[date].m_lt3++; else if (event.magnitude < 5) dailyData[date].m_35++; else dailyData[date].m_gte5++;
+      if (event.depth < 60) dailyData[date].d_lt60++; else if (event.depth < 300) dailyData[date].d_mid++; else dailyData[date].d_deep++;
+    });
+
+    const tbody = document.getElementById('freqTableBody');
+    tbody.innerHTML = '';
+    Object.keys(dailyData).sort().forEach(date => {
+      const d = dailyData[date];
+      tbody.innerHTML += `<tr>
+        <td style="border: 1px solid #cbd5e1;">${date}</td>
+        <td style="border: 1px solid #cbd5e1; background: #f1f5f9; font-weight:bold;">${d.total}</td>
+        <td style="border: 1px solid #cbd5e1; color: #16a34a; font-weight:bold;">${d.m_lt3}</td>
+        <td style="border: 1px solid #cbd5e1; color: #ca8a04; font-weight:bold;">${d.m_35}</td>
+        <td style="border: 1px solid #cbd5e1; color: #dc2626; font-weight:bold;">${d.m_gte5}</td>
+        <td style="border: 1px solid #cbd5e1; color: #dc2626; font-weight:bold;">${d.d_lt60}</td>
+        <td style="border: 1px solid #cbd5e1; color: #ca8a04; font-weight:bold;">${d.d_mid}</td>
+        <td style="border: 1px solid #cbd5e1; color: #16a34a; font-weight:bold;">${d.d_deep}</td>
+      </tr>`;
+    });
+  }
+
+  // --- LOGIKA KALKULASI SEISCOMP ---
+  function calculateSeiscomp() {
+      let totalHidupOverall = 0, totalMatiOverall = 0, rowCount = 0;
+      document.querySelectorAll('#seiscompTable tbody tr.calc-row').forEach(row => {
+          let countH = 0, countM = 0;
+          const selects = row.querySelectorAll('.status-select');
+          selects.forEach(sel => { if (sel.value === 'H') countH++; else if (sel.value === 'M') countM++; });
+          
+          const pctHidup = (countH / selects.length) * 100;
+          const pctMati = (countM / selects.length) * 100;
+          row.querySelector('.pct-hidup').textContent = pctHidup.toFixed(2) + '%';
+          row.querySelector('.pct-mati').textContent = pctMati.toFixed(2) + '%';
+
+          totalHidupOverall += pctHidup; totalMatiOverall += pctMati; rowCount++;
+      });
+      if (rowCount > 0) {
+          document.getElementById('avg-hidup').textContent = (totalHidupOverall / rowCount).toFixed(2) + '%';
+          document.getElementById('avg-mati').textContent = (totalMatiOverall / rowCount).toFixed(2) + '%';
+      }
+  }
+
+  function updateMapDisplay() {
+    document.getElementById('outT').textContent = document.getElementById('inT').value || 'PETA SEISMISITAS';
+    document.getElementById('outP').textContent = 'PERIODE ' + (document.getElementById('inP').value || '');
+  }
+  function updateFaultsColor() {
+    const c = document.getElementById('colorFaults').value;
+    if (faultsLayer) faultsLayer.eachLayer(l => l.setStyle({ color: c, weight: 0.8 }));
+  }
+  function updateSubduksiColor() {
+    const c = document.getElementById('colorSubduksi').value;
+    if (subLayer) subLayer.eachLayer(l => l.setStyle({ color: c, weight: 1.5 }));
+  }
+  function toggleSubduksi() {
+    if (!mapInstance || !subLayer) return;
+    document.getElementById('swSubduksi').checked ? mapInstance.addLayer(subLayer) : mapInstance.removeLayer(subLayer);
+  }
+  function changeBasemap() { 
+    if(!mapInstance) return;
+    mapInstance.removeLayer(baseLayer);
+    const value = document.getElementById('selB').value;
+    let newLayer;
+    
+    switch(value) {
+      case 'imagery':
+        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS'
+        });
+        break;
+      case 'street':
+        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS'
+        });
+        break;
+      case 'topo':
+        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom'
+        });
+        break;
+      case 'darkgray':
+        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ', maxZoom: 16
+        });
+        break;
+      default:
+        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ', maxZoom: 13
+        });
+    }
+    
+    baseLayer = newLayer.addTo(mapInstance);
+  }
+  function changeNorthArrow() {
+    const url = document.getElementById('selNorthArrow').value;
+    document.getElementById('outA').src = url;
+  }
+
+  // --- SHP OVERLAY LAYER: Kabupaten/Kota only ---
+  const shpLayers = {
+    Kabupaten: { url: "{% static 'repository/js/batas_kabupaten_indo.geojson' %}", data: null, layer: null, labelKey: 'KAB_KOTA' },
+  };
+
+  function _shpStyle() {
+    const fill    = document.getElementById('fillKabupaten').value;
+    const outline = document.getElementById('outlineKabupaten').value;
+    const opacity = parseInt(document.getElementById('opacityKabupaten').value) / 100;
+    return { color: outline, weight: 1, fillColor: fill, fillOpacity: opacity, opacity: 0.9 };
+  }
+
+  function _buildShpLayer(key) {
+    const entry = shpLayers[key];
+    const showLabel = document.getElementById('swShpLabel').checked;
+    return L.geoJSON(entry.data, {
+      pane: 'pKabupaten',
+      style: _shpStyle(),
+      onEachFeature: function(feature, layer) {
+        const name = feature.properties[entry.labelKey] || '';
+        layer.bindTooltip(name, { permanent: showLabel, sticky: !showLabel, className: 'shp-label', direction: 'center' });
+      }
+    });
+  }
+
+  async function toggleShpLayer(key) {
+    if (!mapInstance) return;
+    const entry = shpLayers[key];
+    const checked = document.getElementById('sw' + key).checked;
+    if (checked) {
+      if (!entry.data) {
+        try {
+          const res = await fetch(entry.url);
+          entry.data = await res.json();
+        } catch(e) { console.error('Failed to load', key, e); return; }
+      }
+      if (entry.layer) mapInstance.removeLayer(entry.layer);
+      entry.layer = _buildShpLayer(key).addTo(mapInstance);
+    } else {
+      if (entry.layer) { mapInstance.removeLayer(entry.layer); entry.layer = null; }
+    }
+  }
+
+  function updateShpStyle() {
+    const entry = shpLayers['Kabupaten'];
+    if (entry.layer) entry.layer.setStyle(_shpStyle());
+  }
+
+  function toggleShpLabels() {
+    const entry = shpLayers['Kabupaten'];
+    if (entry.layer && entry.data) {
+      mapInstance.removeLayer(entry.layer);
+      entry.layer = _buildShpLayer('Kabupaten').addTo(mapInstance);
+    }
+  }
+  function toggleSlab() { if(mapInstance && slabLayer) { if(document.getElementById('swSlab').checked) mapInstance.addLayer(slabLayer); else mapInstance.removeLayer(slabLayer); } }
+  function toggleFaults() { if(mapInstance && faultsLayer) { if(document.getElementById('swFaults').checked) mapInstance.addLayer(faultsLayer); else mapInstance.removeLayer(faultsLayer); } }
+  function toggleSlabFelt() { if(mapFeltInstance && slabLayer) { if(document.getElementById('swSlabFelt').checked) mapFeltInstance.addLayer(slabLayer); else mapFeltInstance.removeLayer(slabLayer); } }
+
+  // --- CHARTS ---
+  Chart.register(ChartDataLabels);
+  function renderCharts() {
+    if (cmbInst) cmbInst.destroy(); if (cmpInst) cmpInst.destroy();
+    if (cdbInst) cdbInst.destroy(); if (cdpInst) cdpInst.destroy();
+
+    // Compute stats from the currently filtered mapData
+    const mags   = mapData.map(e => e.magnitude);
+    const depths = mapData.map(e => e.depth);
+    const curMag   = [mags.filter(m => m < 3).length, mags.filter(m => m >= 3 && m < 5).length, mags.filter(m => m >= 5).length];
+    const curDepth = [depths.filter(d => d < 60).length, depths.filter(d => d >= 60 && d < 300).length, depths.filter(d => d >= 300).length];
+
+    const baseOpt = { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { datalabels: { anchor: 'end', align: 'top', font: { size: 9, weight: 'bold' } }, legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } } };
+    const barOpt = { ...baseOpt, plugins: { ...baseOpt.plugins, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } };
+
+    const magColors   = ['#6ee7b7', '#fbbf24', '#f87171'];
+    const depthColors = ['#f87171', '#fbbf24', '#6ee7b7'];
+    cmbInst = new Chart("cMB", { type: 'bar',      data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: curMag,   backgroundColor: magColors   }] }, options: barOpt  });
+    cmpInst = new Chart("cMP", { type: 'doughnut', data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: curMag,   backgroundColor: magColors   }] }, options: baseOpt });
+    cdbInst = new Chart("cDB", { type: 'bar',      data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: curDepth, backgroundColor: depthColors }] }, options: barOpt  });
+    cdpInst = new Chart("cDP", { type: 'doughnut', data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: curDepth, backgroundColor: depthColors }] }, options: baseOpt });
+  }
+
+  // --- LISTENERS ---
+  document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => initMap());
+  document.getElementById('tab-felt-btn').addEventListener('shown.bs.tab', () => initMapFelt());
+  document.getElementById('tab-stats-btn').addEventListener('shown.bs.tab', () => { renderCharts(); generateDailyFrequencyTable(); initEventsTable(); });
+
+  document.addEventListener('DOMContentLoaded', () => {
+      // Initialise date filter inputs to cover the full range of uploaded data
+      if (allMapData.length > 0) {
+        const dates = allMapData.map(ev => ev.time.substring(0, 10)).sort();
+        document.getElementById('filterStart').value = dates[0];
+        document.getElementById('filterEnd').value   = dates[dates.length - 1];
+      }
+      _updateFilterBadge();
+
+      if (document.getElementById('tab-map-btn').classList.contains('active')) initMap();
+      const sidebarToggle = document.getElementById('sidebar-toggle');
+      if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+          document.getElementById('sidebar')?.classList.toggle('hidden');
+          if (mapInstance) setTimeout(() => mapInstance.invalidateSize(), 300);
+          if (mapFeltInstance) setTimeout(() => mapFeltInstance.invalidateSize(), 300);
+        });
+      }
+      
+      // Listener Edit Tabel Peta Dirasakan -> Update Marker Peta
+      document.getElementById('feltTableBody').addEventListener('input', function(e) {
+          if (e.target.tagName === 'TD' && e.target.hasAttribute('contenteditable')) {
+              const row = e.target.closest('tr');
+              const id = row.getAttribute('data-id');
+              
+              if (feltMarkers[id]) {
+                  if (e.target.classList.contains('edit-lat') || e.target.classList.contains('edit-lon')) {
+                      let lat = parseFloat(row.querySelector('.edit-lat').textContent);
+                      let lon = parseFloat(row.querySelector('.edit-lon').textContent);
+                      if (!isNaN(lat) && !isNaN(lon)) feltMarkers[id].setLatLng([lat, lon]);
+                  }
+                  if (e.target.classList.contains('edit-place') || e.target.classList.contains('edit-mag') || e.target.classList.contains('edit-time')) {
+                      let place = row.querySelector('.edit-place').textContent;
+                      let mag = row.querySelector('.edit-mag').textContent;
+                      let time = row.querySelector('.edit-time').textContent;
+                      feltMarkers[id].getPopup().setContent(`<b>${place}</b><br>Mag: ${mag}<br>${time}`);
+                  }
+              } else if (id.startsWith('new-')) {
+                  let lat = parseFloat(row.querySelector('.edit-lat').textContent);
+                  let lon = parseFloat(row.querySelector('.edit-lon').textContent);
+                  if (!isNaN(lat) && !isNaN(lon) && mapFeltInstance) {
+                      let place = row.querySelector('.edit-place').textContent || 'Lokasi Baru';
+                      let mag = row.querySelector('.edit-mag').textContent || '-';
+                      let time = row.querySelector('.edit-time').textContent || '-';
+                      let marker = L.marker([lat, lon], { icon: starIcon }).addTo(mapFeltInstance).bindPopup(`<b>${place}</b><br>Mag: ${mag}<br>${time}`);
+                      feltMarkers[id] = marker;
+                  }
+              }
+          }
+      });
+      
+      document.querySelectorAll('.status-select').forEach(sel => sel.addEventListener('change', calculateSeiscomp));
+      calculateSeiscomp();
+  });
+
+  const EVENTS_PER_PAGE = 25;
+  let eventsCurrentPage = 1;
+  let eventsTableInit = false;
+
+  function initEventsTable() {
+    if (eventsTableInit) return;
+    eventsTableInit = true;
+    renderEventsPage(1);
+  }
+
+  function renderEventsPage(page) {
+    eventsCurrentPage = page;
+    const total = mapData.length;
+    const totalPages = Math.max(1, Math.ceil(total / EVENTS_PER_PAGE));
+    eventsCurrentPage = Math.min(Math.max(1, page), totalPages);
+    const start = (eventsCurrentPage - 1) * EVENTS_PER_PAGE;
+    const slice = mapData.slice(start, start + EVENTS_PER_PAGE);
+
+    const tbody = document.getElementById('eventsTableBody');
+    tbody.innerHTML = '';
+    slice.forEach((ev, i) => {
+      const globalIdx = start + i;
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-idx', globalIdx);
+      tr.innerHTML = `
+        <td class="ev-no">${globalIdx + 1}</td>
+        <td contenteditable="true" spellcheck="false">${ev.time}</td>
+        <td contenteditable="true" spellcheck="false">${ev.latitude.toFixed(4)}</td>
+        <td contenteditable="true" spellcheck="false">${ev.longitude.toFixed(4)}</td>
+        <td contenteditable="true" spellcheck="false">${ev.magnitude.toFixed(1)}</td>
+        <td contenteditable="true" spellcheck="false">${ev.depth.toFixed(1)}</td>
+        <td contenteditable="true" spellcheck="false" class="text-start">${ev.location || ''}</td>
+        <td class="no-print"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteEventRow(this)" title="Hapus"><i class="bi bi-trash"></i></button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const pageInfo = document.getElementById('eventsPageInfo');
+    const pageNum = document.getElementById('eventsPageNum');
+    const prevBtn = document.getElementById('eventsPrevBtn');
+    const nextBtn = document.getElementById('eventsNextBtn');
+    if (pageInfo) pageInfo.textContent = `${start + 1}–${Math.min(start + EVENTS_PER_PAGE, total)} dari ${total}`;
+    if (pageNum) pageNum.textContent = `${eventsCurrentPage} / ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = eventsCurrentPage <= 1;
+    if (nextBtn) nextBtn.disabled = eventsCurrentPage >= totalPages;
+    updateEventsCount();
+  }
+
+  function eventsChangePage(delta) {
+    renderEventsPage(eventsCurrentPage + delta);
+  }
+
+  function deleteEventRow(btn) {
+    const tr = btn.closest('tr');
+    const idx = parseInt(tr.getAttribute('data-idx'));
+    const target = mapData[idx];
+    const masterIdx = allMapData.indexOf(target);
+    if (masterIdx !== -1) allMapData.splice(masterIdx, 1);
+    // Re-apply current filter so mapData stays consistent
+    _applyCurrentFilter();
+    renderEventsPage(eventsCurrentPage);
+    generateDailyFrequencyTable();
+    if (mapInstance && markersLayer) plotSeismicityMarkers(mapData);
+    _updateMapLegend();
+    _updateFilterBadge();
+  }
+
+  function updateEventsCount() {
+    const el = document.getElementById('eventsCount');
+    if (el) el.textContent = mapData.length + ' events';
+  }
+
+  function getEventsTableData() {
+    const headers = ['No', 'Waktu (UTC)', 'Lintang', 'Bujur', 'Magnitudo', 'Kedalaman (km)', 'Lokasi'];
+    const rows = mapData.map((ev, i) => [
+      i + 1,
+      ev.time,
+      ev.latitude.toFixed(4),
+      ev.longitude.toFixed(4),
+      ev.magnitude.toFixed(1),
+      ev.depth.toFixed(1),
+      ev.location || '',
+    ]);
+    return { headers, rows };
+  }
+
+  function exportEventsExcel() {
+    const { headers, rows } = getEventsTableData();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = [{ wch: 5 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 40 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kejadian Gempa');
+    XLSX.writeFile(wb, 'infografis_gempa_{{ start }}_{{ end }}.xlsx');
+  }
+
+  function exportEventsPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const { headers, rows } = getEventsTableData();
+    doc.setFontSize(11);
+    doc.text('Daftar Kejadian Gempabumi — {{ start }} s/d {{ end }}', 14, 14);
+    doc.autoTable({
+      head: [headers],
+      body: rows,
+      startY: 20,
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+      columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 32 }, 2: { cellWidth: 18 }, 3: { cellWidth: 18 }, 4: { cellWidth: 18 }, 5: { cellWidth: 22 }, 6: { cellWidth: 'auto' } },
+    });
+    doc.save('infografis_gempa_{{ start }}_{{ end }}.pdf');
+  }
+
+  // --- DATE FILTER ---
+  function _applyCurrentFilter() {
+    const s = document.getElementById('filterStart').value;
+    const e = document.getElementById('filterEnd').value;
+    if (!s && !e) {
+      mapData  = allMapData;
+      feltData = allFeltData;
+    } else {
+      const start = s ? new Date(s + 'T00:00:00') : null;
+      const end   = e ? new Date(e + 'T23:59:59') : null;
+      mapData  = allMapData.filter(ev => {
+        const t = new Date(ev.time.replace(' ', 'T'));
+        return (!start || t >= start) && (!end || t <= end);
+      });
+      feltData = allFeltData.filter(ev => {
+        const t = new Date(ev.time.replace(' ', 'T'));
+        return (!start || t >= start) && (!end || t <= end);
+      });
+    }
+  }
+
+  function _refreshAllViews() {
+    if (mapInstance && markersLayer) plotSeismicityMarkers(mapData);
+    if (mapFeltInstance) plotFeltMarkers(feltData);
+    if (feltOverlayLayer && document.getElementById('swFeltOverlay')?.checked) plotFeltOverlay();
+    // Only re-render charts/table if they've been opened at least once
+    if (cmbInst) {
+      renderCharts();
+      generateDailyFrequencyTable();
+      eventsTableInit = false;
+      initEventsTable();
+    }
+    _filterFeltTableRows();
+    _updateMapLegend();
+    _updateFilterBadge();
+  }
+
+  function plotFeltOverlay() {
+    if (!feltOverlayLayer) return;
+    feltOverlayLayer.clearLayers();
+    feltData.forEach(item => {
+      L.marker([item.lat, item.lon], { icon: starIcon })
+        .addTo(feltOverlayLayer)
+        .bindPopup(`<b>${item.place}</b><br>Mag: ${item.mag}<br>${item.time}`);
+    });
+  }
+
+  function toggleFeltOverlay() {
+    if (!mapInstance) return;
+    const checked = document.getElementById('swFeltOverlay').checked;
+    if (checked) {
+      if (!feltOverlayLayer) {
+        feltOverlayLayer = L.layerGroup().addTo(mapInstance);
+      } else {
+        mapInstance.addLayer(feltOverlayLayer);
+      }
+      plotFeltOverlay();
+      if (!feltOverlayLegendCtrl) {
+        feltOverlayLegendCtrl = L.control({ position: 'bottomright' });
+        feltOverlayLegendCtrl.onAdd = function() {
+          const div = L.DomUtil.create('div');
+          div.style.cssText = 'background:white;border:1.5px solid #000;padding:4px 8px;font-size:11px;font-weight:bold;display:flex;align-items:center;gap:5px;border-radius:2px;pointer-events:none;';
+          div.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#FF0000" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Gempa Dirasakan`;
+          return div;
+        };
+      }
+      feltOverlayLegendCtrl.addTo(mapInstance);
+    } else {
+      if (feltOverlayLayer) mapInstance.removeLayer(feltOverlayLayer);
+      if (feltOverlayLegendCtrl) mapInstance.removeControl(feltOverlayLegendCtrl);
+    }
+  }
+
+  function applyDateFilter() {
+    _applyCurrentFilter();
+    _refreshAllViews();
+  }
+
+  function resetDateFilter() {
+    if (allMapData.length > 0) {
+      const dates = allMapData.map(ev => ev.time.substring(0, 10)).sort();
+      document.getElementById('filterStart').value = dates[0];
+      document.getElementById('filterEnd').value   = dates[dates.length - 1];
+    } else {
+      document.getElementById('filterStart').value = '';
+      document.getElementById('filterEnd').value   = '';
+    }
+    mapData  = allMapData;
+    feltData = allFeltData;
+    _refreshAllViews();
+  }
+
+  function _updateMapLegend() {
+    const total = mapData.length;
+    const high  = mapData.filter(e => e.magnitude >= 5).length;
+    const elT = document.getElementById('legendTotal');
+    const elH = document.getElementById('legendHighMag');
+    if (elT) elT.textContent = total;
+    if (elH) elH.textContent = high;
+  }
+
+  function _updateFilterBadge() {
+    const badge = document.getElementById('filterInfoBadge');
+    if (badge) badge.textContent = mapData.length + ' / ' + allMapData.length + ' events';
+  }
+
+  function _filterFeltTableRows() {
+    const s = document.getElementById('filterStart').value;
+    const e = document.getElementById('filterEnd').value;
+    const start = s ? new Date(s + 'T00:00:00') : null;
+    const end   = e ? new Date(e + 'T23:59:59') : null;
+    let visible = 0;
+    document.querySelectorAll('#feltTableBody tr').forEach(row => {
+      const tc = row.querySelector('.edit-time');
+      if (!tc) { row.style.display = ''; visible++; return; }
+      const t = new Date(tc.textContent.trim().replace(' ', 'T'));
+      const show = (!start || t >= start) && (!end || t <= end);
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    const badge = document.getElementById('stat-total-dirasakan');
+    if (badge) badge.innerHTML = `Total Dirasakan: <strong>${visible}</strong>`;
+  }
+
+  function addFeltRow() {
+      const tbody = document.getElementById('feltTableBody');
+      const tr = document.createElement('tr');
+      const newId = 'new-' + Date.now();
+      tr.setAttribute('data-id', newId);
+      tr.innerHTML = `
+          <td class="row-number"></td>
+          <td contenteditable="true" spellcheck="false" class="edit-time"></td>
+          <td contenteditable="true" spellcheck="false" class="edit-lat"></td>
+          <td contenteditable="true" spellcheck="false" class="edit-lon"></td>
+          <td contenteditable="true" spellcheck="false" class="edit-mag"></td>
+          <td contenteditable="true" spellcheck="false"></td>
+          <td contenteditable="true" spellcheck="false" class="text-start edit-place"></td>
+          <td contenteditable="true" spellcheck="false" class="text-start"></td>
+          <td class="no-print"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteFeltRow(this)"><i class="bi bi-trash"></i></button></td>
+      `;
+      tbody.appendChild(tr);
+      updateFeltRowNumbers();
+  }
 </script>
+
 {% endblock %}
