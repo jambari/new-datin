@@ -213,6 +213,7 @@ class EventBrowser(models.Model):
     longitude    = models.FloatField()
     depth_km     = models.FloatField()
     location     = models.CharField(max_length=255, blank=True)
+    author       = models.CharField(max_length=50, blank=True, db_index=True)
     nearest_city = models.CharField(max_length=100, blank=True)
     distance_km  = models.FloatField(null=True, blank=True)
     fetched_at   = models.DateTimeField(auto_now=True)

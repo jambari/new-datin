@@ -23,6 +23,7 @@ from repository.models import EventBrowser, ReferenceLocation
 
 BASE_URL = 'http://172.19.2.185:18080/events/browse'
 START_DATE = datetime.date(2025, 1, 1)
+ALLOWED_AGENCIES = {'PGR5', 'BMKG-JAY', 'BMKG-NBPI', 'BMKG-SWI'}
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -74,7 +75,11 @@ def parse_html(content):
         lat_title       = (cells[3].get('title') or '').strip()
         lon_title       = (cells[4].get('title') or '').strip()
         depth_title     = (cells[5].get('title') or '').strip()
+        author          = (cells[7].text_content() or '').strip()
         location        = (cells[13].text_content() or '').strip()
+
+        if author not in ALLOWED_AGENCIES:
+            continue
 
         try:
             origin_time = datetime.datetime.strptime(origin_time_str, '%Y-%m-%d %H:%M:%S')
@@ -110,6 +115,7 @@ def parse_html(content):
             'longitude':   longitude,
             'depth_km':    depth_km,
             'location':    location,
+            'author':      author,
         })
     return events
 
@@ -168,6 +174,7 @@ class Command(BaseCommand):
                         'longitude':    ev['longitude'],
                         'depth_km':     ev['depth_km'],
                         'location':     ev['location'],
+                        'author':       ev['author'],
                         'nearest_city': city_name,
                         'distance_km':  dist,
                     }
