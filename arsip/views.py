@@ -12,10 +12,15 @@ def _media_url(path):
 def album_list(request):
     albums = Album.objects.prefetch_related('cover_photo')
     for a in albums:
-        if a.cover_photo:
-            a.cover_url = _media_url(a.cover_photo.thumbnail_path or a.cover_photo.file_path)
+        if a.cover_photo and not a.cover_photo.is_video:
+            a.cover_url      = _media_url(a.cover_photo.thumbnail_path or a.cover_photo.file_path)
+            a.cover_is_video = False
+        elif a.cover_photo and a.cover_photo.is_video:
+            a.cover_url      = ''
+            a.cover_is_video = True
         else:
-            a.cover_url = ''
+            a.cover_url      = ''
+            a.cover_is_video = False
     return render(request, 'arsip/album_list.html', {'albums': albums})
 
 
