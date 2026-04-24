@@ -104,6 +104,11 @@
             </button>
           </li>
           <li class="nav-item">
+            <button class="nav-link" id="tab-felt-btn" data-bs-toggle="pill" data-bs-target="#pane-felt">
+              <i class="bi bi-star me-2"></i>Peta Dirasakan
+            </button>
+          </li>
+          <li class="nav-item">
             <button class="nav-link" id="tab-stats-btn" data-bs-toggle="pill" data-bs-target="#pane-stats">
               <i class="bi bi-bar-chart me-2"></i>Statistik & Rekap
             </button>
@@ -315,6 +320,197 @@
                 </div>
 
                 <!-- Lightbox for felt images -->
+                <div id="feltLightbox" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;">
+                    <span id="feltLbClose" style="position:fixed;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;opacity:.8;">&times;</span>
+                    <div style="position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;" id="feltLbZoomBar">
+                        <button class="lb-zoom-btn" id="feltLbZoomIn">+</button>
+                        <button class="lb-zoom-btn" id="feltLbZoomOut">−</button>
+                        <button class="lb-zoom-btn" id="feltLbZoomReset" style="font-size:13px;padding:4px 10px;">Reset</button>
+                    </div>
+                    <span id="feltLbPrev" style="position:fixed;top:50%;left:8px;transform:translateY(-50%);color:#fff;font-size:36px;cursor:pointer;opacity:.6;padding:0 14px;">&#8249;</span>
+                    <img id="feltLbImg" src="" alt="" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:4px;transform-origin:center;transition:transform .1s;cursor:grab;">
+                    <span id="feltLbNext" style="position:fixed;top:50%;right:8px;transform:translateY(-50%);color:#fff;font-size:36px;cursor:pointer;opacity:.6;padding:0 14px;">&#8250;</span>
+                    <div id="feltLbCaption" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:4px 14px;border-radius:999px;pointer-events:none;"></div>
+                </div>
+                <script>
+                (function(){
+                    let imgs = [], idx = 0, scale = 1, px = 0, py = 0, drag = false, sx, sy, opx, opy;
+                    const lb = document.getElementById('feltLightbox');
+                    const lbImg = document.getElementById('feltLbImg');
+                    const lbCap = document.getElementById('feltLbCaption');
+                    function applyT(){ lbImg.style.transform = `translate(${px}px,${py}px) scale(${scale})`; }
+                    function openAt(i){
+                        idx = i; scale=1; px=0; py=0;
+                        lbImg.src = imgs[i].src;
+                        lbCap.textContent = imgs[i].dataset.caption || '';
+                        applyT(); lb.style.display='flex'; document.body.style.overflow='hidden';
+                    }
+                    function close(){ lb.style.display='none'; document.body.style.overflow=''; }
+                    function nav(d){ openAt((idx+d+imgs.length)%imgs.length); }
+                    document.addEventListener('DOMContentLoaded', function(){
+                        imgs = Array.from(document.querySelectorAll('.felt-gallery-img'));
+                        imgs.forEach((img,i) => img.addEventListener('click', ()=>openAt(i)));
+                        document.getElementById('feltLbClose').onclick = close;
+                        document.getElementById('feltLbPrev').onclick = ()=>nav(-1);
+                        document.getElementById('feltLbNext').onclick = ()=>nav(1);
+                        document.getElementById('feltLbZoomIn').onclick = ()=>{ scale=Math.min(scale+.25,5); applyT(); };
+                        document.getElementById('feltLbZoomOut').onclick = ()=>{ scale=Math.max(scale-.25,.5); applyT(); };
+                        document.getElementById('feltLbZoomReset').onclick = ()=>{ scale=1;px=0;py=0; applyT(); };
+                        lbImg.addEventListener('wheel', e=>{ e.preventDefault(); scale=Math.min(Math.max(scale+(e.deltaY<0?.15:-.15),.5),5); applyT(); },{passive:false});
+                        lbImg.addEventListener('mousedown', e=>{ if(scale<=1)return; drag=true;sx=e.clientX;sy=e.clientY;opx=px;opy=py;lbImg.style.cursor='grabbing'; });
+                        document.addEventListener('mousemove', e=>{ if(!drag)return; px=opx+(e.clientX-sx); py=opy+(e.clientY-sy); applyT(); });
+                        document.addEventListener('mouseup', ()=>{ drag=false; lbImg.style.cursor='grab'; });
+                        lb.addEventListener('click', e=>{ if(e.target===lb) close(); });
+                        document.addEventListener('keydown', e=>{
+                            if(lb.style.display!=='flex') return;
+                            if(e.key==='Escape') close();
+                            if(e.key==='ArrowRight') nav(1);
+                            if(e.key==='ArrowLeft') nav(-1);
+                            if(e.key==='+'){scale=Math.min(scale+.25,5);applyT();}
+                            if(e.key==='-'){scale=Math.max(scale-.25,.5);applyT();}
+                        });
+                    });
+                })();
+                </script>
+                {% endif %}
+
+              </div>
+             </div>
+          </div>
+
+          <div class="tab-pane fade" id="pane-felt" role="tabpanel">
+             <div class="row justify-content-center">
+              <div class="col-lg-8">
+
+                <div class="formal-frame shadow-sm mb-4">
+                    <div class="header-grid">
+                        <div class="text-start"><img src="{% static 'repository/images/logo-bmkg.png' %}" style="height: 75px;"></div>
+                        <div class="title-box">
+                            <span class="t-main">PETA GEMPABUMI DIRASAKAN DI PAPUA DAN SEKITARNYA</span>
+                            <span class="t-sub">PERIODE {{ start }} s/d {{ end }}</span>
+                            <div id="scaleContFelt" class="mt-2 d-flex justify-content-center"></div>
+                        </div>
+                        <div class="text-end"><img src="{% static 'repository/images/gpt_north_arrow.svg' %}" style="width:70px;"></div>
+                    </div>
+
+                    <div id="mapFelt"></div>
+
+                    <div class="legend-grid">
+                        <div class="legend-box">
+                            <span class="legend-t">Legenda</span>
+                            <svg width="60" height="60" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="margin-top: 8px;">
+                                <polygon points="50,15 61,40 88,40 67,57 78,82 50,65 22,82 33,57 12,40 39,40"
+                                         fill="#000000" stroke="none"/>
+                                <polygon points="50,17 59,38 86,38 68,55 76,80 50,63 24,80 32,55 14,38 42,38"
+                                         fill="#FF0000" stroke="none"/>
+                            </svg>
+                            <div style="font-size: 0.7rem; margin-top: 5px;">Pusat Gempa Dirasakan</div>
+                        </div>
+                        <div class="legend-box"><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
+                        <div class="legend-box">
+                            <div class="fw-bold mt-2" style="font-size: 0.85rem;"><span>BMKG Jayapura</span></div>
+                            <div><span>{{ start }} s/d {{ end }}</span></div>
+                        </div>
+                        <div class="legend-box">
+                            <span class="legend-t">STATISTIK</span>
+                            <div class="small mt-1" style="font-size: 0.8rem;" id="stat-total-dirasakan">
+                                Total Dirasakan: <strong>{{ felt_events|length }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-card shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h6 class="fw-bold mb-0">Daftar Kejadian Gempabumi Dirasakan</h6>
+                        <button type="button" class="btn btn-sm btn-primary no-print" onclick="addFeltRow()"><i class="bi bi-plus-lg"></i> Tambah Baris</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm text-center align-middle" style="font-size: 0.8rem;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 40px;">No</th>
+                                    <th>Waktu Kejadian (UTC)</th>
+                                    <th>Lintang</th>
+                                    <th>Bujur</th>
+                                    <th>Mag</th>
+                                    <th>Kedalaman (km)</th>
+                                    <th>Keterangan / Lokasi</th>
+                                    <th>Intensitas (MMI)</th>
+                                    <th class="no-print" style="width: 50px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feltTableBody" spellcheck="false">
+                                {% for event in felt_events %}
+                                <tr data-id="{{ forloop.counter }}">
+                                    <td class="row-number">{{ forloop.counter }}</td>
+                                    <td contenteditable="true" class="edit-time">{{ event.event_datetime|date:"Y-m-d H:i:s" }}</td>
+                                    <td contenteditable="true" class="edit-lat">{{ event.latitude }}</td>
+                                    <td contenteditable="true" class="edit-lon">{{ event.longitude }}</td>
+                                    <td contenteditable="true" class="edit-mag">{{ event.magnitude }}</td>
+                                    <td contenteditable="true">{{ event.depth_km }}</td>
+                                    <td contenteditable="true" class="text-start edit-place">{{ event.wilayah }}</td>
+                                    <td contenteditable="true" class="text-start">{{ event.dirasakan }}</td>
+                                    <td class="no-print">
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteFeltRow(this)" title="Hapus"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted fst-italic no-print">* Klik pada teks tabel untuk mengedit langsung. Mengubah koordinat atau menghapus baris akan otomatis tersinkron dengan Ikon Bintang pada peta di atas.</small>
+                </div>
+
+                {% if felt_events %}
+                <div class="report-card shadow-sm mt-4">
+                    <h6 class="fw-bold border-bottom pb-2 mb-3">Shakemap &amp; Daftar Stasiun MMI</h6>
+                    <style>
+                        .felt-img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+                        .felt-img-card { border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; background: #fff; }
+                        .felt-img-card .felt-card-header { background: #f8f9fa; padding: 6px 10px; font-size: 0.75rem; font-weight: 600; color: #495057; border-bottom: 1px solid #dee2e6; }
+                        .felt-img-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+                        .felt-img-pair > div { padding: 6px; }
+                        .felt-img-pair > div:first-child { border-right: 1px solid #dee2e6; }
+                        .felt-img-pair img { width: 100%; height: auto; object-fit: contain; cursor: zoom-in; border-radius: 3px; transition: opacity .15s; }
+                        .felt-img-pair img:hover { opacity: 0.85; }
+                        .felt-img-label { font-size: 0.65rem; color: #6c757d; text-align: center; margin-top: 3px; text-transform: uppercase; letter-spacing: .04em; }
+                        .felt-no-img { height: 80px; display: flex; align-items: center; justify-content: center; color: #ced4da; font-size: 0.75rem; border: 1px dashed #dee2e6; border-radius: 3px; }
+                    </style>
+                    <div class="felt-img-grid" id="feltImgGrid">
+                        {% for event in felt_events %}
+                        <div class="felt-img-card">
+                            <div class="felt-card-header">
+                                #{{ forloop.counter }} — M{{ event.magnitude }} &nbsp;{{ event.event_datetime|date:"d M Y H:i" }} UTC
+                                <div style="font-weight:400; color:#6c757d;">{{ event.wilayah|truncatechars:60 }}</div>
+                            </div>
+                            <div class="felt-img-pair">
+                                <div>
+                                    {% if event.img_report_1 %}
+                                        <img src="{{ event.img_report_1.url }}" alt="Report 1"
+                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Report 1"
+                                             class="felt-gallery-img">
+                                    {% else %}
+                                        <div class="felt-no-img">No Report</div>
+                                    {% endif %}
+                                    <div class="felt-img-label">Report 1</div>
+                                </div>
+                                <div>
+                                    {% if event.img_stationlist %}
+                                        <img src="{{ event.img_stationlist.url }}" alt="Station List"
+                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Daftar Stasiun MMI"
+                                             class="felt-gallery-img">
+                                    {% else %}
+                                        <div class="felt-no-img">No Station List</div>
+                                    {% endif %}
+                                    <div class="felt-img-label">Daftar Stasiun</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <div id="feltLightbox" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;">
                     <span id="feltLbClose" style="position:fixed;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;opacity:.8;">&times;</span>
                     <div style="position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;" id="feltLbZoomBar">

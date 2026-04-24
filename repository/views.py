@@ -1295,6 +1295,7 @@ def event_browser(request):
     context = {
         'map_data':       json.dumps(map_data, cls=DjangoJSONEncoder),
         'felt_map_data':  '[]',
+        'felt_events':    [],
         'avg_lat':        avg_lat,
         'avg_lon':        avg_lon,
         'formatted_bulan': formatted_period,
