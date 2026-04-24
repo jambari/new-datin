@@ -116,17 +116,8 @@
           </li>
         </ul>
 
-        <!-- Filter bar + SHP overlay controls -->
+        <!-- SHP overlay controls -->
         <div class="d-flex flex-wrap align-items-center gap-2 mb-4 p-2 bg-white border rounded no-print" id="dateFilterBar">
-          <span class="small fw-bold text-muted"><i class="bi bi-funnel me-1"></i>Filter Tanggal:</span>
-          <input type="date" id="filterStart" class="form-control form-control-sm" style="width:145px" title="Dari tanggal">
-          <span class="small text-muted">s/d</span>
-          <input type="date" id="filterEnd" class="form-control form-control-sm" style="width:145px" title="Sampai tanggal">
-          <button class="btn btn-primary btn-sm" onclick="applyDateFilter()"><i class="bi bi-check2 me-1"></i>Terapkan</button>
-          <button class="btn btn-outline-secondary btn-sm" onclick="resetDateFilter()"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
-          <span class="badge bg-secondary ms-1" id="filterInfoBadge"></span>
-
-          <span class="text-muted mx-1">|</span>
           <input class="form-check-input m-0" type="checkbox" id="swKabupaten" onchange="toggleShpLayer('Kabupaten')">
           <label class="small mb-0 fw-bold text-muted" for="swKabupaten">Kab/Kota</label>
           <input type="color" id="fillKabupaten" value="#3182ce" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
