@@ -65,9 +65,8 @@
     /* Bootstrap loaded on this page overrides sidebar styles — restore them */
     #sidebar a { color: inherit !important; text-decoration: none !important; }
     #sidebar a:hover { color: inherit !important; text-decoration: none !important; }
-    /* Zero out Bootstrap's ul padding on the root nav list only; preserve sub-ul Tailwind pl-* classes */
-    #sidebar > nav > ul { padding-left: 0 !important; list-style: none !important; margin: 0 !important; }
-    #sidebar li { list-style: none !important; }
+    #sidebar ul, #sidebar ol { padding-left: 0 !important; list-style: none !important; margin-bottom: 0 !important; }
+    #sidebar li { list-style: none !important; margin-left: 0 !important; }
 
     @media print {
         .no-print { display: none !important; } 
@@ -149,7 +148,7 @@
                 <div class="report-card">
                   <h6 class="fw-bold border-bottom pb-2 mb-3">Parameter Peta</h6>
                   <div class="mb-3"><label class="form-label small fw-bold">Judul Peta</label><input type="text" id="inT" class="form-control form-control-sm" value="PETA SEISMISITAS" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
-                  <div class="mb-3"><label class="form-label small fw-bold">Periode</label><input type="text" id="inP" class="form-control form-control-sm" value="{{ start }} s/d {{ end }}" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
+                  <input type="hidden" id="inP" value="{{ start }} s/d {{ end }}">
                   <button class="btn btn-primary btn-sm w-100 mb-2" onclick="updateMapDisplay()"><i class="bi bi-arrow-clockwise me-1"></i>Update</button>
                   <button onclick="window.print()" class="btn btn-success btn-sm w-100 mb-3"><i class="bi bi-printer me-1"></i>Cetak PDF</button>
                   <hr>
