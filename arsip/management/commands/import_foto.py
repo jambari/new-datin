@@ -14,6 +14,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.utils import timezone as tz
 
 from arsip.models import Album, Foto, VIDEO_EXTENSIONS
 
@@ -109,7 +110,8 @@ class Command(BaseCommand):
                             if exif:
                                 raw = exif.get(36867) or exif.get(36868)
                                 if raw:
-                                    taken_at = datetime.datetime.strptime(raw, '%Y:%m:%d %H:%M:%S')
+                                    naive = datetime.datetime.strptime(raw, '%Y:%m:%d %H:%M:%S')
+                                    taken_at = tz.make_aware(naive, datetime.timezone.utc)
                     except Exception:
                         pass
 
