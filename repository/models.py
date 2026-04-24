@@ -203,3 +203,24 @@ class GempaMemusakMedia(models.Model):
 
     def __str__(self):
         return f"{self.event} — {self.media_type} ({self.file.name})"
+
+
+class EventBrowser(models.Model):
+    event_id     = models.CharField(max_length=50, unique=True, db_index=True)
+    origin_time  = models.DateTimeField(db_index=True)
+    magnitude    = models.FloatField()
+    latitude     = models.FloatField()   # negative = south
+    longitude    = models.FloatField()
+    depth_km     = models.FloatField()
+    location     = models.CharField(max_length=255, blank=True)
+    nearest_city = models.CharField(max_length=100, blank=True)
+    distance_km  = models.FloatField(null=True, blank=True)
+    fetched_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-origin_time']
+        verbose_name = 'Event Browser'
+        verbose_name_plural = 'Event Browser'
+
+    def __str__(self):
+        return f"{self.event_id} M{self.magnitude} {self.origin_time:%Y-%m-%d %H:%M}"

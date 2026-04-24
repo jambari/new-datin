@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+
+      <!-- header + date filter -->
+      <div class="bg-white border-b px-6 py-3 flex flex-wrap items-center gap-3">
+        <h1 class="text-lg font-bold text-gray-800 mr-2">Event Browser</h1>
+        <form method="get" class="flex flex-wrap items-center gap-2">
+          <label class="text-sm text-gray-500">Dari</label>
+          <input type="date" name="start" value="{{ start }}"
+                 class="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <label class="text-sm text-gray-500">s/d</label>
+          <input type="date" name="end" value="{{ end }}"
+                 class="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <button type="submit"
+                  class="bg-blue-600 text-white text-sm px-3 py-1 rounded hover:bg-blue-700">Tampilkan</button>
+          <span class="text-sm text-gray-400 ml-2">{{ count }} event</span>
+          <span class="text-xs text-gray-300">/ {{ total_db }} total di DB</span>
+        </form>
+      </div>
+
+      <!-- map -->
+      <div id="map" style="height:420px;width:100%;"></div>
+
+      <!-- stats bar -->
+      <div class="bg-white border-b px-6 py-2 flex flex-wrap gap-6 text-sm" id="statsBar">
+        <span>Total: <strong id="sTot">{{ count }}</strong></span>
+        <span>M≥5: <strong id="sM5">—</strong></span>
+        <span>M≥4: <strong id="sM4">—</strong></span>
+        <span>M≥3: <strong id="sM3">—</strong></span>
+        <span>Maks: <strong id="sMax">—</strong></span>
+      </div>
+
+      <!-- events table -->
+      <div class="px-6 py-4">
+        <div class="bg-white rounded-xl shadow overflow-auto" style="max-height:380px;">
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50 sticky top-0">
+              <tr>
+                <th class="px-3 py-2 text-left text-gray-500 font-semibold">Event ID</th>
+                <th class="px-3 py-2 text-left text-gray-500 font-semibold">Waktu (UTC)</th>
+                <th class="px-3 py-2 text-center text-gray-500 font-semibold">Mag</th>
+                <th class="px-3 py-2 text-center text-gray-500 font-semibold">Depth (km)</th>
+                <th class="px-3 py-2 text-right text-gray-500 font-semibold">Lat</th>
+                <th class="px-3 py-2 text-right text-gray-500 font-semibold">Lon</th>
+                <th class="px-3 py-2 text-left text-gray-500 font-semibold">Lokasi</th>
+                <th class="px-3 py-2 text-left text-gray-500 font-semibold">Kota Terdekat</th>
+                <th class="px-3 py-2 text-right text-gray-500 font-semibold">Jarak (km)</th>
+              </tr>
+            </thead>
+            <tbody id="evtBody">
+              {% for e in events %}
+              <tr class="border-t hover:bg-blue-50 cursor-pointer" onclick="focusEvent('{{ e.event_id }}')">
+                <td class="px-3 py-1.5 font-mono text-gray-600">{{ e.event_id }}</td>
+                <td class="px-3 py-1.5 whitespace-nowrap">{{ e.origin_time|date:"Y-m-d H:i:s" }}</td>
+                <td class="px-3 py-1.5 text-center font-bold
+                  {% if e.magnitude >= 5 %}text-red-600{% elif e.magnitude >= 4 %}text-orange-500{% elif e.magnitude >= 3 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                  {{ e.magnitude }}</td>
+                <td class="px-3 py-1.5 text-center">{{ e.depth_km|floatformat:0 }}</td>
+                <td class="px-3 py-1.5 text-right font-mono">{{ e.latitude|floatformat:3 }}</td>
+                <td class="px-3 py-1.5 text-right font-mono">{{ e.longitude|floatformat:3 }}</td>
+                <td class="px-3 py-1.5 text-gray-600">{{ e.location }}</td>
+                <td class="px-3 py-1.5 text-gray-500">{{ e.nearest_city }}</td>
+                <td class="px-3 py-1.5 text-right text-gray-500">
+                  {% if e.distance_km %}{{ e.distance_km|floatformat:0 }}{% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="9" class="px-3 py-6 text-center text-gray-400">
+                Tidak ada event dalam rentang tanggal ini. Jalankan <code>python manage.py fetch_events</code> terlebih dahulu.
+              </td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- static GeoJSON layers -->
+<script src="{% static 'repository/js/GarisPantaiPapua.js' %}"></script>
+<script src="{% static 'repository/js/batas_laut_indonesia.js' %}"></script>
+<script src="{% static 'repository/js/indofaults.js' %}"></script>
+
+<script>
+const allEvents = {{ map_data|safe }};
+
+// --- Map setup ---
+const map = L.map('map', { zoomSnap: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
+
+map.createPane('pFaults'); map.getPane('pFaults').style.zIndex = 270;
+map.createPane('pEvents'); map.getPane('pEvents').style.zIndex = 290;
+
+const esriOcean = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri', maxZoom: 13
+}).addTo(map);
+
+if (typeof GarisPantaiPapua !== 'undefined')
+  L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } }).addTo(map);
+if (typeof batas_laut_indonesia !== 'undefined')
+  L.geoJSON(batas_laut_indonesia, { style: { color: "#3b82f6", weight: 1, dashArray: '5,5' } }).addTo(map);
+if (typeof indoFaults !== 'undefined')
+  L.geoJSON(indoFaults, { pane: 'pFaults', style: { color: '#555', weight: 0.7 } }).addTo(map);
+else if (typeof indofaults !== 'undefined')
+  L.geoJSON(indofaults, { pane: 'pFaults', style: { color: '#555', weight: 0.7 } }).addTo(map);
+
+function magColor(m) { return m >= 5 ? '#ef4444' : m >= 4 ? '#f97316' : m >= 3 ? '#eab308' : '#22c55e'; }
+function depthColor(d) { return d < 60 ? '#ef4444' : d < 300 ? '#eab308' : '#22c55e'; }
+
+let markersLayer = L.layerGroup().addTo(map);
+const markerMap  = {};   // event_id → marker
+
+function plotEvents() {
+  markersLayer.clearLayers();
+  Object.keys(markerMap).forEach(k => delete markerMap[k]);
+
+  allEvents.forEach(ev => {
+    const m = L.circleMarker([ev.latitude, ev.longitude], {
+      pane: 'pEvents',
+      radius: Math.max(4, ev.magnitude * 2.5),
+      fillColor: depthColor(ev.depth_km),
+      color: '#000', weight: 0.6, opacity: 0.9, fillOpacity: 0.8,
+    }).addTo(markersLayer).bindPopup(
+      `<strong>${ev.event_id}</strong><br>` +
+      `M${ev.magnitude.toFixed(1)} | D: ${ev.depth_km.toFixed(0)} km<br>` +
+      `${ev.time}<br>${ev.location}<br>` +
+      `<em>${ev.nearest_city} (${ev.distance_km} km)</em>`
+    );
+    markerMap[ev.event_id] = m;
+  });
+  updateStats();
+}
+
+function focusEvent(id) {
+  const m = markerMap[id];
+  if (m) { map.setView(m.getLatLng(), 8); m.openPopup(); }
+}
+
+function updateStats() {
+  const mags = allEvents.map(e => e.magnitude);
+  document.getElementById('sTot').textContent = allEvents.length;
+  document.getElementById('sM5').textContent  = mags.filter(m => m >= 5).length;
+  document.getElementById('sM4').textContent  = mags.filter(m => m >= 4).length;
+  document.getElementById('sM3').textContent  = mags.filter(m => m >= 3).length;
+  document.getElementById('sMax').textContent  = mags.length ? Math.max(...mags).toFixed(1) : '—';
+}
+
+// legend
+const legend = L.control({ position: 'bottomright' });
+legend.onAdd = () => {
+  const d = L.DomUtil.create('div');
+  d.style.cssText = 'background:rgba(255,255,255,.9);padding:8px 12px;border-radius:6px;font-size:11px;line-height:1.8;box-shadow:0 1px 5px rgba(0,0,0,.3)';
+  d.innerHTML =
+    '<strong>Kedalaman</strong><br>' +
+    '<span style="color:#ef4444">●</span> Dangkal (&lt;60 km)<br>' +
+    '<span style="color:#eab308">●</span> Menengah (60–300 km)<br>' +
+    '<span style="color:#22c55e">●</span> Dalam (&gt;300 km)';
+  return d;
+};
+legend.addTo(map);
+
+plotEvents();
+</script>
+{% endblock %}

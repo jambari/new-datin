@@ -1249,3 +1249,41 @@ def _handle_media_uploads(request, obj):
     caption    = request.POST.get('caption_new', '')
     for f in files:
         GempaMemusakMedia.objects.create(event=obj, file=f, media_type=media_type, caption=caption)
+
+
+# ── Event Browser ─────────────────────────────────────────────────────────────
+@login_required
+def event_browser(request):
+    from .models import EventBrowser
+    today = date.today()
+    default_start = today - timedelta(days=6)
+
+    start_str = request.GET.get('start', default_start.isoformat())
+    end_str   = request.GET.get('end',   today.isoformat())
+    try:
+        start = date.fromisoformat(start_str)
+        end   = date.fromisoformat(end_str)
+    except ValueError:
+        start, end = default_start, today
+
+    qs = EventBrowser.objects.filter(
+        origin_time__date__gte=start,
+        origin_time__date__lte=end,
+    ).order_by('-origin_time')
+
+    map_data = list(qs.values(
+        'event_id', 'latitude', 'longitude', 'magnitude',
+        'depth_km', 'origin_time', 'location', 'nearest_city', 'distance_km',
+    ))
+    for ev in map_data:
+        ev['time'] = ev.pop('origin_time').strftime('%Y-%m-%d %H:%M:%S UTC')
+
+    context = {
+        'map_data': json.dumps(map_data, cls=DjangoJSONEncoder),
+        'events':   qs[:500],
+        'start':    start.isoformat(),
+        'end':      end.isoformat(),
+        'count':    qs.count(),
+        'total_db': EventBrowser.objects.count(),
+    }
+    return render(request, 'repository/event_browser.html', context)

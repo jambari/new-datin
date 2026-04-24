@@ -30,6 +30,8 @@ urlpatterns = [
     path('json/analysis/<int:pk>/', views.json_analysis, name='json_analysis'),
     path('json/delete/<int:pk>/', views.json_delete, name='json_delete'),
 
+    path('event-browser/', views.event_browser, name='event_browser'),
+
     # ── Gempa Merusak CRUD ─────────────────────────────────────────────────────
     path('gempa-merusak/', views.gempa_merusak_list, name='gempa_merusak_list'),
     path('gempa-merusak/tambah/', views.gempa_merusak_create, name='gempa_merusak_create'),
