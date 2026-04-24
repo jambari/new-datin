@@ -12,15 +12,15 @@ def _media_url(path):
 def album_list(request):
     albums = Album.objects.prefetch_related('cover_photo')
     for a in albums:
-        if a.cover_photo and not a.cover_photo.is_video:
-            a.cover_url      = _media_url(a.cover_photo.thumbnail_path or a.cover_photo.file_path)
+        if a.cover_photo and a.cover_photo.thumbnail_path:
+            a.cover_url      = _media_url(a.cover_photo.thumbnail_path)
+            a.cover_is_video = a.cover_photo.is_video
+        elif a.cover_photo and not a.cover_photo.is_video:
+            a.cover_url      = _media_url(a.cover_photo.file_path)
             a.cover_is_video = False
-        elif a.cover_photo and a.cover_photo.is_video:
-            a.cover_url      = ''
-            a.cover_is_video = True
         else:
             a.cover_url      = ''
-            a.cover_is_video = False
+            a.cover_is_video = a.cover_photo.is_video if a.cover_photo else False
     return render(request, 'arsip/album_list.html', {'albums': albums})
 
 
@@ -29,9 +29,11 @@ def album_detail(request, pk):
     album = get_object_or_404(Album, pk=pk)
     fotos = album.fotos.all()
     for f in fotos:
-        if f.is_video:
-            f.thumb_url = ''   # template will show a video icon
+        if f.thumbnail_path:
+            f.thumb_url = _media_url(f.thumbnail_path)
+        elif not f.is_video:
+            f.thumb_url = _media_url(f.file_path)
         else:
-            f.thumb_url = _media_url(f.thumbnail_path or f.file_path)
+            f.thumb_url = ''   # no thumbnail yet — show play icon
         f.full_url = _media_url(f.file_path)
     return render(request, 'arsip/album_detail.html', {'album': album, 'fotos': fotos})

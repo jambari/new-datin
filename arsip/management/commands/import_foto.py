@@ -82,9 +82,31 @@ class Command(BaseCommand):
                     skipped += 1
                     continue
 
-                # thumbnail — images only; videos get empty thumbnail_path
+                # thumbnail — images via Pillow, videos via ffmpeg if available
                 thumb_rel = ''
                 w = h = 0
+                if is_vid and not dry and __import__('shutil').which('ffmpeg'):
+                    import subprocess as _sp
+                    thumb_rel = f'arsip_foto_thumbs/{folder_name}/{media_path.stem}.jpg'
+                    thumb_abs = media / thumb_rel
+                    thumb_abs.parent.mkdir(parents=True, exist_ok=True)
+                    dur_r = _sp.run(
+                        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                         '-of', 'default=noprint_wrappers=1:nokey=1', str(media_path)],
+                        capture_output=True, text=True)
+                    try:
+                        seek = max(1, round(float(dur_r.stdout.strip()) * 0.2))
+                    except ValueError:
+                        seek = 5
+                    r = _sp.run(
+                        ['ffmpeg', '-y', '-ss', str(seek), '-i', str(media_path),
+                         '-vframes', '1',
+                         '-vf', 'scale=220x220:force_original_aspect_ratio=decrease,'
+                                'pad=220x220:(ow-iw)/2:(oh-ih)/2:black',
+                         '-q:v', '3', str(thumb_abs)],
+                        capture_output=True)
+                    if r.returncode != 0 or not thumb_abs.exists():
+                        thumb_rel = ''
                 if not is_vid and not dry:
                     thumb_rel = f'arsip_foto_thumbs/{folder_name}/{media_path.stem}.jpg'
                     thumb_abs = media / thumb_rel
