@@ -21,6 +21,9 @@ class Album(models.Model):
         return self.fotos.count()
 
 
+VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.3gp', '.wmv', '.mts', '.m4v'}
+
+
 class Foto(models.Model):
     album          = models.ForeignKey(Album, on_delete=models.CASCADE, related_name='fotos')
     file_path      = models.CharField(max_length=512, unique=True)   # relative to MEDIA_ROOT
@@ -30,6 +33,7 @@ class Foto(models.Model):
     file_size      = models.PositiveIntegerField(default=0)
     width          = models.PositiveIntegerField(default=0)
     height         = models.PositiveIntegerField(default=0)
+    is_video       = models.BooleanField(default=False)
     imported_at    = models.DateTimeField(auto_now_add=True)
 
     class Meta:

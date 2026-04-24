@@ -26,12 +26,19 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;">
           {% for foto in fotos %}
           <div onclick="openLightbox({{ forloop.counter0 }})"
-               style="cursor:pointer;overflow:hidden;border-radius:6px;background:#e5e7eb;aspect-ratio:4/3;">
-            <img src="{{ foto.thumb_url }}"
-                 style="width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s;"
-                 onmouseover="this.style.transform='scale(1.06)'"
-                 onmouseout="this.style.transform='scale(1)'"
-                 loading="lazy" alt="{{ foto.caption }}">
+               style="cursor:pointer;overflow:hidden;border-radius:6px;background:#1e293b;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;position:relative;">
+            {% if foto.is_video %}
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="#94a3b8" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <span style="font-size:9px;color:#64748b;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ foto.caption }}</span>
+              </div>
+            {% else %}
+              <img src="{{ foto.thumb_url }}"
+                   style="width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s;"
+                   onmouseover="this.style.transform='scale(1.06)'"
+                   onmouseout="this.style.transform='scale(1)'"
+                   loading="lazy" alt="{{ foto.caption }}">
+            {% endif %}
           </div>
           {% endfor %}
         </div>
@@ -60,10 +67,12 @@
   <button onclick="moveLb(-1)"
     style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#fff;background:rgba(255,255,255,.1);border:none;cursor:pointer;border-radius:50%;width:44px;height:44px;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;">&#8249;</button>
 
-  <!-- image container (overflow hidden for zoom) -->
+  <!-- media container -->
   <div id="lbImgWrap" style="overflow:hidden;max-width:90vw;max-height:80vh;display:flex;align-items:center;justify-content:center;margin-top:44px;">
     <img id="lbImg" src="" alt=""
          style="max-width:90vw;max-height:80vh;object-fit:contain;transform-origin:center;transition:transform .15s;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);">
+    <video id="lbVideo" src="" controls
+           style="display:none;max-width:90vw;max-height:80vh;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);"></video>
   </div>
 
   <!-- caption -->
@@ -79,7 +88,7 @@
 <script>
 const photos = [
   {% for foto in fotos %}
-  { full: "{{ foto.full_url }}", caption: "{{ foto.caption|escapejs }}" },
+  { full: "{{ foto.full_url }}", caption: "{{ foto.caption|escapejs }}", is_video: {{ foto.is_video|yesno:"true,false" }} },
   {% endfor %}
 ];
 let lbIdx = 0;
@@ -117,11 +126,24 @@ function _applyZoom() {
 }
 function _renderLb() {
   const p = photos[lbIdx];
-  document.getElementById('lbImg').src = p.full;
-  document.getElementById('lbImg').style.transform = 'scale(1)';
+  const img   = document.getElementById('lbImg');
+  const video = document.getElementById('lbVideo');
   document.getElementById('lbCaption').textContent = p.caption;
   document.getElementById('lbCounter').textContent = `${lbIdx + 1} / ${photos.length}`;
   document.getElementById('lbZoomLabel').textContent = '100%';
+  if (p.is_video) {
+    img.style.display   = 'none';
+    video.style.display = 'block';
+    video.src = p.full;
+    video.load();
+  } else {
+    video.style.display = 'none';
+    video.pause();
+    video.src = '';
+    img.style.display     = 'block';
+    img.src               = p.full;
+    img.style.transform   = 'scale(1)';
+  }
 }
 function _lbKey(e) {
   if (e.key === 'ArrowRight') moveLb(1);

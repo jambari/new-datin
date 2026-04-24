@@ -24,6 +24,9 @@ def album_detail(request, pk):
     album = get_object_or_404(Album, pk=pk)
     fotos = album.fotos.all()
     for f in fotos:
-        f.thumb_url = _media_url(f.thumbnail_path or f.file_path)
-        f.full_url  = _media_url(f.file_path)
+        if f.is_video:
+            f.thumb_url = ''   # template will show a video icon
+        else:
+            f.thumb_url = _media_url(f.thumbnail_path or f.file_path)
+        f.full_url = _media_url(f.file_path)
     return render(request, 'arsip/album_detail.html', {'album': album, 'fotos': fotos})
