@@ -35,6 +35,8 @@ def haversine(lat1, lon1, lat2, lon2):
 
 
 def nearest_city(lat, lon, cities):
+    if not cities:
+        return '', None
     best_name, best_dist = '', float('inf')
     for c in cities:
         d = haversine(lat, lon, c.latitude, c.longitude)

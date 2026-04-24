@@ -937,7 +937,7 @@
         <td contenteditable="true" spellcheck="false">${ev.longitude.toFixed(4)}</td>
         <td contenteditable="true" spellcheck="false">${ev.magnitude.toFixed(1)}</td>
         <td contenteditable="true" spellcheck="false">${ev.depth.toFixed(1)}</td>
-        <td contenteditable="true" spellcheck="false" class="text-start">${ev.location || ''}</td>
+        <td contenteditable="true" spellcheck="false" class="text-start">${ev.nearest_city ? ev.nearest_city + (ev.distance_km ? ' (' + Number(ev.distance_km).toFixed(0) + ' km)' : '') : (ev.location || '')}</td>
         <td class="no-print"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteEventRow(this)" title="Hapus"><i class="bi bi-trash"></i></button></td>
       `;
       tbody.appendChild(tr);
@@ -987,7 +987,7 @@
       ev.longitude.toFixed(4),
       ev.magnitude.toFixed(1),
       ev.depth.toFixed(1),
-      ev.location || '',
+      ev.nearest_city ? ev.nearest_city + (ev.distance_km ? ' (' + Number(ev.distance_km).toFixed(0) + ' km)' : '') : (ev.location || ''),
     ]);
     return { headers, rows };
   }

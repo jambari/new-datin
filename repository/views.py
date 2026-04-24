@@ -1274,16 +1274,17 @@ def event_browser(request):
     map_data = []
     lats, lons = [], []
     for ev in qs.values('event_id', 'latitude', 'longitude', 'magnitude', 'depth_km', 'origin_time', 'location', 'nearest_city', 'distance_km'):
+        dist = ev['distance_km']
         map_data.append({
-            'event_id':    ev['event_id'],
-            'latitude':    ev['latitude'],
-            'longitude':   ev['longitude'],
-            'magnitude':   ev['magnitude'],
-            'depth':       ev['depth_km'],       # json_analysis uses 'depth'
-            'time':        ev['origin_time'].strftime('%Y-%m-%d %H:%M:%S UTC'),
-            'location':    ev['location'],
+            'event_id':     ev['event_id'],
+            'latitude':     ev['latitude'],
+            'longitude':    ev['longitude'],
+            'magnitude':    ev['magnitude'],
+            'depth':        ev['depth_km'],
+            'time':         ev['origin_time'].strftime('%Y-%m-%d %H:%M:%S UTC'),
+            'location':     ev['location'],
             'nearest_city': ev['nearest_city'],
-            'distance_km': ev['distance_km'],
+            'distance_km':  round(dist, 1) if dist is not None and dist != float('inf') else None,
         })
         lats.append(ev['latitude'])
         lons.append(ev['longitude'])
@@ -1292,19 +1293,49 @@ def event_browser(request):
     avg_lon = round(sum(lons) / len(lons), 4) if lons else 137.5
     formatted_period = f"{start.strftime('%d %B %Y')} s/d {end.strftime('%d %B %Y')}"
 
+    # Peta Dirasakan — FeltEarthquake within the selected date range
+    _WIB = dt_timezone(timedelta(hours=7))
+    felt_events_query = list(
+        FeltEarthquake.objects.filter(
+            event_datetime__date__gte=start,
+            event_datetime__date__lte=end,
+        ).order_by('event_datetime')
+    )
+    shk_map = {
+        shk.event_id: shk
+        for shk in ShakemapEvent.objects.filter(
+            event_time__date__gte=start,
+            event_time__date__lte=end,
+        )
+    }
+    for fe in felt_events_query:
+        wib_ts = fe.event_datetime.astimezone(_WIB).strftime('%Y%m%d%H%M%S')
+        fe.shk_event = shk_map.get(wib_ts)
+
+    felt_map_data = [
+        {
+            'lat':   float(fe.latitude),
+            'lon':   float(fe.longitude),
+            'mag':   float(fe.magnitude),
+            'place': fe.wilayah,
+            'time':  fe.event_datetime.strftime('%Y-%m-%d %H:%M'),
+        }
+        for fe in felt_events_query
+    ]
+
     context = {
-        'map_data':       json.dumps(map_data, cls=DjangoJSONEncoder),
-        'felt_map_data':  '[]',
-        'felt_events':    [],
-        'avg_lat':        avg_lat,
-        'avg_lon':        avg_lon,
+        'map_data':        json.dumps(map_data, cls=DjangoJSONEncoder),
+        'felt_map_data':   json.dumps(felt_map_data),
+        'felt_events':     felt_events_query,
+        'avg_lat':         avg_lat,
+        'avg_lon':         avg_lon,
         'formatted_bulan': formatted_period,
-        'start':          start.isoformat(),
-        'end':            end.isoformat(),
-        'count':          len(map_data),
-        'total_db':       EventBrowser.objects.count(),
+        'start':           start.isoformat(),
+        'end':             end.isoformat(),
+        'count':           len(map_data),
+        'total_db':        EventBrowser.objects.count(),
         'stats': {
-            'total': len(map_data),
+            'total':   len(map_data),
             'max_mag': max((e['magnitude'] for e in map_data), default=0),
         },
     }
