@@ -20,31 +20,35 @@
           <p>Belum ada foto. Jalankan <code>python manage.py import_foto</code> setelah rsync selesai.</p>
         </div>
       {% else %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;">
           {% for album in albums %}
           <a href="{% url 'arsip:album_detail' album.pk %}"
-             class="group bg-white rounded-xl shadow hover:shadow-md transition overflow-hidden">
-            <div class="relative w-full" style="padding-bottom:75%;">
+             style="display:inline-flex;flex-direction:column;width:200px;text-decoration:none;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);overflow:hidden;transition:box-shadow .2s;"
+             onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.18)'"
+             onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.1)'">
+            <div style="position:relative;width:200px;height:200px;background:#e5e7eb;flex-shrink:0;">
               {% if album.cover_url %}
                 <img src="{{ album.cover_url }}"
-                     class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                     style="width:200px;height:200px;object-fit:cover;display:block;transition:transform .3s;"
+                     onmouseover="this.style.transform='scale(1.06)'"
+                     onmouseout="this.style.transform='scale(1)'"
                      loading="lazy" alt="{{ album.name }}">
               {% else %}
-                <div class="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-300">
-                  <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#d1d5db;">
+                  <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                       d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                   </svg>
                 </div>
               {% endif %}
-              <span class="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded">
+              <span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;">
                 {{ album.foto_count }}
               </span>
             </div>
-            <div class="p-2">
-              <p class="text-xs font-semibold text-gray-700 truncate" title="{{ album.name }}">{{ album.name }}</p>
+            <div style="padding:8px 10px;">
+              <p style="margin:0;font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ album.name }}">{{ album.name }}</p>
               {% if album.description %}
-                <p class="text-xs text-gray-400 truncate">{{ album.description }}</p>
+                <p style="margin:2px 0 0;font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ album.description }}</p>
               {% endif %}
             </div>
           </a>
