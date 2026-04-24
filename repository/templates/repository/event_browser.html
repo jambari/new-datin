@@ -139,6 +139,8 @@
                   <h6 class="fw-bold border-bottom pb-2 mb-3">Parameter Peta</h6>
                   <div class="mb-3"><label class="form-label small fw-bold">Judul Peta</label><input type="text" id="inT" class="form-control form-control-sm" value="PETA SEISMISITAS" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
                   <input type="hidden" id="inP" value="{{ start }} s/d {{ end }}">
+                  <input type="hidden" id="filterStart" value="{{ start }}">
+                  <input type="hidden" id="filterEnd" value="{{ end }}">
                   <button class="btn btn-primary btn-sm w-100 mb-2" onclick="updateMapDisplay()"><i class="bi bi-arrow-clockwise me-1"></i>Update</button>
                   <button onclick="window.print()" class="btn btn-success btn-sm w-100 mb-3"><i class="bi bi-printer me-1"></i>Cetak PDF</button>
                   <hr>
