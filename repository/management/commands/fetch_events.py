@@ -26,6 +26,9 @@ START_DATE = datetime.date(2025, 1, 1)
 ALLOWED_AGENCIES = {'PGR5', 'BMKG-JAY', 'BMKG-NBPI', 'BMKG-SWI'}
 
 
+_DIRECTIONS = ['Utara', 'TimurLaut', 'Timur', 'Tenggara', 'Selatan', 'BaratDaya', 'Barat', 'BaratLaut']
+
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371.0
     dlat = math.radians(lat2 - lat1)
@@ -34,16 +37,31 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * 2 * math.asin(math.sqrt(a))
 
 
+def _bearing(lat1, lon1, lat2, lon2):
+    """Bearing from (lat1,lon1) toward (lat2,lon2), in degrees 0-360."""
+    dlon = math.radians(lon2 - lon1)
+    lat1_r, lat2_r = math.radians(lat1), math.radians(lat2)
+    x = math.sin(dlon) * math.cos(lat2_r)
+    y = math.cos(lat1_r) * math.sin(lat2_r) - math.sin(lat1_r) * math.cos(lat2_r) * math.cos(dlon)
+    return (math.degrees(math.atan2(x, y)) + 360) % 360
+
+
 def nearest_city(lat, lon, cities):
+    """Return (formatted_label, distance_km) e.g. ('34Km BaratLaut JAYAPURA-PAPUA', 34.2)."""
     if not cities:
         return '', None
-    best_name, best_dist = '', float('inf')
+    best_city, best_dist = None, float('inf')
     for c in cities:
         d = haversine(lat, lon, c.latitude, c.longitude)
         if d < best_dist:
             best_dist = d
-            best_name = c.name
-    return best_name, round(best_dist, 1)
+            best_city = c
+    dist_km = round(best_dist, 1)
+    # bearing FROM city TO epicentre gives direction of quake relative to city
+    brng = _bearing(best_city.latitude, best_city.longitude, lat, lon)
+    direction = _DIRECTIONS[round(brng / 45) % 8]
+    label = f"{round(best_dist)}Km {direction} {best_city.name}"
+    return label, dist_km
 
 
 def fetch_day(date):
