@@ -1340,3 +1340,89 @@ def event_browser(request):
         },
     }
     return render(request, 'repository/event_browser.html', context)
+
+
+# ---------------------------------------------------------------------------
+# QuakeLink push API — accepts batched events from remote scrapers
+# POST /api/events/push/   Authorization: Bearer <QUAKELINK_PUSH_TOKEN>
+# ---------------------------------------------------------------------------
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings as dj_settings
+import math as _math
+
+_DIRECTIONS_PUSH = ['Utara','TimurLaut','Timur','Tenggara','Selatan','BaratDaya','Barat','BaratLaut']
+
+def _hav(lat1, lon1, lat2, lon2):
+    R = 6371.0
+    dlat = _math.radians(lat2 - lat1)
+    dlon = _math.radians(lon2 - lon1)
+    a = _math.sin(dlat/2)**2 + _math.cos(_math.radians(lat1)) * _math.cos(_math.radians(lat2)) * _math.sin(dlon/2)**2
+    return R * 2 * _math.asin(_math.sqrt(a))
+
+def _brng(lat1, lon1, lat2, lon2):
+    dlon = _math.radians(lon2 - lon1)
+    lat1r, lat2r = _math.radians(lat1), _math.radians(lat2)
+    x = _math.sin(dlon) * _math.cos(lat2r)
+    y = _math.cos(lat1r) * _math.sin(lat2r) - _math.sin(lat1r) * _math.cos(lat2r) * _math.cos(dlon)
+    return (_math.degrees(_math.atan2(x, y)) + 360) % 360
+
+def _nearest(lat, lon, cities):
+    if not cities:
+        return '', None
+    best, bd = None, float('inf')
+    for c in cities:
+        d = _hav(lat, lon, c.latitude, c.longitude)
+        if d < bd:
+            bd, best = d, c
+    direction = _DIRECTIONS_PUSH[round(_brng(best.latitude, best.longitude, lat, lon) / 45) % 8]
+    return f"{round(bd)}Km {direction} {best.name}", round(bd, 1)
+
+
+@csrf_exempt
+def push_events_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=405)
+
+    token = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+    expected = getattr(dj_settings, 'QUAKELINK_PUSH_TOKEN', '')
+    if not expected or token != expected:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        events = json.loads(request.body)
+        if not isinstance(events, list):
+            raise ValueError
+    except (ValueError, Exception):
+        return JsonResponse({'error': 'Expected JSON array'}, status=400)
+
+    from .models import EventBrowser, ReferenceLocation
+    cities = list(ReferenceLocation.objects.all())
+    new_count = updated_count = 0
+
+    for ev in events:
+        try:
+            lat  = float(ev['latitude'])
+            lon  = float(ev['longitude'])
+            city_label, dist = _nearest(lat, lon, cities)
+            obj, created = EventBrowser.objects.update_or_create(
+                event_id=ev['event_id'],
+                defaults={
+                    'origin_time':  datetime.fromisoformat(ev['origin_time']),
+                    'magnitude':    float(ev['magnitude']),
+                    'latitude':     lat,
+                    'longitude':    lon,
+                    'depth_km':     float(ev['depth_km']),
+                    'location':     ev.get('location', ''),
+                    'author':       ev.get('author', ''),
+                    'nearest_city': city_label,
+                    'distance_km':  dist,
+                },
+            )
+            if created:
+                new_count += 1
+            else:
+                updated_count += 1
+        except Exception:
+            continue
+
+    return JsonResponse({'new': new_count, 'updated': updated_count})
