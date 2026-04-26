@@ -102,7 +102,7 @@ class Command(BaseCommand):
                         ['ffmpeg', '-y', '-ss', str(seek), '-i', str(media_path),
                          '-vframes', '1',
                          '-vf', 'scale=220x220:force_original_aspect_ratio=decrease,'
-                                'pad=220x220:(ow-iw)/2:(oh-ih)/2:black',
+                                'pad=220:220:(ow-iw)/2:(oh-ih)/2:black',
                          '-q:v', '3', str(thumb_abs)],
                         capture_output=True)
                     if r.returncode != 0 or not thumb_abs.exists():

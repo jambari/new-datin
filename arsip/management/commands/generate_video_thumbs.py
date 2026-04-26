@@ -13,7 +13,7 @@ from django.core.management.base import BaseCommand
 
 from arsip.models import Foto
 
-THUMB_SIZE = '220x220'  # ffmpeg scale filter (keeps aspect, pads to fit)
+THUMB_W = THUMB_H = 220
 
 
 def get_duration(src):
@@ -33,8 +33,8 @@ def extract_thumb(src, thumb_abs, seek_sec):
     r = subprocess.run(
         ['ffmpeg', '-y', '-ss', str(seek_sec), '-i', str(src),
          '-vframes', '1',
-         '-vf', f'scale={THUMB_SIZE}:force_original_aspect_ratio=decrease,'
-                f'pad={THUMB_SIZE}:(ow-iw)/2:(oh-ih)/2:black',
+         '-vf', f'scale={THUMB_W}x{THUMB_H}:force_original_aspect_ratio=decrease,'
+                f'pad={THUMB_W}:{THUMB_H}:(ow-iw)/2:(oh-ih)/2:black',
          '-q:v', '3', str(thumb_abs)],
         capture_output=True
     )
