@@ -17,7 +17,6 @@ class Album(models.Model):
     def __str__(self):
         return self.name
 
-    @property
     def foto_count(self):
         return self.fotos.count()
 
