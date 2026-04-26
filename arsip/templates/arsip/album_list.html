@@ -6,10 +6,20 @@
     {% include 'partials/_topbar.html' %}
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
 
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-bold text-gray-800">Arsip Foto</h1>
         <span class="text-sm text-gray-500">{{ albums|length }} album</span>
       </div>
+
+      <form method="get" class="mb-5">
+        <div class="flex gap-2 max-w-sm">
+          <input type="text" name="q" value="{{ q }}" placeholder="Cari album…"
+            class="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          {% if q %}
+            <a href="{% url 'arsip:album_list' %}" class="px-3 py-1.5 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">✕</a>
+          {% endif %}
+        </div>
+      </form>
 
       {% if not albums %}
         <div class="bg-white rounded-xl shadow p-10 text-center text-gray-400">

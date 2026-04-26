@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from django.db.models import Count
 from .models import Album, Foto
 
 
@@ -10,7 +11,10 @@ def _media_url(path):
 
 @login_required
 def album_list(request):
-    albums = Album.objects.prefetch_related('cover_photo')
+    q = request.GET.get('q', '').strip()
+    albums = Album.objects.prefetch_related('cover_photo').annotate(foto_count=Count('fotos'))
+    if q:
+        albums = albums.filter(name__icontains=q)
     for a in albums:
         if a.cover_photo and a.cover_photo.thumbnail_path:
             a.cover_url      = _media_url(a.cover_photo.thumbnail_path)
@@ -21,7 +25,7 @@ def album_list(request):
         else:
             a.cover_url      = ''
             a.cover_is_video = a.cover_photo.is_video if a.cover_photo else False
-    return render(request, 'arsip/album_list.html', {'albums': albums})
+    return render(request, 'arsip/album_list.html', {'albums': albums, 'q': q})
 
 
 @login_required
