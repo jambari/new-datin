@@ -11,7 +11,7 @@ app_name = 'wrsng' # Penting untuk namespacing
 
 urlpatterns = [
     # Endpoint API untuk menerima data
-    path('wrsng/status/update/', WRSNGStatusUpdateAPI.as_view(), name='status_update_api'),
+    path('status/update/', WRSNGStatusUpdateAPI.as_view(), name='status_update_api'),
     
     # --- URL BARU UNTUK HALAMAN DAFTAR ---
     path('status/list/', WRSNGStatusListView.as_view(), name='status_list'),
