@@ -26,7 +26,26 @@ START_DATE = datetime.date(2025, 1, 1)
 ALLOWED_AGENCIES = {'PGR5', 'BMKG-JAY', 'BMKG-NBPI', 'BMKG-SWI'}
 
 
-_DIRECTIONS = ['Utara', 'TimurLaut', 'Timur', 'Tenggara', 'Selatan', 'BaratDaya', 'Barat', 'BaratLaut']
+_DIRECTIONS = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut']
+
+_PROVINCE_SUFFIXES = {
+    'PAPUA', 'PAPUABRT', 'PAPUABRTDY', 'PAPUASEL', 'PAPUATENGAH', 'PAPUAPEGNGN',
+    'PAPUANUGINI', 'MALUKU', 'MALUKUUTARA', 'SULUT', 'SULTRA', 'SULTENG', 'SULSEL',
+}
+
+
+def _clean_city(name):
+    parts = [p.strip() for p in name.strip().replace(' - ', '-').split('-')]
+    while len(parts) > 1:
+        tail = parts[-1].upper().replace(' ', '')
+        combined = (parts[-2].upper().replace(' ', '') + parts[-1].upper().replace(' ', ''))
+        if combined in _PROVINCE_SUFFIXES:
+            parts = parts[:-2]
+        elif tail in _PROVINCE_SUFFIXES:
+            parts.pop()
+        else:
+            break
+    return ' '.join(p.title() for p in parts if p)
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -47,7 +66,7 @@ def _bearing(lat1, lon1, lat2, lon2):
 
 
 def nearest_city(lat, lon, cities):
-    """Return (formatted_label, distance_km) e.g. ('34Km BaratLaut JAYAPURA-PAPUA', 34.2)."""
+    """Return (formatted_label, distance_km) e.g. ('34 km Barat Laut Jayapura', 34.2)."""
     if not cities:
         return '', None
     best_city, best_dist = None, float('inf')
@@ -57,10 +76,9 @@ def nearest_city(lat, lon, cities):
             best_dist = d
             best_city = c
     dist_km = round(best_dist, 1)
-    # bearing FROM city TO epicentre gives direction of quake relative to city
     brng = _bearing(best_city.latitude, best_city.longitude, lat, lon)
     direction = _DIRECTIONS[round(brng / 45) % 8]
-    label = f"{round(best_dist)}Km {direction} {best_city.name}"
+    label = f"{round(best_dist)} km {direction} {_clean_city(best_city.name)}"
     return label, dist_km
 
 

@@ -1350,7 +1350,25 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings as dj_settings
 import math as _math
 
-_DIRECTIONS_PUSH = ['Utara','TimurLaut','Timur','Tenggara','Selatan','BaratDaya','Barat','BaratLaut']
+_DIRECTIONS_PUSH = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut']
+
+_PROV_SUFFIXES_PUSH = {
+    'PAPUA', 'PAPUABRT', 'PAPUABRTDY', 'PAPUASEL', 'PAPUATENGAH', 'PAPUAPEGNGN',
+    'PAPUANUGINI', 'MALUKU', 'MALUKUUTARA', 'SULUT', 'SULTRA', 'SULTENG', 'SULSEL',
+}
+
+def _clean_city_push(name):
+    parts = [p.strip() for p in name.strip().replace(' - ', '-').split('-')]
+    while len(parts) > 1:
+        tail = parts[-1].upper().replace(' ', '')
+        combined = (parts[-2].upper().replace(' ', '') + parts[-1].upper().replace(' ', ''))
+        if combined in _PROV_SUFFIXES_PUSH:
+            parts = parts[:-2]
+        elif tail in _PROV_SUFFIXES_PUSH:
+            parts.pop()
+        else:
+            break
+    return ' '.join(p.title() for p in parts if p)
 
 def _hav(lat1, lon1, lat2, lon2):
     R = 6371.0
@@ -1375,7 +1393,7 @@ def _nearest(lat, lon, cities):
         if d < bd:
             bd, best = d, c
     direction = _DIRECTIONS_PUSH[round(_brng(best.latitude, best.longitude, lat, lon) / 45) % 8]
-    return f"{round(bd)}Km {direction} {best.name}", round(bd, 1)
+    return f"{round(bd)} km {direction} {_clean_city_push(best.name)}", round(bd, 1)
 
 
 @csrf_exempt

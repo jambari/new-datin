@@ -135,8 +135,7 @@ def tambah_perjadin(request):
             ).exists()
 
             if is_exists:
-                # Jika sudah ada, jangan simpan dan beri pesan (opsional)
-                return redirect('perjadin:index_perjadin')
+                return redirect(f'/perjadin/?month={curr_m}&year={curr_y}')
 
             try:
                 PerjalananDinas.objects.create(
@@ -151,7 +150,7 @@ def tambah_perjadin(request):
             except Exception as e:
                 return HttpResponse(f"Error: {e}")
                 
-    return HttpResponseForbidden()
+    return redirect('perjadin:index_perjadin')
 
 def detail_pegawai(request, pegawai_id):
     pegawai = get_object_or_404(Pegawai, id=pegawai_id)
