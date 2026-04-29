@@ -64,7 +64,7 @@
               {% for row in rows %}
               <tr class="hover:bg-gray-50 transition-colors duration-150">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ row.reported_at|date:"Y-m-d H:i:s" }}
+                  {{ row.reported_at|timezone:"Asia/Jayapura"|date:"Y-m-d H:i:s" }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
                   {{ row.instrument }}

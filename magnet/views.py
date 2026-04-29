@@ -1177,9 +1177,6 @@ def lemi_status_api(request):
 @login_required
 def instrument_status_list(request):
     from .models import InstrumentStatus as IS
-    import zoneinfo
-
-    _WIT = zoneinfo.ZoneInfo('Asia/Jayapura')
 
     instrument_filter = request.GET.get('instrument', '')
     start_date_str    = request.GET.get('start_date', '')
@@ -1219,7 +1216,7 @@ def instrument_status_list(request):
             'status':        rec.status,
             'status_label':  STATUS_LABEL.get(rec.status, rec.status),
             'computer_name': rec.computer_name,
-            'reported_at':   rec.reported_at.astimezone(_WIT),
+            'reported_at':   rec.reported_at,
         })
 
     context = {
