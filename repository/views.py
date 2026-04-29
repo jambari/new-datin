@@ -1357,6 +1357,9 @@ _PROV_SUFFIXES_PUSH = {
     'PAPUANUGINI', 'MALUKU', 'MALUKUUTARA', 'SULUT', 'SULTRA', 'SULTENG', 'SULSEL',
 }
 
+_SUBDISTRICT_PREFIXES_PUSH = {'LEREH', 'GENYEM', 'KEBAR', 'SENGGI'}
+_ADMIN_LABELS_PUSH = {'KAB': 'Kab.', 'KOTA': 'Kota', 'PEG': 'Peg.'}
+
 def _clean_city_push(name):
     parts = [p.strip() for p in name.strip().replace(' - ', '-').split('-')]
     while len(parts) > 1:
@@ -1368,7 +1371,14 @@ def _clean_city_push(name):
             parts.pop()
         else:
             break
-    return ' '.join(p.title() for p in parts if p)
+    if len(parts) == 1:
+        return parts[0].title()
+    first_up = parts[0].upper()
+    if first_up in _ADMIN_LABELS_PUSH:
+        return _ADMIN_LABELS_PUSH[first_up] + ' ' + ' '.join(p.title() for p in parts[1:])
+    if first_up in _SUBDISTRICT_PREFIXES_PUSH:
+        return ' '.join(p.title() for p in parts[1:])
+    return ' '.join(p.title() for p in parts)
 
 def _hav(lat1, lon1, lat2, lon2):
     R = 6371.0

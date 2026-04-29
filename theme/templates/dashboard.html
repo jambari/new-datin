@@ -86,7 +86,7 @@
             <div>
               <p style="font-size:15px;font-weight:600;color:#111827;margin-bottom:4px;">{{ latest_gempa.nearest_city|default:latest_gempa.location }}</p>
               <p style="font-size:13px;color:#6b7280;">{{ latest_gempa.origin_time|timezone:"Asia/Jayapura"|date:"d M Y, H:i:s" }} WIT</p>
-              <p style="font-size:13px;color:#6b7280;">Kedalaman {{ latest_gempa.depth_km }} km &nbsp;|&nbsp; {{ latest_gempa.latitude }}&deg;, {{ latest_gempa.longitude }}&deg;</p>
+              <p style="font-size:13px;color:#6b7280;">Kedalaman {{ latest_gempa.depth_km }} km &nbsp;|&nbsp; {{ latest_gempa.latitude|floatformat:3 }}&deg;, {{ latest_gempa.longitude|floatformat:3 }}&deg;</p>
             </div>
           </div>
           {% endif %}

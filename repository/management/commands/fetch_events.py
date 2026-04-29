@@ -33,6 +33,11 @@ _PROVINCE_SUFFIXES = {
     'PAPUANUGINI', 'MALUKU', 'MALUKUUTARA', 'SULUT', 'SULTRA', 'SULTENG', 'SULSEL',
 }
 
+# Sub-districts whose prefix should be dropped (keep only the regency/city name)
+_SUBDISTRICT_PREFIXES = {'LEREH', 'GENYEM', 'KEBAR', 'SENGGI'}
+# Admin-level prefixes that map to readable labels
+_ADMIN_LABELS = {'KAB': 'Kab.', 'KOTA': 'Kota', 'PEG': 'Peg.'}
+
 
 def _clean_city(name):
     parts = [p.strip() for p in name.strip().replace(' - ', '-').split('-')]
@@ -45,7 +50,14 @@ def _clean_city(name):
             parts.pop()
         else:
             break
-    return ' '.join(p.title() for p in parts if p)
+    if len(parts) == 1:
+        return parts[0].title()
+    first_up = parts[0].upper()
+    if first_up in _ADMIN_LABELS:
+        return _ADMIN_LABELS[first_up] + ' ' + ' '.join(p.title() for p in parts[1:])
+    if first_up in _SUBDISTRICT_PREFIXES:
+        return ' '.join(p.title() for p in parts[1:])
+    return ' '.join(p.title() for p in parts)
 
 
 def haversine(lat1, lon1, lat2, lon2):
