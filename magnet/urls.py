@@ -35,5 +35,6 @@ urlpatterns = [
     path('api/update-availability/', update_magnet_availability, name='update_magnet_availability'),
     path('observation/bartington/', views.observation_bartington_form_view, name='observation_bartington'),
     path('observation/legacy/', views.observation_legacy_list_view, name='observation_legacy_list'),
-    path('api/lemi/status/', views.lemi_status_api, name='lemi_status_api'),
+    path('api/lemi/status/',       views.lemi_status_api,       name='lemi_status_api'),
+    path('api/instrument/status/', views.instrument_status_api, name='instrument_status_api'),
 ]

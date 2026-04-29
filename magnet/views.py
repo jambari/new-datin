@@ -1056,7 +1056,7 @@ def observation_legacy_list_view(request):
     }
     return render(request, 'magnet/observation_legacy_list.html', context)
 
-# ── LEMI-018 Monitor API ──────────────────────────────────────────────────────
+# ── Instrument Monitor API (LEMI-018 / Proton / Nexstorm) ────────────────────
 
 import subprocess
 from django.views.decorators.csrf import csrf_exempt
@@ -1064,28 +1064,35 @@ from django.http import JsonResponse
 from django.conf import settings as dj_settings
 from django.utils import timezone
 from datetime import timedelta
-from .models import LEMIStatus
+from .models import InstrumentStatus
 import json as _json
 
-def _send_lemi_telegram(status, computer_name):
+_INSTRUMENT_LABELS = {
+    InstrumentStatus.LEMI:     'LEMI-018',
+    InstrumentStatus.PROTON:   'Proton',
+    InstrumentStatus.NEXSTORM: 'Nexstorm',
+}
+_STALE_MINUTES = 5
+
+
+def _send_instrument_telegram(instrument, status, computer_name):
     token   = dj_settings.TELEGRAM_BOT_TOKEN
     chat_id = dj_settings.TELEGRAM_CHAT_ID
     if not token or not chat_id:
         return
-    if status == LEMIStatus.STATUS_NOT_RESPONDING:
-        msg = (
-            "🚨 <b>PERINGATAN LEMI-018</b>\n\n"
-            f"⚠️ LEMI-018 <b>TIDAK MERESPONS</b>\n"
-            f"Komputer: <b>{computer_name}</b>\n\n"
-            "Segera restart aplikasi LEMI-018!"
-        )
+    name = _INSTRUMENT_LABELS.get(instrument, instrument.upper())
+    if status == InstrumentStatus.STATUS_NOT_RESPONDING:
+        emoji, keterangan = '⚠️', 'TIDAK MERESPONS'
+        saran = f'Segera restart aplikasi {name}!'
     else:
-        msg = (
-            "🚨 <b>PERINGATAN LEMI-018</b>\n\n"
-            f"❌ LEMI-018 <b>TIDAK BERJALAN</b>\n"
-            f"Komputer: <b>{computer_name}</b>\n\n"
-            "Segera buka aplikasi LEMI-018!"
-        )
+        emoji, keterangan = '❌', 'TIDAK BERJALAN'
+        saran = f'Segera buka aplikasi {name}!'
+    msg = (
+        f"🚨 <b>PERINGATAN {name}</b>\n\n"
+        f"{emoji} {name} <b>{keterangan}</b>\n"
+        f"Komputer: <b>{computer_name}</b>\n\n"
+        f"{saran}"
+    )
     subprocess.run([
         'curl', '-s', '-X', 'POST',
         f'https://api.telegram.org/bot{token}/sendMessage',
@@ -1096,19 +1103,27 @@ def _send_lemi_telegram(status, computer_name):
 
 
 @csrf_exempt
-def lemi_status_api(request):
+def instrument_status_api(request):
+    """
+    GET  → returns latest status for all 3 instruments as one JSON object.
+    POST → {"instrument":"lemi|proton|nexstorm","status":"ok|not_responding|not_running",
+             "computer_name":"PC-NAME"}
+    """
     if request.method == 'GET':
-        try:
-            latest = LEMIStatus.objects.latest()
-            stale  = (timezone.now() - latest.reported_at) > timedelta(minutes=5)
-            return JsonResponse({
-                'status':        'monitor_offline' if stale else latest.status,
-                'computer_name': latest.computer_name,
-                'reported_at':   latest.reported_at.isoformat(),
-                'stale':         stale,
-            })
-        except LEMIStatus.DoesNotExist:
-            return JsonResponse({'status': 'unknown', 'stale': True})
+        result = {}
+        for instr in (InstrumentStatus.LEMI, InstrumentStatus.PROTON, InstrumentStatus.NEXSTORM):
+            try:
+                latest = InstrumentStatus.objects.filter(instrument=instr).latest('reported_at')
+                stale  = (timezone.now() - latest.reported_at) > timedelta(minutes=_STALE_MINUTES)
+                result[instr] = {
+                    'status':        'monitor_offline' if stale else latest.status,
+                    'computer_name': latest.computer_name,
+                    'reported_at':   latest.reported_at.isoformat(),
+                    'stale':         stale,
+                }
+            except InstrumentStatus.DoesNotExist:
+                result[instr] = {'status': 'unknown', 'stale': True}
+        return JsonResponse(result)
 
     if request.method == 'POST':
         token    = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
@@ -1118,31 +1133,42 @@ def lemi_status_api(request):
 
         try:
             data          = _json.loads(request.body)
+            instrument    = data.get('instrument', '')
             new_status    = data.get('status', '')
-            computer_name = data.get('computer_name', 'LEMI-PC')
+            computer_name = data.get('computer_name', 'Unknown')
         except Exception:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-        if new_status not in (LEMIStatus.STATUS_OK, LEMIStatus.STATUS_NOT_RESPONDING, LEMIStatus.STATUS_NOT_RUNNING):
-            return JsonResponse({'error': 'Invalid status'}, status=400)
+        if instrument not in _INSTRUMENT_LABELS or new_status not in InstrumentStatus.VALID_STATUSES:
+            return JsonResponse({'error': 'Invalid instrument or status'}, status=400)
 
-        # Detect transition to alert state → send Telegram once
         try:
-            prev = LEMIStatus.objects.latest()
-            was_ok = prev.status == LEMIStatus.STATUS_OK
-        except LEMIStatus.DoesNotExist:
+            prev   = InstrumentStatus.objects.filter(instrument=instrument).latest('reported_at')
+            was_ok = prev.status == InstrumentStatus.STATUS_OK
+        except InstrumentStatus.DoesNotExist:
             was_ok = True
 
-        LEMIStatus.objects.create(status=new_status, computer_name=computer_name)
+        InstrumentStatus.objects.create(
+            instrument=instrument, status=new_status, computer_name=computer_name,
+        )
 
-        if new_status != LEMIStatus.STATUS_OK and was_ok:
-            _send_lemi_telegram(new_status, computer_name)
+        if new_status != InstrumentStatus.STATUS_OK and was_ok:
+            _send_instrument_telegram(instrument, new_status, computer_name)
 
-        # Keep only the last 500 rows
-        old_ids = LEMIStatus.objects.values_list('id', flat=True)[500:]
+        # Trim: keep last 500 rows per instrument
+        old_ids = list(
+            InstrumentStatus.objects.filter(instrument=instrument)
+            .values_list('id', flat=True)[500:]
+        )
         if old_ids:
-            LEMIStatus.objects.filter(id__in=list(old_ids)).delete()
+            InstrumentStatus.objects.filter(id__in=old_ids).delete()
 
-        return JsonResponse({'ok': True, 'status': new_status})
+        return JsonResponse({'ok': True, 'instrument': instrument, 'status': new_status})
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+# kept so the old URL still resolves without a 500
+@csrf_exempt
+def lemi_status_api(request):
+    return instrument_status_api(request)

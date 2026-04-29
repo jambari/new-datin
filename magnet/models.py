@@ -248,3 +248,34 @@ class LEMIStatus(models.Model):
 
     def __str__(self):
         return f"LEMI {self.status} @ {self.computer_name} ({self.reported_at})"
+
+
+class InstrumentStatus(models.Model):
+    LEMI      = 'lemi'
+    PROTON    = 'proton'
+    NEXSTORM  = 'nexstorm'
+    INSTRUMENT_CHOICES = [
+        (LEMI,     'LEMI-018'),
+        (PROTON,   'Proton'),
+        (NEXSTORM, 'Nexstorm'),
+    ]
+    STATUS_OK             = 'ok'
+    STATUS_NOT_RESPONDING = 'not_responding'
+    STATUS_NOT_RUNNING    = 'not_running'
+    STATUS_CHOICES = [
+        (STATUS_OK,             'OK'),
+        (STATUS_NOT_RESPONDING, 'Not Responding'),
+        (STATUS_NOT_RUNNING,    'Not Running'),
+    ]
+    VALID_STATUSES = {STATUS_OK, STATUS_NOT_RESPONDING, STATUS_NOT_RUNNING}
+
+    instrument    = models.CharField(max_length=20, choices=INSTRUMENT_CHOICES)
+    status        = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    computer_name = models.CharField(max_length=100, blank=True)
+    reported_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-reported_at']
+
+    def __str__(self):
+        return f"{self.instrument} {self.status} @ {self.computer_name} ({self.reported_at})"

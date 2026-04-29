@@ -91,6 +91,14 @@
           </div>
           {% endif %}
 
+          <!-- Instrument Status Badges -->
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;background:#f9fafb;border-radius:6px;">
+            <span style="font-size:11px;font-weight:600;color:#6b7280;margin-right:2px;">Status Alat:</span>
+            <span id="badge-lemi"     style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#e5e7eb;color:#6b7280;">LEMI-018 —</span>
+            <span id="badge-proton"   style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#e5e7eb;color:#6b7280;">Proton —</span>
+            <span id="badge-nexstorm" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#e5e7eb;color:#6b7280;">Nexstorm —</span>
+          </div>
+
           <!-- Recent felt earthquakes -->
           <p style="font-size:12px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Gempa Dirasakan (30 hari)</p>
           {% if recent_felt %}
@@ -243,19 +251,19 @@
   </div>
 </div>
 
-<!-- ── LEMI Alert Modal ───────────────────────────────────────────────────── -->
-<div id="lemi-alert-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:12px;padding:36px 40px;max-width:480px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);">
-    <div style="font-size:56px;margin-bottom:12px;">🚨</div>
-    <h2 style="font-size:20px;font-weight:800;color:#dc2626;margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em;">PERHATIAN!</h2>
-    <p id="lemi-alert-text" style="font-size:15px;font-weight:600;color:#111827;margin-bottom:24px;line-height:1.6;"></p>
-    <button id="lemi-dismiss-btn" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;">
+<!-- ── Instrument Alert Modal ─────────────────────────────────────────────── -->
+<div id="instr-alert-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:32px 36px;max-width:500px;width:92%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.45);">
+    <div style="font-size:52px;margin-bottom:10px;">🚨</div>
+    <h2 style="font-size:18px;font-weight:800;color:#dc2626;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;">PERHATIAN — INSTRUMEN BERMASALAH!</h2>
+    <ul id="instr-alert-list" style="text-align:left;font-size:14px;font-weight:600;color:#111827;margin-bottom:22px;line-height:2;padding-left:18px;"></ul>
+    <button id="instr-dismiss-btn" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;">
       Dismiss (10 menit)
     </button>
   </div>
 </div>
 
-<audio id="lemi-alert-audio" loop preload="none">
+<audio id="instr-alert-audio" loop preload="none">
   {% load static %}
   <source src="{% static 'alert.mp3' %}" type="audio/mpeg">
 </audio>
@@ -266,30 +274,52 @@ document.addEventListener('DOMContentLoaded', function() {
   const sidebarToggle = document.getElementById('sidebar-toggle');
   if (sidebarToggle) sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
 
-  // ── LEMI monitor polling ──────────────────────────────────────────────────
-  const LEMI_API     = '/magnet/api/lemi/status/';
-  const POLL_MS      = 30000;
-  const SILENCE_KEY  = 'lemi_silenced_until';
-  const modal        = document.getElementById('lemi-alert-modal');
-  const alertText    = document.getElementById('lemi-alert-text');
-  const dismissBtn   = document.getElementById('lemi-dismiss-btn');
-  const audio        = document.getElementById('lemi-alert-audio');
+  // ── Instrument monitor polling ────────────────────────────────────────────
+  const API         = '/magnet/api/instrument/status/';
+  const POLL_MS     = 30000;
+  const SILENCE_KEY = 'instr_silenced_until';
+  const modal       = document.getElementById('instr-alert-modal');
+  const alertList   = document.getElementById('instr-alert-list');
+  const dismissBtn  = document.getElementById('instr-dismiss-btn');
+  const audio       = document.getElementById('instr-alert-audio');
+
+  const LABELS = { lemi:'LEMI-018', proton:'Proton', nexstorm:'Nexstorm' };
+  const STATUS_MSGS = {
+    not_responding : 'TIDAK MERESPONS — harap restart segera',
+    not_running    : 'TIDAK BERJALAN — harap buka aplikasi',
+    monitor_offline: 'Monitor offline — script pemantau mati?',
+    unknown        : 'Status tidak diketahui',
+  };
+  const BADGE_OK  = 'background:#d1fae5;color:#065f46';
+  const BADGE_ERR = 'background:#fee2e2;color:#991b1b';
+  const BADGE_UNK = 'background:#e5e7eb;color:#6b7280';
 
   function isSilenced() {
     const t = localStorage.getItem(SILENCE_KEY);
     return t && Date.now() < parseInt(t);
   }
-
-  function showModal(msg) {
-    alertText.textContent = msg;
-    modal.style.display   = 'flex';
+  function setBadge(id, label, status) {
+    const el = document.getElementById('badge-' + id);
+    if (!el) return;
+    const style = status === 'ok' ? BADGE_OK : (status === 'unknown' ? BADGE_UNK : BADGE_ERR);
+    const icon  = status === 'ok' ? '✓' : (status === 'unknown' ? '—' : '✗');
+    el.style.cssText = `font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;${style}`;
+    el.textContent   = `${label} ${icon}`;
+  }
+  function showModal(problems) {
+    alertList.innerHTML = '';
+    problems.forEach(p => {
+      const li = document.createElement('li');
+      li.textContent = p;
+      alertList.appendChild(li);
+    });
+    modal.style.display = 'flex';
     audio.play().catch(() => {});
   }
-
   function hideModal() {
     modal.style.display = 'none';
     audio.pause();
-    audio.currentTime   = 0;
+    audio.currentTime = 0;
   }
 
   dismissBtn.addEventListener('click', function() {
@@ -297,25 +327,27 @@ document.addEventListener('DOMContentLoaded', function() {
     hideModal();
   });
 
-  function checkLEMI() {
-    fetch(LEMI_API)
+  function checkInstruments() {
+    fetch(API)
       .then(r => r.json())
       .then(data => {
-        if (data.status === 'ok') { hideModal(); return; }
-        if (isSilenced())         { hideModal(); return; }
-        const msgs = {
-          'not_responding': 'LEMI-018 TIDAK MERESPONS!\nHarap restart aplikasi segera.',
-          'not_running':    'LEMI-018 TIDAK BERJALAN!\nHarap buka aplikasi segera.',
-          'monitor_offline':'Monitor LEMI tidak aktif!\nScript pemantau di komputer LEMI mungkin mati.',
-          'unknown':        'Status LEMI tidak diketahui.',
-        };
-        showModal(msgs[data.status] || 'Status LEMI bermasalah!');
+        const problems = [];
+        ['lemi','proton','nexstorm'].forEach(key => {
+          const d = data[key] || {status:'unknown'};
+          setBadge(key, LABELS[key], d.status);
+          if (d.status !== 'ok' && d.status !== 'unknown') {
+            const pc  = d.computer_name ? ` (${d.computer_name})` : '';
+            problems.push(`${LABELS[key]}${pc}: ${STATUS_MSGS[d.status] || d.status}`);
+          }
+        });
+        if (problems.length === 0 || isSilenced()) { hideModal(); return; }
+        showModal(problems);
       })
       .catch(() => {});
   }
 
-  checkLEMI();
-  setInterval(checkLEMI, POLL_MS);
+  checkInstruments();
+  setInterval(checkInstruments, POLL_MS);
 });
 </script>
 {% endblock %}
