@@ -227,3 +227,24 @@ class MagnetDataAvailability(models.Model):
 
     def __str__(self):
         return f"{self.station} - {self.date}: {self.percentage}%"
+
+
+class LEMIStatus(models.Model):
+    STATUS_OK            = 'ok'
+    STATUS_NOT_RESPONDING = 'not_responding'
+    STATUS_NOT_RUNNING   = 'not_running'
+    STATUS_CHOICES = [
+        (STATUS_OK,            'OK'),
+        (STATUS_NOT_RESPONDING, 'Not Responding'),
+        (STATUS_NOT_RUNNING,   'Not Running'),
+    ]
+    status        = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    computer_name = models.CharField(max_length=100, blank=True)
+    reported_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-reported_at']
+        get_latest_by = 'reported_at'
+
+    def __str__(self):
+        return f"LEMI {self.status} @ {self.computer_name} ({self.reported_at})"

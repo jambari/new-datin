@@ -1055,3 +1055,94 @@ def observation_legacy_list_view(request):
         'end_date': end_date_str,
     }
     return render(request, 'magnet/observation_legacy_list.html', context)
+
+# ── LEMI-018 Monitor API ──────────────────────────────────────────────────────
+
+import subprocess
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.conf import settings as dj_settings
+from django.utils import timezone
+from datetime import timedelta
+from .models import LEMIStatus
+import json as _json
+
+def _send_lemi_telegram(status, computer_name):
+    token   = dj_settings.TELEGRAM_BOT_TOKEN
+    chat_id = dj_settings.TELEGRAM_CHAT_ID
+    if not token or not chat_id:
+        return
+    if status == LEMIStatus.STATUS_NOT_RESPONDING:
+        msg = (
+            "🚨 <b>PERINGATAN LEMI-018</b>\n\n"
+            f"⚠️ LEMI-018 <b>TIDAK MERESPONS</b>\n"
+            f"Komputer: <b>{computer_name}</b>\n\n"
+            "Segera restart aplikasi LEMI-018!"
+        )
+    else:
+        msg = (
+            "🚨 <b>PERINGATAN LEMI-018</b>\n\n"
+            f"❌ LEMI-018 <b>TIDAK BERJALAN</b>\n"
+            f"Komputer: <b>{computer_name}</b>\n\n"
+            "Segera buka aplikasi LEMI-018!"
+        )
+    subprocess.run([
+        'curl', '-s', '-X', 'POST',
+        f'https://api.telegram.org/bot{token}/sendMessage',
+        '-d', f'chat_id={chat_id}',
+        '-d', 'parse_mode=HTML',
+        '--data-urlencode', f'text={msg}',
+    ])
+
+
+@csrf_exempt
+def lemi_status_api(request):
+    if request.method == 'GET':
+        try:
+            latest = LEMIStatus.objects.latest()
+            stale  = (timezone.now() - latest.reported_at) > timedelta(minutes=5)
+            return JsonResponse({
+                'status':        'monitor_offline' if stale else latest.status,
+                'computer_name': latest.computer_name,
+                'reported_at':   latest.reported_at.isoformat(),
+                'stale':         stale,
+            })
+        except LEMIStatus.DoesNotExist:
+            return JsonResponse({'status': 'unknown', 'stale': True})
+
+    if request.method == 'POST':
+        token    = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+        expected = getattr(dj_settings, 'LEMI_MONITOR_TOKEN', '')
+        if not expected or token != expected:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+        try:
+            data          = _json.loads(request.body)
+            new_status    = data.get('status', '')
+            computer_name = data.get('computer_name', 'LEMI-PC')
+        except Exception:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        if new_status not in (LEMIStatus.STATUS_OK, LEMIStatus.STATUS_NOT_RESPONDING, LEMIStatus.STATUS_NOT_RUNNING):
+            return JsonResponse({'error': 'Invalid status'}, status=400)
+
+        # Detect transition to alert state → send Telegram once
+        try:
+            prev = LEMIStatus.objects.latest()
+            was_ok = prev.status == LEMIStatus.STATUS_OK
+        except LEMIStatus.DoesNotExist:
+            was_ok = True
+
+        LEMIStatus.objects.create(status=new_status, computer_name=computer_name)
+
+        if new_status != LEMIStatus.STATUS_OK and was_ok:
+            _send_lemi_telegram(new_status, computer_name)
+
+        # Keep only the last 500 rows
+        old_ids = LEMIStatus.objects.values_list('id', flat=True)[500:]
+        if old_ids:
+            LEMIStatus.objects.filter(id__in=list(old_ids)).delete()
+
+        return JsonResponse({'ok': True, 'status': new_status})
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)

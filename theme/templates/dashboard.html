@@ -243,11 +243,79 @@
   </div>
 </div>
 
+<!-- ── LEMI Alert Modal ───────────────────────────────────────────────────── -->
+<div id="lemi-alert-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:36px 40px;max-width:480px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+    <div style="font-size:56px;margin-bottom:12px;">🚨</div>
+    <h2 style="font-size:20px;font-weight:800;color:#dc2626;margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em;">PERHATIAN!</h2>
+    <p id="lemi-alert-text" style="font-size:15px;font-weight:600;color:#111827;margin-bottom:24px;line-height:1.6;"></p>
+    <button id="lemi-dismiss-btn" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:14px;font-weight:700;cursor:pointer;">
+      Dismiss (10 menit)
+    </button>
+  </div>
+</div>
+
+<audio id="lemi-alert-audio" loop preload="none">
+  {% load static %}
+  <source src="{% static 'alert.mp3' %}" type="audio/mpeg">
+</audio>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const sidebar = document.getElementById('sidebar');
   const sidebarToggle = document.getElementById('sidebar-toggle');
   if (sidebarToggle) sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
+
+  // ── LEMI monitor polling ──────────────────────────────────────────────────
+  const LEMI_API     = '/magnet/api/lemi/status/';
+  const POLL_MS      = 30000;
+  const SILENCE_KEY  = 'lemi_silenced_until';
+  const modal        = document.getElementById('lemi-alert-modal');
+  const alertText    = document.getElementById('lemi-alert-text');
+  const dismissBtn   = document.getElementById('lemi-dismiss-btn');
+  const audio        = document.getElementById('lemi-alert-audio');
+
+  function isSilenced() {
+    const t = localStorage.getItem(SILENCE_KEY);
+    return t && Date.now() < parseInt(t);
+  }
+
+  function showModal(msg) {
+    alertText.textContent = msg;
+    modal.style.display   = 'flex';
+    audio.play().catch(() => {});
+  }
+
+  function hideModal() {
+    modal.style.display = 'none';
+    audio.pause();
+    audio.currentTime   = 0;
+  }
+
+  dismissBtn.addEventListener('click', function() {
+    localStorage.setItem(SILENCE_KEY, Date.now() + 10 * 60 * 1000);
+    hideModal();
+  });
+
+  function checkLEMI() {
+    fetch(LEMI_API)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'ok') { hideModal(); return; }
+        if (isSilenced())         { hideModal(); return; }
+        const msgs = {
+          'not_responding': 'LEMI-018 TIDAK MERESPONS!\nHarap restart aplikasi segera.',
+          'not_running':    'LEMI-018 TIDAK BERJALAN!\nHarap buka aplikasi segera.',
+          'monitor_offline':'Monitor LEMI tidak aktif!\nScript pemantau di komputer LEMI mungkin mati.',
+          'unknown':        'Status LEMI tidak diketahui.',
+        };
+        showModal(msgs[data.status] || 'Status LEMI bermasalah!');
+      })
+      .catch(() => {});
+  }
+
+  checkLEMI();
+  setInterval(checkLEMI, POLL_MS);
 });
 </script>
 {% endblock %}
