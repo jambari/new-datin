@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">Log Status Instrumen</h1>
+
+        <!-- Filter -->
+        <form method="get" action="{% url 'instrument_status_list' %}"
+              style="background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);margin-bottom:24px;">
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label for="instrument" style="font-size:13px;font-weight:500;color:#374151;">Instrumen:</label>
+              <select id="instrument" name="instrument"
+                      style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:150px;">
+                {% for val, label in instrument_choices %}
+                  <option value="{{ val }}" {% if val == instrument_filter %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label for="start_date" style="font-size:13px;font-weight:500;color:#374151;">Dari Tanggal:</label>
+              <input type="date" id="start_date" name="start_date" value="{{ start_date }}"
+                     style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label for="end_date" style="font-size:13px;font-weight:500;color:#374151;">Sampai Tanggal:</label>
+              <input type="date" id="end_date" name="end_date" value="{{ end_date }}"
+                     style="padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+            </div>
+
+            <div>
+              <button type="submit"
+                      style="background:#4f46e5;color:#fff;padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">
+                Filter
+              </button>
+            </div>
+
+          </div>
+        </form>
+
+        <!-- Table -->
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu (WIT)</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instrumen</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Komputer</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for row in rows %}
+              <tr class="hover:bg-gray-50 transition-colors duration-150">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ row.reported_at|date:"Y-m-d H:i:s" }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
+                  {{ row.instrument }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  {% if row.status == 'ok' %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      ✅ {{ row.status_label }}
+                    </span>
+                  {% elif row.status == 'not_responding' %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      ⚠️ {{ row.status_label }}
+                    </span>
+                  {% else %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                      ❌ {{ row.status_label }}
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ row.computer_name|default:"-" }}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
+                  Tidak ada data yang ditemukan.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="flex flex-col md:flex-row justify-between items-center mt-6 gap-4">
+          <div class="text-sm text-gray-600">
+            Halaman <span class="font-semibold">{{ page_obj.number }}</span> dari
+            <span class="font-semibold">{{ paginator.num_pages }}</span>
+            (Total: <span class="font-semibold">{{ paginator.count }}</span> rekaman)
+          </div>
+          <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+            {% if page_obj.has_previous %}
+              <a href="?page={{ page_obj.previous_page_number }}&instrument={{ instrument_filter }}&start_date={{ start_date }}&end_date={{ end_date }}"
+                 class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}&instrument={{ instrument_filter }}&start_date={{ start_date }}&end_date={{ end_date }}"
+                 class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </a>
+            {% endif %}
+          </nav>
+        </div>
+        {% endif %}
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('sidebar');
+    if (toggle && sidebar) toggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
+  });
+</script>
+{% endblock %}

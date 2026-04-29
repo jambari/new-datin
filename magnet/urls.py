@@ -37,4 +37,5 @@ urlpatterns = [
     path('observation/legacy/', views.observation_legacy_list_view, name='observation_legacy_list'),
     path('api/lemi/status/',       views.lemi_status_api,       name='lemi_status_api'),
     path('api/instrument/status/', views.instrument_status_api, name='instrument_status_api'),
+    path('instrument/status/log/', views.instrument_status_list, name='instrument_status_list'),
 ]

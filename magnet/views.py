@@ -1172,3 +1172,69 @@ def instrument_status_api(request):
 @csrf_exempt
 def lemi_status_api(request):
     return instrument_status_api(request)
+
+
+@login_required
+def instrument_status_list(request):
+    from .models import InstrumentStatus as IS
+    import zoneinfo
+
+    _WIT = zoneinfo.ZoneInfo('Asia/Jayapura')
+
+    instrument_filter = request.GET.get('instrument', '')
+    start_date_str    = request.GET.get('start_date', '')
+    end_date_str      = request.GET.get('end_date', '')
+
+    qs = IS.objects.all().order_by('-reported_at')
+    if instrument_filter:
+        qs = qs.filter(instrument=instrument_filter)
+    if start_date_str:
+        d = parse_date(start_date_str)
+        if d:
+            qs = qs.filter(reported_at__date__gte=d)
+    if end_date_str:
+        d = parse_date(end_date_str)
+        if d:
+            qs = qs.filter(reported_at__date__lte=d)
+
+    paginator  = Paginator(qs, 50)
+    page_obj   = paginator.get_page(request.GET.get('page'))
+
+    STATUS_LABEL = {
+        'ok':             'OK',
+        'not_responding': 'Tidak Merespons',
+        'not_running':    'Tidak Berjalan',
+    }
+    INSTR_LABEL = {
+        IS.LEMI:     'LEMI-018',
+        IS.PROTON:   'Proton',
+        IS.NEXSTORM: 'Nexstorm',
+    }
+
+    rows = []
+    for rec in page_obj:
+        rows.append({
+            'id':            rec.id,
+            'instrument':    INSTR_LABEL.get(rec.instrument, rec.instrument),
+            'status':        rec.status,
+            'status_label':  STATUS_LABEL.get(rec.status, rec.status),
+            'computer_name': rec.computer_name,
+            'reported_at':   rec.reported_at.astimezone(_WIT),
+        })
+
+    context = {
+        'rows':              rows,
+        'page_obj':          page_obj,
+        'paginator':         paginator,
+        'is_paginated':      page_obj.has_other_pages(),
+        'instrument_filter': instrument_filter,
+        'start_date':        start_date_str,
+        'end_date':          end_date_str,
+        'instrument_choices': [
+            ('',        'Semua'),
+            (IS.LEMI,     'LEMI-018'),
+            (IS.PROTON,   'Proton'),
+            (IS.NEXSTORM, 'Nexstorm'),
+        ],
+    }
+    return render(request, 'magnet/instrument_status_list.html', context)
