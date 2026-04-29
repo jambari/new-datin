@@ -72,49 +72,54 @@
         </div>
       </div>
 
-      <!-- ── Row 2: Latest Gempa + Logbook ─────────────────────────────── -->
+      <!-- ── Row 2: Instrument Monitor + Logbook ──────────────────────── -->
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px;">
 
-        <!-- Latest Earthquake -->
+        <!-- Instrument Monitor -->
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
-          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:16px;">Gempa Terkini</h2>
-          {% if latest_gempa %}
-          <div style="display:flex;align-items:center;gap:20px;padding:16px;background:#f9fafb;border-radius:8px;margin-bottom:12px;">
-            <div style="text-align:center;background:#4f46e5;color:#fff;border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <span style="font-size:22px;font-weight:700;">M{{ latest_gempa.magnitude|floatformat:1 }}</span>
-            </div>
-            <div>
-              <p style="font-size:15px;font-weight:600;color:#111827;margin-bottom:4px;">{{ latest_gempa.nearest_city|default:latest_gempa.location }}</p>
-              <p style="font-size:13px;color:#6b7280;">{{ latest_gempa.origin_time|timezone:"Asia/Jayapura"|date:"d M Y, H:i:s" }} WIT</p>
-              <p style="font-size:13px;color:#6b7280;">Kedalaman {{ latest_gempa.depth_km }} km &nbsp;|&nbsp; {{ latest_gempa.latitude|floatformat:3 }}&deg;, {{ latest_gempa.longitude|floatformat:3 }}&deg;</p>
-            </div>
-          </div>
-          {% endif %}
-
-          <!-- Instrument Status Badges -->
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;background:#f9fafb;border-radius:6px;">
-            <span style="font-size:11px;font-weight:600;color:#6b7280;margin-right:2px;">Status Alat:</span>
-            <span id="badge-lemi"     style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#e5e7eb;color:#6b7280;">LEMI-018 —</span>
-            <span id="badge-proton"   style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#e5e7eb;color:#6b7280;">Proton —</span>
-            <span id="badge-nexstorm" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#e5e7eb;color:#6b7280;">Nexstorm —</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <h2 style="font-size:14px;font-weight:700;color:#374151;">Status Instrumen</h2>
+            <span id="instr-last-update" style="font-size:11px;color:#9ca3af;">Memuat...</span>
           </div>
 
-          <!-- Recent felt earthquakes -->
-          <p style="font-size:12px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Gempa Dirasakan (30 hari)</p>
-          {% if recent_felt %}
-          <table style="width:100%;font-size:12px;border-collapse:collapse;">
-            {% for eq in recent_felt %}
-            <tr style="border-bottom:1px solid #f3f4f6;">
-              <td style="padding:6px 4px;font-weight:600;color:#4f46e5;">M{{ eq.magnitude|floatformat:1 }}</td>
-              <td style="padding:6px 4px;color:#374151;">{{ eq.wilayah }}</td>
-              <td style="padding:6px 4px;color:#9ca3af;white-space:nowrap;">{{ eq.event_datetime|timezone:"Asia/Jayapura"|date:"d/m/Y H:i" }}</td>
-              {% if eq.dirasakan %}<td style="padding:6px 4px;color:#6b7280;font-size:11px;">{{ eq.dirasakan }}</td>{% endif %}
-            </tr>
-            {% endfor %}
-          </table>
-          {% else %}
-          <p style="font-size:13px;color:#9ca3af;font-style:italic;">Tidak ada gempa dirasakan 30 hari terakhir.</p>
-          {% endif %}
+          <!-- LEMI-018 -->
+          <div id="card-lemi" style="display:flex;align-items:center;gap:16px;padding:16px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:12px;transition:border-color .3s;">
+            <div id="dot-lemi" style="width:16px;height:16px;border-radius:50%;background:#e5e7eb;flex-shrink:0;box-shadow:0 0 0 4px #f3f4f6;"></div>
+            <div style="flex:1;min-width:0;">
+              <p style="font-size:15px;font-weight:700;color:#111827;margin-bottom:2px;">LEMI-018</p>
+              <p id="sub-lemi" style="font-size:12px;color:#6b7280;">—</p>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <span id="badge-lemi" style="display:inline-block;font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;background:#e5e7eb;color:#6b7280;">—</span>
+              <p id="time-lemi" style="font-size:10px;color:#9ca3af;margin-top:4px;">—</p>
+            </div>
+          </div>
+
+          <!-- Proton -->
+          <div id="card-proton" style="display:flex;align-items:center;gap:16px;padding:16px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:12px;transition:border-color .3s;">
+            <div id="dot-proton" style="width:16px;height:16px;border-radius:50%;background:#e5e7eb;flex-shrink:0;box-shadow:0 0 0 4px #f3f4f6;"></div>
+            <div style="flex:1;min-width:0;">
+              <p style="font-size:15px;font-weight:700;color:#111827;margin-bottom:2px;">Proton</p>
+              <p id="sub-proton" style="font-size:12px;color:#6b7280;">—</p>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <span id="badge-proton" style="display:inline-block;font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;background:#e5e7eb;color:#6b7280;">—</span>
+              <p id="time-proton" style="font-size:10px;color:#9ca3af;margin-top:4px;">—</p>
+            </div>
+          </div>
+
+          <!-- Nexstorm -->
+          <div id="card-nexstorm" style="display:flex;align-items:center;gap:16px;padding:16px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:0;transition:border-color .3s;">
+            <div id="dot-nexstorm" style="width:16px;height:16px;border-radius:50%;background:#e5e7eb;flex-shrink:0;box-shadow:0 0 0 4px #f3f4f6;"></div>
+            <div style="flex:1;min-width:0;">
+              <p style="font-size:15px;font-weight:700;color:#111827;margin-bottom:2px;">Nexstorm</p>
+              <p id="sub-nexstorm" style="font-size:12px;color:#6b7280;">—</p>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <span id="badge-nexstorm" style="display:inline-block;font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;background:#e5e7eb;color:#6b7280;">—</span>
+              <p id="time-nexstorm" style="font-size:10px;color:#9ca3af;margin-top:4px;">—</p>
+            </div>
+          </div>
         </div>
 
         <!-- Logbook + Next Shift -->
@@ -284,28 +289,67 @@ document.addEventListener('DOMContentLoaded', function() {
   const audio       = document.getElementById('instr-alert-audio');
 
   const LABELS = { lemi:'LEMI-018', proton:'Proton', nexstorm:'Nexstorm' };
+  const STATUS_LABEL = {
+    ok             : 'OK',
+    not_responding : 'Tidak Merespons',
+    not_running    : 'Tidak Berjalan',
+    monitor_offline: 'Monitor Offline',
+    unknown        : 'Tidak Diketahui',
+  };
   const STATUS_MSGS = {
     not_responding : 'TIDAK MERESPONS — harap restart segera',
     not_running    : 'TIDAK BERJALAN — harap buka aplikasi',
     monitor_offline: 'Monitor offline — script pemantau mati?',
     unknown        : 'Status tidak diketahui',
   };
-  const BADGE_OK  = 'background:#d1fae5;color:#065f46';
-  const BADGE_ERR = 'background:#fee2e2;color:#991b1b';
-  const BADGE_UNK = 'background:#e5e7eb;color:#6b7280';
 
   function isSilenced() {
     const t = localStorage.getItem(SILENCE_KEY);
     return t && Date.now() < parseInt(t);
   }
-  function setBadge(id, label, status) {
-    const el = document.getElementById('badge-' + id);
-    if (!el) return;
-    const style = status === 'ok' ? BADGE_OK : (status === 'unknown' ? BADGE_UNK : BADGE_ERR);
-    const icon  = status === 'ok' ? '✓' : (status === 'unknown' ? '—' : '✗');
-    el.style.cssText = `font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;${style}`;
-    el.textContent   = `${label} ${icon}`;
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
   }
+
+  function updateCard(key, d) {
+    const isOk      = d.status === 'ok';
+    const isUnknown = d.status === 'unknown';
+    const isErr     = !isOk && !isUnknown;
+
+    // Dot color
+    const dot = document.getElementById('dot-' + key);
+    if (dot) {
+      dot.style.background  = isOk ? '#10b981' : (isErr ? '#ef4444' : '#e5e7eb');
+      dot.style.boxShadow   = isOk ? '0 0 0 4px #d1fae5' : (isErr ? '0 0 0 4px #fee2e2' : '0 0 0 4px #f3f4f6');
+    }
+
+    // Card border
+    const card = document.getElementById('card-' + key);
+    if (card) {
+      card.style.borderColor = isOk ? '#6ee7b7' : (isErr ? '#fca5a5' : '#e5e7eb');
+      card.style.background  = isOk ? '#f0fdf4' : (isErr ? '#fff5f5' : '#fff');
+    }
+
+    // Badge
+    const badge = document.getElementById('badge-' + key);
+    if (badge) {
+      badge.style.background = isOk ? '#d1fae5' : (isErr ? '#fee2e2' : '#e5e7eb');
+      badge.style.color      = isOk ? '#065f46' : (isErr ? '#991b1b' : '#6b7280');
+      badge.textContent      = (isOk ? '✓ ' : (isErr ? '✗ ' : '— ')) + (STATUS_LABEL[d.status] || d.status);
+    }
+
+    // Sub-text: computer name
+    const sub = document.getElementById('sub-' + key);
+    if (sub) sub.textContent = d.computer_name ? 'Komputer: ' + d.computer_name : '—';
+
+    // Last update time
+    const time = document.getElementById('time-' + key);
+    if (time) time.textContent = d.reported_at ? 'Update: ' + fmtTime(d.reported_at) : '—';
+  }
+
   function showModal(problems) {
     alertList.innerHTML = '';
     problems.forEach(p => {
@@ -316,6 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
     modal.style.display = 'flex';
     audio.play().catch(() => {});
   }
+
   function hideModal() {
     modal.style.display = 'none';
     audio.pause();
@@ -334,12 +379,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const problems = [];
         ['lemi','proton','nexstorm'].forEach(key => {
           const d = data[key] || {status:'unknown'};
-          setBadge(key, LABELS[key], d.status);
+          updateCard(key, d);
           if (d.status !== 'ok' && d.status !== 'unknown') {
-            const pc  = d.computer_name ? ` (${d.computer_name})` : '';
+            const pc = d.computer_name ? ` (${d.computer_name})` : '';
             problems.push(`${LABELS[key]}${pc}: ${STATUS_MSGS[d.status] || d.status}`);
           }
         });
+        const upd = document.getElementById('instr-last-update');
+        if (upd) upd.textContent = 'Diperbarui: ' + new Date().toLocaleTimeString('id-ID');
         if (problems.length === 0 || isSilenced()) { hideModal(); return; }
         showModal(problems);
       })
