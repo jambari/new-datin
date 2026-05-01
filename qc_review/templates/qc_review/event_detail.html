@@ -752,175 +752,175 @@
 <div class="guide">
 
 <!-- ───────────────────────────────────────────────────────
-     SECTION 1 — SeisComP scautopick pipeline
+     SEKSI 1 — Pipeline scautopick SeisComP
      ─────────────────────────────────────────────────────── -->
-<h2>How SeisComP picks phases automatically</h2>
+<h2>Cara SeisComP Memilah Fase Secara Otomatis</h2>
 <p>
-  SeisComP's automatic picking module, <span class="mono-inline">scautopick</span>,
-  runs continuously on incoming waveform streams. It works in two stages: a fast
-  energy-based <em>detector</em> that identifies candidate events, followed by an
-  optional <em>re-picker</em> that refines the pick onset.
+  Modul pemilahan otomatis SeisComP, <span class="mono-inline">scautopick</span>,
+  berjalan secara terus-menerus pada aliran gelombang yang masuk. Prosesnya bekerja
+  dalam dua tahap: <em>detektor</em> berbasis energi yang cepat untuk mengidentifikasi
+  kandidat gempa, diikuti oleh <em>re-picker</em> opsional yang memperhalus onset pick.
 </p>
 
-<h3>Stage 1 — STA/LTA Detector</h3>
+<h3>Tahap 1 — Detektor STA/LTA</h3>
 <p>
-  The primary detector applies a classic <strong>Short-Term Average / Long-Term
-  Average (STA/LTA)</strong> algorithm. The waveform is first bandpass-filtered
-  (default: Butterworth 3rd order, 0.7–2 Hz) to suppress microseismic and
-  instrumental noise. Then two sliding windows compute:
+  Detektor utama menerapkan algoritma klasik <strong>Short-Term Average / Long-Term
+  Average (STA/LTA)</strong>. Gelombang terlebih dahulu difilter bandpass
+  (standar: Butterworth orde 3, 0.7–2 Hz) untuk menekan noise mikroseismik dan
+  instrumental. Kemudian dua jendela geser menghitung:
 </p>
 <ul style="margin:.5rem 0 .9rem 1.5rem; line-height:1.8; font-size:.92rem;">
-  <li><strong>STA</strong> — short window (~0.5–2 s) sensitive to sudden energy changes</li>
-  <li><strong>LTA</strong> — long window (~10–80 s) representing the background noise level</li>
+  <li><strong>STA</strong> — jendela pendek (~0,5–2 s) sensitif terhadap perubahan energi tiba-tiba</li>
+  <li><strong>LTA</strong> — jendela panjang (~10–80 s) mewakili tingkat noise latar belakang</li>
 </ul>
 <p>
-  When the STA/LTA ratio exceeds the trigger threshold (default = 3), a
-  <em>preliminary pick</em> is placed at that moment and the stream is flagged for
-  re-picking. The picker resets once the ratio falls below the off-threshold (default = 1.5).
+  Ketika rasio STA/LTA melampaui ambang pemicu (standar = 3), sebuah
+  <em>pick awal</em> ditempatkan pada saat itu dan aliran ditandai untuk
+  di-re-pick. Picker direset setelah rasio turun di bawah ambang mati (standar = 1,5).
 </p>
 
 <div class="callout info">
-  <strong>What STA/LTA really measures</strong><br>
-  The ratio is a measure of <em>energy change</em>, not waveform character.
-  Any sudden energy increase — a P arrival, a noise burst, a teleseismic surface
-  wave, a tectonic tremor, or a passing vehicle — can cross the threshold.
-  The algorithm has no concept of what a P wave is; it only knows that the
-  amplitude got louder.
+  <strong>Apa yang sebenarnya diukur STA/LTA</strong><br>
+  Rasio ini merupakan ukuran <em>perubahan energi</em>, bukan karakter gelombang.
+  Setiap peningkatan energi tiba-tiba — kedatangan gelombang P, ledakan noise, gelombang
+  permukaan teleseismik, tremor tektonik, atau kendaraan yang lewat — dapat melewati ambang batas.
+  Algoritma ini tidak mengenal apa itu gelombang P; ia hanya tahu bahwa
+  amplitudo menjadi lebih keras.
 </div>
 
-<h3>Stage 2 — Re-pickers (AIC and BK)</h3>
+<h3>Tahap 2 — Re-picker (AIC dan BK)</h3>
 <p>
-  Once STA/LTA triggers, <span class="mono-inline">scautopick</span> hands the
-  waveform window to a more precise re-picker. Two options are available:
+  Setelah STA/LTA terpicu, <span class="mono-inline">scautopick</span> meneruskan
+  jendela gelombang ke re-picker yang lebih presisi. Dua opsi tersedia:
 </p>
 
 <div class="method-grid">
   <div class="method-card">
     <div class="mc-head">
-      <h4>AIC Picker</h4>
+      <h4>Picker AIC</h4>
       <div class="mc-year">Akaike, 1974 · Maeda, 1985</div>
     </div>
     <div class="mc-body">
       <p>
-        Uses the <strong>Akaike Information Criterion</strong> to find the optimal
-        statistical change-point in a short waveform window. Models the window as
-        two stationary processes (noise before, signal after) and finds the split
-        point that minimises the total AIC.
+        Menggunakan <strong>Akaike Information Criterion</strong> untuk menemukan titik
+        perubahan statistik optimal dalam jendela gelombang pendek. Memodelkan jendela sebagai
+        dua proses stasioner (noise sebelum, sinyal sesudah) dan mencari titik pemisah
+        yang meminimalkan total AIC.
       </p>
-      <p><strong>Best at:</strong> Sharp, impulsive P onsets with high SNR.</p>
+      <p><strong>Terbaik untuk:</strong> Onset P tajam dan impulsif dengan SNR tinggi.</p>
       <ul class="pro-con pros">
-        <li>More precise than raw STA/LTA trigger time</li>
-        <li>Works well when noise is stationary</li>
-        <li>Fast, no tuning for individual stations</li>
+        <li>Lebih presisi dibanding waktu pemicu STA/LTA mentah</li>
+        <li>Bekerja baik ketika noise stasioner</li>
+        <li>Cepat, tidak perlu penyetelan per stasiun</li>
       </ul>
       <ul class="pro-con cons">
-        <li>Requires STA/LTA to trigger first — misses very small events</li>
-        <li>Sensitive to non-stationary noise (e.g., glitches, spikes)</li>
-        <li>Only picks P; needs separate module for S</li>
+        <li>Membutuhkan STA/LTA untuk memicu terlebih dahulu — melewatkan gempa sangat kecil</li>
+        <li>Sensitif terhadap noise non-stasioner (mis. glitch, spike)</li>
+        <li>Hanya memilah P; butuh modul terpisah untuk S</li>
       </ul>
     </div>
   </div>
 
   <div class="method-card">
     <div class="mc-head">
-      <h4>BK Picker (Baer-Kradolfer)</h4>
+      <h4>Picker BK (Baer-Kradolfer)</h4>
       <div class="mc-year">Baer &amp; Kradolfer, 1987</div>
     </div>
     <div class="mc-body">
       <p>
-        Computes a characteristic function based on the envelope of a bandpass-filtered
-        signal, using amplitude thresholds rather than statistical information criteria.
-        Designed specifically for <em>local and regional</em> seismicity.
+        Menghitung fungsi karakteristik berdasarkan amplop sinyal yang difilter bandpass,
+        menggunakan ambang amplitudo daripada kriteria informasi statistik.
+        Dirancang khusus untuk seismisitas <em>lokal dan regional</em>.
       </p>
-      <p><strong>Best at:</strong> Moderate SNR local events, robust in broadband noise.</p>
+      <p><strong>Terbaik untuk:</strong> Gempa lokal dengan SNR sedang, andal dalam noise broadband.</p>
       <ul class="pro-con pros">
-        <li>Robust against emergent onsets common in local events</li>
-        <li>Less sensitive to high-frequency spikes than AIC</li>
-        <li>Configurable per station via frequency bands and thresholds</li>
+        <li>Andal terhadap onset emergent yang umum pada gempa lokal</li>
+        <li>Kurang sensitif terhadap spike frekuensi tinggi dibanding AIC</li>
+        <li>Dapat dikonfigurasi per stasiun melalui pita frekuensi dan ambang batas</li>
       </ul>
       <ul class="pro-con cons">
-        <li>Requires careful tuning per network / magnitude range</li>
-        <li>Threshold-based — struggles when noise character changes</li>
-        <li>Only picks P by design</li>
+        <li>Membutuhkan penyetelan cermat per jaringan / rentang magnitudo</li>
+        <li>Berbasis ambang batas — kesulitan ketika karakter noise berubah</li>
+        <li>Hanya memilah P secara desain</li>
       </ul>
     </div>
   </div>
 </div>
 
-<h3>Stage 3 — S-phase picker (S-L2)</h3>
+<h3>Tahap 3 — Picker fase-S (S-L2)</h3>
 <p>
-  For S-phase picking, <span class="mono-inline">scautopick</span> uses the
-  <strong>S-L2 spicker</strong>, which exploits the polarization difference between
-  P and S waves: P energy is concentrated on the vertical component (Z), while
-  S energy dominates the horizontal components (N and E). The L2 norm of the
-  horizontal components is computed after the P arrival, and the S onset is
-  estimated from the peak of this horizontal energy envelope.
+  Untuk pemilahan fase-S, <span class="mono-inline">scautopick</span> menggunakan
+  <strong>S-L2 spicker</strong>, yang memanfaatkan perbedaan polarisasi antara
+  gelombang P dan S: energi P terkonsentrasi pada komponen vertikal (Z), sementara
+  energi S mendominasi komponen horizontal (N dan E). Norma L2 dari komponen
+  horizontal dihitung setelah kedatangan P, dan onset S diperkirakan dari puncak
+  amplop energi horizontal ini.
 </p>
 
 <div class="callout warn">
-  <strong>S-phase limitation</strong><br>
-  S-L2 can only run <em>after</em> a P pick exists, and is sensitive to the assumed
-  P–S velocity ratio. It works best for simple, clear local events. For noisy
-  records, low-magnitude events, or emergent S arrivals, it often misses or
-  places the pick on the S-wave coda rather than the true onset.
+  <strong>Keterbatasan fase-S</strong><br>
+  S-L2 hanya dapat berjalan <em>setelah</em> pick P ada, dan sensitif terhadap asumsi
+  rasio kecepatan P–S. Bekerja paling baik untuk gempa lokal yang sederhana dan jelas.
+  Untuk rekaman berisi noise, gempa magnitudo rendah, atau kedatangan S yang emergent,
+  sering terlewat atau menempatkan pick pada coda gelombang-S daripada onset sebenarnya.
 </div>
 
-<h3>The full scautopick pipeline</h3>
+<h3>Pipeline scautopick lengkap</h3>
 <div class="pipeline">
   <div class="pipe-box trigger">
     <div class="pipe-title">STA/LTA</div>
-    <div class="pipe-sub">Butterworth BP 0.7–2 Hz<br>Trigger: ratio ≥ 3</div>
+    <div class="pipe-sub">Butterworth BP 0.7–2 Hz<br>Pemicu: rasio ≥ 3</div>
   </div>
   <div class="pipe-arrow">→</div>
   <div class="pipe-box repicker">
-    <div class="pipe-title">AIC or BK</div>
-    <div class="pipe-sub">Re-picks P onset<br>within trigger window</div>
+    <div class="pipe-title">AIC atau BK</div>
+    <div class="pipe-sub">Re-pick onset P<br>dalam jendela pemicu</div>
   </div>
   <div class="pipe-arrow">→</div>
   <div class="pipe-box spicker">
     <div class="pipe-title">S-L2 spicker</div>
-    <div class="pipe-sub">Horizontal L2 envelope<br>after P pick</div>
+    <div class="pipe-sub">Amplop L2 horizontal<br>setelah pick P</div>
   </div>
   <div class="pipe-arrow">→</div>
   <div class="pipe-box" style="background:var(--paper-2)">
     <div class="pipe-title">scautoloc</div>
-    <div class="pipe-sub">Associates picks<br>into events</div>
+    <div class="pipe-sub">Mengasosiasikan pick<br>menjadi event</div>
   </div>
 </div>
 
 
 <!-- ───────────────────────────────────────────────────────
-     SECTION 2 — EQTransformer
+     SEKSI 2 — EQTransformer
      ─────────────────────────────────────────────────────── -->
-<h2>How EQTransformer picks phases</h2>
+<h2>Cara EQTransformer Memilah Fase</h2>
 <p>
-  EQTransformer (Mousavi et al., 2020) is a deep-learning model built on a
-  <strong>transformer + encoder-decoder architecture</strong> trained on millions
-  of three-component seismic waveform examples from global networks. Unlike
-  threshold-based methods, it learns <em>representations</em> — the characteristic
-  shape, frequency content, and polarization signature of P and S arrivals —
-  directly from labelled data.
+  EQTransformer (Mousavi et al., 2020) adalah model deep learning yang dibangun di atas
+  arsitektur <strong>transformer + encoder-decoder</strong> yang dilatih dengan jutaan
+  contoh gelombang seismik tiga komponen dari jaringan global. Tidak seperti metode
+  berbasis ambang batas, ia mempelajari <em>representasi</em> — bentuk karakteristik,
+  konten frekuensi, dan tanda tangan polarisasi kedatangan P dan S —
+  langsung dari data berlabel.
 </p>
 
-<h3>Architecture in plain terms</h3>
+<h3>Arsitektur dalam Bahasa Sederhana</h3>
 <p>
-  A fixed-length three-component window (60 s at 100 Hz = 6,000 samples per channel)
-  is fed through:
+  Jendela tiga komponen dengan panjang tetap (60 s pada 100 Hz = 6.000 sampel per saluran)
+  dilewatkan melalui:
 </p>
 <ol style="margin:.5rem 0 .9rem 1.5rem; line-height:1.9; font-size:.92rem;">
-  <li><strong>Encoder</strong> — seven residual convolutional blocks with LSTM layers extract
-      progressively abstract temporal features from all three components simultaneously.</li>
-  <li><strong>Transformer</strong> — a self-attention mechanism captures long-range dependencies
-      across the full window, connecting the noise character before the P arrival with the
-      signal character after.</li>
-  <li><strong>Three decoder heads</strong> — one each for detection probability,
-      P-phase probability, and S-phase probability, running in parallel on the
-      encoded representation.</li>
+  <li><strong>Encoder</strong> — tujuh blok konvolusional residual dengan lapisan LSTM mengekstrak
+      fitur temporal yang semakin abstrak dari ketiga komponen secara bersamaan.</li>
+  <li><strong>Transformer</strong> — mekanisme self-attention menangkap dependensi jarak jauh
+      di seluruh jendela, menghubungkan karakter noise sebelum kedatangan P dengan
+      karakter sinyal sesudahnya.</li>
+  <li><strong>Tiga kepala decoder</strong> — masing-masing untuk probabilitas deteksi,
+      probabilitas fase-P, dan probabilitas fase-S, berjalan paralel pada
+      representasi yang telah dikodekan.</li>
 </ol>
 <p>
-  The outputs are three continuous time series of probabilities (0–1), one per sample.
-  A pick is placed where the P-head or S-head exceeds the configured threshold
-  (default 0.3), at the peak of each probability spike.
+  Keluarannya adalah tiga deret waktu probabilitas (0–1) yang kontinu, satu per sampel.
+  Pick ditempatkan di mana kepala-P atau kepala-S melampaui ambang yang dikonfigurasi
+  (standar 0,3), pada puncak setiap lonjakan probabilitas.
 </p>
 
 <div class="method-card" style="margin:1.2rem 0 1.8rem;">
@@ -930,266 +930,267 @@
   </div>
   <div class="mc-body">
     <p>
-      Trained on <strong>1.2 million waveform examples</strong> from the STEAD
-      dataset, covering earthquakes from magnitude 0.1 to 7.9, distances from
-      local to teleseismic, and SNR from very clean to barely detectable.
+      Dilatih pada <strong>1,2 juta contoh gelombang</strong> dari dataset STEAD,
+      mencakup gempa dari magnitudo 0,1 hingga 7,9, jarak dari lokal hingga teleseismik,
+      dan SNR dari sangat bersih hingga hampir tidak terdeteksi.
     </p>
-    <p><strong>Best at:</strong> Low-to-moderate SNR, emergent onsets, simultaneous P and S, noisy station environments.</p>
+    <p><strong>Terbaik untuk:</strong> SNR rendah hingga sedang, onset emergent, P dan S bersamaan, lingkungan stasiun berising.</p>
     <ul class="pro-con pros">
-      <li>Picks P <em>and</em> S jointly in one forward pass — no need to chain separate algorithms</li>
-      <li>Returns a calibrated probability score, not just a time — gives you confidence information</li>
-      <li>Trained on diverse noise conditions; generalises well to different network types</li>
-      <li>No threshold tuning per station — a single probability cutoff works globally</li>
-      <li>Sees all three components simultaneously — uses S-wave polarization implicitly</li>
-      <li>GPU-batched: 20 stations processed in ~1 second on RTX 2000 Ada</li>
+      <li>Memilah P <em>dan</em> S sekaligus dalam satu forward pass — tidak perlu merantai algoritma terpisah</li>
+      <li>Mengembalikan skor probabilitas yang terkalibrasi, bukan hanya waktu — memberikan informasi kepercayaan</li>
+      <li>Dilatih pada beragam kondisi noise; generalisasi baik ke berbagai jenis jaringan</li>
+      <li>Tidak perlu penyetelan ambang per stasiun — satu ambang probabilitas berlaku secara global</li>
+      <li>Melihat ketiga komponen secara bersamaan — menggunakan polarisasi gelombang-S secara implisit</li>
+      <li>GPU-batched: 20 stasiun diproses dalam ~1 detik pada RTX 2000 Ada</li>
     </ul>
     <ul class="pro-con cons">
-      <li>Requires PyTorch and ~150 MB model weights (downloaded once, cached)</li>
-      <li>Fixed 60-second input window — very long codas or overlapping events need special handling</li>
-      <li>May underperform on very unusual local noise conditions not well-represented in STEAD</li>
-      <li>Black box — harder to reason about <em>why</em> it placed a pick where it did</li>
-      <li>Requires GPU for fast batch processing (CPU works but is ~10× slower)</li>
+      <li>Membutuhkan PyTorch dan ~150 MB bobot model (diunduh sekali, dicache)</li>
+      <li>Jendela input tetap 60 detik — coda sangat panjang atau event yang tumpang tindih memerlukan penanganan khusus</li>
+      <li>Mungkin berkinerja buruk pada kondisi noise lokal yang sangat tidak biasa dan tidak terwakili dengan baik dalam STEAD</li>
+      <li>Black box — sulit untuk memahami <em>mengapa</em> ia menempatkan pick di posisi tersebut</li>
+      <li>Membutuhkan GPU untuk pemrosesan batch cepat (CPU berfungsi tetapi ~10× lebih lambat)</li>
     </ul>
   </div>
 </div>
 
 
 <!-- ───────────────────────────────────────────────────────
-     SECTION 3 — Full side-by-side comparison
+     SEKSI 3 — Perbandingan penuh berdampingan
      ─────────────────────────────────────────────────────── -->
-<h2>Side-by-side comparison</h2>
+<h2>Perbandingan Berdampingan</h2>
 
 <table class="cmp-method-table">
   <thead>
     <tr>
-      <th>Property</th>
-      <th>STA/LTA (SeisComP detector)</th>
-      <th>AIC / BK (SeisComP re-picker)</th>
+      <th>Properti</th>
+      <th>STA/LTA (detektor SeisComP)</th>
+      <th>AIC / BK (re-picker SeisComP)</th>
       <th>EQTransformer</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>Published</td>
-      <td>~1970s (Allen, 1978)</td>
+      <td>Diterbitkan</td>
+      <td>~1970-an (Allen, 1978)</td>
       <td>1974–1987</td>
       <td class="good">2020</td>
     </tr>
     <tr>
-      <td>Input</td>
-      <td>1 component, bandpass</td>
-      <td>1 component, short window after trigger</td>
-      <td class="good">3 components, full 60 s window</td>
+      <td>Masukan</td>
+      <td>1 komponen, bandpass</td>
+      <td>1 komponen, jendela pendek setelah pemicu</td>
+      <td class="good">3 komponen, jendela penuh 60 s</td>
     </tr>
     <tr>
-      <td>Output</td>
-      <td>Trigger time (binary)</td>
-      <td>Refined P time only</td>
-      <td class="good">P time + S time + detection probability (continuous)</td>
+      <td>Keluaran</td>
+      <td>Waktu pemicu (biner)</td>
+      <td>Waktu P yang diperhalus saja</td>
+      <td class="good">Waktu P + waktu S + probabilitas deteksi (kontinu)</td>
     </tr>
     <tr>
-      <td>What it measures</td>
-      <td>Energy change</td>
-      <td>Statistical change-point</td>
-      <td class="good">Learned waveform shape + polarization patterns</td>
+      <td>Yang diukur</td>
+      <td>Perubahan energi</td>
+      <td>Titik perubahan statistik</td>
+      <td class="good">Bentuk gelombang yang dipelajari + pola polarisasi</td>
     </tr>
     <tr>
-      <td>Needs prior trigger</td>
-      <td>No — is the trigger</td>
-      <td class="warn">Yes — only runs after STA/LTA fires</td>
-      <td class="good">No — scans the full window independently</td>
+      <td>Butuh pemicu awal</td>
+      <td>Tidak — adalah pemicunya</td>
+      <td class="warn">Ya — hanya berjalan setelah STA/LTA aktif</td>
+      <td class="good">Tidak — memindai jendela penuh secara independen</td>
     </tr>
     <tr>
-      <td>S-phase picking</td>
-      <td class="warn">Via separate S-L2 module (polarization heuristic)</td>
-      <td class="bad">Not supported</td>
-      <td class="good">Native — P and S predicted jointly</td>
+      <td>Pemilahan fase-S</td>
+      <td class="warn">Melalui modul S-L2 terpisah (heuristik polarisasi)</td>
+      <td class="bad">Tidak didukung</td>
+      <td class="good">Natif — P dan S diprediksi bersama</td>
     </tr>
     <tr>
-      <td>Confidence score</td>
-      <td class="bad">None — ratio is not a probability</td>
-      <td class="bad">None</td>
-      <td class="good">0–1 probability per pick, per sample</td>
+      <td>Skor kepercayaan</td>
+      <td class="bad">Tidak ada — rasio bukan probabilitas</td>
+      <td class="bad">Tidak ada</td>
+      <td class="good">Probabilitas 0–1 per pick, per sampel</td>
     </tr>
     <tr>
-      <td>Low-SNR performance</td>
-      <td class="bad">Poor — high false-trigger rate</td>
-      <td class="warn">Moderate — depends on SNR at trigger time</td>
-      <td class="good">Good — trained on noisy waveforms</td>
+      <td>Performa SNR rendah</td>
+      <td class="bad">Buruk — tingkat false-trigger tinggi</td>
+      <td class="warn">Sedang — bergantung pada SNR saat pemicu</td>
+      <td class="good">Baik — dilatih pada gelombang berising</td>
     </tr>
     <tr>
-      <td>Emergent onsets</td>
-      <td class="bad">Misses slow-rising P arrivals</td>
-      <td class="warn">BK handles better than AIC</td>
-      <td class="good">Handles well — shape-based, not threshold-based</td>
+      <td>Onset emergent</td>
+      <td class="bad">Melewatkan kedatangan P yang naik lambat</td>
+      <td class="warn">BK lebih baik dari AIC</td>
+      <td class="good">Menangani dengan baik — berbasis bentuk, bukan ambang</td>
     </tr>
     <tr>
-      <td>Parameter tuning</td>
-      <td class="warn">Requires tuning per network (trigOn, trigOff, filter)</td>
-      <td class="warn">Requires tuning per network (SNR thresholds, windows)</td>
-      <td class="good">Single probability threshold, global</td>
+      <td>Penyetelan parameter</td>
+      <td class="warn">Butuh penyetelan per jaringan (trigOn, trigOff, filter)</td>
+      <td class="warn">Butuh penyetelan per jaringan (ambang SNR, jendela)</td>
+      <td class="good">Satu ambang probabilitas, berlaku global</td>
     </tr>
     <tr>
-      <td>Computation cost</td>
-      <td class="good">Negligible — simple arithmetic</td>
-      <td class="good">Negligible</td>
-      <td class="warn">~1–2 s per event on GPU; ~10–30 s on CPU</td>
+      <td>Biaya komputasi</td>
+      <td class="good">Dapat diabaikan — aritmetika sederhana</td>
+      <td class="good">Dapat diabaikan</td>
+      <td class="warn">~1–2 s per event pada GPU; ~10–30 s pada CPU</td>
     </tr>
     <tr>
-      <td>Interpretability</td>
-      <td class="good">Fully transparent — energy ratio is understandable</td>
-      <td class="good">Statistically grounded</td>
-      <td class="warn">Black box — model internals are not interpretable</td>
+      <td>Interpretabilitas</td>
+      <td class="good">Sepenuhnya transparan — rasio energi mudah dipahami</td>
+      <td class="good">Berbasis statistik</td>
+      <td class="warn">Black box — internal model tidak dapat diinterpretasi</td>
     </tr>
     <tr>
-      <td>Generalisation</td>
-      <td class="warn">Requires re-tuning per network / magnitude range</td>
-      <td class="warn">Requires re-tuning per network</td>
-      <td class="good">Trained on global data; fine-tunable per network</td>
+      <td>Generalisasi</td>
+      <td class="warn">Butuh penyetelan ulang per jaringan / rentang magnitudo</td>
+      <td class="warn">Butuh penyetelan ulang per jaringan</td>
+      <td class="good">Dilatih pada data global; dapat di-fine-tune per jaringan</td>
     </tr>
   </tbody>
 </table>
 
 
 <!-- ───────────────────────────────────────────────────────
-     SECTION 4 — Why EQT is a good second opinion
+     SEKSI 4 — Mengapa EQT adalah pendapat kedua yang tepat
      ─────────────────────────────────────────────────────── -->
-<h2>Why EQTransformer is the right QC second opinion</h2>
+<h2>Mengapa EQTransformer adalah Pendapat Kedua QC yang Tepat</h2>
 
 <p>
-  A second opinion is only useful if it is <em>independent</em>. If you run STA/LTA
-  a second time, or AIC with slightly different parameters, you will almost always
-  get the same answer — because the underlying question is still "where does the
-  energy change?" If the analyst placed P on a noise burst, a second STA/LTA pass
-  will place it there too.
+  Pendapat kedua hanya berguna jika bersifat <em>independen</em>. Jika Anda menjalankan
+  STA/LTA untuk kedua kalinya, atau AIC dengan parameter yang sedikit berbeda, Anda hampir
+  selalu akan mendapatkan jawaban yang sama — karena pertanyaan mendasarnya masih "di mana
+  energi berubah?" Jika analis menempatkan P pada ledakan noise, putaran STA/LTA kedua
+  akan menempatkannya di sana juga.
 </p>
 
 <div class="callout tip">
-  <strong>The independence principle</strong><br>
-  EQTransformer disagrees with the analyst through a fundamentally different
-  mechanism. It does not measure energy onset. It recognises the <em>shape</em> of
-  a P or S arrival — the characteristic frequency sweep, the polarity change on the
-  vertical component, the expected S/P amplitude ratio. When it disagrees, it is
-  because it saw something in the waveform morphology that conflicts with the pick
-  position. That is meaningful disagreement worth investigating.
+  <strong>Prinsip independensi</strong><br>
+  EQTransformer tidak setuju dengan analis melalui mekanisme yang secara fundamental berbeda.
+  Ia tidak mengukur onset energi. Ia mengenali <em>bentuk</em> dari kedatangan P atau S —
+  sapuan frekuensi karakteristik, perubahan polaritas pada komponen vertikal, rasio
+  amplitudo S/P yang diharapkan. Ketika ia tidak setuju, itu karena ia melihat sesuatu dalam
+  morfologi gelombang yang bertentangan dengan posisi pick. Itulah ketidaksetujuan bermakna
+  yang layak diselidiki.
 </div>
 
-<h3>Three concrete cases where EQT catches analyst errors</h3>
+<h3>Tiga kasus konkret di mana EQT menangkap kesalahan analis</h3>
 
 <div class="method-grid">
   <div class="method-card">
     <div class="mc-head">
-      <h4>Case 1 — Noise spike trigger</h4>
+      <h4>Kasus 1 — Pemicu spike noise</h4>
     </div>
     <div class="mc-body">
       <p>
-        A noise burst (glitch, teleseismic phase, cultural noise) causes STA/LTA to
-        trigger early. The analyst, seeing the trigger, places P on the spike.
-        EQTransformer, looking at the full waveform, recognises that the spike does
-        not have the characteristic frequency content of a P arrival from a local
-        earthquake and places its pick several seconds later where the true P onset
-        occurs. <strong>Δt typically &gt; 1 s → red flag.</strong>
+        Ledakan noise (glitch, fase teleseismik, noise budaya) menyebabkan STA/LTA
+        terpicu lebih awal. Analis, melihat pemicu, menempatkan P pada spike tersebut.
+        EQTransformer, melihat seluruh gelombang, mengenali bahwa spike tersebut tidak
+        memiliki konten frekuensi karakteristik dari kedatangan P gempa lokal dan
+        menempatkan picknya beberapa detik kemudian di mana onset P sebenarnya terjadi.
+        <strong>Δt biasanya &gt; 1 s → bendera merah.</strong>
       </p>
     </div>
   </div>
   <div class="method-card">
     <div class="mc-head">
-      <h4>Case 2 — Emergent P onset</h4>
+      <h4>Kasus 2 — Onset P emergent</h4>
     </div>
     <div class="mc-body">
       <p>
-        For deeper or more distant events, the P arrival builds slowly rather than
-        arriving impulsively. STA/LTA (and human analysts looking for the "obvious"
-        onset) tend to place P too late, at the point where energy is clearly above
-        noise rather than at the true first motion. EQTransformer, trained on
-        emergent arrivals, picks closer to the true onset.
-        <strong>Δt typically 0.2–0.8 s earlier → yellow or green flag.</strong>
+        Untuk gempa yang lebih dalam atau lebih jauh, kedatangan P membangun secara
+        perlahan daripada tiba secara impulsif. STA/LTA (dan analis manusia yang mencari
+        onset yang "jelas") cenderung menempatkan P terlambat, pada titik di mana energi
+        jelas di atas noise daripada pada gerakan pertama sebenarnya. EQTransformer,
+        dilatih pada kedatangan emergent, memilah lebih dekat ke onset sebenarnya.
+        <strong>Δt biasanya 0,2–0,8 s lebih awal → bendera kuning atau hijau.</strong>
       </p>
     </div>
   </div>
   <div class="method-card">
     <div class="mc-head">
-      <h4>Case 3 — Analyst P/S confusion</h4>
+      <h4>Kasus 3 — Kebingungan P/S analis</h4>
     </div>
     <div class="mc-body">
       <p>
-        For a short P-S interval (near station, local event), an analyst unfamiliar
-        with the station's typical waveform may place the P pick on an S arrival or
-        vice versa. EQTransformer uses three-component polarization information
-        implicitly — P dominates the Z component, S dominates N/E — and is unlikely
-        to confuse the two for clear records.
-        <strong>Δt large and inconsistent with nearby stations → red flag, check phase label.</strong>
+        Untuk interval P-S pendek (stasiun dekat, gempa lokal), analis yang tidak familiar
+        dengan bentuk gelombang khas stasiun tersebut mungkin menempatkan pick P pada
+        kedatangan S atau sebaliknya. EQTransformer menggunakan informasi polarisasi tiga
+        komponen secara implisit — P mendominasi komponen Z, S mendominasi N/E — dan kecil
+        kemungkinan membingungkan keduanya untuk rekaman yang jelas.
+        <strong>Δt besar dan tidak konsisten dengan stasiun terdekat → bendera merah, periksa label fase.</strong>
       </p>
     </div>
   </div>
   <div class="method-card">
     <div class="mc-head">
-      <h4>Case 4 — Cycle skipping</h4>
+      <h4>Kasus 4 — Cycle skipping</h4>
     </div>
     <div class="mc-body">
       <p>
-        On low-frequency records (regional/teleseismic), an analyst may pick one
-        full cycle (period) late relative to the true onset — a common error on
-        10–15 s period surface waves. EQTransformer, having seen this pattern in
-        training data, is less prone to cycle-skipping for the P phase.
-        <strong>Δt close to one dominant period → red flag, check waveform frequency content.</strong>
+        Pada rekaman frekuensi rendah (regional/teleseismik), analis mungkin memilah
+        satu siklus penuh (periode) terlambat relatif terhadap onset sebenarnya — kesalahan
+        umum pada gelombang permukaan dengan periode 10–15 s. EQTransformer, yang telah
+        melihat pola ini dalam data pelatihan, lebih tidak rentan terhadap cycle-skipping
+        untuk fase P.
+        <strong>Δt mendekati satu periode dominan → bendera merah, periksa konten frekuensi gelombang.</strong>
       </p>
     </div>
   </div>
 </div>
 
-<h3>Three cases where EQT should be treated with caution</h3>
+<h3>Tiga kasus di mana EQT harus diperlakukan dengan hati-hati</h3>
 <div class="method-grid">
   <div class="method-card">
     <div class="mc-head">
-      <h4>Very local microseismicity (&lt;10 km)</h4>
+      <h4>Mikroseismisitas sangat lokal (&lt;10 km)</h4>
     </div>
     <div class="mc-body">
       <p>
-        P-S separation may be less than 2 seconds. EQTransformer's 60-second window
-        was trained predominantly on events with longer P-S. Its S pick on very
-        nearby events is less reliable. Trust the analyst's S pick more for Δ &lt; 0.1°.
+        Pemisahan P-S mungkin kurang dari 2 detik. Jendela 60 detik EQTransformer
+        dilatih terutama pada event dengan P-S lebih panjang. Pick S-nya pada event
+        yang sangat dekat kurang andal. Percayai lebih pick S analis untuk Δ &lt; 0,1°.
       </p>
     </div>
   </div>
   <div class="method-card">
     <div class="mc-head">
-      <h4>Highly unusual local noise</h4>
+      <h4>Noise lokal yang sangat tidak biasa</h4>
     </div>
     <div class="mc-body">
       <p>
-        If your station has a distinctive noise source (harbour waves, factory
-        machinery, geothermal tremor) not well-represented in the STEAD training
-        data, EQTransformer may produce false picks with high probability scores.
-        A station with systematic high ΔP across many events should be investigated
-        — it may need the model fine-tuned on local noise.
+        Jika stasiun Anda memiliki sumber noise yang khas (gelombang pelabuhan, mesin
+        pabrik, tremor geotermal) yang tidak terwakili dengan baik dalam data pelatihan
+        STEAD, EQTransformer mungkin menghasilkan pick palsu dengan skor probabilitas
+        tinggi. Stasiun dengan ΔP sistematis tinggi di banyak event perlu diselidiki
+        — mungkin perlu fine-tuning model pada noise lokal.
       </p>
     </div>
   </div>
   <div class="method-card">
     <div class="mc-head">
-      <h4>Overlapping events</h4>
+      <h4>Event yang tumpang tindih</h4>
     </div>
     <div class="mc-body">
       <p>
-        If a second earthquake occurs within the 60-second processing window of the
-        first, EQTransformer may pick phases from both events on the same trace.
-        The analyst, with contextual awareness of the seismic sequence, is better
-        positioned to identify and separate overlapping events.
+        Jika gempa kedua terjadi dalam jendela pemrosesan 60 detik dari yang pertama,
+        EQTransformer mungkin memilah fase dari kedua event pada trace yang sama.
+        Analis, dengan kesadaran kontekstual tentang urutan seismik, lebih mampu
+        mengidentifikasi dan memisahkan event yang tumpang tindih.
       </p>
     </div>
   </div>
   <div class="method-card">
     <div class="mc-head">
-      <h4>Teleseismic phases (depth phases)</h4>
+      <h4>Fase teleseismik (depth phases)</h4>
     </div>
     <div class="mc-body">
       <p>
-        For teleseismic events, depth phases (pP, sP) arrive shortly after the
-        direct P and can be mistaken for it. EQTransformer is trained primarily on
-        single-station local/regional picking and may not correctly distinguish
-        P from pP for deep teleseismic events. For events with Δ &gt; 30°, use
-        EQT picks as a rough reference only.
+        Untuk event teleseismik, depth phases (pP, sP) tiba sesaat setelah P langsung
+        dan bisa tertukar dengannya. EQTransformer dilatih terutama untuk pemilahan
+        lokal/regional satu stasiun dan mungkin tidak membedakan P dari pP dengan benar
+        untuk event teleseismik dalam. Untuk event dengan Δ &gt; 30°, gunakan
+        pick EQT hanya sebagai referensi kasar.
       </p>
     </div>
   </div>
@@ -1197,83 +1198,83 @@
 
 
 <!-- ───────────────────────────────────────────────────────
-     SECTION 5 — QC flags and decision guide
+     SEKSI 5 — Bendera QC dan panduan keputusan
      ─────────────────────────────────────────────────────── -->
-<h2>Reading the QC flags in this system</h2>
+<h2>Membaca Bendera QC dalam Sistem Ini</h2>
 
 <p>
-  Each station is assigned a QC flag based on the worst absolute residual between
-  the analyst's pick and EQTransformer's pick, across both P and S.
+  Setiap stasiun diberi bendera QC berdasarkan residual absolut terburuk antara
+  pick analis dan pick EQTransformer, untuk P maupun S.
 </p>
 
 <div class="threshold-ref">
-  <div class="thr-item green"><div class="thr-dot"></div>Green — |Δt| &lt; 0.5 s</div>
-  <div class="thr-item yellow"><div class="thr-dot"></div>Yellow — 0.5 s ≤ |Δt| &lt; 1.5 s</div>
-  <div class="thr-item red"><div class="thr-dot"></div>Red — |Δt| ≥ 1.5 s</div>
+  <div class="thr-item green"><div class="thr-dot"></div>Hijau — |Δt| &lt; 0,5 s</div>
+  <div class="thr-item yellow"><div class="thr-dot"></div>Kuning — 0,5 s ≤ |Δt| &lt; 1,5 s</div>
+  <div class="thr-item red"><div class="thr-dot"></div>Merah — |Δt| ≥ 1,5 s</div>
 </div>
 
 <p>
-  These thresholds are calibrated for <strong>local and regional events</strong>
-  on short-period instruments (SH channels, 100 Hz). For teleseismic events,
-  a yellow flag at 1.5 s is not necessarily alarming — EQTransformer's absolute
-  accuracy degrades with distance. Use the distance class shown on each station card
-  to contextualise the flag.
+  Ambang batas ini dikalibrasi untuk <strong>event lokal dan regional</strong>
+  pada instrumen short-period (saluran SH, 100 Hz). Untuk event teleseismik,
+  bendera kuning pada 1,5 s belum tentu mengkhawatirkan — akurasi absolut
+  EQTransformer menurun seiring jarak. Gunakan kelas jarak yang ditampilkan pada
+  setiap kartu stasiun untuk mengontekstualisasikan bendera.
 </p>
 
 <table class="cmp-method-table">
   <thead>
     <tr>
-      <th>Flag</th>
-      <th>What it means</th>
-      <th>Recommended action</th>
+      <th>Bendera</th>
+      <th>Artinya</th>
+      <th>Tindakan yang Disarankan</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><span class="pill green">green</span></td>
-      <td>EQT and analyst agree to within 0.5 s on both P and S. High confidence the pick is correct.</td>
-      <td>Accept analyst pick. No re-pick needed unless the waveform plot shows an obvious issue.</td>
+      <td><span class="pill green">hijau</span></td>
+      <td>EQT dan analis setuju dalam 0,5 s untuk P dan S. Kepercayaan tinggi bahwa pick sudah benar.</td>
+      <td>Terima pick analis. Tidak perlu re-pick kecuali plot gelombang menunjukkan masalah yang jelas.</td>
     </tr>
     <tr>
-      <td><span class="pill yellow">yellow</span></td>
-      <td>Moderate disagreement (0.5–1.5 s). Could be an emergent onset where both methods have uncertainty, or a legitimate small error.</td>
-      <td>Look at the waveform plot and annotation panel. Does EQT's dashed line align better with first motion? If so, flag for re-pick.</td>
+      <td><span class="pill yellow">kuning</span></td>
+      <td>Ketidaksepakatan sedang (0,5–1,5 s). Bisa jadi onset emergent di mana kedua metode punya ketidakpastian, atau kesalahan kecil yang sah.</td>
+      <td>Lihat plot gelombang dan panel anotasi. Apakah garis putus-putus EQT lebih sesuai dengan gerakan pertama? Jika ya, tandai untuk re-pick.</td>
     </tr>
     <tr>
-      <td><span class="pill red">red</span></td>
-      <td>Large disagreement ≥ 1.5 s. Either the analyst made an error, or EQT is confused (noise spike, overlapping event, unusual noise).</td>
-      <td>Always open the waveform plot. Look at all three components. Check if EQT's pick aligns with a clear phase onset. Check if the station is in the map near the expected azimuth.</td>
+      <td><span class="pill red">merah</span></td>
+      <td>Ketidaksepakatan besar ≥ 1,5 s. Entah analis membuat kesalahan, atau EQT kebingungan (spike noise, event tumpang tindih, noise tidak biasa).</td>
+      <td>Selalu buka plot gelombang. Lihat ketiga komponen. Periksa apakah pick EQT sesuai dengan onset fase yang jelas. Periksa apakah stasiun berada di peta dekat azimuth yang diharapkan.</td>
     </tr>
     <tr>
-      <td><span class="pill unknown">unknown</span></td>
-      <td>EQTransformer did not produce a pick above the detection threshold for this station. Either the SNR was below 0.3 probability, or no phase was found in the window.</td>
-      <td>Not necessarily wrong — may indicate a noisy station or a genuine low-SNR recording. Check the waveform. If the analyst's pick looks reasonable, accept it.</td>
+      <td><span class="pill unknown">tidak diketahui</span></td>
+      <td>EQTransformer tidak menghasilkan pick di atas ambang deteksi untuk stasiun ini. SNR di bawah probabilitas 0,3, atau tidak ada fase yang ditemukan dalam jendela.</td>
+      <td>Tidak selalu salah — mungkin menunjukkan stasiun berising atau rekaman SNR rendah yang sesungguhnya. Periksa gelombang. Jika pick analis terlihat masuk akal, terima.</td>
     </tr>
   </tbody>
 </table>
 
 <div class="callout tip">
-  <strong>Practical workflow for junior analysts</strong><br>
-  1. Open the <strong>Pick Comparison</strong> tab first. Sort by ΔP to find the worst discrepancies.
-  2. For any red or yellow station, click to the <strong>Waveforms</strong> tab and scroll to that station.
-  3. Look at the annotation panel: does EQT's dashed line land on a clearer phase onset than the analyst's solid line?
-  4. If yes → mark as "Needs re-pick" and leave a note explaining which phase and direction.
-  5. If no (EQT seems confused) → mark as "Accept analyst pick" with a note like "EQT appears to have triggered on noise burst."
-  6. After the senior analyst reviews your notes and re-commits, the new run will appear in the run dropdown and you can compare run #1 vs run #2 to see how the picks changed.
+  <strong>Alur kerja praktis untuk analis junior</strong><br>
+  1. Buka tab <strong>Perbandingan Pick</strong> terlebih dahulu. Urutkan berdasarkan ΔP untuk menemukan perbedaan terburuk.<br>
+  2. Untuk setiap stasiun merah atau kuning, klik ke tab <strong>Gelombang</strong> dan gulir ke stasiun tersebut.<br>
+  3. Lihat panel anotasi: apakah garis putus-putus EQT berada pada onset fase yang lebih jelas dibanding garis solid analis?<br>
+  4. Jika ya → tandai sebagai "Perlu re-pick" dan tinggalkan catatan yang menjelaskan fase mana dan arahnya.<br>
+  5. Jika tidak (EQT tampak kebingungan) → tandai sebagai "Terima pick analis" dengan catatan seperti "EQT tampaknya terpicu pada ledakan noise."<br>
+  6. Setelah analis senior meninjau catatan Anda dan melakukan commit ulang, run baru akan muncul di dropdown run dan Anda dapat membandingkan run #1 vs run #2 untuk melihat perubahan pick.
 </div>
 
 
 <!-- ───────────────────────────────────────────────────────
-     SECTION 6 — References
+     SEKSI 6 — Referensi
      ─────────────────────────────────────────────────────── -->
-<h2>References</h2>
+<h2>Referensi</h2>
 <ul style="line-height:2; font-size:.88rem; color:var(--muted); list-style:none; padding:0;">
   <li><strong style="color:var(--ink)">Allen, R.V. (1978)</strong> — "Automatic earthquake recognition and timing from single traces." <em>BSSA</em>, 68(5), 1521–1532.</li>
   <li><strong style="color:var(--ink)">Baer, M. &amp; Kradolfer, U. (1987)</strong> — "An automatic phase picker for local and teleseismic events." <em>BSSA</em>, 77(4), 1437–1445.</li>
   <li><strong style="color:var(--ink)">Maeda, N. (1985)</strong> — "A method for reading and checking phase times in auto-processing system of seismic wave data." <em>Zisin</em>, 38, 365–379.</li>
   <li><strong style="color:var(--ink)">Mousavi, S.M. et al. (2020)</strong> — "Earthquake transformer — an attentive deep-learning model for simultaneous earthquake detection and phase picking." <em>Nature Communications</em>, 11, 3952.</li>
   <li><strong style="color:var(--ink)">Woollam, J. et al. (2022)</strong> — "SeisBench — a toolbox for machine learning in seismology." <em>Seismological Research Letters</em>, 93(3), 1695–1709.</li>
-  <li><strong style="color:var(--ink)">SeisComP documentation</strong> — scautopick module. <em>https://docs.seiscomp.de/apps/scautopick.html</em></li>
+  <li><strong style="color:var(--ink)">Dokumentasi SeisComP</strong> — modul scautopick. <em>https://docs.seiscomp.de/apps/scautopick.html</em></li>
 </ul>
 
 </div>{# /guide #}
