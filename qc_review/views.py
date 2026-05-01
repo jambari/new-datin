@@ -17,6 +17,7 @@ import json
 from datetime import datetime, timezone
 
 from django.core.files.base import ContentFile
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_datetime
@@ -235,10 +236,13 @@ def event_map_json(request, public_id):
 # ---------------------------------------------------------------------------
 
 def event_list(request):
-    events = Event.objects.all().prefetch_related("runs")
+    qs = Event.objects.all().prefetch_related("runs")
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
     rows = [{"event": e, "summary": e.qc_summary,
-             "run_count": e.run_count} for e in events]
-    return render(request, "qc_review/event_list.html", {"rows": rows})
+             "run_count": e.run_count} for e in page_obj]
+    return render(request, "qc_review/event_list.html",
+                  {"rows": rows, "page_obj": page_obj})
 
 
 import json as _json

@@ -119,6 +119,11 @@ def dashboard(request):
         summary = next((s for s in lightning_7d if s.summary_date == d), None)
         chart_data.append(summary.total_count if summary else 0)
 
+    # --- Latest QC events ---
+    from qc_review.models import Event as QCEvent
+    _qc_qs = QCEvent.objects.prefetch_related("runs__station_results").order_by("-origin_time")[:5]
+    latest_qc_rows = [{"event": e, "summary": e.qc_summary} for e in _qc_qs]
+
     context = {
         'gempa_7d':            gempa_7d,
         'gempa_30d':           gempa_30d,
@@ -139,5 +144,6 @@ def dashboard(request):
         'gempa_merusak_total': GempaMemusak.objects.count(),
         'sun_rise_wit':        sun_rise_wit,
         'sun_set_wit':         sun_set_wit,
+        'latest_qc_rows':      latest_qc_rows,
     }
     return render(request, 'dashboard.html', context)

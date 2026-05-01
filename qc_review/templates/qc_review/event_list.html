@@ -67,6 +67,40 @@
     border-bottom: 1px solid var(--line);
     padding-bottom: 0.4rem;
   }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 1.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+  }
+  .pagination a,
+  .pagination span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--ink);
+    text-decoration: none;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .pagination a:hover { background: var(--paper-2); border-color: var(--analyst); color: var(--analyst); }
+  .pagination span.current {
+    background: var(--analyst);
+    border-color: var(--analyst);
+    color: #fff;
+    font-weight: 700;
+    pointer-events: none;
+  }
+  .pagination span.disabled { color: var(--muted); pointer-events: none; }
+  .pagination .pg-info { color: var(--muted); border: none; font-size: 0.78rem; }
 </style>
 {% endblock %}
 
@@ -121,5 +155,43 @@
 <div class="card empty">
   No events yet. Run the worker to ingest a SeisComP commit.
 </div>
+{% endif %}
+
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="pagination" aria-label="Halaman event">
+
+  {% if page_obj.has_previous %}
+    <a href="?page=1" title="Pertama">&laquo;</a>
+    <a href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+  {% else %}
+    <span class="disabled">&laquo;</span>
+    <span class="disabled">&lsaquo;</span>
+  {% endif %}
+
+  {% for num in page_obj.paginator.page_range %}
+    {% if page_obj.number == num %}
+      <span class="current">{{ num }}</span>
+    {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}
+      <a href="?page={{ num }}">{{ num }}</a>
+    {% elif num == 1 or num == page_obj.paginator.num_pages %}
+      {% if num == 1 and page_obj.number > 5 %}<span class="disabled">…</span>{% endif %}
+      <a href="?page={{ num }}">{{ num }}</a>
+      {% if num == page_obj.paginator.num_pages and page_obj.number < page_obj.paginator.num_pages|add:"-4" %}<span class="disabled">…</span>{% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">&rsaquo;</a>
+    <a href="?page={{ page_obj.paginator.num_pages }}" title="Terakhir">&raquo;</a>
+  {% else %}
+    <span class="disabled">&rsaquo;</span>
+    <span class="disabled">&raquo;</span>
+  {% endif %}
+
+  <span class="pg-info">
+    Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}
+    &nbsp;·&nbsp; {{ page_obj.paginator.count }} event
+  </span>
+</nav>
 {% endif %}
 {% endblock %}
