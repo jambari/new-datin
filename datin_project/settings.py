@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'tailwind',
     'theme',
     'django_browser_reload',
@@ -288,3 +289,10 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880   # 5MB
 
 QUAKELINK_PUSH_TOKEN = config('QUAKELINK_PUSH_TOKEN', default='')
 LEMI_MONITOR_TOKEN   = config('LEMI_MONITOR_TOKEN',   default='')
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
