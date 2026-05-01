@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'maintenance',
     'perjadin',
     'arsip',
+    'qc_review',
 ]
 
 # Add this to the bottom of the file

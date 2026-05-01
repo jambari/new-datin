@@ -1,5 +1,11 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: light --default;
+}
+
+/* Force class-based dark mode — dark: variants only apply when .dark is on a parent.
+   Since no JS sets that class, dark mode is effectively disabled. */
+@variant dark (&:is(.dark *));
 
 /**
   * A catch-all path to Django template files, JavaScript, and Python files
@@ -8,4 +14,6 @@
   * If your final CSS file is not being updated after code changes, you may want to broaden or narrow
   * the scope of this path.
   */
-@source "../../../**/*.{html,py,js}";
+@source "../../../*/templates/**/*.html";
+@source "../../../theme/templates/**/*.html";
+@source "../../../*/static_src/src/*.css";

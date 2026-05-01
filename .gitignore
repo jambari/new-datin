@@ -24,6 +24,11 @@ eloquent-env-*.json
 # --- Virtual Environment (Wajib di-ignore) ---
 # Folder ini berisi library python, bukan kode Anda
 datin/
+venv/
+
+# --- Database Dumps ---
+*.dump
+*.sql
 # Environment variables
 .env
 .env.local

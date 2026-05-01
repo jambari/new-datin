@@ -1,0 +1,126 @@
+{% extends "qc_review/base.html" %}
+{% block title %}Events · Seismic QC{% endblock %}
+
+{% block extra_head %}
+<style>
+  .events { display: grid; gap: 1rem; }
+  .event-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(150px, 1fr) 2fr auto;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1.2rem 1.5rem;
+    border-left: 4px solid var(--line);
+    transition: border-color 0.15s;
+  }
+  .event-row:hover { border-left-color: var(--auto); }
+  .event-row .pid {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-bottom: none;
+    color: var(--ink);
+  }
+  .event-row .when {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .event-row .region { font-style: italic; color: var(--ink); }
+  .event-row .mag {
+    font-family: 'Newsreader', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--auto);
+    margin-right: 0.4rem;
+  }
+  .summary {
+    display: flex; gap: 0.4rem; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+  }
+  .summary .bar-stack {
+    display: flex;
+    height: 8px;
+    width: 140px;
+    border: 1px solid var(--line);
+  }
+  .summary .bar-stack > span { display: block; height: 100%; }
+  .summary .bg { background: var(--green); }
+  .summary .by { background: var(--yellow); }
+  .summary .br { background: var(--red); }
+  .summary .bu { background: var(--paper-2); }
+
+  .empty {
+    padding: 4rem 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-style: italic;
+  }
+  h2.section {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.4rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="section">Committed events · awaiting review</h2>
+
+{% if rows %}
+<div class="events">
+  {% for row in rows %}
+    {% with e=row.event s=row.summary %}
+    <div class="card event-row">
+      <div>
+        <div><a class="pid" href="{% url 'event_detail' public_id=e.public_id %}">{{ e.public_id }}</a></div>
+        <div class="when">{{ e.origin_time|date:"Y-m-d H:i:s" }} UTC</div>
+      </div>
+      <div>
+        <span class="mag">M{{ e.magnitude|default:"–" }}</span>
+        <span class="mono" style="color: var(--muted); font-size: 0.85rem;">{{ e.magnitude_type|default:"" }}</span>
+        <div class="when">{{ e.depth_km|floatformat:0 }} km depth</div>
+      </div>
+      <div class="region">
+        {{ e.region|default:"—" }}
+        <div style="margin-top: 0.3rem; display: flex; gap: 0.3rem; flex-wrap: wrap;">
+          {% if e.latest_status %}
+            <span class="pill status-{{ e.latest_status }}">{{ e.latest_status }}</span>
+          {% endif %}
+          {% if row.run_count > 1 %}
+            <span class="pill" style="color: var(--auto); border-color: var(--auto); background: rgba(184,52,26,0.08);">
+              {{ row.run_count }} commits
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="summary">
+        <span title="{{ s.green }} green / {{ s.yellow }} yellow / {{ s.red }} red / {{ s.unknown }} unknown">
+          <span class="bar-stack">
+            {% if s.total %}
+              <span class="bg" style="width: {% widthratio s.green s.total 100 %}%"></span>
+              <span class="by" style="width: {% widthratio s.yellow s.total 100 %}%"></span>
+              <span class="br" style="width: {% widthratio s.red s.total 100 %}%"></span>
+              <span class="bu" style="width: {% widthratio s.unknown s.total 100 %}%"></span>
+            {% endif %}
+          </span>
+        </span>
+        <span style="color: var(--muted);">{{ s.total }} sta</span>
+      </div>
+    </div>
+    {% endwith %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty">
+  No events yet. Run the worker to ingest a SeisComP commit.
+</div>
+{% endif %}
+{% endblock %}

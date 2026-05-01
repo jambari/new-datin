@@ -1,0 +1,1540 @@
+{% extends "qc_review/base.html" %}
+{% block title %}{{ event.public_id }} · QC{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+<style>
+/* ── layout ──────────────────────────────────────────────── */
+.crumb { font-family:'JetBrains Mono',monospace; font-size:.8rem; color:var(--muted); margin-bottom:1rem; }
+.crumb a { color:var(--muted); }
+
+.event-header {
+  display:grid; grid-template-columns:1.5fr 1fr 1fr;
+  border:2px solid var(--ink); margin-bottom:1rem;
+  background:var(--paper); box-shadow:6px 6px 0 var(--line);
+}
+.event-header > div { padding:1.2rem 1.5rem; border-right:1px solid var(--line); }
+.event-header > div:last-child { border-right:none; }
+.event-header .label { font-family:'JetBrains Mono',monospace; font-size:.7rem; text-transform:uppercase; letter-spacing:.15em; color:var(--muted); margin-bottom:.4rem; }
+.event-header .pid  { font-family:'JetBrains Mono',monospace; font-size:1.4rem; font-weight:700; }
+.event-header .region { font-style:italic; margin-top:.2rem; }
+.event-header .mag  { font-size:2.4rem; font-weight:600; color:var(--auto); line-height:1; }
+.event-header .coords { font-family:'JetBrains Mono',monospace; font-size:.9rem; }
+.summary-row { display:flex; gap:.6rem; flex-wrap:wrap; margin:.5rem 0 0; }
+
+/* ── run-bar ──────────────────────────────────────────────── */
+.run-bar {
+  display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+  padding:.7rem 1.2rem; background:var(--ink); color:var(--paper);
+  font-family:'JetBrains Mono',monospace; font-size:.78rem; margin-bottom:1.5rem;
+}
+.run-bar .label { color:#c4ff5a; letter-spacing:.1em; text-transform:uppercase; font-size:.7rem; }
+.run-bar select { background:var(--ink); color:var(--paper); border:1px solid #555; padding:.2rem .4rem; font-family:inherit; font-size:inherit; }
+.run-bar a { color:var(--paper); border-bottom:1px dotted #c4ff5a; }
+.run-bar .latest-tag { background:#c4ff5a; color:var(--ink); padding:.05em .5em; font-weight:700; }
+
+/* ── banners ──────────────────────────────────────────────── */
+.banner-final {
+  margin-bottom:1.5rem; padding:1rem 1.4rem; background:var(--green);
+  color:var(--paper); border:2px solid var(--green); box-shadow:4px 4px 0 var(--line);
+  font-family:'JetBrains Mono',monospace; display:flex; align-items:center; gap:1rem;
+}
+.banner-prelim {
+  margin-bottom:1.5rem; padding:1rem 1.4rem; background:rgba(107,101,82,.12);
+  border:1px solid var(--muted); color:var(--muted);
+  font-family:'JetBrains Mono',monospace; font-size:.85rem;
+}
+.revision { border:1px solid var(--auto); background:rgba(184,52,26,.04); margin-bottom:1.5rem; }
+.revision-head { display:flex; align-items:center; gap:.7rem; padding:.7rem 1.2rem; border-bottom:1px solid var(--auto); background:rgba(184,52,26,.08); font-family:'JetBrains Mono',monospace; font-size:.78rem; color:var(--auto); }
+.revision-head .label { font-weight:700; text-transform:uppercase; letter-spacing:.1em; }
+.revision table { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:.85rem; }
+.revision td,.revision th { padding:.5rem 1.2rem; text-align:left; border-bottom:1px solid rgba(184,52,26,.15); }
+.revision tr:last-child td { border-bottom:none; }
+.revision th { color:var(--muted); font-weight:500; font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; }
+.revision .arrow { color:var(--auto); padding:0 .5rem; }
+.revision .delta { color:var(--auto); font-weight:700; }
+.revision .old   { color:var(--muted); text-decoration:line-through; }
+
+/* ── TABS ─────────────────────────────────────────────────── */
+.tab-bar {
+  display:flex; gap:0; border-bottom:2px solid var(--ink);
+  margin-bottom:1.5rem;
+}
+.tab-btn {
+  padding:.65rem 1.6rem;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.82rem;
+  font-weight:500;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  border:none;
+  cursor:pointer;
+  background:var(--paper-2);
+  color:var(--muted);
+  border-top:2px solid transparent;
+  border-right:1px solid var(--line);
+  transition:background .12s, color .12s;
+}
+.tab-btn:hover { background:var(--paper); color:var(--ink); }
+.tab-btn.active {
+  background:var(--ink);
+  color:var(--paper);
+  border-top:2px solid var(--ink);
+}
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+
+/* ── waveform tab ─────────────────────────────────────────── */
+.top-grid {
+  display:grid; grid-template-columns:minmax(360px,1fr) minmax(420px,1.2fr);
+  gap:1.5rem; margin-bottom:2rem;
+}
+@media (max-width:1000px) { .top-grid { grid-template-columns:1fr; } }
+.panel { border:1px solid var(--line); background:var(--paper); box-shadow:4px 4px 0 var(--line); overflow:hidden; display:flex; flex-direction:column; }
+.panel-head { display:flex; justify-content:space-between; align-items:baseline; padding:.8rem 1.2rem; border-bottom:1px solid var(--line); background:var(--paper-2); }
+.panel-head h3 { font-family:'Newsreader',serif; font-weight:600; font-size:1rem; }
+.panel-head .hint { font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; }
+#map { height:360px; width:100%; background:#c8c2a8; }
+.panel.record img { width:100%; height:auto; display:block; }
+
+.guidance { padding:1rem 1.2rem; margin-bottom:2rem; border-left:4px solid var(--analyst); background:var(--paper-2); font-style:italic; color:var(--ink); }
+.guidance strong { font-style:normal; font-family:'JetBrains Mono',monospace; font-size:.78rem; text-transform:uppercase; letter-spacing:.1em; }
+
+.legend { display:flex; gap:2rem; flex-wrap:wrap; padding:1rem 1.5rem; background:var(--paper-2); border:1px solid var(--line); margin-bottom:1.5rem; font-family:'JetBrains Mono',monospace; font-size:.78rem; }
+.legend .key { display:inline-flex; align-items:center; gap:.5rem; }
+.legend .swatch { display:inline-block; width:18px; height:3px; }
+.swatch-analyst-p { background:var(--analyst); }
+.swatch-analyst-s { background:var(--green); }
+.swatch-auto-p { background:var(--auto); border-bottom:2px dashed var(--auto); height:0; }
+.swatch-auto-s { background:#6b2bbf; border-bottom:2px dashed #6b2bbf; height:0; }
+
+.station { display:grid; grid-template-columns:280px 1fr; border:1px solid var(--line); box-shadow:4px 4px 0 var(--line); margin-bottom:2rem; background:var(--paper); }
+.station-side { padding:1.5rem; background:var(--paper-2); border-right:1px solid var(--line); }
+.station-id { font-family:'JetBrains Mono',monospace; font-size:1.3rem; font-weight:700; margin-bottom:.3rem; }
+.station-side .dist { font-family:'JetBrains Mono',monospace; font-size:.85rem; color:var(--muted); margin-bottom:1rem; }
+.station-side h4 { font-family:'JetBrains Mono',monospace; font-size:.7rem; text-transform:uppercase; letter-spacing:.15em; color:var(--muted); margin:1.2rem 0 .5rem; font-weight:500; }
+.picks { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:.78rem; }
+.picks td,.picks th { text-align:left; padding:.3rem .5rem .3rem 0; }
+.picks th { color:var(--muted); font-weight:500; }
+.picks .delta-good { color:var(--green); font-weight:700; }
+.picks .delta-warn { color:var(--yellow); font-weight:700; }
+.picks .delta-bad  { color:var(--red); font-weight:700; }
+.station-main { padding:1rem; display:flex; flex-direction:column; }
+.station-main img { width:100%; height:auto; display:block; border:1px solid var(--line); }
+.station-main .review { margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--line); display:flex; gap:.8rem; align-items:flex-start; flex-wrap:wrap; }
+.review textarea { flex:1; min-width:240px; min-height:60px; padding:.6rem; border:1px solid var(--line); background:var(--paper); font-family:'Newsreader',serif; font-size:.95rem; resize:vertical; }
+.review input.reviewer-name { padding:.5rem; border:1px solid var(--line); background:var(--paper); font-family:'JetBrains Mono',monospace; font-size:.8rem; width:130px; }
+.review select { padding:.5rem; border:1px solid var(--line); background:var(--paper); font-family:'JetBrains Mono',monospace; font-size:.8rem; }
+.review button { padding:.5rem 1.2rem; border:1px solid var(--ink); background:var(--ink); color:var(--paper); font-family:'JetBrains Mono',monospace; font-size:.8rem; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; transition:background .1s; }
+.review button:hover { background:var(--auto); border-color:var(--auto); }
+
+/* ── METHOD GUIDE TAB ─────────────────────────────────────── */
+.guide {
+  max-width: 900px;
+}
+.guide h2 {
+  font-family: 'Newsreader', serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 2rem 0 .5rem;
+  padding-bottom: .4rem;
+  border-bottom: 2px solid var(--line);
+}
+.guide h2:first-child { margin-top: 0; }
+.guide h3 {
+  font-family: 'Newsreader', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 1.4rem 0 .4rem;
+}
+.guide p {
+  line-height: 1.7;
+  color: #1a1a1a;
+  margin-bottom: .9rem;
+}
+.guide .mono-inline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .88em;
+  background: var(--paper-2);
+  border: 1px solid var(--grid);
+  padding: .05em .35em;
+  border-radius: 3px;
+}
+
+/* pipeline diagram */
+.pipeline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 1.2rem 0 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+}
+.pipe-box {
+  padding: .6rem 1rem;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  text-align: center;
+  min-width: 130px;
+}
+.pipe-box .pipe-title {
+  font-weight: 700;
+  font-size: .8rem;
+  letter-spacing: .04em;
+  color: var(--ink);
+}
+.pipe-box .pipe-sub {
+  color: var(--muted);
+  font-size: .7rem;
+  margin-top: .2rem;
+}
+.pipe-arrow {
+  font-size: 1.2rem;
+  color: var(--muted);
+  padding: 0 .3rem;
+}
+.pipe-box.trigger  { border-color: #b8851f; background: rgba(184,133,31,.07); }
+.pipe-box.repicker { border-color: #1f4ea8; background: rgba(31,78,168,.06); }
+.pipe-box.spicker  { border-color: #0e8a4f; background: rgba(14,138,79,.06); }
+.pipe-box.eqt      { border-color: var(--auto); background: rgba(184,52,26,.06); }
+
+/* comparison grid */
+.method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  margin: 1.2rem 0 1.8rem;
+}
+@media (max-width: 750px) { .method-grid { grid-template-columns: 1fr; } }
+
+.method-card {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--line);
+  overflow: hidden;
+}
+.method-card .mc-head {
+  padding: .8rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+}
+.method-card .mc-head h4 {
+  font-family: 'Newsreader', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+.method-card .mc-head .mc-year {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .7rem;
+  color: var(--muted);
+  margin-top: .15rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.method-card .mc-body {
+  padding: .9rem 1.1rem;
+}
+.method-card .mc-body p {
+  font-size: .9rem;
+  margin-bottom: .6rem;
+  line-height: 1.6;
+}
+
+/* pros / cons list */
+.pro-con { margin: .7rem 0 .9rem; }
+.pro-con li {
+  font-size: .88rem;
+  line-height: 1.55;
+  margin-bottom: .3rem;
+  padding-left: 1.4rem;
+  position: relative;
+  list-style: none;
+}
+.pro-con li::before {
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+.pro-con.pros li::before { content: '✓'; color: var(--green); }
+.pro-con.cons li::before { content: '✗'; color: var(--red); }
+
+/* full comparison table */
+.cmp-method-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  margin: 1rem 0 1.8rem;
+}
+.cmp-method-table th {
+  background: var(--ink);
+  color: var(--paper);
+  padding: .55rem .9rem;
+  text-align: left;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.cmp-method-table td {
+  padding: .55rem .9rem;
+  border-bottom: 1px solid var(--grid);
+  vertical-align: top;
+  line-height: 1.55;
+}
+.cmp-method-table tr:nth-child(even) td { background: var(--paper-2); }
+.cmp-method-table td:first-child {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+  width: 160px;
+}
+.cmp-method-table .good { color: var(--green); font-weight: 600; }
+.cmp-method-table .warn { color: var(--yellow); font-weight: 600; }
+.cmp-method-table .bad  { color: var(--red); font-weight: 600; }
+
+/* callout boxes */
+.callout {
+  padding: 1rem 1.3rem;
+  margin: 1.2rem 0;
+  border-left: 4px solid;
+  font-size: .92rem;
+  line-height: 1.65;
+}
+.callout.info   { border-color: var(--analyst); background: rgba(31,78,168,.06); }
+.callout.tip    { border-color: var(--green);   background: rgba(45,110,62,.06); }
+.callout.warn   { border-color: var(--yellow);  background: rgba(184,133,31,.07); }
+.callout strong { font-family: 'JetBrains Mono', monospace; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; }
+
+/* threshold reference */
+.threshold-ref {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: .8rem 0 1.2rem;
+}
+.thr-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .8rem;
+  padding: .4rem .8rem;
+  border: 1px solid;
+  border-radius: 3px;
+}
+.thr-item.green  { color: var(--green);  border-color: var(--green);  background: rgba(45,110,62,.08); }
+.thr-item.yellow { color: var(--yellow); border-color: var(--yellow); background: rgba(184,133,31,.08); }
+.thr-item.red    { color: var(--red);    border-color: var(--red);    background: rgba(168,43,26,.08); }
+.thr-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.thr-item.green  .thr-dot { background: var(--green); }
+.thr-item.yellow .thr-dot { background: var(--yellow); }
+.thr-item.red    .thr-dot { background: var(--red); }
+.cmp-layout { display:grid; grid-template-columns:1fr 360px; gap:1.5rem; align-items:start; }
+@media (max-width:1100px) { .cmp-layout { grid-template-columns:1fr; } }
+
+/* Residual dot chart */
+.cmp-chart-wrap {
+  border:1px solid var(--line); background:var(--paper);
+  box-shadow:4px 4px 0 var(--line); padding:1.2rem;
+  position:sticky; top:1rem;
+}
+.cmp-chart-wrap h3 { font-family:'Newsreader',serif; font-size:1rem; font-weight:600; margin-bottom:.8rem; }
+.cmp-chart-wrap .hint { font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+
+/* Comparison table */
+.cmp-table-wrap { overflow-x:auto; }
+.cmp-table {
+  width:100%;
+  border-collapse:collapse;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.82rem;
+}
+.cmp-table thead th {
+  background:var(--ink); color:var(--paper);
+  padding:.55rem .9rem; text-align:left;
+  font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
+  position:sticky; top:0; z-index:2;
+  cursor:pointer; white-space:nowrap;
+  user-select:none;
+}
+.cmp-table thead th:hover { background:#2a2f3d; }
+.cmp-table thead th .sort-arrow { opacity:.4; margin-left:.3rem; }
+.cmp-table thead th.sorted-asc  .sort-arrow-asc,
+.cmp-table thead th.sorted-desc .sort-arrow-desc { opacity:1; }
+
+.cmp-table tbody tr:nth-child(even) { background:var(--paper-2); }
+.cmp-table tbody tr:hover { background:#e8e3d4; }
+.cmp-table td { padding:.5rem .9rem; vertical-align:middle; border-bottom:1px solid var(--grid); }
+
+/* Station name cell */
+.cmp-table .sta-cell { font-weight:700; font-size:.88rem; }
+.cmp-table .dist-cell { color:var(--muted); font-size:.75rem; }
+
+/* Phase-pair row within a station group */
+.cmp-table .phase-row td { padding:.28rem .9rem; border-bottom:none; }
+.cmp-table .phase-row.last td { border-bottom:1px solid var(--line); }
+.cmp-table .phase-label { font-weight:700; font-size:.78rem; }
+.cmp-table .phase-label.p-label { color:var(--analyst); }
+.cmp-table .phase-label.s-label { color:var(--green); }
+
+/* Time cells */
+.cmp-table .time-analyst { color:var(--ink); }
+.cmp-table .time-auto    { color:var(--auto); }
+.cmp-table .no-pick      { color:var(--muted); font-style:italic; }
+
+/* Residual badge */
+.delta-badge {
+  display:inline-block;
+  padding:.1em .45em;
+  border-radius:3px;
+  font-weight:700;
+  font-size:.8rem;
+  white-space:nowrap;
+}
+.delta-badge.good   { background:rgba(45,110,62,.12);  color:var(--green); }
+.delta-badge.warn   { background:rgba(184,133,31,.14); color:var(--yellow); }
+.delta-badge.bad    { background:rgba(168,43,26,.10);  color:var(--red); }
+.delta-badge.none   { color:var(--muted); font-weight:400; }
+
+/* QC flag dot */
+.qc-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:.4rem; }
+.qc-dot.green  { background:var(--green); }
+.qc-dot.yellow { background:var(--yellow); }
+.qc-dot.red    { background:var(--red); }
+.qc-dot.unknown{ background:var(--muted); }
+
+/* Action badges */
+.action-badge { display:inline-block; padding:.1em .5em; border-radius:3px; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+.action-badge.accepted { background:rgba(45,110,62,.14); color:var(--green); }
+.action-badge.revised  { background:rgba(184,133,31,.14); color:var(--yellow); }
+.action-badge.rejected { background:rgba(168,43,26,.10); color:var(--red); }
+.action-badge.pending  { background:rgba(107,101,82,.10); color:var(--muted); }
+
+/* Stat summary cards */
+.stat-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; margin-bottom:1.5rem; }
+.stat-card { border:1px solid var(--line); background:var(--paper); padding:.9rem 1rem; text-align:center; }
+.stat-card .num { font-family:'Newsreader',serif; font-size:2rem; font-weight:600; line-height:1; }
+.stat-card .lbl { font-family:'JetBrains Mono',monospace; font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-top:.2rem; }
+.stat-card.green { border-color:var(--green); }
+.stat-card.green .num { color:var(--green); }
+.stat-card.yellow { border-color:var(--yellow); }
+.stat-card.yellow .num { color:var(--yellow); }
+.stat-card.red { border-color:var(--red); }
+.stat-card.red .num { color:var(--red); }
+
+/* Leaflet */
+.leaflet-popup-content-wrapper { border-radius:0; border:1px solid var(--ink); font-family:'JetBrains Mono',monospace; font-size:.78rem; }
+.leaflet-popup-content { margin:.6rem .8rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="crumb"><a href="{% url 'event_list' %}">← all events</a></div>
+
+<!-- ── event header ─────────────────────────────────────── -->
+<div class="event-header">
+  <div>
+    <div class="label">Event</div>
+    <div class="pid">{{ event.public_id }}</div>
+    <div class="region">{{ run.region_at_commit|default:"—" }}</div>
+    <div class="mono" style="margin-top:.6rem;font-size:.85rem;color:var(--muted);">
+      {{ run.origin_time_at_commit|date:"Y-m-d H:i:s.u" }} UTC
+    </div>
+  </div>
+  <div>
+    <div class="label">Magnitude</div>
+    <span class="mag">M{{ run.magnitude_at_commit|default:"–" }}</span>
+    <span class="mono">{{ run.magnitude_type_at_commit|default:"" }}</span>
+  </div>
+  <div>
+    <div class="label">Hypocenter</div>
+    <div class="coords">{{ run.latitude_at_commit|floatformat:3 }}°, {{ run.longitude_at_commit|floatformat:3 }}°</div>
+    <div class="coords" style="color:var(--muted);">{{ run.depth_at_commit|floatformat:1 }} km depth</div>
+    <div class="summary-row">
+      {% if summary.green  %}<span class="pill green" >{{ summary.green  }} green</span>{% endif %}
+      {% if summary.yellow %}<span class="pill yellow">{{ summary.yellow }} yellow</span>{% endif %}
+      {% if summary.red    %}<span class="pill red"   >{{ summary.red    }} red</span>{% endif %}
+      {% if summary.unknown%}<span class="pill unknown">{{ summary.unknown }} unknown</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── run bar ──────────────────────────────────────────── -->
+{% if all_runs %}
+<div class="run-bar">
+  <span class="label">QC run</span>
+  <strong>#{{ run.run_number }}</strong>
+  {% if run.run_number == event.latest_run.run_number %}<span class="latest-tag">LATEST</span>
+  {% else %}<span style="color:#c4ff5a;">⚠ historical view</span>{% endif %}
+  {% if run.evaluation_status %}<span class="pill status-{{ run.evaluation_status }}">{{ run.evaluation_status }}</span>{% endif %}
+  {% if run.evaluation_mode   %}<span class="pill mode-{{ run.evaluation_mode }}">{{ run.evaluation_mode }}</span>{% endif %}
+  <span style="color:#888">·</span>
+  <span>committed {{ run.committed_at|date:"Y-m-d H:i" }} UTC</span>
+  {% if all_runs.count > 1 %}
+    <span style="color:#888">·</span>
+    <span class="label">jump to:</span>
+    <select onchange="if(this.value) window.location=this.value;">
+      {% for r in all_runs %}
+        <option value="{% url 'event_detail_run' public_id=event.public_id run_number=r.run_number %}"
+          {% if r.run_number == run.run_number %}selected{% endif %}>
+          run #{{ r.run_number }}{% if r.evaluation_status %} ({{ r.evaluation_status }}){% endif %} — {{ r.committed_at|date:"M d H:i" }}
+        </option>
+      {% endfor %}
+    </select>
+    {% if run.run_number != event.latest_run.run_number %}
+      <a href="{% url 'event_detail' public_id=event.public_id %}">→ latest</a>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% if run.is_final %}
+<div class="banner-final">
+  <span style="font-size:1.4rem">✓</span>
+  <div>
+    <div style="font-size:.78rem;letter-spacing:.15em;text-transform:uppercase;">FINAL — reviewed by senior analyst</div>
+    <div style="font-size:.85rem;opacity:.85;margin-top:.2rem;">Status: <strong>{{ run.evaluation_status }}</strong></div>
+  </div>
+</div>
+{% endif %}
+{% if run.is_preliminary %}
+<div class="banner-prelim">
+  <strong>PRELIMINARY</strong> — automatic detection. Picks may shift substantially.
+</div>
+{% endif %}
+{% endif %}
+
+<!-- ── revision diff ────────────────────────────────────── -->
+{% if all_runs.count > 1 %}
+{% with diff=run.diff_to_previous %}
+{% if diff %}
+<div class="revision">
+  <div class="revision-head">
+    <span class="label">Parameter revision</span>
+    <span>since run #{{ run.run_number|add:"-1" }}, the analyst changed:</span>
+  </div>
+  <table>
+    <thead><tr><th>Parameter</th><th>Was</th><th></th><th>Now</th><th>Δ</th></tr></thead>
+    <tbody>
+      {% for name, change in diff.items %}
+      <tr>
+        <td>{{ name }}</td>
+        <td class="old">
+          {% if name == "depth_km" %}{{ change.old|floatformat:1 }} km
+          {% elif name == "magnitude" %}M{{ change.old|floatformat:2 }}
+          {% elif name == "origin_time" %}{{ change.old|date:"H:i:s" }}
+          {% else %}{{ change.old|floatformat:3 }}°{% endif %}
+        </td>
+        <td class="arrow">→</td>
+        <td>
+          {% if name == "depth_km" %}{{ change.new|floatformat:1 }} km
+          {% elif name == "magnitude" %}M{{ change.new|floatformat:2 }}
+          {% elif name == "origin_time" %}{{ change.new|date:"H:i:s" }}
+          {% else %}{{ change.new|floatformat:3 }}°{% endif %}
+        </td>
+        <td class="delta">{% if change.delta %}{% if change.delta > 0 %}+{% endif %}{{ change.delta|floatformat:3 }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endwith %}
+{% endif %}
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TAB BAR                                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="tab-bar" role="tablist">
+  <button class="tab-btn active" role="tab" data-target="tab-waveforms"
+          onclick="switchTab(this)" id="btn-waveforms">
+    📈 Waveforms <span style="opacity:.55;font-size:.7rem;margin-left:.3rem;">{{ stations|length }} stations</span>
+  </button>
+  <button class="tab-btn" role="tab" data-target="tab-comparison"
+          onclick="switchTab(this)" id="btn-comparison">
+    🔬 Pick Comparison
+  </button>
+  <button class="tab-btn" role="tab" data-target="tab-methods"
+          onclick="switchTab(this)" id="btn-methods">
+    📖 Method Guide
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TAB 1 — WAVEFORMS                                       -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="tab-waveforms" class="tab-pane active">
+
+  <div class="guidance">
+    <strong>QC tip</strong> &nbsp; Compare the <span style="color:var(--analyst)">solid</span>
+    analyst pick against the <span style="color:var(--auto)">dashed</span> EQTransformer pick.
+    Disagreements above ~0.5 s on local events deserve a second look. Switch to the
+    <strong>Pick Comparison</strong> tab for a structured residual summary.
+  </div>
+
+  <!-- map + record section -->
+  <div class="top-grid">
+    {% if has_station_coords %}
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Network geometry</h3>
+        <span class="hint">colored by QC flag</span>
+      </div>
+      <div id="map"></div>
+    </div>
+    {% endif %}
+    {% if run.overview_image %}
+    <div class="panel record">
+      <div class="panel-head">
+        <h3>Record section · {{ stations|length }} stations</h3>
+        <span class="hint">sorted by distance</span>
+      </div>
+      <img src="{{ run.overview_image.url }}" alt="Record section">
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="legend">
+    <span class="key"><span class="swatch swatch-analyst-p"></span> analyst P</span>
+    <span class="key"><span class="swatch swatch-analyst-s"></span> analyst S</span>
+    <span class="key"><span class="swatch swatch-auto-p"></span> EQTransformer P</span>
+    <span class="key"><span class="swatch swatch-auto-s"></span> EQTransformer S</span>
+  </div>
+
+  {% for s in stations %}
+  <div class="station">
+    <aside class="station-side">
+      <div class="station-id">{{ s.network }}.{{ s.station }}</div>
+      <div class="dist">
+        {% if s.distance_deg %}Δ = {{ s.distance_deg|floatformat:2 }}°{% endif %}
+        &nbsp;·&nbsp; {{ s.distance_class }}
+      </div>
+      <span class="pill {{ s.qc_flag }}">{{ s.qc_flag }}</span>
+
+      <h4>Analyst picks</h4>
+      <table class="picks">
+        <tr><td>P</td><td>{{ s.analyst_p|date:"H:i:s.u"|default:"—" }}</td></tr>
+        <tr><td>S</td><td>{{ s.analyst_s|date:"H:i:s.u"|default:"—" }}</td></tr>
+      </table>
+
+      <h4>EQTransformer</h4>
+      <table class="picks">
+        <tr><td>P</td><td>{{ s.auto_p|date:"H:i:s.u"|default:"—" }}{% if s.auto_p_prob %} <span style="color:var(--muted)">({{ s.auto_p_prob|floatformat:2 }})</span>{% endif %}</td></tr>
+        <tr><td>S</td><td>{{ s.auto_s|date:"H:i:s.u"|default:"—" }}{% if s.auto_s_prob %} <span style="color:var(--muted)">({{ s.auto_s_prob|floatformat:2 }})</span>{% endif %}</td></tr>
+      </table>
+
+      <h4>Residuals (auto − analyst)</h4>
+      <table class="picks">
+        <tr>
+          <td>ΔP</td>
+          <td class="{% if s.delta_p != None %}{% if s.delta_p|floatformat:2 == '0.00' %}delta-good{% elif s.delta_p < 0.5 and s.delta_p > -0.5 %}delta-good{% elif s.delta_p < 1.5 and s.delta_p > -1.5 %}delta-warn{% else %}delta-bad{% endif %}{% endif %}">
+            {% if s.delta_p == None %}—{% else %}{{ s.delta_p|floatformat:2 }} s{% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td>ΔS</td>
+          <td class="{% if s.delta_s != None %}{% if s.delta_s < 0.5 and s.delta_s > -0.5 %}delta-good{% elif s.delta_s < 1.5 and s.delta_s > -1.5 %}delta-warn{% else %}delta-bad{% endif %}{% endif %}">
+            {% if s.delta_s == None %}—{% else %}{{ s.delta_s|floatformat:2 }} s{% endif %}
+          </td>
+        </tr>
+      </table>
+
+      <h4>Filter</h4>
+      <div class="mono" style="font-size:.78rem;">
+        bandpass {{ s.filter_freqmin|floatformat:1 }}–{{ s.filter_freqmax|floatformat:1 }} Hz
+      </div>
+    </aside>
+
+    <div class="station-main">
+      {% if s.image %}
+        <img src="{{ s.image.url }}" alt="{{ s.network }}.{{ s.station }}">
+      {% else %}
+        <div style="padding:3rem;text-align:center;color:var(--muted);font-style:italic;">no waveform image available</div>
+      {% endif %}
+
+      <form class="review" method="post" action="{% url 'station_review' station_id=s.id %}">
+        {% csrf_token %}
+        <textarea name="note" placeholder="Reviewer note (e.g. 'auto P aligns with first motion, recommend re-pick')">{{ s.reviewer_note }}</textarea>
+        <input class="reviewer-name" type="text" name="reviewer" placeholder="initials" value="{{ s.reviewer_name }}">
+        <select name="action">
+          <option value="pending"  {% if s.reviewer_action == "pending" %}selected{% endif %}>Pending</option>
+          <option value="accepted" {% if s.reviewer_action == "accepted" %}selected{% endif %}>Accept analyst pick</option>
+          <option value="revised"  {% if s.reviewer_action == "revised" %}selected{% endif %}>Needs re-pick</option>
+          <option value="rejected" {% if s.reviewer_action == "rejected" %}selected{% endif %}>Reject station</option>
+        </select>
+        <button type="submit">Save</button>
+      </form>
+      {% if s.reviewed_at %}
+        <div class="mono" style="font-size:.72rem;color:var(--muted);margin-top:.4rem;">
+          reviewed {{ s.reviewed_at|date:"Y-m-d H:i" }} UTC{% if s.reviewer_name %} by {{ s.reviewer_name }}{% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="card" style="padding:3rem;text-align:center;color:var(--muted);font-style:italic;">no stations on this run</div>
+  {% endfor %}
+
+</div>{# /tab-waveforms #}
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TAB 2 — PICK COMPARISON                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="tab-comparison" class="tab-pane">
+
+  <!-- stat summary cards -->
+  <div class="stat-cards">
+    <div class="stat-card green">
+      <div class="num" id="count-green">–</div>
+      <div class="lbl">Green (&lt;0.5 s)</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="num" id="count-yellow">–</div>
+      <div class="lbl">Yellow (&lt;1.5 s)</div>
+    </div>
+    <div class="stat-card red">
+      <div class="num" id="count-red">–</div>
+      <div class="lbl">Red (≥1.5 s)</div>
+    </div>
+    <div class="stat-card" style="border-color:var(--muted)">
+      <div class="num" id="count-nomatch" style="color:var(--muted)">–</div>
+      <div class="lbl">No EQT match</div>
+    </div>
+  </div>
+
+  <div class="cmp-layout">
+
+    <!-- comparison table (left, main) -->
+    <div class="cmp-table-wrap">
+      <table class="cmp-table" id="cmp-table">
+        <thead>
+          <tr>
+            <th data-col="code"         class="sorted-asc">Station <span class="sort-arrow"><span class="sort-arrow-asc">▲</span><span class="sort-arrow-desc">▼</span></span></th>
+            <th data-col="distance_deg">Δ (°) <span class="sort-arrow"><span class="sort-arrow-asc">▲</span><span class="sort-arrow-desc">▼</span></span></th>
+            <th>Phase</th>
+            <th>Analyst pick</th>
+            <th>EQTransformer</th>
+            <th data-col="delta_p">ΔP (s) <span class="sort-arrow"><span class="sort-arrow-asc">▲</span><span class="sort-arrow-desc">▼</span></span></th>
+            <th data-col="delta_s">ΔS (s) <span class="sort-arrow"><span class="sort-arrow-asc">▲</span><span class="sort-arrow-desc">▼</span></span></th>
+            <th>QC</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="cmp-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- residual chart (right, sticky) -->
+    <div class="cmp-chart-wrap">
+      <h3>Residuals (auto − analyst)</h3>
+      <div class="hint" style="margin-bottom:.8rem;">ΔP and ΔS per station · seconds</div>
+      <canvas id="residual-chart" height="300"></canvas>
+      <div style="margin-top:1rem; font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--muted);">
+        <span style="display:inline-block;width:10px;height:10px;background:#1f4ea8;border-radius:50%;margin-right:.3rem;"></span>ΔP &nbsp;
+        <span style="display:inline-block;width:10px;height:10px;background:#0e8a4f;border-radius:50%;margin-right:.3rem;"></span>ΔS<br>
+        <span style="margin-top:.5rem;display:block;">Dashed lines at ±0.5 s (green) and ±1.5 s (yellow) thresholds.</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>{# /tab-comparison #}
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TAB 3 — METHOD GUIDE                                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="tab-methods" class="tab-pane">
+<div class="guide">
+
+<!-- ───────────────────────────────────────────────────────
+     SECTION 1 — SeisComP scautopick pipeline
+     ─────────────────────────────────────────────────────── -->
+<h2>How SeisComP picks phases automatically</h2>
+<p>
+  SeisComP's automatic picking module, <span class="mono-inline">scautopick</span>,
+  runs continuously on incoming waveform streams. It works in two stages: a fast
+  energy-based <em>detector</em> that identifies candidate events, followed by an
+  optional <em>re-picker</em> that refines the pick onset.
+</p>
+
+<h3>Stage 1 — STA/LTA Detector</h3>
+<p>
+  The primary detector applies a classic <strong>Short-Term Average / Long-Term
+  Average (STA/LTA)</strong> algorithm. The waveform is first bandpass-filtered
+  (default: Butterworth 3rd order, 0.7–2 Hz) to suppress microseismic and
+  instrumental noise. Then two sliding windows compute:
+</p>
+<ul style="margin:.5rem 0 .9rem 1.5rem; line-height:1.8; font-size:.92rem;">
+  <li><strong>STA</strong> — short window (~0.5–2 s) sensitive to sudden energy changes</li>
+  <li><strong>LTA</strong> — long window (~10–80 s) representing the background noise level</li>
+</ul>
+<p>
+  When the STA/LTA ratio exceeds the trigger threshold (default = 3), a
+  <em>preliminary pick</em> is placed at that moment and the stream is flagged for
+  re-picking. The picker resets once the ratio falls below the off-threshold (default = 1.5).
+</p>
+
+<div class="callout info">
+  <strong>What STA/LTA really measures</strong><br>
+  The ratio is a measure of <em>energy change</em>, not waveform character.
+  Any sudden energy increase — a P arrival, a noise burst, a teleseismic surface
+  wave, a tectonic tremor, or a passing vehicle — can cross the threshold.
+  The algorithm has no concept of what a P wave is; it only knows that the
+  amplitude got louder.
+</div>
+
+<h3>Stage 2 — Re-pickers (AIC and BK)</h3>
+<p>
+  Once STA/LTA triggers, <span class="mono-inline">scautopick</span> hands the
+  waveform window to a more precise re-picker. Two options are available:
+</p>
+
+<div class="method-grid">
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>AIC Picker</h4>
+      <div class="mc-year">Akaike, 1974 · Maeda, 1985</div>
+    </div>
+    <div class="mc-body">
+      <p>
+        Uses the <strong>Akaike Information Criterion</strong> to find the optimal
+        statistical change-point in a short waveform window. Models the window as
+        two stationary processes (noise before, signal after) and finds the split
+        point that minimises the total AIC.
+      </p>
+      <p><strong>Best at:</strong> Sharp, impulsive P onsets with high SNR.</p>
+      <ul class="pro-con pros">
+        <li>More precise than raw STA/LTA trigger time</li>
+        <li>Works well when noise is stationary</li>
+        <li>Fast, no tuning for individual stations</li>
+      </ul>
+      <ul class="pro-con cons">
+        <li>Requires STA/LTA to trigger first — misses very small events</li>
+        <li>Sensitive to non-stationary noise (e.g., glitches, spikes)</li>
+        <li>Only picks P; needs separate module for S</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>BK Picker (Baer-Kradolfer)</h4>
+      <div class="mc-year">Baer &amp; Kradolfer, 1987</div>
+    </div>
+    <div class="mc-body">
+      <p>
+        Computes a characteristic function based on the envelope of a bandpass-filtered
+        signal, using amplitude thresholds rather than statistical information criteria.
+        Designed specifically for <em>local and regional</em> seismicity.
+      </p>
+      <p><strong>Best at:</strong> Moderate SNR local events, robust in broadband noise.</p>
+      <ul class="pro-con pros">
+        <li>Robust against emergent onsets common in local events</li>
+        <li>Less sensitive to high-frequency spikes than AIC</li>
+        <li>Configurable per station via frequency bands and thresholds</li>
+      </ul>
+      <ul class="pro-con cons">
+        <li>Requires careful tuning per network / magnitude range</li>
+        <li>Threshold-based — struggles when noise character changes</li>
+        <li>Only picks P by design</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Stage 3 — S-phase picker (S-L2)</h3>
+<p>
+  For S-phase picking, <span class="mono-inline">scautopick</span> uses the
+  <strong>S-L2 spicker</strong>, which exploits the polarization difference between
+  P and S waves: P energy is concentrated on the vertical component (Z), while
+  S energy dominates the horizontal components (N and E). The L2 norm of the
+  horizontal components is computed after the P arrival, and the S onset is
+  estimated from the peak of this horizontal energy envelope.
+</p>
+
+<div class="callout warn">
+  <strong>S-phase limitation</strong><br>
+  S-L2 can only run <em>after</em> a P pick exists, and is sensitive to the assumed
+  P–S velocity ratio. It works best for simple, clear local events. For noisy
+  records, low-magnitude events, or emergent S arrivals, it often misses or
+  places the pick on the S-wave coda rather than the true onset.
+</div>
+
+<h3>The full scautopick pipeline</h3>
+<div class="pipeline">
+  <div class="pipe-box trigger">
+    <div class="pipe-title">STA/LTA</div>
+    <div class="pipe-sub">Butterworth BP 0.7–2 Hz<br>Trigger: ratio ≥ 3</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-box repicker">
+    <div class="pipe-title">AIC or BK</div>
+    <div class="pipe-sub">Re-picks P onset<br>within trigger window</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-box spicker">
+    <div class="pipe-title">S-L2 spicker</div>
+    <div class="pipe-sub">Horizontal L2 envelope<br>after P pick</div>
+  </div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-box" style="background:var(--paper-2)">
+    <div class="pipe-title">scautoloc</div>
+    <div class="pipe-sub">Associates picks<br>into events</div>
+  </div>
+</div>
+
+
+<!-- ───────────────────────────────────────────────────────
+     SECTION 2 — EQTransformer
+     ─────────────────────────────────────────────────────── -->
+<h2>How EQTransformer picks phases</h2>
+<p>
+  EQTransformer (Mousavi et al., 2020) is a deep-learning model built on a
+  <strong>transformer + encoder-decoder architecture</strong> trained on millions
+  of three-component seismic waveform examples from global networks. Unlike
+  threshold-based methods, it learns <em>representations</em> — the characteristic
+  shape, frequency content, and polarization signature of P and S arrivals —
+  directly from labelled data.
+</p>
+
+<h3>Architecture in plain terms</h3>
+<p>
+  A fixed-length three-component window (60 s at 100 Hz = 6,000 samples per channel)
+  is fed through:
+</p>
+<ol style="margin:.5rem 0 .9rem 1.5rem; line-height:1.9; font-size:.92rem;">
+  <li><strong>Encoder</strong> — seven residual convolutional blocks with LSTM layers extract
+      progressively abstract temporal features from all three components simultaneously.</li>
+  <li><strong>Transformer</strong> — a self-attention mechanism captures long-range dependencies
+      across the full window, connecting the noise character before the P arrival with the
+      signal character after.</li>
+  <li><strong>Three decoder heads</strong> — one each for detection probability,
+      P-phase probability, and S-phase probability, running in parallel on the
+      encoded representation.</li>
+</ol>
+<p>
+  The outputs are three continuous time series of probabilities (0–1), one per sample.
+  A pick is placed where the P-head or S-head exceeds the configured threshold
+  (default 0.3), at the peak of each probability spike.
+</p>
+
+<div class="method-card" style="margin:1.2rem 0 1.8rem;">
+  <div class="mc-head">
+    <h4>EQTransformer via SeisBench</h4>
+    <div class="mc-year">Mousavi et al., 2020 · SeisBench: Woollam et al., 2022</div>
+  </div>
+  <div class="mc-body">
+    <p>
+      Trained on <strong>1.2 million waveform examples</strong> from the STEAD
+      dataset, covering earthquakes from magnitude 0.1 to 7.9, distances from
+      local to teleseismic, and SNR from very clean to barely detectable.
+    </p>
+    <p><strong>Best at:</strong> Low-to-moderate SNR, emergent onsets, simultaneous P and S, noisy station environments.</p>
+    <ul class="pro-con pros">
+      <li>Picks P <em>and</em> S jointly in one forward pass — no need to chain separate algorithms</li>
+      <li>Returns a calibrated probability score, not just a time — gives you confidence information</li>
+      <li>Trained on diverse noise conditions; generalises well to different network types</li>
+      <li>No threshold tuning per station — a single probability cutoff works globally</li>
+      <li>Sees all three components simultaneously — uses S-wave polarization implicitly</li>
+      <li>GPU-batched: 20 stations processed in ~1 second on RTX 2000 Ada</li>
+    </ul>
+    <ul class="pro-con cons">
+      <li>Requires PyTorch and ~150 MB model weights (downloaded once, cached)</li>
+      <li>Fixed 60-second input window — very long codas or overlapping events need special handling</li>
+      <li>May underperform on very unusual local noise conditions not well-represented in STEAD</li>
+      <li>Black box — harder to reason about <em>why</em> it placed a pick where it did</li>
+      <li>Requires GPU for fast batch processing (CPU works but is ~10× slower)</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ───────────────────────────────────────────────────────
+     SECTION 3 — Full side-by-side comparison
+     ─────────────────────────────────────────────────────── -->
+<h2>Side-by-side comparison</h2>
+
+<table class="cmp-method-table">
+  <thead>
+    <tr>
+      <th>Property</th>
+      <th>STA/LTA (SeisComP detector)</th>
+      <th>AIC / BK (SeisComP re-picker)</th>
+      <th>EQTransformer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Published</td>
+      <td>~1970s (Allen, 1978)</td>
+      <td>1974–1987</td>
+      <td class="good">2020</td>
+    </tr>
+    <tr>
+      <td>Input</td>
+      <td>1 component, bandpass</td>
+      <td>1 component, short window after trigger</td>
+      <td class="good">3 components, full 60 s window</td>
+    </tr>
+    <tr>
+      <td>Output</td>
+      <td>Trigger time (binary)</td>
+      <td>Refined P time only</td>
+      <td class="good">P time + S time + detection probability (continuous)</td>
+    </tr>
+    <tr>
+      <td>What it measures</td>
+      <td>Energy change</td>
+      <td>Statistical change-point</td>
+      <td class="good">Learned waveform shape + polarization patterns</td>
+    </tr>
+    <tr>
+      <td>Needs prior trigger</td>
+      <td>No — is the trigger</td>
+      <td class="warn">Yes — only runs after STA/LTA fires</td>
+      <td class="good">No — scans the full window independently</td>
+    </tr>
+    <tr>
+      <td>S-phase picking</td>
+      <td class="warn">Via separate S-L2 module (polarization heuristic)</td>
+      <td class="bad">Not supported</td>
+      <td class="good">Native — P and S predicted jointly</td>
+    </tr>
+    <tr>
+      <td>Confidence score</td>
+      <td class="bad">None — ratio is not a probability</td>
+      <td class="bad">None</td>
+      <td class="good">0–1 probability per pick, per sample</td>
+    </tr>
+    <tr>
+      <td>Low-SNR performance</td>
+      <td class="bad">Poor — high false-trigger rate</td>
+      <td class="warn">Moderate — depends on SNR at trigger time</td>
+      <td class="good">Good — trained on noisy waveforms</td>
+    </tr>
+    <tr>
+      <td>Emergent onsets</td>
+      <td class="bad">Misses slow-rising P arrivals</td>
+      <td class="warn">BK handles better than AIC</td>
+      <td class="good">Handles well — shape-based, not threshold-based</td>
+    </tr>
+    <tr>
+      <td>Parameter tuning</td>
+      <td class="warn">Requires tuning per network (trigOn, trigOff, filter)</td>
+      <td class="warn">Requires tuning per network (SNR thresholds, windows)</td>
+      <td class="good">Single probability threshold, global</td>
+    </tr>
+    <tr>
+      <td>Computation cost</td>
+      <td class="good">Negligible — simple arithmetic</td>
+      <td class="good">Negligible</td>
+      <td class="warn">~1–2 s per event on GPU; ~10–30 s on CPU</td>
+    </tr>
+    <tr>
+      <td>Interpretability</td>
+      <td class="good">Fully transparent — energy ratio is understandable</td>
+      <td class="good">Statistically grounded</td>
+      <td class="warn">Black box — model internals are not interpretable</td>
+    </tr>
+    <tr>
+      <td>Generalisation</td>
+      <td class="warn">Requires re-tuning per network / magnitude range</td>
+      <td class="warn">Requires re-tuning per network</td>
+      <td class="good">Trained on global data; fine-tunable per network</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<!-- ───────────────────────────────────────────────────────
+     SECTION 4 — Why EQT is a good second opinion
+     ─────────────────────────────────────────────────────── -->
+<h2>Why EQTransformer is the right QC second opinion</h2>
+
+<p>
+  A second opinion is only useful if it is <em>independent</em>. If you run STA/LTA
+  a second time, or AIC with slightly different parameters, you will almost always
+  get the same answer — because the underlying question is still "where does the
+  energy change?" If the analyst placed P on a noise burst, a second STA/LTA pass
+  will place it there too.
+</p>
+
+<div class="callout tip">
+  <strong>The independence principle</strong><br>
+  EQTransformer disagrees with the analyst through a fundamentally different
+  mechanism. It does not measure energy onset. It recognises the <em>shape</em> of
+  a P or S arrival — the characteristic frequency sweep, the polarity change on the
+  vertical component, the expected S/P amplitude ratio. When it disagrees, it is
+  because it saw something in the waveform morphology that conflicts with the pick
+  position. That is meaningful disagreement worth investigating.
+</div>
+
+<h3>Three concrete cases where EQT catches analyst errors</h3>
+
+<div class="method-grid">
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>Case 1 — Noise spike trigger</h4>
+    </div>
+    <div class="mc-body">
+      <p>
+        A noise burst (glitch, teleseismic phase, cultural noise) causes STA/LTA to
+        trigger early. The analyst, seeing the trigger, places P on the spike.
+        EQTransformer, looking at the full waveform, recognises that the spike does
+        not have the characteristic frequency content of a P arrival from a local
+        earthquake and places its pick several seconds later where the true P onset
+        occurs. <strong>Δt typically &gt; 1 s → red flag.</strong>
+      </p>
+    </div>
+  </div>
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>Case 2 — Emergent P onset</h4>
+    </div>
+    <div class="mc-body">
+      <p>
+        For deeper or more distant events, the P arrival builds slowly rather than
+        arriving impulsively. STA/LTA (and human analysts looking for the "obvious"
+        onset) tend to place P too late, at the point where energy is clearly above
+        noise rather than at the true first motion. EQTransformer, trained on
+        emergent arrivals, picks closer to the true onset.
+        <strong>Δt typically 0.2–0.8 s earlier → yellow or green flag.</strong>
+      </p>
+    </div>
+  </div>
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>Case 3 — Analyst P/S confusion</h4>
+    </div>
+    <div class="mc-body">
+      <p>
+        For a short P-S interval (near station, local event), an analyst unfamiliar
+        with the station's typical waveform may place the P pick on an S arrival or
+        vice versa. EQTransformer uses three-component polarization information
+        implicitly — P dominates the Z component, S dominates N/E — and is unlikely
+        to confuse the two for clear records.
+        <strong>Δt large and inconsistent with nearby stations → red flag, check phase label.</strong>
+      </p>
+    </div>
+  </div>
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>Case 4 — Cycle skipping</h4>
+    </div>
+    <div class="mc-body">
+      <p>
+        On low-frequency records (regional/teleseismic), an analyst may pick one
+        full cycle (period) late relative to the true onset — a common error on
+        10–15 s period surface waves. EQTransformer, having seen this pattern in
+        training data, is less prone to cycle-skipping for the P phase.
+        <strong>Δt close to one dominant period → red flag, check waveform frequency content.</strong>
+      </p>
+    </div>
+  </div>
+</div>
+
+<h3>Three cases where EQT should be treated with caution</h3>
+<div class="method-grid">
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>Very local microseismicity (&lt;10 km)</h4>
+    </div>
+    <div class="mc-body">
+      <p>
+        P-S separation may be less than 2 seconds. EQTransformer's 60-second window
+        was trained predominantly on events with longer P-S. Its S pick on very
+        nearby events is less reliable. Trust the analyst's S pick more for Δ &lt; 0.1°.
+      </p>
+    </div>
+  </div>
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>Highly unusual local noise</h4>
+    </div>
+    <div class="mc-body">
+      <p>
+        If your station has a distinctive noise source (harbour waves, factory
+        machinery, geothermal tremor) not well-represented in the STEAD training
+        data, EQTransformer may produce false picks with high probability scores.
+        A station with systematic high ΔP across many events should be investigated
+        — it may need the model fine-tuned on local noise.
+      </p>
+    </div>
+  </div>
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>Overlapping events</h4>
+    </div>
+    <div class="mc-body">
+      <p>
+        If a second earthquake occurs within the 60-second processing window of the
+        first, EQTransformer may pick phases from both events on the same trace.
+        The analyst, with contextual awareness of the seismic sequence, is better
+        positioned to identify and separate overlapping events.
+      </p>
+    </div>
+  </div>
+  <div class="method-card">
+    <div class="mc-head">
+      <h4>Teleseismic phases (depth phases)</h4>
+    </div>
+    <div class="mc-body">
+      <p>
+        For teleseismic events, depth phases (pP, sP) arrive shortly after the
+        direct P and can be mistaken for it. EQTransformer is trained primarily on
+        single-station local/regional picking and may not correctly distinguish
+        P from pP for deep teleseismic events. For events with Δ &gt; 30°, use
+        EQT picks as a rough reference only.
+      </p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ───────────────────────────────────────────────────────
+     SECTION 5 — QC flags and decision guide
+     ─────────────────────────────────────────────────────── -->
+<h2>Reading the QC flags in this system</h2>
+
+<p>
+  Each station is assigned a QC flag based on the worst absolute residual between
+  the analyst's pick and EQTransformer's pick, across both P and S.
+</p>
+
+<div class="threshold-ref">
+  <div class="thr-item green"><div class="thr-dot"></div>Green — |Δt| &lt; 0.5 s</div>
+  <div class="thr-item yellow"><div class="thr-dot"></div>Yellow — 0.5 s ≤ |Δt| &lt; 1.5 s</div>
+  <div class="thr-item red"><div class="thr-dot"></div>Red — |Δt| ≥ 1.5 s</div>
+</div>
+
+<p>
+  These thresholds are calibrated for <strong>local and regional events</strong>
+  on short-period instruments (SH channels, 100 Hz). For teleseismic events,
+  a yellow flag at 1.5 s is not necessarily alarming — EQTransformer's absolute
+  accuracy degrades with distance. Use the distance class shown on each station card
+  to contextualise the flag.
+</p>
+
+<table class="cmp-method-table">
+  <thead>
+    <tr>
+      <th>Flag</th>
+      <th>What it means</th>
+      <th>Recommended action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="pill green">green</span></td>
+      <td>EQT and analyst agree to within 0.5 s on both P and S. High confidence the pick is correct.</td>
+      <td>Accept analyst pick. No re-pick needed unless the waveform plot shows an obvious issue.</td>
+    </tr>
+    <tr>
+      <td><span class="pill yellow">yellow</span></td>
+      <td>Moderate disagreement (0.5–1.5 s). Could be an emergent onset where both methods have uncertainty, or a legitimate small error.</td>
+      <td>Look at the waveform plot and annotation panel. Does EQT's dashed line align better with first motion? If so, flag for re-pick.</td>
+    </tr>
+    <tr>
+      <td><span class="pill red">red</span></td>
+      <td>Large disagreement ≥ 1.5 s. Either the analyst made an error, or EQT is confused (noise spike, overlapping event, unusual noise).</td>
+      <td>Always open the waveform plot. Look at all three components. Check if EQT's pick aligns with a clear phase onset. Check if the station is in the map near the expected azimuth.</td>
+    </tr>
+    <tr>
+      <td><span class="pill unknown">unknown</span></td>
+      <td>EQTransformer did not produce a pick above the detection threshold for this station. Either the SNR was below 0.3 probability, or no phase was found in the window.</td>
+      <td>Not necessarily wrong — may indicate a noisy station or a genuine low-SNR recording. Check the waveform. If the analyst's pick looks reasonable, accept it.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout tip">
+  <strong>Practical workflow for junior analysts</strong><br>
+  1. Open the <strong>Pick Comparison</strong> tab first. Sort by ΔP to find the worst discrepancies.
+  2. For any red or yellow station, click to the <strong>Waveforms</strong> tab and scroll to that station.
+  3. Look at the annotation panel: does EQT's dashed line land on a clearer phase onset than the analyst's solid line?
+  4. If yes → mark as "Needs re-pick" and leave a note explaining which phase and direction.
+  5. If no (EQT seems confused) → mark as "Accept analyst pick" with a note like "EQT appears to have triggered on noise burst."
+  6. After the senior analyst reviews your notes and re-commits, the new run will appear in the run dropdown and you can compare run #1 vs run #2 to see how the picks changed.
+</div>
+
+
+<!-- ───────────────────────────────────────────────────────
+     SECTION 6 — References
+     ─────────────────────────────────────────────────────── -->
+<h2>References</h2>
+<ul style="line-height:2; font-size:.88rem; color:var(--muted); list-style:none; padding:0;">
+  <li><strong style="color:var(--ink)">Allen, R.V. (1978)</strong> — "Automatic earthquake recognition and timing from single traces." <em>BSSA</em>, 68(5), 1521–1532.</li>
+  <li><strong style="color:var(--ink)">Baer, M. &amp; Kradolfer, U. (1987)</strong> — "An automatic phase picker for local and teleseismic events." <em>BSSA</em>, 77(4), 1437–1445.</li>
+  <li><strong style="color:var(--ink)">Maeda, N. (1985)</strong> — "A method for reading and checking phase times in auto-processing system of seismic wave data." <em>Zisin</em>, 38, 365–379.</li>
+  <li><strong style="color:var(--ink)">Mousavi, S.M. et al. (2020)</strong> — "Earthquake transformer — an attentive deep-learning model for simultaneous earthquake detection and phase picking." <em>Nature Communications</em>, 11, 3952.</li>
+  <li><strong style="color:var(--ink)">Woollam, J. et al. (2022)</strong> — "SeisBench — a toolbox for machine learning in seismology." <em>Seismological Research Letters</em>, 93(3), 1695–1709.</li>
+  <li><strong style="color:var(--ink)">SeisComP documentation</strong> — scautopick module. <em>https://docs.seiscomp.de/apps/scautopick.html</em></li>
+</ul>
+
+</div>{# /guide #}
+</div>{# /tab-methods #}
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCRIPTS                                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% if has_station_coords %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+{% endif %}
+
+<script>
+// ─── Tab switching ───────────────────────────────────────────────────────────
+function switchTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(btn.dataset.target).classList.add('active');
+  // Re-draw the chart when comparison tab becomes visible (chart needs visible canvas)
+  if (btn.dataset.target === 'tab-comparison' && window._residualChart) {
+    window._residualChart.resize();
+  }
+}
+
+// ─── Comparison data ─────────────────────────────────────────────────────────
+const CMP = {{ comparison_json|safe }};
+
+// ─── Stat summary cards ──────────────────────────────────────────────────────
+(function() {
+  let green=0, yellow=0, red=0, nomatch=0;
+  CMP.forEach(s => {
+    const hasDelta = s.delta_p !== null || s.delta_s !== null;
+    if (!hasDelta && (s.auto_p === null && s.auto_s === null)) { nomatch++; return; }
+    const worst = Math.max(
+      s.delta_p !== null ? Math.abs(s.delta_p) : 0,
+      s.delta_s !== null ? Math.abs(s.delta_s) : 0,
+    );
+    if (worst < 0.5) green++;
+    else if (worst < 1.5) yellow++;
+    else red++;
+  });
+  document.getElementById('count-green').textContent  = green;
+  document.getElementById('count-yellow').textContent = yellow;
+  document.getElementById('count-red').textContent    = red;
+  document.getElementById('count-nomatch').textContent= nomatch;
+})();
+
+// ─── Comparison table ────────────────────────────────────────────────────────
+function deltaBadgeClass(val) {
+  if (val === null) return 'none';
+  const a = Math.abs(val);
+  if (a < 0.5) return 'good';
+  if (a < 1.5) return 'warn';
+  return 'bad';
+}
+function deltaBadgeHtml(val) {
+  if (val === null) return '<span class="delta-badge none">—</span>';
+  const cls = deltaBadgeClass(val);
+  const sign = val > 0 ? '+' : '';
+  return `<span class="delta-badge ${cls}">${sign}${val.toFixed(2)}s</span>`;
+}
+function actionBadge(action) {
+  const labels = { pending:'Pending', accepted:'Accepted', revised:'Re-pick', rejected:'Rejected' };
+  return `<span class="action-badge ${action}">${labels[action]||action}</span>`;
+}
+
+let sortCol = 'code', sortAsc = true;
+
+function renderTable() {
+  const data = [...CMP].sort((a,b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (va === null) va = sortAsc ? Infinity : -Infinity;
+    if (vb === null) vb = sortAsc ? Infinity : -Infinity;
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  // Update sort arrows
+  document.querySelectorAll('#cmp-table thead th[data-col]').forEach(th => {
+    th.classList.remove('sorted-asc','sorted-desc');
+    if (th.dataset.col === sortCol)
+      th.classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
+  });
+
+  const rows = data.map(s => {
+    const dist = s.distance_deg !== null ? s.distance_deg.toFixed(2)+'°' : '—';
+    const apTime = s.analyst_p ? `<span class="time-analyst">${s.analyst_p}</span>` : '<span class="no-pick">no pick</span>';
+    const asTime = s.analyst_s ? `<span class="time-analyst">${s.analyst_s}</span>` : '<span class="no-pick">no pick</span>';
+    const eqtP   = s.auto_p
+      ? `<span class="time-auto">${s.auto_p}</span> <span style="color:var(--muted);font-size:.72rem">(${s.auto_p_prob!==null?s.auto_p_prob.toFixed(2):'?'})</span>`
+      : '<span class="no-pick">no detection</span>';
+    const eqtS   = s.auto_s
+      ? `<span class="time-auto">${s.auto_s}</span> <span style="color:var(--muted);font-size:.72rem">(${s.auto_s_prob!==null?s.auto_s_prob.toFixed(2):'?'})</span>`
+      : '<span class="no-pick">no detection</span>';
+
+    return `
+<tr>
+  <td rowspan="2" class="sta-cell">
+    <span class="qc-dot ${s.qc_flag}"></span>${s.code}
+    <div class="dist-cell">${dist} · ${s.distance_class}</div>
+    <div style="margin-top:.3rem;font-size:.72rem;color:var(--muted)">${s.filter_band}</div>
+  </td>
+  <td rowspan="2" style="display:none"></td>
+  <td><span class="phase-label p-label">P</span></td>
+  <td>${apTime}</td>
+  <td>${eqtP}</td>
+  <td>${deltaBadgeHtml(s.delta_p)}</td>
+  <td rowspan="2">${deltaBadgeHtml(s.delta_s)}</td>
+  <td rowspan="2"><span class="pill ${s.qc_flag}">${s.qc_flag}</span></td>
+  <td rowspan="2">${actionBadge(s.reviewer_action)}</td>
+</tr>
+<tr class="phase-row last">
+  <td><span class="phase-label s-label">S</span></td>
+  <td>${asTime}</td>
+  <td>${eqtS}</td>
+  <td></td>
+</tr>`;
+  }).join('');
+  document.getElementById('cmp-tbody').innerHTML = rows;
+}
+
+renderTable();
+document.querySelectorAll('#cmp-table thead th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    if (sortCol === th.dataset.col) sortAsc = !sortAsc;
+    else { sortCol = th.dataset.col; sortAsc = true; }
+    renderTable();
+  });
+});
+
+// ─── Residual scatter chart (Chart.js) ──────────────────────────────────────
+(function() {
+  const labels = CMP.map(s => s.code.split('.')[1]);  // just the STA code
+  const dpData = CMP.map(s => s.delta_p);
+  const dsData = CMP.map(s => s.delta_s);
+
+  const ctx = document.getElementById('residual-chart').getContext('2d');
+  window._residualChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'ΔP (s)',
+          data: dpData,
+          backgroundColor: dpData.map(v => {
+            if (v === null) return 'rgba(107,101,82,.2)';
+            const a = Math.abs(v);
+            if (a < 0.5) return 'rgba(45,110,62,.75)';
+            if (a < 1.5) return 'rgba(184,133,31,.80)';
+            return 'rgba(168,43,26,.80)';
+          }),
+          borderColor: 'rgba(31,78,168,.6)',
+          borderWidth: 1,
+          borderRadius: 2,
+        },
+        {
+          label: 'ΔS (s)',
+          data: dsData,
+          backgroundColor: dsData.map(v => {
+            if (v === null) return 'rgba(107,101,82,.2)';
+            const a = Math.abs(v);
+            if (a < 0.5) return 'rgba(45,110,62,.45)';
+            if (a < 1.5) return 'rgba(184,133,31,.50)';
+            return 'rgba(168,43,26,.50)';
+          }),
+          borderColor: 'rgba(14,138,79,.6)',
+          borderWidth: 1,
+          borderRadius: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => labels[items[0].dataIndex],
+            label: item => {
+              const v = item.raw;
+              if (v === null) return `${item.dataset.label}: no detection`;
+              return `${item.dataset.label}: ${v > 0 ? '+' : ''}${v.toFixed(3)} s`;
+            },
+          },
+        },
+        annotation: { /* requires plugin, skip */ },
+      },
+      scales: {
+        x: {
+          grid: { color: '#eee' },
+          ticks: { font: { family: 'JetBrains Mono', size: 10 } },
+        },
+        y: {
+          title: { display: true, text: 'Residual (s)', font: { size: 10 } },
+          grid: { color: ctx => ctx.tick.value === 0 ? '#aaa' : '#eee' },
+          ticks: { font: { family: 'JetBrains Mono', size: 10 } },
+        },
+      },
+    },
+  });
+
+  // Add threshold lines manually after chart draw
+  window._residualChart.options.plugins.beforeDraw = chart => {
+    const {ctx: c, chartArea: {top,bottom,left,right}, scales: {y}} = chart;
+    [[0.5,'rgba(45,110,62,.5)'],[-0.5,'rgba(45,110,62,.5)'],
+     [1.5,'rgba(184,133,31,.5)'],[-1.5,'rgba(184,133,31,.5)']].forEach(([v,col]) => {
+      const yp = y.getPixelForValue(v);
+      c.save(); c.strokeStyle=col; c.lineWidth=1; c.setLineDash([4,3]);
+      c.beginPath(); c.moveTo(left,yp); c.lineTo(right,yp); c.stroke();
+      c.restore();
+    });
+  };
+})();
+
+// ─── Leaflet map ─────────────────────────────────────────────────────────────
+{% if has_station_coords %}
+(function() {
+  const flagColors = { green:'#2d6e3e', yellow:'#b8851f', red:'#a82b1a', unknown:'#888' };
+  const map = L.map('map', { zoomControl:true });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; OpenStreetMap, &copy; CARTO', maxZoom:18,
+  }).addTo(map);
+
+  fetch("{% url 'event_map_json' public_id=event.public_id %}?run={{ run.run_number }}")
+    .then(r => r.json())
+    .then(data => {
+      const bounds = [];
+      if (data.event && data.event.lat != null) {
+        const ep = L.marker([data.event.lat, data.event.lon], {
+          icon: L.divIcon({ className:'', html:'<div style="font-size:24px;line-height:24px;color:#a82b1a;text-shadow:0 0 3px white;">★</div>', iconSize:[24,24], iconAnchor:[12,12] })
+        }).addTo(map);
+        ep.bindPopup(`<strong>Epicenter</strong><br>M${data.event.magnitude??'—'}<br>${data.event.lat.toFixed(3)}°, ${data.event.lon.toFixed(3)}°<br>${data.event.depth_km??'—'} km`);
+        bounds.push([data.event.lat, data.event.lon]);
+      }
+      data.stations.forEach(s => {
+        const col = flagColors[s.qc_flag] || flagColors.unknown;
+        const m = L.circleMarker([s.lat, s.lon], { radius:7, color:'#0a0e1a', weight:1.5, fillColor:col, fillOpacity:.85 }).addTo(map);
+        const dP = s.delta_p == null ? '—' : `${s.delta_p > 0?'+':''}${s.delta_p.toFixed(2)}s`;
+        const dS = s.delta_s == null ? '—' : `${s.delta_s > 0?'+':''}${s.delta_s.toFixed(2)}s`;
+        m.bindPopup(`<strong>${s.code}</strong><br>Δ=${s.distance_deg??'—'}° · ${s.qc_flag.toUpperCase()}<br>ΔP=${dP} · ΔS=${dS}`);
+        if (data.event?.lat != null)
+          L.polyline([[data.event.lat,data.event.lon],[s.lat,s.lon]], { color:col, weight:1, opacity:.4, dashArray:'3,4' }).addTo(map);
+        bounds.push([s.lat, s.lon]);
+      });
+      if (bounds.length) map.fitBounds(bounds, { padding:[30,30] });
+      else map.setView([0,0], 2);
+    })
+    .catch(() => { document.getElementById('map').innerHTML='<div style="padding:2rem;text-align:center;color:#666;font-family:monospace;font-size:.85rem;">Map unavailable</div>'; });
+})();
+{% endif %}
+</script>
+{% endblock %}
