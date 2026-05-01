@@ -1,7 +1,6 @@
 {% extends "qc_review/base.html" %}
-{% block title %}Events · Seismic QC{% endblock %}
 
-{% block extra_head %}
+{% block qc_extra_head %}
 <style>
   .events { display: grid; gap: 1rem; }
   .event-row {
@@ -71,7 +70,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block qc_content %}
 <h2 class="section">Committed events · awaiting review</h2>
 
 {% if rows %}
@@ -80,7 +79,7 @@
     {% with e=row.event s=row.summary %}
     <div class="card event-row">
       <div>
-        <div><a class="pid" href="{% url 'event_detail' public_id=e.public_id %}">{{ e.public_id }}</a></div>
+        <div><a class="pid" href="{% url 'qc_review:event_detail' public_id=e.public_id %}">{{ e.public_id }}</a></div>
         <div class="when">{{ e.origin_time|date:"Y-m-d H:i:s" }} UTC</div>
       </div>
       <div>

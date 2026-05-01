@@ -1,111 +1,89 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Seismic QC{% endblock %}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --ink:        #0a0e1a;
-      --paper:      #f4f1e8;       /* warm seismograph-paper cream */
-      --paper-2:    #ebe6d6;
-      --line:       #2a2f3d;
-      --grid:       #d4cfb8;
-      --trace:      #1a3d2e;       /* deep green like classic chart needles */
-      --analyst:    #1f4ea8;
-      --auto:       #b8341a;
-      --green:      #2d6e3e;
-      --yellow:     #b8851f;
-      --red:        #a82b1a;
-      --muted:      #6b6552;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: var(--paper); color: var(--ink); font-family: 'Newsreader', Georgia, serif; line-height: 1.5; }
-    body {
-      background-image:
-        repeating-linear-gradient(0deg, transparent 0, transparent 39px, rgba(42,47,61,0.04) 39px, rgba(42,47,61,0.04) 40px);
-      min-height: 100vh;
-    }
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    a { color: var(--analyst); text-decoration: none; border-bottom: 1px dotted; }
-    a:hover { color: var(--auto); }
+{% extends "base.html" %}
+{% load static %}
 
-    header.bar {
-      border-bottom: 2px solid var(--ink);
-      background: var(--ink);
-      color: var(--paper);
-      padding: 1rem 2rem;
-      display: flex; align-items: baseline; justify-content: space-between;
-      flex-wrap: wrap; gap: 1rem;
-    }
-    header.bar h1 {
-      font-family: 'Newsreader', serif;
-      font-weight: 600;
-      font-size: 1.4rem;
-      letter-spacing: 0.02em;
-    }
-    header.bar h1 span.dot {
-      display: inline-block; width: 10px; height: 10px;
-      background: #c4ff5a;
-      border-radius: 50%;
-      margin-right: 0.5rem;
-      box-shadow: 0 0 8px #c4ff5a;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse { 0%,100% {opacity: 1;} 50% {opacity: 0.4;} }
-    header.bar .meta { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; opacity: 0.7; letter-spacing: 0.05em; }
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:        #0a0e1a;
+    --paper:      #f4f1e8;
+    --paper-2:    #ebe6d6;
+    --line:       #2a2f3d;
+    --grid:       #d4cfb8;
+    --trace:      #1a3d2e;
+    --analyst:    #1f4ea8;
+    --auto:       #b8341a;
+    --green:      #2d6e3e;
+    --yellow:     #b8851f;
+    --red:        #a82b1a;
+    --muted:      #6b6552;
+  }
+  #qc-main {
+    background: var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0, transparent 39px, rgba(42,47,61,0.04) 39px, rgba(42,47,61,0.04) 40px);
+  }
+  #qc-main * { box-sizing: border-box; }
+  #qc-main { font-family: 'Newsreader', Georgia, serif; line-height: 1.5; color: var(--ink); }
+  #qc-main .mono { font-family: 'JetBrains Mono', monospace; }
+  #qc-main a { color: var(--analyst); text-decoration: none; border-bottom: 1px dotted; }
+  #qc-main a:hover { color: var(--auto); }
 
-    main { max-width: 1280px; margin: 0 auto; padding: 2rem; }
+  .pill {
+    display: inline-block;
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+  .pill.green   { color: var(--green);  background: rgba(45,110,62,0.10); }
+  .pill.yellow  { color: var(--yellow); background: rgba(184,133,31,0.12); }
+  .pill.red     { color: var(--red);    background: rgba(168,43,26,0.10); }
+  .pill.unknown { color: var(--muted);  background: rgba(107,101,82,0.10); }
 
-    .pill {
-      display: inline-block;
-      padding: 0.15em 0.6em;
-      border-radius: 999px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.72rem;
-      font-weight: 500;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      border: 1px solid currentColor;
-    }
-    .pill.green   { color: var(--green);  background: rgba(45,110,62,0.10); }
-    .pill.yellow  { color: var(--yellow); background: rgba(184,133,31,0.12); }
-    .pill.red     { color: var(--red);    background: rgba(168,43,26,0.10); }
-    .pill.unknown { color: var(--muted);  background: rgba(107,101,82,0.10); }
+  .pill.status-preliminary { color: var(--muted);   background: rgba(107,101,82,0.10); }
+  .pill.status-confirmed   { color: var(--analyst); background: rgba(31,78,168,0.08); }
+  .pill.status-reviewed,
+  .pill.status-final {
+    color: var(--paper);
+    background: var(--green);
+    border-color: var(--green);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .pill.mode-automatic { color: var(--auto); background: rgba(184,52,26,0.08); }
+  .pill.mode-manual    { color: var(--ink);  background: rgba(10,14,26,0.05); }
 
-    /* Evaluation-status pills — these mirror SeisComP's analyst workflow */
-    .pill.status-preliminary { color: var(--muted);   background: rgba(107,101,82,0.10); }
-    .pill.status-confirmed   { color: var(--analyst); background: rgba(31,78,168,0.08); }
-    .pill.status-reviewed,
-    .pill.status-final {
-      color: var(--paper);
-      background: var(--green);
-      border-color: var(--green);
-      font-weight: 700;
-      letter-spacing: 0.08em;
-    }
-    .pill.mode-automatic { color: var(--auto); background: rgba(184,52,26,0.08); }
-    .pill.mode-manual    { color: var(--ink);  background: rgba(10,14,26,0.05); }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 4px 4px 0 var(--line);
+    margin-bottom: 1.5rem;
+  }
+</style>
+{% block qc_extra_head %}{% endblock %}
+{% endblock %}
 
-    .card {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      box-shadow: 4px 4px 0 var(--line);
-      margin-bottom: 1.5rem;
-    }
-  </style>
-  {% block extra_head %}{% endblock %}
-</head>
-<body>
-  <header class="bar">
-    <h1><span class="dot"></span>SEISMIC <em>·</em> QC</h1>
-    <div class="meta">SEISCOMP / OBSPY / EQTRANSFORMER PIPELINE</div>
-  </header>
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-</body>
-</html>
+{% block content %}
+<div class="flex h-screen bg-gray-100 overflow-hidden">
+  <div id="sidebar">
+    {% include 'partials/_sidebar.html' %}
+  </div>
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main id="qc-main" class="flex-1 overflow-x-hidden overflow-y-auto p-6">
+      {% block qc_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% block qc_scripts %}{% endblock %}
+{% endblock %}

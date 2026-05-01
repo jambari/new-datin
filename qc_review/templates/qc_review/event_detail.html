@@ -1,11 +1,6 @@
 {% extends "qc_review/base.html" %}
-{% block title %}{{ event.public_id }} · QC{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""/>
+{% block qc_extra_head %}
 <style>
 /* ── layout ──────────────────────────────────────────────── */
 .crumb { font-family:'JetBrains Mono',monospace; font-size:.8rem; color:var(--muted); margin-bottom:1rem; }
@@ -437,8 +432,8 @@
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="crumb"><a href="{% url 'event_list' %}">← all events</a></div>
+{% block qc_content %}
+<div class="crumb"><a href="{% url 'qc_review:event_list' %}">← all events</a></div>
 
 <!-- ── event header ─────────────────────────────────────── -->
 <div class="event-header">
@@ -484,14 +479,14 @@
     <span class="label">jump to:</span>
     <select onchange="if(this.value) window.location=this.value;">
       {% for r in all_runs %}
-        <option value="{% url 'event_detail_run' public_id=event.public_id run_number=r.run_number %}"
+        <option value="{% url 'qc_review:event_detail_run' public_id=event.public_id run_number=r.run_number %}"
           {% if r.run_number == run.run_number %}selected{% endif %}>
           run #{{ r.run_number }}{% if r.evaluation_status %} ({{ r.evaluation_status }}){% endif %} — {{ r.committed_at|date:"M d H:i" }}
         </option>
       {% endfor %}
     </select>
     {% if run.run_number != event.latest_run.run_number %}
-      <a href="{% url 'event_detail' public_id=event.public_id %}">→ latest</a>
+      <a href="{% url 'qc_review:event_detail' public_id=event.public_id %}">→ latest</a>
     {% endif %}
   {% endif %}
 </div>
@@ -660,7 +655,7 @@
         <div style="padding:3rem;text-align:center;color:var(--muted);font-style:italic;">no waveform image available</div>
       {% endif %}
 
-      <form class="review" method="post" action="{% url 'station_review' station_id=s.id %}">
+      <form class="review" method="post" action="{% url 'qc_review:station_review' station_id=s.id %}">
         {% csrf_token %}
         <textarea name="note" placeholder="Reviewer note (e.g. 'auto P aligns with first motion, recommend re-pick')">{{ s.reviewer_note }}</textarea>
         <input class="reviewer-name" type="text" name="reviewer" placeholder="initials" value="{{ s.reviewer_name }}">
@@ -1285,9 +1280,9 @@
 </div>{# /tab-methods #}
 
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<!-- SCRIPTS                                                 -->
-<!-- ═══════════════════════════════════════════════════════ -->
+{% endblock %}{# /qc_content #}
+
+{% block qc_scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 {% if has_station_coords %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -1509,7 +1504,7 @@ document.querySelectorAll('#cmp-table thead th[data-col]').forEach(th => {
     attribution:'&copy; OpenStreetMap, &copy; CARTO', maxZoom:18,
   }).addTo(map);
 
-  fetch("{% url 'event_map_json' public_id=event.public_id %}?run={{ run.run_number }}")
+  fetch("{% url 'qc_review:event_map_json' public_id=event.public_id %}?run={{ run.run_number }}")
     .then(r => r.json())
     .then(data => {
       const bounds = [];
@@ -1537,4 +1532,4 @@ document.querySelectorAll('#cmp-table thead th[data-col]').forEach(th => {
 })();
 {% endif %}
 </script>
-{% endblock %}
+{% endblock %}{# /qc_scripts #}
