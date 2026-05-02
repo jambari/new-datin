@@ -242,12 +242,16 @@ def event_map_json(request, public_id):
 def event_list(request):
     from jadwal.models import JadwalHarian, Pegawai
     from datetime import date, datetime, timedelta, timezone as _tz
+    from django.db.models import Q
 
     qs = Event.objects.all().prefetch_related("runs").order_by("-origin_time")
 
     # ── filter: pegawai ──────────────────────────────────────────────────────
     pegawai_id = request.GET.get("pegawai", "").strip()
-    pegawai_list = Pegawai.objects.all().order_by("urutan", "nama")
+    today = date.today()
+    pegawai_list = Pegawai.objects.filter(
+        Q(tanggal_keluar__isnull=True) | Q(tanggal_keluar__gt=today)
+    ).order_by("urutan", "nama")
     selected_pegawai = None
     if pegawai_id:
         try:
