@@ -304,6 +304,6 @@ def station_review(request, station_id):
     sr.reviewer_name = request.POST.get("reviewer", "")[:64]
     sr.reviewed_at = datetime.now(timezone.utc)
     sr.save()
-    return redirect("event_detail_run",
+    return redirect("qc_review:event_detail_run",
                     public_id=sr.run.event.public_id,
                     run_number=sr.run.run_number)

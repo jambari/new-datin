@@ -100,4 +100,15 @@ document.querySelectorAll('.gm-media').forEach(img => {
 document.getElementById('lb').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
 document.addEventListener('keydown', e => { if(e.key==='Escape') document.getElementById('lb').style.display='none'; });
 </script>
+
+<script>
+(function() {
+  var btn = document.getElementById('sidebar-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var el = document.getElementById('sidebar');
+    if (el) el.classList.toggle('hidden');
+  });
+})();
+</script>
 {% endblock %}

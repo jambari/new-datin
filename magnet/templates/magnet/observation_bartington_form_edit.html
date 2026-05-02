@@ -227,4 +227,15 @@
     });
   });
 </script>
+
+<script>
+(function() {
+  var btn = document.getElementById('sidebar-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var el = document.getElementById('sidebar');
+    if (el) el.classList.toggle('hidden');
+  });
+})();
+</script>
 {% endblock %}
