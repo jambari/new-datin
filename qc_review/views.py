@@ -30,6 +30,9 @@ from rest_framework.response import Response
 from .models import Event, QCRun, StationResult
 from .utils import get_on_duty_staff
 
+import zoneinfo as _zi
+_WIT = _zi.ZoneInfo("Asia/Jayapura")
+
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -237,8 +240,83 @@ def event_map_json(request, public_id):
 # ---------------------------------------------------------------------------
 
 def event_list(request):
-    qs = Event.objects.all().prefetch_related("runs")
-    paginator = Paginator(qs, 20)
+    from jadwal.models import JadwalHarian, Pegawai
+    from datetime import date, datetime, timedelta, timezone as _tz
+
+    qs = Event.objects.all().prefetch_related("runs").order_by("-origin_time")
+
+    # ── filter: pegawai ──────────────────────────────────────────────────────
+    pegawai_id = request.GET.get("pegawai", "").strip()
+    pegawai_list = Pegawai.objects.all().order_by("urutan", "nama")
+    selected_pegawai = None
+    if pegawai_id:
+        try:
+            selected_pegawai = Pegawai.objects.get(pk=int(pegawai_id))
+            # Collect all (tanggal, pola) pairs for this pegawai
+            jadwal_qs = (
+                JadwalHarian.objects
+                .filter(pegawai=selected_pegawai, pola__isnull=False, pola__is_libur=False)
+                .select_related("pola")
+            )
+            # Build a set of WIT dates this pegawai was on shift.
+            # We also store (date, start, end, overnight) to do exact time matching.
+            shift_windows = []
+            for j in jadwal_qs:
+                shift_windows.append((
+                    j.tanggal,
+                    j.pola.jam_mulai,
+                    j.pola.jam_selesai,
+                    j.pola.jam_selesai < j.pola.jam_mulai,  # overnight
+                ))
+            # Filter events whose origin_time WIT falls within any shift window
+            matching_ids = []
+            for e in qs:
+                if e.origin_time is None:
+                    continue
+                e_wit = e.origin_time.astimezone(_WIT)
+                e_date = e_wit.date()
+                e_time = e_wit.time()
+                for (s_date, s_start, s_end, overnight) in shift_windows:
+                    if not overnight:
+                        if s_date == e_date and s_start <= e_time <= s_end:
+                            matching_ids.append(e.pk)
+                            break
+                    else:
+                        # Shift started on s_date, event either same day after start or next day before end
+                        if s_date == e_date and e_time >= s_start:
+                            matching_ids.append(e.pk)
+                            break
+                        if s_date == e_date - timedelta(days=1) and e_time <= s_end:
+                            matching_ids.append(e.pk)
+                            break
+            qs = qs.filter(pk__in=matching_ids)
+        except (ValueError, Pegawai.DoesNotExist):
+            selected_pegawai = None
+
+    # ── filter: date range (origin_time in WIT) ──────────────────────────────
+    date_from_str = request.GET.get("date_from", "").strip()
+    date_to_str   = request.GET.get("date_to", "").strip()
+    date_from = date_to = None
+    if date_from_str:
+        try:
+            date_from = date.fromisoformat(date_from_str)
+            # WIT midnight → UTC
+            dt_from_utc = datetime(date_from.year, date_from.month, date_from.day,
+                                   tzinfo=_WIT).astimezone(_tz.utc)
+            qs = qs.filter(origin_time__gte=dt_from_utc)
+        except ValueError:
+            date_from = None
+    if date_to_str:
+        try:
+            date_to = date.fromisoformat(date_to_str)
+            next_day = date_to + timedelta(days=1)
+            dt_to_utc = datetime(next_day.year, next_day.month, next_day.day,
+                                 tzinfo=_WIT).astimezone(_tz.utc)
+            qs = qs.filter(origin_time__lt=dt_to_utc)
+        except ValueError:
+            date_to = None
+
+    paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(request.GET.get("page", 1))
     rows = []
     for e in page_obj:
@@ -248,8 +326,14 @@ def event_list(request):
             "run_count": e.run_count,
             "on_duty":   get_on_duty_staff(e.origin_time),
         })
-    return render(request, "qc_review/event_list.html",
-                  {"rows": rows, "page_obj": page_obj})
+    return render(request, "qc_review/event_list.html", {
+        "rows":             rows,
+        "page_obj":         page_obj,
+        "pegawai_list":     pegawai_list,
+        "selected_pegawai": selected_pegawai,
+        "date_from":        date_from_str,
+        "date_to":          date_to_str,
+    })
 
 
 import json as _json

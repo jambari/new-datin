@@ -3,6 +3,72 @@
 
 {% block qc_extra_head %}
 <style>
+  /* ── filter bar ── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    align-items: flex-end;
+    padding: 1rem 1.4rem;
+    margin-bottom: 1.2rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper-2);
+  }
+  .filter-bar label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .filter-bar select,
+  .filter-bar input[type="date"] {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--paper);
+    color: var(--ink);
+    min-width: 160px;
+  }
+  .filter-bar select:focus,
+  .filter-bar input[type="date"]:focus {
+    outline: none;
+    border-color: var(--analyst);
+  }
+  .filter-bar .btn-filter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.35rem 1rem;
+    border: 1px solid var(--analyst);
+    border-radius: 4px;
+    background: var(--analyst);
+    color: #fff;
+    cursor: pointer;
+    align-self: flex-end;
+  }
+  .filter-bar .btn-filter:hover { opacity: 0.85; }
+  .filter-bar .btn-reset {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: none;
+    align-self: flex-end;
+    display: inline-flex;
+    align-items: center;
+  }
+  .filter-bar .btn-reset:hover { color: var(--ink); border-color: var(--ink); }
+
   .events { display: grid; gap: 1rem; }
   .event-row {
     display: grid;
@@ -118,6 +184,28 @@
 
 {% block qc_content %}
 <h2 class="section">Committed events · awaiting review</h2>
+
+<form method="get" class="filter-bar">
+  <label>
+    Petugas Dinas
+    <select name="pegawai">
+      <option value="">— Semua petugas —</option>
+      {% for p in pegawai_list %}
+        <option value="{{ p.pk }}" {% if selected_pegawai and selected_pegawai.pk == p.pk %}selected{% endif %}>{{ p.nama }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Dari tanggal
+    <input type="date" name="date_from" value="{{ date_from }}">
+  </label>
+  <label>
+    Sampai tanggal
+    <input type="date" name="date_to" value="{{ date_to }}">
+  </label>
+  <button type="submit" class="btn-filter">Terapkan</button>
+  <a href="?" class="btn-reset">Reset</a>
+</form>
 
 {% if rows %}
 <div class="events">
