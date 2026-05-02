@@ -33,11 +33,22 @@
       <!-- ── Stat Cards ─────────────────────────────────────────────────── -->
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;">
 
+        {% if birthday_pegawai %}
+        <div style="background:linear-gradient(135deg,#fdf2f8 0%,#fce7f3 100%);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #ec4899;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:8px;right:12px;font-size:22px;opacity:.25;">🎂</div>
+          <p style="font-size:11px;font-weight:600;color:#9d174d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Selamat Ulang Tahun 🎉</p>
+          {% for p in birthday_pegawai %}
+            <p style="font-size:14px;font-weight:700;color:#111827;line-height:1.4;margin-bottom:2px;">{{ p.nama }}</p>
+          {% endfor %}
+          <p style="font-size:11px;color:#be185d;margin-top:6px;">Semoga panjang umur &amp; sehat selalu</p>
+        </div>
+        {% else %}
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #4f46e5;">
           <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Gempa 7 Hari</p>
           <p style="font-size:32px;font-weight:700;color:#111827;line-height:1;">{{ gempa_7d }}</p>
           <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Total: {{ gempa_total }} kejadian</p>
         </div>
+        {% endif %}
 
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #0891b2;">
           <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Gempa 30 Hari</p>
@@ -58,7 +69,8 @@
         </div>
 
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #f97316;">
-          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Matahari — Jayapura</p>
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Matahari — Jayapura</p>
+          <p style="font-size:11px;color:#f97316;margin-bottom:8px;">Besok, {{ sun_date|date:"d M Y" }}</p>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
             <span style="font-size:16px;">🌅</span>
             <span style="font-size:13px;color:#6b7280;">Terbit</span>

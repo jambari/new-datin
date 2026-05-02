@@ -20,13 +20,24 @@ def dashboard(request):
     felt_30d = FeltEarthquake.objects.filter(event_datetime__date__gte=month_ago).count()
     recent_felt = FeltEarthquake.objects.order_by('-event_datetime')[:5]
 
-    # --- Terbit Terbenam Matahari (Jayapura) ---
+    # --- Terbit Terbenam Matahari (Jayapura) — show tomorrow ---
     from almanac.models import SunMoonEvent
     import zoneinfo as _zi
     _WIT = _zi.ZoneInfo("Asia/Jayapura")
-    sunmoon_today = SunMoonEvent.objects.filter(date=today, city='Jayapura').first()
-    sun_rise_wit = sunmoon_today.sun_rise.astimezone(_WIT).strftime('%H:%M') if sunmoon_today and sunmoon_today.sun_rise else None
-    sun_set_wit  = sunmoon_today.sun_set.astimezone(_WIT).strftime('%H:%M')  if sunmoon_today and sunmoon_today.sun_set  else None
+    tomorrow_date = today + datetime.timedelta(days=1)
+    sunmoon_tomorrow = SunMoonEvent.objects.filter(date=tomorrow_date, city='Jayapura').first()
+    sun_rise_wit = sunmoon_tomorrow.sun_rise.astimezone(_WIT).strftime('%H:%M') if sunmoon_tomorrow and sunmoon_tomorrow.sun_rise else None
+    sun_set_wit  = sunmoon_tomorrow.sun_set.astimezone(_WIT).strftime('%H:%M')  if sunmoon_tomorrow and sunmoon_tomorrow.sun_set  else None
+
+    # --- Birthday today (WIT) from NIP YYYYMMDD prefix ---
+    from jadwal.models import Pegawai
+    now_wit_dt = timezone.now().astimezone(_WIT)
+    today_wit_date = now_wit_dt.date()
+    mmdd = today_wit_date.strftime('%m%d')
+    birthday_pegawai = list(
+        Pegawai.objects.filter(nip__regex=r'^\d{4}' + mmdd)
+        .order_by('urutan', 'nama')
+    )
 
     # --- Lightning ---
     from lightning.models import DailyStrikeSummary
@@ -144,6 +155,8 @@ def dashboard(request):
         'gempa_merusak_total': GempaMemusak.objects.count(),
         'sun_rise_wit':        sun_rise_wit,
         'sun_set_wit':         sun_set_wit,
+        'sun_date':            tomorrow_date,
+        'birthday_pegawai':    birthday_pegawai,
         'latest_qc_rows':      latest_qc_rows,
     }
     return render(request, 'dashboard.html', context)
