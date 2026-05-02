@@ -1,4 +1,5 @@
 {% extends "qc_review/base.html" %}
+{% load tz %}
 
 {% block qc_extra_head %}
 <style>
@@ -429,6 +430,38 @@
 /* Leaflet */
 .leaflet-popup-content-wrapper { border-radius:0; border:1px solid var(--ink); font-family:'JetBrains Mono',monospace; font-size:.78rem; }
 .leaflet-popup-content { margin:.6rem .8rem; }
+
+/* ── petugas jaga strip ───────────────────────────────────── */
+.petugas-strip {
+  display:flex; align-items:center; flex-wrap:wrap;
+  gap:.5rem; padding:.7rem 1.2rem;
+  border:1px solid var(--line); border-top:none;
+  background:var(--paper-2); margin-bottom:1rem;
+  font-family:'JetBrains Mono',monospace; font-size:.78rem;
+}
+.petugas-strip .strip-label {
+  color:var(--muted); text-transform:uppercase; letter-spacing:.12em;
+  font-size:.68rem; margin-right:.3rem; white-space:nowrap;
+}
+.petugas-strip .wit-time {
+  color:var(--ink); font-weight:600; margin-right:.6rem; white-space:nowrap;
+}
+.petugas-chip {
+  display:inline-flex; align-items:center; gap:.35rem;
+  padding:.25em .65em; border-radius:999px;
+  background:rgba(29,78,216,.08); border:1px solid rgba(29,78,216,.2);
+  color:var(--analyst);
+}
+.petugas-chip .chip-pola {
+  font-size:.68rem; font-weight:700; padding:.05em .4em;
+  background:var(--analyst); color:#fff; border-radius:999px;
+}
+.petugas-chip .chip-time {
+  font-size:.68rem; color:var(--muted);
+}
+.petugas-strip .no-jadwal {
+  color:var(--muted); font-style:italic;
+}
 </style>
 {% endblock %}
 
@@ -461,6 +494,24 @@
       {% if summary.unknown%}<span class="pill unknown">{{ summary.unknown }} unknown</span>{% endif %}
     </div>
   </div>
+</div>
+
+<!-- ── Petugas Jaga ─────────────────────────────────────── -->
+<div class="petugas-strip">
+  <span class="strip-label">Petugas Jaga</span>
+  <span class="wit-time">{{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y H:i:s" }} WIT</span>
+  <span style="color:var(--line);margin-right:.3rem;">|</span>
+  {% if on_duty %}
+    {% for duty in on_duty %}
+    <span class="petugas-chip">
+      <span class="chip-pola">{{ duty.pola.kode }}</span>
+      <span>{{ duty.pegawai.nama }}</span>
+      <span class="chip-time">{{ duty.pola.jam_mulai|time:"H:i" }}–{{ duty.pola.jam_selesai|time:"H:i" }}{% if duty.overnight %}+1{% endif %}</span>
+    </span>
+    {% endfor %}
+  {% else %}
+    <span class="no-jadwal">— tidak ada data jadwal untuk tanggal ini</span>
+  {% endif %}
 </div>
 
 <!-- ── run bar ──────────────────────────────────────────── -->

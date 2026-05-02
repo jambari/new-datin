@@ -1,12 +1,13 @@
 {% extends "qc_review/base.html" %}
+{% load tz %}
 
 {% block qc_extra_head %}
 <style>
   .events { display: grid; gap: 1rem; }
   .event-row {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(150px, 1fr) 2fr auto;
-    gap: 1.5rem;
+    grid-template-columns: minmax(180px, 1fr) minmax(130px, 1fr) 2fr minmax(160px,1fr) auto;
+    gap: 1.2rem;
     align-items: center;
     padding: 1.2rem 1.5rem;
     border-left: 4px solid var(--line);
@@ -50,6 +51,17 @@
   .summary .br { background: var(--red); }
   .summary .bu { background: var(--paper-2); }
 
+  .petugas-col { display:flex; flex-direction:column; gap:.3rem; }
+  .petugas-col .wit { font-family:'JetBrains Mono',monospace; font-size:.68rem; color:var(--muted); }
+  .duty-chip {
+    display:inline-flex; align-items:center; gap:.25rem;
+    font-family:'JetBrains Mono',monospace; font-size:.72rem;
+    color:var(--analyst);
+  }
+  .duty-chip .kode {
+    font-size:.65rem; font-weight:700; padding:.05em .35em;
+    background:var(--analyst); color:#fff; border-radius:3px;
+  }
   .empty {
     padding: 4rem 2rem;
     text-align: center;
@@ -133,6 +145,17 @@
             </span>
           {% endif %}
         </div>
+      </div>
+      <div class="petugas-col">
+        <span class="wit">{{ e.origin_time|timezone:"Asia/Jayapura"|date:"H:i" }} WIT</span>
+        {% for duty in row.on_duty %}
+          <span class="duty-chip">
+            <span class="kode">{{ duty.pola.kode }}</span>
+            <span>{{ duty.pegawai.nama }}</span>
+          </span>
+        {% empty %}
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);font-style:italic;">—</span>
+        {% endfor %}
       </div>
       <div class="summary">
         <span title="{{ s.green }} green / {{ s.yellow }} yellow / {{ s.red }} red / {{ s.unknown }} unknown">

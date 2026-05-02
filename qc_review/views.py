@@ -28,6 +28,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from .models import Event, QCRun, StationResult
+from .utils import get_on_duty_staff
 
 
 # ---------------------------------------------------------------------------
@@ -239,8 +240,14 @@ def event_list(request):
     qs = Event.objects.all().prefetch_related("runs")
     paginator = Paginator(qs, 20)
     page_obj = paginator.get_page(request.GET.get("page", 1))
-    rows = [{"event": e, "summary": e.qc_summary,
-             "run_count": e.run_count} for e in page_obj]
+    rows = []
+    for e in page_obj:
+        rows.append({
+            "event":     e,
+            "summary":   e.qc_summary,
+            "run_count": e.run_count,
+            "on_duty":   get_on_duty_staff(e.origin_time),
+        })
     return render(request, "qc_review/event_list.html",
                   {"rows": rows, "page_obj": page_obj})
 
@@ -293,6 +300,7 @@ def event_detail(request, public_id, run_number=None):
         "all_runs": all_runs,
         "has_station_coords": has_station_coords,
         "comparison_json": _json.dumps(comparison),
+        "on_duty": get_on_duty_staff(event.origin_time),
     })
 
 
