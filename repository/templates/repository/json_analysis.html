@@ -136,6 +136,19 @@
           <span class="badge bg-secondary ms-1" id="filterInfoBadge"></span>
 
           <span class="text-muted mx-1">|</span>
+          <div class="form-check form-check-inline m-0">
+            <input class="form-check-input" type="checkbox" id="swSrcExisting" checked onchange="refreshMarkers()">
+            <label class="form-check-label small" for="swSrcExisting">
+              <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:2px;"></span>Existing
+            </label>
+          </div>
+          <div class="form-check form-check-inline m-0">
+            <input class="form-check-input" type="checkbox" id="swSrcQC" checked onchange="refreshMarkers()">
+            <label class="form-check-label small" for="swSrcQC">
+              <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#FFD700;vertical-align:middle;margin-right:2px;"></span>QC Reviewer
+            </label>
+          </div>
+          <span class="text-muted mx-1">|</span>
           <input class="form-check-input m-0" type="checkbox" id="swKabupaten" onchange="toggleShpLayer('Kabupaten')">
           <label class="small mb-0 fw-bold text-muted" for="swKabupaten">Kab/Kota</label>
           <input type="color" id="fillKabupaten" value="#3182ce" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
@@ -184,20 +197,6 @@
                       <input type="color" id="colorSubduksi" value="#8b5cf6" title="Warna subduksi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateSubduksiColor()">
                     </div>
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="swFeltOverlay" onchange="toggleFeltOverlay()"><label class="form-check-label small">Overlay Gempa Dirasakan</label></div>
-                    <hr class="my-2">
-                    <div class="fw-bold small mb-2">Sumber Data</div>
-                    <div class="form-check mb-1">
-                      <input class="form-check-input" type="checkbox" id="swSrcExisting" checked onchange="refreshMarkers()">
-                      <label class="form-check-label small" for="swSrcExisting">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:3px;"></span>Existing (JSON)
-                      </label>
-                    </div>
-                    <div class="form-check mb-1">
-                      <input class="form-check-input" type="checkbox" id="swSrcQC" checked onchange="refreshMarkers()">
-                      <label class="form-check-label small" for="swSrcQC">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid #2980b9;background:#6ee7b7;vertical-align:middle;margin-right:3px;"></span>QC Reviewer
-                      </label>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -688,10 +687,10 @@
         L.circleMarker([ev.latitude, ev.longitude], {
           pane: 'pEvents',
           radius: Math.max(4, ev.magnitude * 2.5),
-          fillColor: getColorByDepth(ev.depth),
-          color: '#2980b9', weight: 2.2, opacity: 1, fillOpacity: 0.75
+          fillColor: '#FFD700',
+          color: '#000', weight: 1.5, opacity: 0.9, fillOpacity: 0.9
         }).addTo(markersLayer).bindPopup(
-          `<span style="color:#2980b9;font-weight:700;">[QC] Run #${ev.run_number}</span><br>` +
+          `<span style="font-weight:700;">[QC] Run #${ev.run_number}</span><br>` +
           `<strong>M${ev.magnitude.toFixed(1)}</strong> · D: ${ev.depth.toFixed(1)} km<br>` +
           `${ev.time}<br><em>${ev.location}</em>`
         );
