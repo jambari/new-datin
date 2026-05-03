@@ -24,8 +24,9 @@ def calculate_remark(lat, lon):
     nearest = min(locations, key=lambda loc: haversine(lat, lon, loc.latitude, loc.longitude))
     distance = round(haversine(lat, lon, nearest.latitude, nearest.longitude))
 
-    lat1, lon1 = math.radians(lat), math.radians(lon)
-    lat2, lon2 = math.radians(nearest.latitude), math.radians(nearest.longitude)
+    # Bearing FROM city TO epicenter → "epicenter is X km [direction] of city"
+    lat1, lon1 = math.radians(nearest.latitude), math.radians(nearest.longitude)
+    lat2, lon2 = math.radians(lat), math.radians(lon)
     x = math.sin(lon2 - lon1) * math.cos(lat2)
     y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
     bearing = (math.degrees(math.atan2(x, y)) + 360) % 360
