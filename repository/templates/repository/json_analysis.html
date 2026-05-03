@@ -184,6 +184,20 @@
                       <input type="color" id="colorSubduksi" value="#8b5cf6" title="Warna subduksi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateSubduksiColor()">
                     </div>
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="swFeltOverlay" onchange="toggleFeltOverlay()"><label class="form-check-label small">Overlay Gempa Dirasakan</label></div>
+                    <hr class="my-2">
+                    <div class="fw-bold small mb-2">Sumber Data</div>
+                    <div class="form-check mb-1">
+                      <input class="form-check-input" type="checkbox" id="swSrcExisting" checked onchange="refreshMarkers()">
+                      <label class="form-check-label small" for="swSrcExisting">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:3px;"></span>Existing (JSON)
+                      </label>
+                    </div>
+                    <div class="form-check mb-1">
+                      <input class="form-check-input" type="checkbox" id="swSrcQC" checked onchange="refreshMarkers()">
+                      <label class="form-check-label small" for="swSrcQC">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid #2980b9;background:#6ee7b7;vertical-align:middle;margin-right:3px;"></span>QC Reviewer
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -654,30 +668,40 @@
     document.getElementById('scaleCont').appendChild(scaleControl.getContainer());
   }
 
-  function plotSeismicityMarkers(data) {
+  function refreshMarkers() {
     if (!mapInstance || !markersLayer) return;
     markersLayer.clearLayers();
-    data.forEach(event => {
-      L.circleMarker([event.latitude, event.longitude], {
-        pane: 'pEvents',
-        radius: Math.max(4, event.magnitude * 2.5),
-        fillColor: getColorByDepth(event.depth),
-        color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
-      }).addTo(markersLayer).bindPopup(`<strong>M${event.magnitude.toFixed(1)}</strong><br>D: ${event.depth.toFixed(1)} km<br>${event.time}`);
-    });
-    // QC Reviewer events — blue border
-    qcMapData.forEach(ev => {
-      L.circleMarker([ev.latitude, ev.longitude], {
-        pane: 'pEvents',
-        radius: Math.max(4, ev.magnitude * 2.5),
-        fillColor: getColorByDepth(ev.depth),
-        color: '#2980b9', weight: 2.2, opacity: 1, fillOpacity: 0.75
-      }).addTo(markersLayer).bindPopup(
-        `<span style="color:#2980b9;font-weight:700;">[QC] Run #${ev.run_number}</span><br>` +
-        `<strong>M${ev.magnitude.toFixed(1)}</strong> · D: ${ev.depth.toFixed(1)} km<br>` +
-        `${ev.time}<br><em>${ev.location}</em>`
-      );
-    });
+    const showExisting = document.getElementById('swSrcExisting')?.checked ?? true;
+    const showQC       = document.getElementById('swSrcQC')?.checked ?? true;
+    if (showExisting) {
+      mapData.forEach(event => {
+        L.circleMarker([event.latitude, event.longitude], {
+          pane: 'pEvents',
+          radius: Math.max(4, event.magnitude * 2.5),
+          fillColor: getColorByDepth(event.depth),
+          color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
+        }).addTo(markersLayer).bindPopup(`<strong>M${event.magnitude.toFixed(1)}</strong><br>D: ${event.depth.toFixed(1)} km<br>${event.time}`);
+      });
+    }
+    if (showQC) {
+      qcMapData.forEach(ev => {
+        L.circleMarker([ev.latitude, ev.longitude], {
+          pane: 'pEvents',
+          radius: Math.max(4, ev.magnitude * 2.5),
+          fillColor: getColorByDepth(ev.depth),
+          color: '#2980b9', weight: 2.2, opacity: 1, fillOpacity: 0.75
+        }).addTo(markersLayer).bindPopup(
+          `<span style="color:#2980b9;font-weight:700;">[QC] Run #${ev.run_number}</span><br>` +
+          `<strong>M${ev.magnitude.toFixed(1)}</strong> · D: ${ev.depth.toFixed(1)} km<br>` +
+          `${ev.time}<br><em>${ev.location}</em>`
+        );
+      });
+    }
+  }
+
+  function plotSeismicityMarkers(data) {
+    mapData = data;
+    refreshMarkers();
   }
 
   // --- INISIALISASI PETA DIRASAKAN (SINKRON DENGAN TABEL) ---
@@ -1060,7 +1084,7 @@
     _applyCurrentFilter();
     renderEventsPage(eventsCurrentPage);
     generateDailyFrequencyTable();
-    if (mapInstance && markersLayer) plotSeismicityMarkers(mapData);
+    if (mapInstance && markersLayer) refreshMarkers();
     _updateMapLegend();
     _updateFilterBadge();
   }
@@ -1132,7 +1156,7 @@
   }
 
   function _refreshAllViews() {
-    if (mapInstance && markersLayer) plotSeismicityMarkers(mapData);
+    if (mapInstance && markersLayer) refreshMarkers();
     if (mapFeltInstance) plotFeltMarkers(feltData);
     if (feltOverlayLayer && document.getElementById('swFeltOverlay')?.checked) plotFeltOverlay();
     // Only re-render charts/table if they've been opened at least once
