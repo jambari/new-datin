@@ -1563,6 +1563,21 @@ document.querySelectorAll('#cmp-table thead th[data-col]').forEach(th => {
         }).addTo(map);
         ep.bindPopup(`<strong>Epicenter</strong><br>M${data.event.magnitude??'—'}<br>${data.event.lat.toFixed(3)}°, ${data.event.lon.toFixed(3)}°<br>${data.event.depth_km??'—'} km`);
         bounds.push([data.event.lat, data.event.lon]);
+
+        if (data.nearest_city) {
+          const city = data.nearest_city;
+          const cityIcon = L.divIcon({
+            className: '',
+            html: '<div style="width:11px;height:11px;background:#e74c3c;border:2px solid #111;box-sizing:border-box;"></div>',
+            iconSize: [11, 11], iconAnchor: [5, 5],
+          });
+          L.marker([city.lat, city.lon], { icon: cityIcon }).addTo(map)
+            .bindPopup(`<strong>${city.name}</strong><br>${city.distance_km} km dari episenter`);
+          L.polyline([[data.event.lat, data.event.lon], [city.lat, city.lon]], {
+            color: '#e74c3c', weight: 1.5, opacity: 0.75, dashArray: '6,5',
+          }).addTo(map);
+          bounds.push([city.lat, city.lon]);
+        }
       }
       data.stations.forEach(s => {
         const col = flagColors[s.qc_flag] || flagColors.unknown;

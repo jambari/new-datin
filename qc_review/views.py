@@ -227,6 +227,21 @@ def event_map_json(request, public_id):
             "delta_s": s.delta_s,
         })
 
+    # Nearest reference city
+    nearest_city = None
+    if event.latitude is not None and event.longitude is not None:
+        from repository.models import ReferenceLocation
+        from repository.utils import haversine
+        locations = list(ReferenceLocation.objects.all())
+        if locations:
+            nc = min(locations, key=lambda loc: haversine(event.latitude, event.longitude, loc.latitude, loc.longitude))
+            nearest_city = {
+                "name": nc.name,
+                "lat": float(nc.latitude),
+                "lon": float(nc.longitude),
+                "distance_km": round(haversine(event.latitude, event.longitude, nc.latitude, nc.longitude)),
+            }
+
     return JsonResponse({
         "event": {
             "public_id": event.public_id,
@@ -237,6 +252,7 @@ def event_map_json(request, public_id):
         },
         "stations": stations,
         "run_number": run.run_number,
+        "nearest_city": nearest_city,
     })
 
 
