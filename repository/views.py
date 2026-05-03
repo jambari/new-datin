@@ -660,6 +660,17 @@ def availability_matrix_view(request, sensor_type='seismo'):
         key = (item['station'], item['date'].strftime('%Y-%m-%d'))
         raw_map[key] = item['avg_pct']
 
+    # For accelero: SLINKTOOL records override the averaged .D-channel records
+    if sensor_type == 'accelero':
+        slinktool_query = ModelClass.objects.filter(
+            station__in=station_list,
+            date__range=[start_date, end_date],
+            channel='SLINKTOOL',
+        ).values('station', 'date', 'percentage')
+        for item in slinktool_query:
+            key = (item['station'], item['date'].strftime('%Y-%m-%d'))
+            raw_map[key] = item['percentage']
+
     # 4. Bangun Tabel
     tabel_data = []
     for stasiun in station_list:

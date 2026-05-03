@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from stations.models import Station, StationStatus
+from stations.models import Station, StationStatus, StationAvailabilitySample
 
 PRIORITY_CHANNELS = ['HNN', 'HNE', 'HNZ', 'HLN', 'HLE', 'HLZ', 'BHN', 'BHE', 'BHZ']
 _DT_RE = re.compile(r'\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+')
@@ -107,15 +107,26 @@ class Command(BaseCommand):
             obj.last_packet_time = info['last_packet']
             obj.channel_info = info['channel']
             obj.save()
+            StationAvailabilitySample.objects.create(
+                station=station,
+                sampled_at=datetime.now(timezone.utc),
+                status=status,
+            )
             updated += 1
 
         # Stations absent from ring buffer → mark OFF
+        now = datetime.now(timezone.utc)
         for sta in Station.objects.filter(is_active=True):
             if (sta.network, sta.code) not in parsed:
                 obj, _ = StationStatus.objects.get_or_create(station=sta)
                 obj.status = 'off'
                 obj.latency = None
                 obj.save()
+                StationAvailabilitySample.objects.create(
+                    station=sta,
+                    sampled_at=now,
+                    status='off',
+                )
 
         self.stdout.write(self.style.SUCCESS(
             f'Done. Updated: {updated}, not in DB (skipped): {skipped}'

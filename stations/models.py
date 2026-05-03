@@ -44,3 +44,17 @@ class StationStatus(models.Model):
         if 1800 < latency_seconds <= 3600:
             return 'gap'
         return 'off'
+
+
+class StationAvailabilitySample(models.Model):
+    """One record per station per fetch_slinktool run (~10-min intervals).
+    Used by compute_accelero_availability to derive daily percentages."""
+    station = models.ForeignKey(Station, on_delete=models.CASCADE, related_name='samples')
+    sampled_at = models.DateTimeField(db_index=True)
+    status = models.CharField(max_length=10)  # on / gap / off
+
+    class Meta:
+        indexes = [models.Index(fields=['station', 'sampled_at'])]
+
+    def __str__(self):
+        return f"{self.station.code} {self.status} @ {self.sampled_at:%Y-%m-%d %H:%M}"

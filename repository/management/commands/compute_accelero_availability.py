@@ -1,86 +1,29 @@
 """
-Compute accelerograph data availability from SeedLink ring buffer.
+Compute accelerograph data availability from StationAvailabilitySample records.
 
-Strategy: query `slinktool -Q` to get each stream's buffer start/end time.
-Availability for a target date = seconds of that date covered by the buffer / 86400 * 100.
-This is an approximation that assumes continuous streaming within the buffer window.
+Strategy: every fetch_slinktool run (~10-min intervals) writes one sample per
+station with status 'on', 'gap', or 'off'.  This command counts how many of
+those samples are 'on' or 'gap' for the target date and converts to a
+percentage.  A station with zero samples for that date gets 0%.
 
-Run daily at 12:00 WIT (03:00 UTC) so the previous UTC day is fully elapsed.
+Run daily at 12:00 WIT (03:00 UTC) so the previous UTC day is fully sampled.
 
 Cron (add to /etc/crontab on production):
   0 3 * * * /var/www/html/venv/bin/python /var/www/html/manage.py compute_accelero_availability >> /var/log/accelero_avail.log 2>&1
 """
-import re
-import subprocess
 from datetime import date, datetime, timedelta, timezone
 
 from django.core.management.base import BaseCommand
+from django.db.models import Count, Q
 
 from repository.models import AcceleroDataAvailability
+from stations.models import Station, StationAvailabilitySample
 
-SEEDLINK_SERVER = '202.90.199.206:18123'
-
-STATIONS = [
-    'ARKPI', 'ARPI', 'BMPI', 'BTSPI', 'DYPI', 'EDMPI', 'ELMPI', 'FKMPM',
-    'GENI', 'JBPI', 'JGPI', 'JMPI', 'KIMPI', 'LJPI', 'MIBPI', 'MMPI',
-    'MTJPI', 'MTMPI', 'OBMPI', 'SATPI', 'SKPM', 'SMPI', 'SOMPI', 'TMPI',
-    'TRPI', 'WAMI',
-]
-
-CHANNELS = ['HNE', 'HNN', 'HNZ']
-
-_DT_RE = re.compile(r'\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+')
-
-
-def _parse_q_output(output):
-    """Return {(net, sta, chan): {'start': datetime, 'end': datetime}} from slinktool -Q."""
-    streams = {}
-    for line in output.splitlines():
-        parts = line.split()
-        if len(parts) < 7:
-            continue
-
-        # Locate quality flag (single char D/R/Q/M) to anchor channel position
-        qual_idx = next(
-            (i for i, p in enumerate(parts) if p in ('D', 'R', 'Q', 'M') and len(p) == 1),
-            None,
-        )
-        if qual_idx is None or qual_idx < 3:
-            continue
-
-        net = parts[0]
-        sta = parts[1]
-        chan = parts[qual_idx - 1]
-
-        dates = _DT_RE.findall(line)
-        if len(dates) < 2:
-            continue
-
-        try:
-            start = datetime.strptime(dates[0].strip(), '%Y/%m/%d %H:%M:%S.%f').replace(tzinfo=timezone.utc)
-            end = datetime.strptime(dates[1].strip(), '%Y/%m/%d %H:%M:%S.%f').replace(tzinfo=timezone.utc)
-        except ValueError:
-            continue
-
-        streams[(net, sta, chan)] = {'start': start, 'end': end}
-
-    return streams
-
-
-def _buffer_availability(buf_start, buf_end, target_date):
-    """Fraction of target_date (UTC) covered by [buf_start, buf_end], as 0–100."""
-    day_start = datetime(target_date.year, target_date.month, target_date.day, tzinfo=timezone.utc)
-    day_end = day_start + timedelta(days=1)
-
-    if buf_end <= day_start or buf_start >= day_end:
-        return 0.0
-
-    covered = (min(buf_end, day_end) - max(buf_start, day_start)).total_seconds()
-    return round(min(100.0, covered / 86400.0 * 100.0), 2)
+CHANNEL_NAME = 'SLINKTOOL'
 
 
 class Command(BaseCommand):
-    help = 'Compute accelerograph availability from SeedLink ring buffer for a given date'
+    help = 'Compute accelerograph availability from StationAvailabilitySample records'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -101,45 +44,41 @@ class Command(BaseCommand):
 
         self.stdout.write(f'[compute_accelero_availability] target date: {target}')
 
-        try:
-            result = subprocess.run(
-                ['slinktool', '-Q', SEEDLINK_SERVER],
-                capture_output=True, text=True, timeout=90,
+        day_start = datetime(target.year, target.month, target.day, tzinfo=timezone.utc)
+        day_end = day_start + timedelta(days=1)
+
+        stations = Station.objects.filter(is_active=True).prefetch_related('samples')
+
+        saved = skipped = 0
+        for station in stations:
+            samples_qs = StationAvailabilitySample.objects.filter(
+                station=station,
+                sampled_at__gte=day_start,
+                sampled_at__lt=day_end,
             )
-            output = result.stdout
-        except subprocess.TimeoutExpired:
-            self.stderr.write('ERROR: slinktool -Q timed out')
-            return
-        except Exception as e:
-            self.stderr.write(f'ERROR: {e}')
-            return
+            total = samples_qs.count()
+            if total == 0:
+                self.stdout.write(f'  {station.code:6s}  no samples — skip')
+                skipped += 1
+                continue
 
-        if not output.strip():
-            self.stderr.write('ERROR: no output from slinktool -Q')
-            return
+            on_count = samples_qs.filter(status__in=('on', 'gap')).count()
+            pct = round(on_count / total * 100.0, 2)
 
-        streams = _parse_q_output(output)
-        self.stdout.write(f'Ring buffer: {len(streams)} streams found')
+            self.stdout.write(f'  {station.code:6s}  {on_count}/{total} samples  {pct:.1f}%')
 
-        saved = 0
-        for sta in STATIONS:
-            for chan in CHANNELS:
-                info = streams.get(('IA', sta, chan))
-                pct = _buffer_availability(info['start'], info['end'], target) if info else 0.0
-
-                tag = f'{pct:.1f}%' if info else '0.0% (no stream)'
-                self.stdout.write(f'  {sta:6s} {chan}  {tag}')
-
-                if not options['dry_run']:
-                    AcceleroDataAvailability.objects.update_or_create(
-                        station=sta,
-                        channel=chan,
-                        date=target,
-                        defaults={'percentage': pct},
-                    )
-                    saved += 1
+            if not options['dry_run']:
+                AcceleroDataAvailability.objects.update_or_create(
+                    station=station.code,
+                    channel=CHANNEL_NAME,
+                    date=target,
+                    defaults={'percentage': pct},
+                )
+                saved += 1
 
         if options['dry_run']:
             self.stdout.write('Dry run — nothing saved.')
         else:
-            self.stdout.write(self.style.SUCCESS(f'Saved {saved} records for {target}'))
+            self.stdout.write(self.style.SUCCESS(
+                f'Saved {saved} records for {target} ({skipped} skipped — no samples)'
+            ))
