@@ -699,17 +699,29 @@ def availability_matrix_view(request, sensor_type='seismo'):
         row['avg_row'] = round(total_val / num_days, 2)
         tabel_data.append(row)
 
-    # Build ON/OFF view (< 30% = OFF)
+    # Build OLA view: Hidup >75%, Gap 0%<x≤75%, Mati =0%
+    def _ola_status(val):
+        if val > 75:
+            return 'hidup'
+        if val > 0:
+            return 'gap'
+        return 'mati'
+
     on_off_data = []
     for row in tabel_data:
+        hari = [
+            {
+                'day_num': d['day_num'],
+                'full_date': d['full_date'],
+                'status': _ola_status(d['val']),
+            }
+            for d in row['hari']
+        ]
         on_off_row = {
             'nama': row['nama'],
-            'hari': [
-                {'day_num': d['day_num'], 'full_date': d['full_date'], 'on': d['val'] >= 30}
-                for d in row['hari']
-            ],
+            'hari': hari,
+            'days_hidup': sum(1 for d in hari if d['status'] == 'hidup'),
         }
-        on_off_row['days_on'] = sum(1 for d in on_off_row['hari'] if d['on'])
         on_off_data.append(on_off_row)
 
     context = {
