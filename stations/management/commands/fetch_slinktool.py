@@ -47,7 +47,7 @@ def _parse_q(output):
         except ValueError:
             continue
 
-        latency = (datetime.now(timezone.utc) - end_time).total_seconds()
+        latency = max(0.0, (datetime.now(timezone.utc) - end_time).total_seconds())
         key = (net, sta)
         existing = station_map.get(key)
 

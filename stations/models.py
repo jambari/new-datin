@@ -39,9 +39,10 @@ class StationStatus(models.Model):
     def compute_status(latency_seconds):
         if latency_seconds is None:
             return 'off'
-        if 0.02 <= latency_seconds <= 1800:
+        latency_seconds = max(0.0, latency_seconds)
+        if latency_seconds <= 1800:
             return 'on'
-        if 1800 < latency_seconds <= 3600:
+        if latency_seconds <= 3600:
             return 'gap'
         return 'off'
 
