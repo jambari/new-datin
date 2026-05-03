@@ -244,14 +244,14 @@ def event_map_json(request, public_id):
 # Web pages
 # ---------------------------------------------------------------------------
 
-def event_list(request):
+def _filter_events(request):
+    """Return (qs, pegawai_list, selected_pegawai, date_from_str, date_to_str)."""
     from jadwal.models import JadwalHarian, Pegawai
     from datetime import date, datetime, timedelta, timezone as _tz
     from django.db.models import Q
 
     qs = Event.objects.all().prefetch_related("runs").order_by("-origin_time")
 
-    # ── filter: pegawai ──────────────────────────────────────────────────────
     pegawai_id = request.GET.get("pegawai", "").strip()
     today = date.today()
     pegawai_list = Pegawai.objects.filter(
@@ -261,23 +261,19 @@ def event_list(request):
     if pegawai_id:
         try:
             selected_pegawai = Pegawai.objects.get(pk=int(pegawai_id))
-            # Collect all (tanggal, pola) pairs for this pegawai
             jadwal_qs = (
                 JadwalHarian.objects
                 .filter(pegawai=selected_pegawai, pola__isnull=False, pola__is_libur=False)
                 .select_related("pola")
             )
-            # Build a set of WIT dates this pegawai was on shift.
-            # We also store (date, start, end, overnight) to do exact time matching.
             shift_windows = []
             for j in jadwal_qs:
                 shift_windows.append((
                     j.tanggal,
                     j.pola.jam_mulai,
                     j.pola.jam_selesai,
-                    j.pola.jam_selesai < j.pola.jam_mulai,  # overnight
+                    j.pola.jam_selesai < j.pola.jam_mulai,
                 ))
-            # Filter events whose origin_time WIT falls within any shift window
             matching_ids = []
             for e in qs:
                 if e.origin_time is None:
@@ -291,7 +287,6 @@ def event_list(request):
                             matching_ids.append(e.pk)
                             break
                     else:
-                        # Shift started on s_date, event either same day after start or next day before end
                         if s_date == e_date and e_time >= s_start:
                             matching_ids.append(e.pk)
                             break
@@ -302,38 +297,40 @@ def event_list(request):
         except (ValueError, Pegawai.DoesNotExist):
             selected_pegawai = None
 
-    # ── filter: date range (origin_time in WIT) ──────────────────────────────
     date_from_str = request.GET.get("date_from", "").strip()
     date_to_str   = request.GET.get("date_to", "").strip()
-    date_from = date_to = None
     if date_from_str:
         try:
-            date_from = date.fromisoformat(date_from_str)
-            # WIT midnight → UTC
-            dt_from_utc = datetime(date_from.year, date_from.month, date_from.day,
-                                   tzinfo=_WIT).astimezone(_tz.utc)
-            qs = qs.filter(origin_time__gte=dt_from_utc)
+            df = date.fromisoformat(date_from_str)
+            qs = qs.filter(origin_time__gte=datetime(df.year, df.month, df.day, tzinfo=_WIT).astimezone(_tz.utc))
         except ValueError:
-            date_from = None
+            date_from_str = ""
     if date_to_str:
         try:
-            date_to = date.fromisoformat(date_to_str)
-            next_day = date_to + timedelta(days=1)
-            dt_to_utc = datetime(next_day.year, next_day.month, next_day.day,
-                                 tzinfo=_WIT).astimezone(_tz.utc)
-            qs = qs.filter(origin_time__lt=dt_to_utc)
+            dt = date.fromisoformat(date_to_str)
+            nd = dt + timedelta(days=1)
+            qs = qs.filter(origin_time__lt=datetime(nd.year, nd.month, nd.day, tzinfo=_WIT).astimezone(_tz.utc))
         except ValueError:
-            date_to = None
+            date_to_str = ""
+
+    return qs, pegawai_list, selected_pegawai, date_from_str, date_to_str
+
+
+def event_list(request):
+    qs, pegawai_list, selected_pegawai, date_from_str, date_to_str = _filter_events(request)
 
     paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(request.GET.get("page", 1))
     rows = []
     for e in page_obj:
+        run = e.latest_run
         rows.append({
-            "event":     e,
-            "summary":   e.qc_summary,
-            "run_count": e.run_count,
-            "on_duty":   get_on_duty_staff(e.origin_time),
+            "event":      e,
+            "run":        run,
+            "summary":    e.qc_summary,
+            "run_count":  e.run_count,
+            "on_duty":    get_on_duty_staff(e.origin_time),
+            "on_duty_qc": get_on_duty_staff(run.committed_at) if run else [],
         })
     return render(request, "qc_review/event_list.html", {
         "rows":             rows,
@@ -409,3 +406,175 @@ def station_review(request, station_id):
     return redirect("qc_review:event_detail_run",
                     public_id=sr.run.event.public_id,
                     run_number=sr.run.run_number)
+
+
+# ---------------------------------------------------------------------------
+# Export helpers
+# ---------------------------------------------------------------------------
+
+def _export_rows(request):
+    """Return list of dicts ready for CSV/PDF export (all filtered events, no pagination)."""
+    qs, _, _, _, _ = _filter_events(request)
+    rows = []
+    for e in qs:
+        run = e.latest_run
+        ot = e.origin_time.astimezone(_WIT) if e.origin_time else None
+        ct = run.committed_at.astimezone(_WIT) if run and run.committed_at else None
+        on_duty     = get_on_duty_staff(e.origin_time)
+        on_duty_qc  = get_on_duty_staff(run.committed_at) if run else []
+        summary     = e.qc_summary
+        rows.append({
+            "public_id":        e.public_id,
+            "origin_time_wit":  ot.strftime("%d/%m/%Y %H:%M:%S") if ot else "–",
+            "magnitude":        f"{e.magnitude:.1f}" if e.magnitude is not None else "–",
+            "magnitude_type":   e.magnitude_type or "–",
+            "depth_km":         f"{e.depth_km:.0f}" if e.depth_km is not None else "–",
+            "region":           e.region or "–",
+            "latitude":         f"{e.latitude:.4f}" if e.latitude is not None else "–",
+            "longitude":        f"{e.longitude:.4f}" if e.longitude is not None else "–",
+            "eval_mode":        (run.evaluation_mode or "–") if run else "–",
+            "eval_status":      (run.evaluation_status or "–") if run else "–",
+            "run_number":       str(run.run_number) if run else "–",
+            "committed_wit":    ct.strftime("%d/%m/%Y %H:%M") if ct else "–",
+            "petugas_dinas":    ", ".join(d.pegawai.nama for d in on_duty) or "–",
+            "petugas_qc":       ", ".join(d.pegawai.nama for d in on_duty_qc) or "–",
+            "sta_total":        str(summary.get("total", 0)),
+            "sta_green":        str(summary.get("green", 0)),
+            "sta_yellow":       str(summary.get("yellow", 0)),
+            "sta_red":          str(summary.get("red", 0)),
+            "sta_unknown":      str(summary.get("unknown", 0)),
+        })
+    return rows
+
+
+def export_csv(request):
+    import csv
+    from django.http import HttpResponse
+
+    rows = _export_rows(request)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="qc_events.csv"'
+    response.write("﻿")  # UTF-8 BOM for Excel
+
+    headers = [
+        "Public ID", "Waktu (WIT)", "M", "Jenis", "Kedalaman (km)", "Lokasi",
+        "Lat", "Lon", "Eval Mode", "Eval Status", "Run", "Commit (WIT)",
+        "Petugas Dinas", "Petugas QC",
+        "Sta Total", "Green", "Yellow", "Red", "Unknown",
+    ]
+    writer = csv.DictWriter(response, fieldnames=headers)
+    writer.writeheader()
+    for r in rows:
+        writer.writerow({
+            "Public ID":      r["public_id"],
+            "Waktu (WIT)":    r["origin_time_wit"],
+            "M":              r["magnitude"],
+            "Jenis":          r["magnitude_type"],
+            "Kedalaman (km)": r["depth_km"],
+            "Lokasi":         r["region"],
+            "Lat":            r["latitude"],
+            "Lon":            r["longitude"],
+            "Eval Mode":      r["eval_mode"],
+            "Eval Status":    r["eval_status"],
+            "Run":            r["run_number"],
+            "Commit (WIT)":   r["committed_wit"],
+            "Petugas Dinas":  r["petugas_dinas"],
+            "Petugas QC":     r["petugas_qc"],
+            "Sta Total":      r["sta_total"],
+            "Green":          r["sta_green"],
+            "Yellow":         r["sta_yellow"],
+            "Red":            r["sta_red"],
+            "Unknown":        r["sta_unknown"],
+        })
+    return response
+
+
+def export_pdf(request):
+    import io
+    from django.http import HttpResponse
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+
+    rows = _export_rows(request)
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
+                            leftMargin=1.2*cm, rightMargin=1.2*cm,
+                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+
+    styles = getSampleStyleSheet()
+    small = ParagraphStyle("small", parent=styles["Normal"], fontSize=6.5, leading=8)
+    title_style = ParagraphStyle("title", parent=styles["Normal"], fontSize=11,
+                                 fontName="Helvetica-Bold", spaceAfter=6)
+    sub_style = ParagraphStyle("sub", parent=styles["Normal"], fontSize=7.5,
+                               textColor=colors.HexColor("#555555"), spaceAfter=10)
+
+    from datetime import date as _date
+    title = Paragraph("Laporan QC Event Gempa Bumi", title_style)
+    subtitle = Paragraph(
+        f"Dicetak: {_date.today().strftime('%d %B %Y')} · "
+        f"Filter: {request.GET.get('date_from','') or '—'} s/d {request.GET.get('date_to','') or '—'} · "
+        f"{len(rows)} event",
+        sub_style,
+    )
+
+    col_headers = [
+        "No", "Public ID", "Waktu (WIT)", "M", "Jenis", "Kdlm\n(km)", "Lokasi",
+        "Lat", "Lon", "Mode", "Status", "Run", "Commit (WIT)",
+        "Petugas\nDinas", "Petugas\nQC",
+        "Sta", "G", "Y", "R", "U",
+    ]
+    table_data = [[Paragraph(h, small) for h in col_headers]]
+    for i, r in enumerate(rows, 1):
+        table_data.append([
+            Paragraph(str(i), small),
+            Paragraph(r["public_id"], small),
+            Paragraph(r["origin_time_wit"], small),
+            Paragraph(r["magnitude"], small),
+            Paragraph(r["magnitude_type"], small),
+            Paragraph(r["depth_km"], small),
+            Paragraph(r["region"][:35], small),
+            Paragraph(r["latitude"], small),
+            Paragraph(r["longitude"], small),
+            Paragraph(r["eval_mode"], small),
+            Paragraph(r["eval_status"], small),
+            Paragraph(r["run_number"], small),
+            Paragraph(r["committed_wit"], small),
+            Paragraph(r["petugas_dinas"][:30], small),
+            Paragraph(r["petugas_qc"][:30], small),
+            Paragraph(r["sta_total"], small),
+            Paragraph(r["sta_green"], small),
+            Paragraph(r["sta_yellow"], small),
+            Paragraph(r["sta_red"], small),
+            Paragraph(r["sta_unknown"], small),
+        ])
+
+    col_widths = [0.7, 2.6, 2.6, 0.8, 0.9, 0.9, 4.5,
+                  1.3, 1.4, 1.2, 1.5, 0.7, 2.6,
+                  3.0, 3.0,
+                  0.6, 0.5, 0.5, 0.5, 0.5]
+    col_widths = [w * cm for w in col_widths]
+
+    tbl = Table(table_data, colWidths=col_widths, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0, 0), (-1, 0),  colors.HexColor("#2c3e50")),
+        ("TEXTCOLOR",    (0, 0), (-1, 0),  colors.white),
+        ("FONTNAME",     (0, 0), (-1, 0),  "Helvetica-Bold"),
+        ("FONTSIZE",     (0, 0), (-1, -1), 6.5),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f6fa")]),
+        ("GRID",         (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
+        ("VALIGN",       (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING",   (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING",(0, 0), (-1, -1), 3),
+        ("LEFTPADDING",  (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+    ]))
+
+    doc.build([title, subtitle, tbl])
+    pdf = buf.getvalue()
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="qc_events.pdf"'
+    return response

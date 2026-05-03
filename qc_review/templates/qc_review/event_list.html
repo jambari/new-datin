@@ -68,11 +68,28 @@
     align-items: center;
   }
   .filter-bar .btn-reset:hover { color: var(--ink); border-color: var(--ink); }
+  .filter-bar .btn-export {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    align-self: flex-end;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .btn-export.csv { border: 1px solid #27ae60; color: #27ae60; background: transparent; }
+  .btn-export.csv:hover { background: #27ae60; color: #fff; }
+  .btn-export.pdf { border: 1px solid #c0392b; color: #c0392b; background: transparent; }
+  .btn-export.pdf:hover { background: #c0392b; color: #fff; }
+  .filter-sep { width: 1px; height: 2rem; background: var(--line); align-self: flex-end; margin: 0 0.2rem; }
 
   .events { display: grid; gap: 1rem; }
   .event-row {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(130px, 1fr) 2fr minmax(160px,1fr) auto;
+    grid-template-columns: minmax(180px, 1fr) minmax(130px, 1fr) 2fr minmax(140px,1fr) minmax(140px,1fr) auto;
     gap: 1.2rem;
     align-items: center;
     padding: 1.2rem 1.5rem;
@@ -205,7 +222,26 @@
   </label>
   <button type="submit" class="btn-filter">Terapkan</button>
   <a href="?" class="btn-reset">Reset</a>
+  <span class="filter-sep"></span>
+  <a id="btn-csv" href="{% url 'qc_review:export_csv' %}" class="btn-export csv">↓ CSV</a>
+  <a id="btn-pdf" href="{% url 'qc_review:export_pdf' %}" class="btn-export pdf">↓ PDF</a>
 </form>
+<script>
+(function(){
+  function updateExportLinks(){
+    var form = document.querySelector('.filter-bar');
+    var params = new URLSearchParams();
+    form.querySelectorAll('select,input').forEach(function(el){
+      if(el.name && el.value) params.set(el.name, el.value);
+    });
+    var qs = params.toString() ? '?' + params.toString() : '';
+    document.getElementById('btn-csv').href = "{% url 'qc_review:export_csv' %}" + qs;
+    document.getElementById('btn-pdf').href = "{% url 'qc_review:export_pdf' %}" + qs;
+  }
+  document.querySelector('.filter-bar').addEventListener('change', updateExportLinks);
+  updateExportLinks();
+})();
+</script>
 
 {% if rows %}
 <div class="events">
@@ -235,10 +271,21 @@
         </div>
       </div>
       <div class="petugas-col">
-        <span class="wit">{{ e.origin_time|timezone:"Asia/Jayapura"|date:"H:i" }} WIT</span>
+        <span class="wit">Dinas {{ e.origin_time|timezone:"Asia/Jayapura"|date:"H:i" }} WIT</span>
         {% for duty in row.on_duty %}
           <span class="duty-chip">
             <span class="kode">{{ duty.pola.kode }}</span>
+            <span>{{ duty.pegawai.nama }}</span>
+          </span>
+        {% empty %}
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);font-style:italic;">—</span>
+        {% endfor %}
+      </div>
+      <div class="petugas-col">
+        <span class="wit">QC {% if row.run %}{{ row.run.committed_at|timezone:"Asia/Jayapura"|date:"H:i" }} WIT{% endif %}</span>
+        {% for duty in row.on_duty_qc %}
+          <span class="duty-chip" style="color:var(--auto);">
+            <span class="kode" style="background:var(--auto);">{{ duty.pola.kode }}</span>
             <span>{{ duty.pegawai.nama }}</span>
           </span>
         {% empty %}

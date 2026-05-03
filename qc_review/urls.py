@@ -11,6 +11,10 @@ urlpatterns = [
     path("station/<int:station_id>/review/",
          views.station_review, name="station_review"),
 
+    # Export
+    path("export/csv/", views.export_csv, name="export_csv"),
+    path("export/pdf/", views.export_pdf, name="export_pdf"),
+
     # API
     path("api/qc-events/", views.ingest_event, name="ingest_event"),
     path("api/event/<str:public_id>/map.json",
