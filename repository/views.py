@@ -1267,7 +1267,6 @@ def _handle_media_uploads(request, obj):
 
 
 # ── Event Browser ─────────────────────────────────────────────────────────────
-@login_required
 def _qc_entry(e):
     """Build a map-data dict from a QCEvent using its latest run snapshot."""
     run = e.latest_run
@@ -1306,6 +1305,7 @@ def _qc_map_entries_by_month(year, month):
     return [e for e in (_qc_entry(ev) for ev in qs) if e is not None]
 
 
+@login_required
 def event_browser(request):
     from .models import EventBrowser
     today = date.today()
