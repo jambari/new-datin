@@ -101,13 +101,13 @@
               <div class="form-check form-check-inline m-0">
                 <input class="form-check-input" type="checkbox" id="swSrcExisting" checked onchange="refreshMarkers()">
                 <label class="form-check-label small" for="swSrcExisting">
-                  <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:2px;"></span>Existing
+                  <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:2px;"></span>Integrasi
                 </label>
               </div>
               <div class="form-check form-check-inline m-0">
                 <input class="form-check-input" type="checkbox" id="swSrcQC" checked onchange="refreshMarkers()">
                 <label class="form-check-label small" for="swSrcQC">
-                  <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#FFD700;vertical-align:middle;margin-right:2px;"></span>QC Reviewer
+                  <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:2px;"></span>JAY
                 </label>
               </div>
             </div>
@@ -613,8 +613,8 @@
         L.circleMarker([ev.latitude, ev.longitude], {
           pane: 'pEvents',
           radius: Math.max(4, ev.magnitude * 2.5),
-          fillColor: '#FFD700',
-          color: '#000', weight: 1.5, opacity: 0.9, fillOpacity: 0.9
+          fillColor: getColorByDepth(ev.depth),
+          color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
         }).addTo(markersLayer).bindPopup(
           `<span style="font-weight:700;">[QC] Run #${ev.run_number}</span><br>` +
           `<strong>M${ev.magnitude.toFixed(1)}</strong> · D: ${ev.depth.toFixed(1)} km<br>` +
