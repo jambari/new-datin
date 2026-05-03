@@ -622,6 +622,15 @@
         );
       });
     }
+    // Update legend stats sesuai sumber aktif
+    const active = [
+      ...(showExisting ? mapData : []),
+      ...(showQC       ? qcMapData : []),
+    ];
+    const elT = document.getElementById('legendTotal');
+    const elH = document.getElementById('legendHighMag');
+    if (elT) elT.textContent = active.length;
+    if (elH) elH.textContent = active.filter(e => e.magnitude >= 5).length;
   }
 
   function plotSeismicityMarkers(data) {
