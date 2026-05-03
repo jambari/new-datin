@@ -1077,7 +1077,20 @@ def json_analysis(request, pk):
         else:
             avg_lat, avg_lon = 0, 0
         
-        nama_upt = "STASIUN GEOFISIKA KELAS I JAYAPURA" 
+        # QC Reviewer data untuk bulan yang sama
+        qc_map_data = _qc_map_entries_by_month(current_year, current_month)
+        qc_stats = {
+            'total':   len(qc_map_data),
+            'max_mag': round(max((e['magnitude'] for e in qc_map_data), default=0), 1),
+            'mag_lt3': len([e for e in qc_map_data if e['magnitude'] < 3]),
+            'mag_35':  len([e for e in qc_map_data if 3 <= e['magnitude'] < 5]),
+            'mag_gte5':len([e for e in qc_map_data if e['magnitude'] >= 5]),
+            'dep_lt60':   len([e for e in qc_map_data if e['depth'] < 60]),
+            'dep_mid':    len([e for e in qc_map_data if 60 <= e['depth'] < 300]),
+            'dep_deep':   len([e for e in qc_map_data if e['depth'] >= 300]),
+        }
+
+        nama_upt = "STASIUN GEOFISIKA KELAS I JAYAPURA"
         context = {
             'upload_obj': upload_obj,
             'upt': nama_upt,
@@ -1085,8 +1098,8 @@ def json_analysis(request, pk):
             'days_range': days_range,
             'num_days': num_days,
             'felt_map_data': json.dumps(felt_map_data),
-            'felt_events': felt_events_query, # Data untuk list/tabel Dirasakan
-            'seiscomp_components': seiscomp_components, # Data monitoring Seiscomp
+            'felt_events': felt_events_query,
+            'seiscomp_components': seiscomp_components,
             'stats': stats,
             'mag_categories': mag_categories,
             'mag_count_low': mag_categories.get('M<3', 0),
@@ -1097,6 +1110,8 @@ def json_analysis(request, pk):
             'depth_count_mid': depth_categories.get('D 60-300', 0),
             'depth_count_deep': depth_categories.get('D>300', 0),
             'map_data': json.dumps(map_data),
+            'qc_map_data': json.dumps(qc_map_data, cls=DjangoJSONEncoder),
+            'qc_stats': qc_stats,
             'avg_lat': avg_lat,
             'avg_lon': avg_lon,
             'events': events[:50],
@@ -1253,6 +1268,44 @@ def _handle_media_uploads(request, obj):
 
 # ── Event Browser ─────────────────────────────────────────────────────────────
 @login_required
+def _qc_entry(e):
+    """Build a map-data dict from a QCEvent using its latest run snapshot."""
+    run = e.latest_run
+    if not run:
+        return None
+    ot = run.snap_origin_time or e.origin_time
+    return {
+        'latitude':   float(run.snap_latitude  if run.snap_latitude  is not None else (e.latitude  or 0)),
+        'longitude':  float(run.snap_longitude if run.snap_longitude is not None else (e.longitude or 0)),
+        'magnitude':  float(run.snap_magnitude if run.snap_magnitude is not None else (e.magnitude or 0)),
+        'depth':      float(run.snap_depth_km  if run.snap_depth_km  is not None else (e.depth_km  or 0)),
+        'time':       ot.strftime('%Y-%m-%d %H:%M:%S UTC') if ot else '–',
+        'event_id':   e.public_id,
+        'location':   run.snap_region or e.region or '',
+        'source':     'qc',
+        'run_number': run.run_number,
+        'eval_status': run.evaluation_status or '',
+    }
+
+
+def _qc_map_entries_by_date(start, end):
+    from qc_review.models import Event as QCEvent
+    qs = QCEvent.objects.filter(
+        origin_time__date__gte=start,
+        origin_time__date__lte=end,
+    ).prefetch_related('runs')
+    return [e for e in (_qc_entry(ev) for ev in qs) if e is not None]
+
+
+def _qc_map_entries_by_month(year, month):
+    from qc_review.models import Event as QCEvent
+    qs = QCEvent.objects.filter(
+        origin_time__year=year,
+        origin_time__month=month,
+    ).prefetch_related('runs')
+    return [e for e in (_qc_entry(ev) for ev in qs) if e is not None]
+
+
 def event_browser(request):
     from .models import EventBrowser
     today = date.today()
@@ -1323,9 +1376,13 @@ def event_browser(request):
         for fe in felt_events_query
     ]
 
+    # QC Reviewer data untuk rentang tanggal yang sama
+    qc_map_data = _qc_map_entries_by_date(start, end)
+
     context = {
         'map_data':        json.dumps(map_data, cls=DjangoJSONEncoder),
         'felt_map_data':   json.dumps(felt_map_data),
+        'qc_map_data':     json.dumps(qc_map_data, cls=DjangoJSONEncoder),
         'felt_events':     felt_events_query,
         'avg_lat':         avg_lat,
         'avg_lon':         avg_lon,
@@ -1337,6 +1394,10 @@ def event_browser(request):
         'stats': {
             'total':   len(map_data),
             'max_mag': max((e['magnitude'] for e in map_data), default=0),
+        },
+        'qc_stats': {
+            'total':   len(qc_map_data),
+            'max_mag': round(max((e['magnitude'] for e in qc_map_data), default=0), 1),
         },
     }
     return render(request, 'repository/event_browser.html', context)

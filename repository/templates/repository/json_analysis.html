@@ -90,7 +90,12 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h2 class="h3 fw-bold mb-0">Laporan Bulanan {{ formatted_bulan }}</h2>
-            <small class="text-muted">Total: <strong>{{ stats.total }}</strong> events</small>
+            <small class="text-muted">
+              Sumber data: <strong>{{ stats.total }}</strong> events (upload JSON)
+              {% if qc_stats.total %}
+              &nbsp;+&nbsp; <span style="color:#2980b9;font-weight:600;">{{ qc_stats.total }} events QC Reviewer</span>
+              {% endif %}
+            </small>
           </div>
           <a href="{% url 'json_upload_list' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i>Kembali
@@ -199,7 +204,7 @@
                     <div class="legend-box"><img src="{% static 'repository/images/legenda.png' %}"></div>
                     <div class="legend-box"><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
                     <div class="legend-box"><div class="fw-bold mt-2" style="font-size: 0.85rem;"><span id="outW">{{ upt }}</span></div><div><span class="">{{ formatted_bulan }}</span></div></div>
-                    <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1" style="font-size: 0.8rem;">Total Gempa: <strong id="legendTotal">{{ stats.total }}</strong><br>M ≥ 5: <strong id="legendHighMag">{{ mag_count_high|default:0 }}</strong></div></div>
+                    <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1" style="font-size: 0.8rem;">Total Gempa: <strong id="legendTotal">{{ stats.total }}</strong><br>M ≥ 5: <strong id="legendHighMag">{{ mag_count_high|default:0 }}</strong>{% if qc_stats.total %}<br><span style="color:#2980b9;">QC: <strong>{{ qc_stats.total }}</strong> · M≥5: <strong>{{ qc_stats.mag_gte5 }}</strong></span>{% endif %}</div></div>
                   </div>
                 </div>
               </div>
@@ -568,6 +573,7 @@
   // Master data (never reassigned; deleteEventRow mutates these arrays)
   const allMapData  = {{ map_data|safe }};
   const allFeltData = {{ felt_map_data|safe }};
+  const qcMapData   = {{ qc_map_data|safe }};
   const avgLat = {{ avg_lat }};
   const avgLon = {{ avg_lon }};
 
@@ -658,6 +664,19 @@
         fillColor: getColorByDepth(event.depth),
         color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
       }).addTo(markersLayer).bindPopup(`<strong>M${event.magnitude.toFixed(1)}</strong><br>D: ${event.depth.toFixed(1)} km<br>${event.time}`);
+    });
+    // QC Reviewer events — blue border
+    qcMapData.forEach(ev => {
+      L.circleMarker([ev.latitude, ev.longitude], {
+        pane: 'pEvents',
+        radius: Math.max(4, ev.magnitude * 2.5),
+        fillColor: getColorByDepth(ev.depth),
+        color: '#2980b9', weight: 2.2, opacity: 1, fillOpacity: 0.75
+      }).addTo(markersLayer).bindPopup(
+        `<span style="color:#2980b9;font-weight:700;">[QC] Run #${ev.run_number}</span><br>` +
+        `<strong>M${ev.magnitude.toFixed(1)}</strong> · D: ${ev.depth.toFixed(1)} km<br>` +
+        `${ev.time}<br><em>${ev.location}</em>`
+      );
     });
   }
 

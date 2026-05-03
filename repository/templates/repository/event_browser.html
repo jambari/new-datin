@@ -86,7 +86,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
           <div>
             <h2 class="h3 fw-bold mb-0">Infografis Gempa</h2>
-            <small class="text-muted">{{ start }} s/d {{ end }} &mdash; <strong>{{ stats.total }}</strong> events &nbsp;|&nbsp; DB: {{ total_db }}</small>
+            <small class="text-muted">{{ start }} s/d {{ end }} &mdash; <strong>{{ stats.total }}</strong> events &nbsp;|&nbsp; DB: {{ total_db }} &nbsp;|&nbsp; <span style="color:#2980b9;font-weight:600;">QC: {{ qc_stats.total }}</span></small>
           </div>
           <form method="get" class="d-flex align-items-center gap-2 no-print">
             <label class="small text-muted mb-0">Dari</label>
@@ -495,6 +495,7 @@
   // Master data (never reassigned; deleteEventRow mutates these arrays)
   const allMapData  = {{ map_data|safe }};
   const allFeltData = {{ felt_map_data|safe }};
+  const qcMapData   = {{ qc_map_data|safe }};
   const avgLat = {{ avg_lat }};
   const avgLon = {{ avg_lon }};
 
@@ -585,6 +586,19 @@
         fillColor: getColorByDepth(event.depth),
         color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
       }).addTo(markersLayer).bindPopup(`<strong>M${event.magnitude.toFixed(1)}</strong><br>D: ${event.depth.toFixed(1)} km<br>${event.time}`);
+    });
+    // QC Reviewer events — same size, blue border to distinguish
+    qcMapData.forEach(ev => {
+      L.circleMarker([ev.latitude, ev.longitude], {
+        pane: 'pEvents',
+        radius: Math.max(4, ev.magnitude * 2.5),
+        fillColor: getColorByDepth(ev.depth),
+        color: '#2980b9', weight: 2.2, opacity: 1, fillOpacity: 0.75
+      }).addTo(markersLayer).bindPopup(
+        `<span style="color:#2980b9;font-weight:700;">[QC] Run #${ev.run_number}</span><br>` +
+        `<strong>M${ev.magnitude.toFixed(1)}</strong> · D: ${ev.depth.toFixed(1)} km<br>` +
+        `${ev.time}<br><em>${ev.location}</em>`
+      );
     });
   }
 
