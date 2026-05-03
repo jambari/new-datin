@@ -29,6 +29,7 @@ from rest_framework.response import Response
 
 from .models import Event, QCRun, StationResult
 from .utils import get_on_duty_staff
+from repository.utils import calculate_remark
 
 import zoneinfo as _zi
 _WIT = _zi.ZoneInfo("Asia/Jayapura")
@@ -86,16 +87,20 @@ def ingest_event(request):
     if not pid:
         return Response({"detail": "event.public_id required"}, status=400)
 
+    lat = ev_data["latitude"]
+    lon = ev_data["longitude"]
+    region = calculate_remark(lat, lon) or ev_data.get("region", "")
+
     event, created_event = Event.objects.update_or_create(
         public_id=pid,
         defaults={
             "origin_time": _parse_iso(ev_data.get("origin_time")),
-            "latitude": ev_data["latitude"],
-            "longitude": ev_data["longitude"],
+            "latitude": lat,
+            "longitude": lon,
             "depth_km": ev_data["depth_km"],
             "magnitude": ev_data.get("magnitude"),
             "magnitude_type": ev_data.get("magnitude_type"),
-            "region": ev_data.get("region"),
+            "region": region,
         },
     )
 
@@ -110,12 +115,12 @@ def ingest_event(request):
         # row will keep the latest values, but this run will always
         # show what the analyst saw at this commit.
         snap_origin_time=_parse_iso(ev_data.get("origin_time")),
-        snap_latitude=ev_data.get("latitude"),
-        snap_longitude=ev_data.get("longitude"),
+        snap_latitude=lat,
+        snap_longitude=lon,
         snap_depth_km=ev_data.get("depth_km"),
         snap_magnitude=ev_data.get("magnitude"),
         snap_magnitude_type=ev_data.get("magnitude_type"),
-        snap_region=ev_data.get("region"),
+        snap_region=region,
         # SeisComP analyst-workflow state for this commit
         evaluation_mode=(ev_data.get("evaluation_mode") or "").lower() or None,
         evaluation_status=(ev_data.get("evaluation_status") or "").lower() or None,
