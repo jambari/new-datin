@@ -120,12 +120,13 @@
 .picks .delta-bad  { color:var(--red); font-weight:700; }
 .station-main { padding:1rem; display:flex; flex-direction:column; }
 .station-main img { width:100%; height:auto; display:block; border:1px solid var(--line); }
-.station-main .review { margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--line); display:flex; gap:.8rem; align-items:flex-start; flex-wrap:wrap; }
-.review textarea { flex:1; min-width:240px; min-height:60px; padding:.6rem; border:1px solid var(--line); background:var(--paper); font-family:'Newsreader',serif; font-size:.95rem; resize:vertical; }
-.review input.reviewer-name { padding:.5rem; border:1px solid var(--line); background:var(--paper); font-family:'JetBrains Mono',monospace; font-size:.8rem; width:130px; }
-.review select { padding:.5rem; border:1px solid var(--line); background:var(--paper); font-family:'JetBrains Mono',monospace; font-size:.8rem; }
-.review button { padding:.5rem 1.2rem; border:1px solid var(--ink); background:var(--ink); color:var(--paper); font-family:'JetBrains Mono',monospace; font-size:.8rem; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; transition:background .1s; }
-.review button:hover { background:var(--auto); border-color:var(--auto); }
+.diqc-strip { margin-top:1rem; padding:.6rem .8rem; border-top:1px dashed var(--line); display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; background:var(--paper-2); }
+.diqc-label { font-family:'JetBrains Mono',monospace; font-size:.68rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
+.diqc-colon { color:var(--muted); margin-right:.2rem; }
+.diqc-name { font-family:'JetBrains Mono',monospace; font-size:.82rem; font-weight:700; color:var(--ink); }
+.diqc-sep { color:var(--muted); font-size:.78rem; }
+.diqc-time { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--muted); margin-left:auto; }
+.diqc-unknown { font-family:'JetBrains Mono',monospace; font-size:.78rem; color:var(--muted); font-style:italic; }
 
 /* ── METHOD GUIDE TAB ─────────────────────────────────────── */
 .guide {
@@ -706,23 +707,19 @@
         <div style="padding:3rem;text-align:center;color:var(--muted);font-style:italic;">no waveform image available</div>
       {% endif %}
 
-      <form class="review" method="post" action="{% url 'qc_review:station_review' station_id=s.id %}">
-        {% csrf_token %}
-        <textarea name="note" placeholder="Reviewer note (e.g. 'auto P aligns with first motion, recommend re-pick')">{{ s.reviewer_note }}</textarea>
-        <input class="reviewer-name" type="text" name="reviewer" placeholder="initials" value="{{ s.reviewer_name }}">
-        <select name="action">
-          <option value="pending"  {% if s.reviewer_action == "pending" %}selected{% endif %}>Pending</option>
-          <option value="accepted" {% if s.reviewer_action == "accepted" %}selected{% endif %}>Accept analyst pick</option>
-          <option value="revised"  {% if s.reviewer_action == "revised" %}selected{% endif %}>Needs re-pick</option>
-          <option value="rejected" {% if s.reviewer_action == "rejected" %}selected{% endif %}>Reject station</option>
-        </select>
-        <button type="submit">Save</button>
-      </form>
-      {% if s.reviewed_at %}
-        <div class="mono" style="font-size:.72rem;color:var(--muted);margin-top:.4rem;">
-          reviewed {{ s.reviewed_at|date:"Y-m-d H:i" }} UTC{% if s.reviewer_name %} by {{ s.reviewer_name }}{% endif %}
-        </div>
-      {% endif %}
+      <div class="diqc-strip">
+        <span class="diqc-label">diQC Oleh</span><span class="diqc-colon">:</span>
+        {% if on_duty_qc %}
+          {% for duty in on_duty_qc %}
+            <span class="diqc-name">{{ duty.pegawai.nama }}</span>{% if not forloop.last %}<span class="diqc-sep">&amp;</span>{% endif %}
+          {% endfor %}
+        {% else %}
+          <span class="diqc-unknown">— tidak ada data jadwal</span>
+        {% endif %}
+        {% if run.committed_at %}
+          <span class="diqc-time">{{ run.committed_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT</span>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% empty %}

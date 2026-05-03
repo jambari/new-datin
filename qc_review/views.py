@@ -388,7 +388,8 @@ def event_detail(request, public_id, run_number=None):
         "all_runs": all_runs,
         "has_station_coords": has_station_coords,
         "comparison_json": _json.dumps(comparison),
-        "on_duty": get_on_duty_staff(event.origin_time),
+        "on_duty":     get_on_duty_staff(event.origin_time),
+        "on_duty_qc":  get_on_duty_staff(run.committed_at) if run else [],
     })
 
 
