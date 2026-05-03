@@ -6,13 +6,12 @@ station with status 'on', 'gap', or 'off'.  This command counts how many of
 those samples are 'on' or 'gap' for the target date and converts to a
 percentage.  A station with zero samples for that date gets 0%.
 
---backfill: when no samples exist, fall back to the ring-buffer coverage
-estimate from slinktool -Q.  Only useful for the first 1-2 days before
-sampling was activated — after that the buffer is too short to reach back.
+--days N  : process the last N calendar days (default 5).
+--backfill: for stations with no samples, fall back to slinktool ring-buffer
+            coverage estimate (useful for the first 1-2 days before sampling
+            was activated — the buffer does not reach further back).
 
-Run daily at 12:00 WIT (03:00 UTC) so the previous UTC day is fully sampled.
-
-Cron:
+Cron (runs daily at 12:00 WIT = 03:00 UTC):
   0 3 * * * /var/www/html/venv/bin/python /var/www/html/manage.py compute_accelero_availability >> /var/log/accelero_avail.log 2>&1
 """
 import re
@@ -74,42 +73,53 @@ class Command(BaseCommand):
     help = 'Compute accelerograph availability from StationAvailabilitySample records'
 
     def add_arguments(self, parser):
-        parser.add_argument('--date', help='Target date YYYY-MM-DD (default: yesterday UTC)')
+        parser.add_argument('--date', help='Target date YYYY-MM-DD; overrides --days')
+        parser.add_argument(
+            '--days',
+            type=int,
+            default=5,
+            help='Number of past days to process (default: 5)',
+        )
         parser.add_argument('--dry-run', action='store_true', help='Print without saving')
         parser.add_argument(
             '--backfill',
             action='store_true',
-            help='For stations with no samples, fall back to slinktool ring-buffer coverage estimate',
+            help='Fall back to slinktool ring-buffer estimate for stations with no samples',
         )
 
     def handle(self, *args, **options):
         if options['date']:
-            target = date.fromisoformat(options['date'])
+            targets = [date.fromisoformat(options['date'])]
         else:
-            target = date.today() - timedelta(days=1)
+            today = date.today()
+            targets = [today - timedelta(days=i) for i in range(1, options['days'] + 1)]
 
-        self.stdout.write(f'[compute_accelero_availability] target date: {target}')
-
-        day_start = datetime(target.year, target.month, target.day, tzinfo=timezone.utc)
-        day_end = day_start + timedelta(days=1)
-
-        # Fetch ring-buffer map only when needed
+        # Query ring buffer once upfront if backfill is requested
         ring_map = {}
         if options['backfill']:
             host = getattr(settings, 'SEEDLINK_HOST', '202.90.199.206')
             port = getattr(settings, 'SEEDLINK_PORT', 18123)
-            self.stdout.write(f'  Backfill mode: querying slinktool {host}:{port}')
+            self.stdout.write(f'Backfill mode: querying slinktool {host}:{port}')
             try:
                 result = subprocess.run(
                     ['slinktool', '-Q', f'{host}:{port}'],
                     capture_output=True, text=True, timeout=90,
                 )
                 ring_map = _parse_q(result.stdout)
-                self.stdout.write(f'  Ring buffer: {len(ring_map)} unique stations')
+                self.stdout.write(f'Ring buffer: {len(ring_map)} unique stations')
             except Exception as e:
-                self.stderr.write(f'  WARNING: slinktool failed: {e}')
+                self.stderr.write(f'WARNING: slinktool failed: {e}')
 
-        stations = Station.objects.filter(is_active=True)
+        stations = list(Station.objects.filter(is_active=True))
+
+        for target in targets:
+            self._process_date(target, stations, ring_map, options)
+
+    def _process_date(self, target, stations, ring_map, options):
+        self.stdout.write(f'\n--- {target} ---')
+        day_start = datetime(target.year, target.month, target.day, tzinfo=timezone.utc)
+        day_end = day_start + timedelta(days=1)
+
         saved = skipped = backfilled = 0
 
         for station in stations:
@@ -123,11 +133,15 @@ class Command(BaseCommand):
             if total > 0:
                 on_count = samples_qs.filter(status__in=('on', 'gap')).count()
                 pct = round(on_count / total * 100.0, 2)
-                method = 'samples'
+                method = f'samples ({on_count}/{total})'
             elif options['backfill']:
                 buf = ring_map.get((station.network, station.code))
                 if buf:
                     pct = _buffer_coverage(buf[0], buf[1], target)
+                    if pct == 0.0:
+                        self.stdout.write(f'  {station.code:6s}  ring-buffer does not reach this date — skip')
+                        skipped += 1
+                        continue
                     method = 'ring-buffer'
                     backfilled += 1
                 else:
@@ -151,9 +165,8 @@ class Command(BaseCommand):
                 saved += 1
 
         if options['dry_run']:
-            self.stdout.write('Dry run — nothing saved.')
+            self.stdout.write(f'  Dry run — nothing saved.')
         else:
             self.stdout.write(self.style.SUCCESS(
-                f'Saved {saved} records for {target} '
-                f'({backfilled} ring-buffer, {skipped} skipped)'
+                f'  Saved {saved} ({backfilled} ring-buffer, {skipped} skipped)'
             ))
