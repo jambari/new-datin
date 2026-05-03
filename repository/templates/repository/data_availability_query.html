@@ -2,552 +2,565 @@
 
 {% block content %}
 <style>
-    /* 1. Style Filter Box */
-    .custom-filter-box {
-        background-color: #ffffff;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 15px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .custom-select {
-        padding: 5px 10px;
-        border: 1px solid #999;
-        border-radius: 4px;
-        background-color: white;
-        font-size: 13px;
-        min-width: 100px;
-        color: #333;
-        cursor: pointer;
-    }
+  /* ── Matrix table ── */
+  .matrix-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+  .matrix-table th, .matrix-table td { text-align: center; border: 1px solid #ccc; padding: 0; height: 22px; font-size: 11px; }
+  .col-day { min-width: 24px; max-width: 24px; width: 24px; }
+  .matrix-input { width:100%; height:100%; text-align:center; border:none; background:transparent; font-size:11px; font-weight:600; color:#1f2937; padding:0; margin:0; }
+  .matrix-input:focus { outline:2px solid #3b82f6; background:white; z-index:10; position:relative; }
+  .matrix-input::-webkit-outer-spin-button, .matrix-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  .sticky-col { position:sticky; left:0; z-index:20; border-right:2px solid #9ca3af; }
+  thead th.sticky-col { background-color:#1f2937; color:white; z-index:30; }
+  tbody td.sticky-col { background-color:#f9fafb; color:#111827; z-index:20; }
 
-    .custom-btn {
-        background-color: #4f46e5;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 13px;
-        font-weight: bold;
-        cursor: pointer;
-    }
+  /* ── Tab bar ── */
+  .tab-bar { display:flex; border-bottom:2px solid #e5e7eb; margin-bottom:0; }
+  .tab-btn {
+    padding:8px 22px; font-size:13px; font-weight:600; letter-spacing:.04em;
+    border:none; background:none; cursor:pointer; color:#6b7280;
+    border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s;
+  }
+  .tab-btn:hover { color:#1f2937; }
+  .tab-btn.active { color:#4f46e5; border-bottom-color:#4f46e5; }
 
-    /* Style Tombol Hijau (Refresh) */
-    .custom-btn-green {
-        background-color: #10b981; /* Emerald-500 */
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 13px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-    .custom-btn-green:hover {
-        background-color: #059669;
-    }
+  /* ── Filter box ── */
+  .filter-box { background:#fff; padding:8px 14px; border:1px solid #d1d5db; border-radius:8px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .filter-select { padding:4px 8px; border:1px solid #9ca3af; border-radius:4px; font-size:13px; color:#374151; background:white; }
+  .filter-btn { background:#4f46e5; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:13px; font-weight:600; cursor:pointer; }
+  .filter-btn-green { background:#10b981; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:13px; font-weight:600; cursor:pointer; }
+  .filter-btn-green:hover { background:#059669; }
 
-    /* 2. Style Tabel COMPACT */
-    .matrix-table {
-        border-collapse: separate; /* Penting untuk sticky header */
-        border-spacing: 0;
-        width: 100%;
-    }
-    
-    .matrix-table th, .matrix-table td {
-        text-align: center;
-        border: 1px solid #ccc;
-        padding: 0;
-        height: 22px;
-        font-size: 11px;
-    }
+  /* ── Latency Map panel ── */
+  #panel-latency {
+    --bg:#0a0e14; --surface:#111720; --border:#1e2d45; --accent:#00c2ff;
+    --text:#e2eaf5; --muted:#5a7a9e; --on:#00e676; --gap:#ffd600; --off:#546e7a;
+    background:var(--bg); border-radius:8px; overflow:hidden;
+  }
+  .lat-topbar {
+    background:linear-gradient(90deg,#060c14,#0d1829,#050c18);
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; padding:10px 18px; gap:14px;
+    color:var(--text);
+  }
+  .lat-stat { display:flex; flex-direction:column; align-items:center; gap:1px; }
+  .lat-stat .lv { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:600; }
+  .lat-stat .ll { font-size:.6rem; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
+  .lat-stat.on .lv  { color:var(--on); }
+  .lat-stat.gap .lv { color:var(--gap); }
+  .lat-stat.off .lv { color:#78909c; }
+  .lat-hdiv { width:1px; height:30px; background:var(--border); margin:0 6px; }
+  .lat-btn {
+    display:flex; align-items:center; gap:7px; padding:5px 12px;
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    cursor:pointer; font-size:.72rem; color:var(--muted);
+    letter-spacing:.07em; text-transform:uppercase;
+    font-family:'IBM Plex Mono',monospace; transition:all .2s; margin-left:auto;
+  }
+  .lat-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .rdot { width:7px; height:7px; border-radius:50%; background:var(--on); animation:rdotpulse 2s infinite; }
+  @keyframes rdotpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
+  #latency-map { height:calc(100vh - 290px); min-height:400px; }
 
-    .col-day {
-        min-width: 24px; 
-        max-width: 24px;
-        width: 24px;
-    }
-
-    .matrix-input {
-        width: 100%;
-        height: 100%;
-        text-align: center;
-        border: none;
-        background: transparent;
-        font-size: 11px;
-        font-weight: 600;
-        color: #1f2937;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .matrix-input:focus {
-        outline: 2px solid #3b82f6;
-        background-color: white;
-        z-index: 10;
-        position: relative;
-    }
-
-    .matrix-input::-webkit-outer-spin-button,
-    .matrix-input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    /* --- PERBAIKAN STICKY COLUMN --- */
-    
-    /* Base Sticky Style */
-    .sticky-col {
-        position: sticky;
-        left: 0;
-        z-index: 20; 
-        border-right: 2px solid #9ca3af; 
-    }
-
-    /* KHUSUS HEADER (Gelap) */
-    thead th.sticky-col {
-        background-color: #1f2937; /* Gray-800 */
-        color: white;
-        z-index: 30; 
-    }
-
-    /* KHUSUS BODY (Terang) */
-    tbody td.sticky-col {
-        background-color: #f9fafb; /* Gray-50 */
-        color: #111827; /* Gray-900 */
-        z-index: 20;
-    }
+  /* Leaflet overrides inside our panel */
+  #panel-latency .leaflet-control-zoom { border:1px solid var(--border) !important; border-radius:8px !important; overflow:hidden; box-shadow:none !important; }
+  #panel-latency .leaflet-control-zoom a { background:rgba(10,14,20,.95) !important; color:var(--muted) !important; border-color:var(--border) !important; }
+  #panel-latency .leaflet-control-zoom a:hover { background:#1a2233 !important; color:var(--accent) !important; }
+  #panel-latency .leaflet-control-attribution { background:rgba(10,14,20,.8) !important; color:var(--muted) !important; font-size:9px !important; }
+  #panel-latency .leaflet-popup-content-wrapper {
+    background:rgba(8,12,18,.97) !important; border:1px solid var(--border) !important;
+    border-radius:10px !important; box-shadow:0 8px 30px rgba(0,0,0,.8) !important; padding:0 !important;
+  }
+  #panel-latency .leaflet-popup-tip-container { display:none; }
+  #panel-latency .leaflet-popup-content { margin:0 !important; width:auto !important; }
+  .lat-legend {
+    background:rgba(10,14,20,.93); border:1px solid var(--border);
+    border-radius:8px; padding:11px 15px; backdrop-filter:blur(8px); min-width:155px;
+    color:var(--text);
+  }
+  .lat-legend-title { font-size:.65rem; font-weight:700; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
+  .lat-legend-item { display:flex; align-items:center; gap:9px; margin-bottom:7px; font-size:.76rem; }
+  .lat-legend-item:last-child { margin-bottom:0; }
+  .tri { width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; flex-shrink:0; }
+  .tri.on  { border-bottom:13px solid #00e676; }
+  .tri.gap { border-bottom:13px solid #ffd600; }
+  .tri.off { border-bottom:13px solid #546e7a; }
+  .lat-range { margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:.62rem; color:var(--muted); }
+  .lat-infobox {
+    background:rgba(10,14,20,.93); border:1px solid var(--border);
+    border-radius:8px; padding:9px 13px; backdrop-filter:blur(8px);
+    font-family:'IBM Plex Mono',monospace; font-size:.68rem; color:var(--muted); text-align:right;
+  }
+  .lat-infobox .il { font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; margin-bottom:2px; }
+  .lat-infobox .iv { color:var(--accent); font-size:.73rem; }
+  .pu { padding:14px 17px; min-width:220px; color:var(--text); }
+  .pu-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:9px; }
+  .pu-sta { font-size:1.05rem; font-weight:700; color:#fff; letter-spacing:.04em; }
+  .pu-name { font-size:.7rem; color:var(--muted); margin-top:1px; }
+  .pu-badge { padding:3px 9px; border-radius:20px; font-size:.75rem; font-weight:700; letter-spacing:.1em; flex-shrink:0; }
+  .pu-badge.on  { background:rgba(0,230,118,.12); color:#00e676; border:1px solid rgba(0,230,118,.35); }
+  .pu-badge.gap { background:rgba(255,214,0,.12);  color:#ffd600; border:1px solid rgba(255,214,0,.35); }
+  .pu-badge.off { background:rgba(84,110,122,.2);  color:#78909c; border:1px solid rgba(84,110,122,.4); }
+  .pu-div { height:1px; background:var(--border); margin-bottom:9px; }
+  .pu-rows { display:flex; flex-direction:column; gap:5px; }
+  .pu-row { display:flex; justify-content:space-between; font-size:.72rem; }
+  .pu-row .k { color:var(--muted); }
+  .pu-row .v { font-family:'IBM Plex Mono',monospace; color:var(--text); font-size:.69rem; }
+  .pu-row .v.hi { color:var(--accent); }
 </style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <div class="flex h-screen bg-gray-100">
   {% include 'partials/_sidebar.html' %}
-  
   <div class="flex-1 flex flex-col overflow-hidden">
-    {% include 'partials/_topbar.html' %} 
+    {% include 'partials/_topbar.html' %}
 
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4">
-        <div class="container mx-auto">
-            
-            <!-- HEADER & FILTER -->
-            <div class="flex justify-between items-center mb-4">
-                <h1 class="text-xl font-bold text-gray-800">{{ page_title }}</h1>
-                
-                <form method="get" class="custom-filter-box">
-                    <div>
-                        <span class="text-xs font-bold text-gray-600">Bulan:</span>
-                        <select name="month" class="custom-select">
-                            {% for m in months_range %}
-                            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <span class="text-xs font-bold text-gray-600">Tahun:</span>
-                        <select name="year" class="custom-select">
-                            {% for y in years_range %}
-                            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="submit" class="custom-btn">Tampilkan</button>
-                </form>
+      <div class="container mx-auto">
+
+        <!-- PAGE HEADER -->
+        <div class="flex flex-wrap justify-between items-center mb-3 gap-2">
+          <h1 class="text-xl font-bold text-gray-800">{{ page_title }}</h1>
+
+          <!-- SHARED FILTER (Month / Year) -->
+          <form method="get" class="filter-box">
+            <input type="hidden" name="tab" id="hidden-tab" value="{{ request.GET.tab|default:'sla' }}">
+            <span class="text-xs font-bold text-gray-600">Bulan:</span>
+            <select name="month" class="filter-select">
+              {% for m in months_range %}
+                <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+              {% endfor %}
+            </select>
+            <span class="text-xs font-bold text-gray-600">Tahun:</span>
+            <select name="year" class="filter-select">
+              {% for y in years_range %}
+                <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="filter-btn">Tampilkan</button>
+          </form>
+        </div>
+
+        <!-- TAB NAVIGATION -->
+        <div class="tab-bar mb-0 bg-white rounded-t-lg px-4 pt-3 shadow-sm">
+          <button class="tab-btn {% if request.GET.tab != 'ola' and request.GET.tab != 'latency' %}active{% endif %}"
+                  onclick="switchTab('sla')">SLA</button>
+          <button class="tab-btn {% if request.GET.tab == 'ola' %}active{% endif %}"
+                  onclick="switchTab('ola')">OLA</button>
+          <button class="tab-btn {% if request.GET.tab == 'latency' %}active{% endif %}"
+                  onclick="switchTab('latency')">Latency Map</button>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- TAB 1 – SLA (Percentage Matrix) -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="panel-sla" class="tab-panel bg-white shadow rounded-b-lg rounded-tr-lg p-0 mb-4"
+             {% if request.GET.tab == 'ola' or request.GET.tab == 'latency' %}style="display:none"{% endif %}>
+
+          <!-- Percentage matrix -->
+          <div class="overflow-x-auto p-1">
+            <table class="matrix-table">
+              <thead class="bg-gray-800 text-white">
+                <tr>
+                  <th class="sticky-col py-1" style="width:30px;">No</th>
+                  <th class="sticky-col py-1" style="left:30px;width:60px;">Kode</th>
+                  {% for d in list_tanggal %}<th class="col-day">{{ d }}</th>{% endfor %}
+                  <th class="bg-gray-700" style="width:40px;">Avg</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white">
+                {% for row in tabel_data %}
+                <tr>
+                  <td class="sticky-col font-mono">{{ forloop.counter }}</td>
+                  <td class="sticky-col font-bold" style="left:30px;text-align:left;padding-left:4px;">{{ row.nama }}</td>
+                  {% for day in row.hari %}
+                  <td id="td-{{ row.nama }}-{{ day.day_num }}">
+                    <input type="number" class="matrix-input"
+                      value="{{ day.val|floatformat:0 }}"
+                      data-station="{{ row.nama }}" data-date="{{ day.full_date }}"
+                      min="0" max="100" onchange="handleEdit(this)">
+                  </td>
+                  {% endfor %}
+                  <td class="font-bold bg-gray-100" id="avg-{{ row.nama }}">{{ row.avg_row|floatformat:0 }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Legend -->
+          <div class="mx-3 mb-3 text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
+            <p class="font-bold mb-1">Keterangan Warna:</p>
+            <div class="flex gap-4 flex-wrap">
+              <div class="flex items-center gap-1"><div style="width:12px;height:12px;background:#f87171;border:1px solid #999;"></div>(0–24%)</div>
+              <div class="flex items-center gap-1"><div style="width:12px;height:12px;background:#fb923c;border:1px solid #999;"></div>(25–49%)</div>
+              <div class="flex items-center gap-1"><div style="width:12px;height:12px;background:#facc15;border:1px solid #999;"></div>(50–80%)</div>
+              <div class="flex items-center gap-1"><div style="width:12px;height:12px;background:#4ade80;border:1px solid #999;"></div>(&gt;80%)</div>
             </div>
+            <p class="mt-1 italic">* Klik angka untuk mengedit. Nilai 0 = data tidak tersedia.</p>
+          </div>
 
-            <!-- TABEL WRAPPER -->
-            <div class="bg-white shadow rounded-lg overflow-hidden mb-4">
-                <div class="overflow-x-auto"> 
-                    <table class="matrix-table">
-                        <thead class="bg-gray-800 text-white">
-                            <tr>
-                                <th class="sticky-col py-1" style="width: 30px;">No</th>
-                                <th class="sticky-col py-1" style="left: 30px; width: 60px;">Kode</th>
-                                
-                                {% for d in list_tanggal %}
-                                    <th class="col-day">{{ d }}</th>
-                                {% endfor %}
-                                
-                                <th class="bg-gray-700" style="width: 40px;">Avg</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white">
-                            {% for row in tabel_data %}
-                            <tr>
-                                <td class="sticky-col font-mono">{{ forloop.counter }}</td>
-                                <td class="sticky-col font-bold" style="left: 30px; text-align: left; padding-left: 4px;">{{ row.nama }}</td>
-                                
-                                {% for day in row.hari %}
-                                <td id="td-{{ row.nama }}-{{ day.day_num }}">
-                                    <input type="number" 
-                                        class="matrix-input"
-                                        value="{{ day.val|floatformat:0 }}"
-                                        data-station="{{ row.nama }}"
-                                        data-date="{{ day.full_date }}"
-                                        min="0" max="100"
-                                        onchange="handleEdit(this)">
-                                </td>
-                                {% endfor %}
-
-                                <td class="font-bold bg-gray-100" id="avg-{{ row.nama }}">{{ row.avg_row|floatformat:0 }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+          <!-- Chart -->
+          <div class="mx-3 mb-4 border border-gray-200 rounded p-3">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-base font-bold text-gray-800">SLA Stasiun {{ sensor_name }} — {{ month_name }} {{ selected_year }}</h3>
+              <button type="button" onclick="forceUpdateChart()" class="filter-btn-green flex items-center gap-2">
+                ↺ Refresh Chart
+              </button>
             </div>
-                            
-            <!-- LEGEND -->
-            <div class="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200 mb-6">
-                <p class="font-bold mb-1">Keterangan Warna:</p>
-                <div class="flex gap-4">
-                    <div class="flex items-center gap-1"><div style="width:12px; height:12px; background-color:#f87171; border:1px solid #999;"></div>(0 - 24%)</div>
-                    <div class="flex items-center gap-1"><div style="width:12px; height:12px; background-color:#fb923c; border:1px solid #999;"></div>(25 - 49%)</div>
-                    <div class="flex items-center gap-1"><div style="width:12px; height:12px; background-color:#facc15; border:1px solid #999;"></div>(50 - 80%)</div>
-                    <div class="flex items-center gap-1"><div style="width:12px; height:12px; background-color:#4ade80; border:1px solid #999;"></div>(> 80%)</div>
-                </div>
-                <p class="mt-1 italic">* Nilai default 0 jika data tidak tersedia. Klik angka untuk mengedit.</p>
-                <p class="mt-1 italic">* Data berasal dari waveform yang tersimpan di seiscomp silahkan periksa dengan 202.90.198.127/stasiun/res2.php </p>
+            <div style="position:relative;height:280px;width:100%;">
+              <canvas id="availabilityChart"></canvas>
             </div>
+          </div>
+        </div><!-- /panel-sla -->
 
-            <!-- ON/OFF TABLE -->
-            <div class="bg-white shadow rounded-lg overflow-hidden mb-4">
-                <div class="flex items-center justify-between px-4 py-3 border-b">
-                    <h2 class="text-base font-bold text-gray-800">Status ON/OFF Stasiun {{ sensor_name }} — {{ month_name }} {{ selected_year }}</h2>
-                    <div class="flex items-center gap-3 text-xs">
-                        <span class="flex items-center gap-1"><span style="display:inline-block;width:12px;height:12px;background:#4ade80;border:1px solid #999;"></span> ON (&ge;30%)</span>
-                        <span class="flex items-center gap-1"><span style="display:inline-block;width:12px;height:12px;background:#f87171;border:1px solid #999;"></span> OFF (&lt;30%)</span>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="matrix-table">
-                        <thead class="bg-gray-800 text-white">
-                            <tr>
-                                <th class="sticky-col py-1" style="width:30px;">No</th>
-                                <th class="sticky-col py-1" style="left:30px;width:60px;">Kode</th>
-                                {% for d in list_tanggal %}
-                                    <th class="col-day">{{ d }}</th>
-                                {% endfor %}
-                                <th style="width:54px;">ON/bln</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white">
-                            {% for row in on_off_data %}
-                            <tr>
-                                <td class="sticky-col font-mono">{{ forloop.counter }}</td>
-                                <td class="sticky-col font-bold" style="left:30px;text-align:left;padding-left:4px;">{{ row.nama }}</td>
-                                {% for day in row.hari %}
-                                <td style="background-color:{% if day.on %}#4ade80{% else %}#f87171{% endif %};color:{% if day.on %}#166534{% else %}#7f1d1d{% endif %};font-size:8px;font-weight:700;letter-spacing:-0.5px;">
-                                    {% if day.on %}ON{% else %}OFF{% endif %}
-                                </td>
-                                {% endfor %}
-                                <td class="font-bold bg-gray-100" style="font-size:11px;">{{ row.days_on }}/{{ list_tanggal|length }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- TAB 2 – OLA (ON/OFF Matrix) -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="panel-ola" class="tab-panel bg-white shadow rounded-b-lg rounded-tr-lg p-0 mb-4"
+             {% if request.GET.tab != 'ola' %}style="display:none"{% endif %}>
+
+          <div class="flex items-center justify-between px-4 py-3 border-b">
+            <h2 class="text-base font-bold text-gray-800">Status ON/OFF Stasiun {{ sensor_name }} — {{ month_name }} {{ selected_year }}</h2>
+            <div class="flex items-center gap-4 text-xs text-gray-600">
+              <span class="flex items-center gap-1">
+                <span style="display:inline-block;width:12px;height:12px;background:#4ade80;border:1px solid #999;"></span> ON (&ge;30%)
+              </span>
+              <span class="flex items-center gap-1">
+                <span style="display:inline-block;width:12px;height:12px;background:#f87171;border:1px solid #999;"></span> OFF (&lt;30%)
+              </span>
             </div>
+          </div>
 
-            <!-- CHART SECTION -->
-            <div class="bg-white shadow rounded-lg p-4 mb-6">
-                <!-- Header Chart dengan Tombol Refresh -->
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">SLA Stasiun {{ sensor_name }} Bulan {{ month_name }} {{ selected_year }}</h3>
-                    
-                    <!-- Tombol Refresh Chart Manual -->
-                    <button type="button" onclick="forceUpdateChart()" class="custom-btn-green flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Refresh Chart
-                    </button>
-                </div>
+          <div class="overflow-x-auto p-1">
+            <table class="matrix-table">
+              <thead class="bg-gray-800 text-white">
+                <tr>
+                  <th class="sticky-col py-1" style="width:30px;">No</th>
+                  <th class="sticky-col py-1" style="left:30px;width:60px;">Kode</th>
+                  {% for d in list_tanggal %}<th class="col-day">{{ d }}</th>{% endfor %}
+                  <th style="width:54px;">ON/bln</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white">
+                {% for row in on_off_data %}
+                <tr>
+                  <td class="sticky-col font-mono">{{ forloop.counter }}</td>
+                  <td class="sticky-col font-bold" style="left:30px;text-align:left;padding-left:4px;">{{ row.nama }}</td>
+                  {% for day in row.hari %}
+                  <td style="background-color:{% if day.on %}#4ade80{% else %}#f87171{% endif %};color:{% if day.on %}#166534{% else %}#7f1d1d{% endif %};font-size:8px;font-weight:700;letter-spacing:-0.5px;">
+                    {% if day.on %}ON{% else %}OFF{% endif %}
+                  </td>
+                  {% endfor %}
+                  <td class="font-bold bg-gray-100" style="font-size:11px;">{{ row.days_on }}/{{ list_tanggal|length }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div><!-- /panel-ola -->
 
-                <div style="position: relative; height: 300px; width: 100%;">
-                    <canvas id="availabilityChart"></canvas>
-                </div>
-            </div>
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- TAB 3 – Latency Map -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="panel-latency" class="tab-panel mb-4"
+             {% if request.GET.tab != 'latency' %}style="display:none"{% endif %}>
 
-        </div> <!-- Closing Container -->
+          <!-- Stats topbar -->
+          <div class="lat-topbar rounded-t-lg">
+            <div class="lat-stat on"><span class="lv" id="cnt-on">–</span><span class="ll">ON</span></div>
+            <div class="lat-hdiv"></div>
+            <div class="lat-stat gap"><span class="lv" id="cnt-gap">–</span><span class="ll">GAP</span></div>
+            <div class="lat-hdiv"></div>
+            <div class="lat-stat off"><span class="lv" id="cnt-off">–</span><span class="ll">OFF</span></div>
+            <div class="lat-hdiv"></div>
+            <span style="font-size:.75rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;">
+              SeedLink: 202.90.199.206:18123 · Auto-refresh 10 menit
+            </span>
+            <button class="lat-btn" id="btn-refresh" onclick="loadStations()">
+              <span class="rdot" id="rdot"></span><span>Refresh</span>
+            </button>
+          </div>
+
+          <!-- Map -->
+          <div id="latency-map"></div>
+        </div><!-- /panel-latency -->
+
+      </div><!-- /container -->
     </main>
   </div>
 </div>
 
-<!-- LIBRARIES -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- Plugin DataLabels untuk menampilkan angka di atas batang -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    const currentSensorType = "{{ sensor_type }}";
-    // Menggunakan variabel update_url jika ada, atau fallback ke default URL
-    const updateApiUrl = "{{ update_url|default:'' }}" || "{% url 'update_availability_cell' %}";
+const currentSensorType = "{{ sensor_type }}";
+const updateApiUrl = "{% url 'update_availability_cell' %}";
+let myChart = null;
+let mapInitialized = false;
+let latMap = null;
+let latMarkers = null;
+let latInterval = null;
 
-    // Variabel Global Chart
-    let myChart = null;
+// ── Tab switching ────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).style.display = '';
+  event.currentTarget.classList.add('active');
+  document.getElementById('hidden-tab').value = name;
 
-    // --- HELPER FUNCTIONS WARNA ---
-    function getChartColor(val) {
-        if (val > 80) return '#4ade80'; // Hijau
-        if (val >= 50) return '#facc15'; // Kuning
-        if (val >= 25) return '#fb923c'; // Oranye
-        return '#f87171'; // Merah
+  if (name === 'latency' && !mapInitialized) {
+    mapInitialized = true;
+    setTimeout(initLatencyMap, 50); // slight delay ensures div is visible
+  }
+  if (name === 'sla' && myChart) {
+    myChart.resize();
+  }
+}
+
+// ── SLA Colour helpers ───────────────────────────────────────────────
+function getChartColor(v) {
+  if (v > 80) return '#4ade80';
+  if (v >= 50) return '#facc15';
+  if (v >= 25) return '#fb923c';
+  return '#f87171';
+}
+function getChartBorderColor(v) {
+  if (v > 80) return '#22c55e';
+  if (v >= 50) return '#eab308';
+  if (v >= 25) return '#f97316';
+  return '#ef4444';
+}
+function setCellColor(input) {
+  const v = parseFloat(input.value);
+  const td = input.parentElement;
+  td.style.backgroundColor = '';
+  td.style.color = 'black';
+  if (v > 80)       td.style.backgroundColor = '#4ade80';
+  else if (v >= 50) td.style.backgroundColor = '#facc15';
+  else if (v >= 25) td.style.backgroundColor = '#fb923c';
+  else { td.style.backgroundColor = '#f87171'; td.style.color = 'white'; }
+}
+
+// ── SLA Edit & Save ──────────────────────────────────────────────────
+function handleEdit(input) {
+  const station = input.dataset.station;
+  const date = input.dataset.date;
+  let value = parseFloat(input.value);
+  if (isNaN(value)) value = 0;
+  value = Math.max(0, Math.min(100, value));
+  input.value = value;
+  setCellColor(input);
+  recalculateRowAvg(station);
+  fetch(updateApiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+    body: JSON.stringify({ station, date, value, sensor_type: currentSensorType }),
+  }).then(r => r.json()).then(d => {
+    if (d.status !== 'success') console.error('Save failed:', d.message);
+  }).catch(e => console.error(e));
+}
+function recalculateRowAvg(stationName) {
+  const inputs = document.querySelectorAll(`input[data-station='${stationName}']`);
+  let total = 0, count = 0;
+  inputs.forEach(i => { total += parseFloat(i.value || 0); count++; });
+  if (count > 0) {
+    const avg = parseFloat((total / count).toFixed(2));
+    const cell = document.getElementById('avg-' + stationName);
+    if (cell) cell.innerText = avg.toFixed(0);
+    updateSingleChartData(stationName, avg);
+  }
+}
+function updateSingleChartData(stationName, newAvg) {
+  if (!myChart) return;
+  const idx = myChart.data.labels.indexOf(stationName);
+  if (idx !== -1) {
+    myChart.data.datasets[0].data[idx] = newAvg;
+    myChart.data.datasets[0].backgroundColor[idx] = getChartColor(newAvg);
+    myChart.data.datasets[0].borderColor[idx] = getChartBorderColor(newAvg);
+    myChart.update();
+  }
+}
+function forceUpdateChart() {
+  if (!myChart) return;
+  const labels = myChart.data.labels;
+  const newData = labels.map(s => {
+    const c = document.getElementById('avg-' + s);
+    return c ? (parseFloat(c.innerText) || 0) : 0;
+  });
+  myChart.data.datasets[0].data = newData;
+  myChart.data.datasets[0].backgroundColor = newData.map(getChartColor);
+  myChart.data.datasets[0].borderColor = newData.map(getChartBorderColor);
+  myChart.update();
+}
+function renderChart() {
+  const ctx = document.getElementById('availabilityChart').getContext('2d');
+  if (myChart) myChart.destroy();
+  Chart.register(ChartDataLabels);
+  const labels = [{% for row in tabel_data %}"{{ row.nama }}",{% endfor %}];
+  const vals   = [{% for row in tabel_data %}{{ row.avg_row }},{% endfor %}];
+  myChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Rata-rata Availability (%)',
+        data: vals,
+        backgroundColor: vals.map(getChartColor),
+        borderColor: vals.map(getChartBorderColor),
+        borderWidth: 1, barPercentage: 0.6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 30 } },
+      scales: {
+        y: { beginAtZero:true, max:100, title:{ display:true, text:'Persentase (%)' } },
+        x: { ticks: { autoSkip:false, maxRotation:90, minRotation:45 } }
+      },
+      plugins: {
+        legend: { display:false },
+        datalabels: {
+          anchor:'end', align:'end', offset:-4, color:'#333',
+          font:{ weight:'bold', size:10 },
+          formatter: v => v > 0 ? Math.round(v) : '',
+        },
+        tooltip: { callbacks: { label: ctx => ctx.raw + '%' } }
+      }
     }
+  });
+}
 
-    function getChartBorderColor(val) {
-        if (val > 80) return '#22c55e';
-        if (val >= 50) return '#eab308';
-        if (val >= 25) return '#f97316';
-        return '#ef4444';
-    }
+// ── Latency Map ──────────────────────────────────────────────────────
+function makeMarkerIcon(status) {
+  const c = { on:'#00e676', gap:'#ffd600', off:'#546e7a' }[status] || '#546e7a';
+  const s = status === 'on' ? 20 : 17;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
+    <polygon points="${s/2},1 1,${s-1} ${s-1},${s-1}"
+      fill="${c}" stroke="${c==='#546e7a'?'#78909c':c}" stroke-width="1"
+      opacity="${status==='off'?0.55:1}"/>
+  </svg>`;
+  return L.divIcon({ html:svg, className:'', iconSize:[s,s], iconAnchor:[s/2,s], popupAnchor:[0,-s] });
+}
+function fmtLat(v) {
+  if (v === null || v === undefined) return 'N/A';
+  if (v < 60) return v.toFixed(1) + ' s';
+  if (v < 3600) return (v/60).toFixed(1) + ' menit';
+  return (v/3600).toFixed(1) + ' jam';
+}
+function fmtDt(iso) {
+  if (!iso) return 'N/A';
+  try {
+    return new Date(iso).toLocaleString('id-ID',{
+      timeZone:'Asia/Jayapura', day:'2-digit', month:'2-digit',
+      year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'
+    }) + ' WIT';
+  } catch { return iso; }
+}
+function buildPopup(s) {
+  return `<div class="pu">
+    <div class="pu-head">
+      <div><div class="pu-sta">${s.network}.${s.code}</div><div class="pu-name">${s.name}</div></div>
+      <div class="pu-badge ${s.status}">${s.status.toUpperCase()}</div>
+    </div>
+    <div class="pu-div"></div>
+    <div class="pu-rows">
+      <div class="pu-row"><span class="k">Channel</span><span class="v hi">${s.channel||'–'}</span></div>
+      <div class="pu-row"><span class="k">Latency</span><span class="v">${fmtLat(s.latency)}</span></div>
+      <div class="pu-row"><span class="k">Paket Terakhir</span><span class="v">${fmtDt(s.last_packet)}</span></div>
+      <div class="pu-row"><span class="k">Sensor</span><span class="v">${s.sensor||'–'}</span></div>
+      <div class="pu-row"><span class="k">Digitizer</span><span class="v">${s.digitizer||'–'}</span></div>
+      <div class="pu-row"><span class="k">Kota</span><span class="v">${s.kota||'–'}</span></div>
+      <div class="pu-row"><span class="k">Koordinat</span><span class="v">${s.latitude.toFixed(4)}°, ${s.longitude.toFixed(4)}°</span></div>
+      <div class="pu-row"><span class="k">Diperbarui</span><span class="v">${fmtDt(s.last_updated)}</span></div>
+    </div>
+  </div>`;
+}
 
-    // 1. Fungsi Mewarnai Cell Tabel
-    function setCellColor(input) {
-        const val = parseFloat(input.value);
-        const td = input.parentElement;
-        
-        td.style.backgroundColor = ''; 
-        td.style.color = 'black'; 
+function initLatencyMap() {
+  latMap = L.map('latency-map', { center:[-4.5, 138.5], zoom:6 });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; CARTO &copy; OpenStreetMap', maxZoom:18
+  }).addTo(latMap);
 
-        if (val > 80) {
-            td.style.backgroundColor = '#4ade80'; 
-        } else if (val >= 50) {
-            td.style.backgroundColor = '#facc15'; 
-        } else if (val >= 25) {
-            td.style.backgroundColor = '#fb923c'; 
-        } else {
-            td.style.backgroundColor = '#f87171'; 
-            td.style.color = 'white'; 
-        }
-    }
+  const legendCtrl = L.control({ position:'bottomleft' });
+  legendCtrl.onAdd = () => {
+    const d = L.DomUtil.create('div','lat-legend');
+    d.innerHTML = `<div class="lat-legend-title">Status Stasiun</div>
+      <div class="lat-legend-item"><div class="tri on"></div><span>ON</span><span class="lat-range">≤ 1800 s</span></div>
+      <div class="lat-legend-item"><div class="tri gap"></div><span>GAP</span><span class="lat-range">1800–3600 s</span></div>
+      <div class="lat-legend-item"><div class="tri off"></div><span>OFF</span><span class="lat-range">&gt; 3600 s</span></div>`;
+    return d;
+  };
+  legendCtrl.addTo(latMap);
 
-    // 2. Init Script
-    document.addEventListener("DOMContentLoaded", function() {
-        // Init warna tabel
-        document.querySelectorAll('.matrix-input').forEach(input => {
-            setCellColor(input);
-        });
-        
-        // Init Toggle Sidebar Mobile
-        const sidebar = document.getElementById('sidebar');
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('hidden');
-            });
-        }
+  const infoCtrl = L.control({ position:'bottomright' });
+  infoCtrl.onAdd = () => {
+    const d = L.DomUtil.create('div','lat-infobox');
+    d.innerHTML = `<div class="il">Last Updated</div><div class="iv" id="lat-lasttime">–</div>`;
+    return d;
+  };
+  infoCtrl.addTo(latMap);
 
-        // Render Chart
-        renderChart();
+  latMarkers = L.layerGroup().addTo(latMap);
+  loadStations();
+  latInterval = setInterval(loadStations, 10 * 60 * 1000);
+}
+
+async function loadStations() {
+  const dot = document.getElementById('rdot');
+  if (dot) dot.style.background = '#ffd600';
+  try {
+    const res = await fetch("{% url 'api_stations' %}");
+    const data = await res.json();
+    latMarkers.clearLayers();
+    let on=0, gap=0, off=0;
+    data.stations.forEach(s => {
+      if (s.status==='on') on++;
+      else if (s.status==='gap') gap++;
+      else off++;
+      L.marker([s.latitude, s.longitude], { icon:makeMarkerIcon(s.status) })
+        .bindPopup(buildPopup(s), { maxWidth:270 })
+        .addTo(latMarkers);
     });
+    document.getElementById('cnt-on').textContent  = on;
+    document.getElementById('cnt-gap').textContent = gap;
+    document.getElementById('cnt-off').textContent = off;
+    const el = document.getElementById('lat-lasttime');
+    if (el) el.textContent = new Date().toLocaleString('id-ID',{
+      timeZone:'Asia/Jayapura', hour:'2-digit', minute:'2-digit', second:'2-digit'
+    }) + ' WIT';
+    if (dot) dot.style.background = '#00e676';
+  } catch(e) {
+    if (dot) dot.style.background = '#ff5252';
+    console.error(e);
+  }
+}
 
-    // 3. Handle Edit & Save
-    function handleEdit(input) {
-        const station = input.dataset.station;
-        const date = input.dataset.date;
-        let value = parseFloat(input.value);
+// ── Init ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Sidebar toggle
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  if (sidebarToggle) sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('hidden'));
 
-        if (isNaN(value)) value = 0;
-        if (value > 100) value = 100;
-        if (value < 0) value = 0;
-        input.value = value; 
+  // Color matrix cells
+  document.querySelectorAll('.matrix-input').forEach(setCellColor);
 
-        // Update warna cell segera
-        setCellColor(input);
+  // Chart (SLA tab)
+  renderChart();
 
-        // --- OPTIMASI: HITUNG RATA-RATA & UPDATE CHART SEGERA (OPTIMISTIC UI) ---
-        // Kita panggil ini DI SINI agar chart langsung berubah tanpa menunggu server
-        recalculateRowAvg(station);
-
-        fetch(updateApiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({
-                station: station,
-                date: date,
-                value: value,
-                sensor_type: currentSensorType 
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.status !== 'success') {
-                console.error("Gagal menyimpan:", data.message);
-                // Opsional: Beri feedback visual/alert jika gagal
-            }
-        })
-        .catch(err => console.error("Error:", err));
-    }
-
-    // 4. Hitung Ulang Rata-rata Baris di Tabel
-    function recalculateRowAvg(stationName) {
-        const inputs = document.querySelectorAll(`input[data-station='${stationName}']`);
-        let total = 0;
-        let count = 0;
-        
-        inputs.forEach(inp => {
-            total += parseFloat(inp.value || 0);
-            count++;
-        });
-
-        if (count > 0) {
-            const avg = parseFloat((total / count).toFixed(2)); 
-            const avgCell = document.getElementById(`avg-${stationName}`);
-            if(avgCell) avgCell.innerText = avg.toFixed(0);
-
-            // --- UPDATE CHART SECARA REALTIME ---
-            updateSingleChartData(stationName, avg);
-        }
-    }
-
-    // --- 5. FUNGSI UPDATE CHART SPESIFIK (SINGLE BAR) ---
-    function updateSingleChartData(stationName, newAvg) {
-        if (!myChart) return;
-
-        const index = myChart.data.labels.indexOf(stationName);
-        if (index !== -1) {
-            // Update Data & Warna Bar
-            myChart.data.datasets[0].data[index] = newAvg;
-            myChart.data.datasets[0].backgroundColor[index] = getChartColor(newAvg);
-            myChart.data.datasets[0].borderColor[index] = getChartBorderColor(newAvg);
-            
-            // Trigger update chart (animasi otomatis)
-            myChart.update();
-        }
-    }
-
-    // --- 6. FUNGSI UPDATE PAKSA SEMUA CHART (DARI TOMBOL REFRESH) ---
-    function forceUpdateChart() {
-        if (!myChart) return;
-        
-        const labels = myChart.data.labels;
-        const newData = [];
-        const newColors = [];
-        const newBorders = [];
-        
-        // Loop setiap stasiun yang ada di chart
-        labels.forEach((stationName) => {
-            // Ambil nilai rata-rata terbaru langsung dari cell tabel 'Avg'
-            const avgCell = document.getElementById(`avg-${stationName}`);
-            let val = 0;
-            if (avgCell) {
-                val = parseFloat(avgCell.innerText) || 0;
-            }
-            
-            newData.push(val);
-            newColors.push(getChartColor(val));
-            newBorders.push(getChartBorderColor(val));
-        });
-        
-        // Terapkan data baru ke chart
-        myChart.data.datasets[0].data = newData;
-        myChart.data.datasets[0].backgroundColor = newColors;
-        myChart.data.datasets[0].borderColor = newBorders;
-        
-        myChart.update();
-    }
-
-    // --- 7. RENDER CHART JS AWAL ---
-    function renderChart() {
-        const ctx = document.getElementById('availabilityChart').getContext('2d');
-
-        // Hapus chart lama jika ada (mencegah memory leak / glitch)
-        if (myChart) {
-            myChart.destroy();
-        }
-
-        // Pastikan Plugin terdaftar
-        Chart.register(ChartDataLabels); 
-
-        const labels = [
-            {% for row in tabel_data %}
-                "{{ row.nama }}",
-            {% endfor %}
-        ];
-
-        const dataValues = [
-            {% for row in tabel_data %}
-                {{ row.avg_row }},
-            {% endfor %}
-        ];
-
-        const backgroundColors = dataValues.map(val => getChartColor(val));
-        const borderColors = dataValues.map(val => getChartBorderColor(val));
-
-        myChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Rata-rata Availability (%)',
-                    data: dataValues,
-                    backgroundColor: backgroundColors,
-                    borderColor: borderColors,
-                    borderWidth: 1,
-                    barPercentage: 0.6,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 30 // Memberi ruang ekstra di atas agar label tidak terpotong
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100, 
-                        title: { display: true, text: 'Persentase (%)' }
-                    },
-                    x: {
-                        ticks: {
-                            autoSkip: false,
-                            maxRotation: 90,
-                            minRotation: 45
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    // KONFIGURASI DATALABELS (Agar muncul di atas batang)
-                    datalabels: {
-                        anchor: 'end',   // Jangkar di ujung batang
-                        align: 'end',    // Taruh label di ATAS batang (luar)
-                        offset: -4,      // Jarak dari batang
-                        color: '#333',   
-                        font: {
-                            weight: 'bold',
-                            size: 10
-                        },
-                        formatter: function(value) {
-                            if (value > 0) {
-                                return Math.round(value); 
-                            } else {
-                                return ""; 
-                            }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.raw + '%';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
+  // If latency tab is active on load, init map
+  if ("{{ request.GET.tab|default:'sla' }}" === 'latency' && !mapInitialized) {
+    mapInitialized = true;
+    setTimeout(initLatencyMap, 50);
+  }
+});
 </script>
 {% endblock %}

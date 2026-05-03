@@ -39,7 +39,8 @@ urlpatterns = [
     path('perjadin/', include('perjadin.urls')),
     path('', include('arsip.urls')),
     path('station-map/', station_map_view, name='station_map'),
-    path('qc/', include('qc_review.urls')), 
+    path('qc/', include('qc_review.urls')),
+    path('', include('stations.urls')),
 ]
 
 # This tells Django to serve media files during development

@@ -72,7 +72,11 @@ INSTALLED_APPS = [
     'perjadin',
     'arsip',
     'qc_review',
+    'stations',
 ]
+
+SEEDLINK_HOST = '202.90.199.206'
+SEEDLINK_PORT = 18123
 
 # Add this to the bottom of the file
 INTERNAL_IPS = [
