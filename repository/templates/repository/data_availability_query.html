@@ -213,6 +213,45 @@
                 <p class="mt-1 italic">* Data berasal dari waveform yang tersimpan di seiscomp silahkan periksa dengan 202.90.198.127/stasiun/res2.php </p>
             </div>
 
+            <!-- ON/OFF TABLE -->
+            <div class="bg-white shadow rounded-lg overflow-hidden mb-4">
+                <div class="flex items-center justify-between px-4 py-3 border-b">
+                    <h2 class="text-base font-bold text-gray-800">Status ON/OFF Stasiun {{ sensor_name }} — {{ month_name }} {{ selected_year }}</h2>
+                    <div class="flex items-center gap-3 text-xs">
+                        <span class="flex items-center gap-1"><span style="display:inline-block;width:12px;height:12px;background:#4ade80;border:1px solid #999;"></span> ON (&ge;30%)</span>
+                        <span class="flex items-center gap-1"><span style="display:inline-block;width:12px;height:12px;background:#f87171;border:1px solid #999;"></span> OFF (&lt;30%)</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="matrix-table">
+                        <thead class="bg-gray-800 text-white">
+                            <tr>
+                                <th class="sticky-col py-1" style="width:30px;">No</th>
+                                <th class="sticky-col py-1" style="left:30px;width:60px;">Kode</th>
+                                {% for d in list_tanggal %}
+                                    <th class="col-day">{{ d }}</th>
+                                {% endfor %}
+                                <th style="width:54px;">ON/bln</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white">
+                            {% for row in on_off_data %}
+                            <tr>
+                                <td class="sticky-col font-mono">{{ forloop.counter }}</td>
+                                <td class="sticky-col font-bold" style="left:30px;text-align:left;padding-left:4px;">{{ row.nama }}</td>
+                                {% for day in row.hari %}
+                                <td style="background-color:{% if day.on %}#4ade80{% else %}#f87171{% endif %};color:{% if day.on %}#166534{% else %}#7f1d1d{% endif %};font-size:8px;font-weight:700;letter-spacing:-0.5px;">
+                                    {% if day.on %}ON{% else %}OFF{% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="font-bold bg-gray-100" style="font-size:11px;">{{ row.days_on }}/{{ list_tanggal|length }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- CHART SECTION -->
             <div class="bg-white shadow rounded-lg p-4 mb-6">
                 <!-- Header Chart dengan Tombol Refresh -->

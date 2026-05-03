@@ -688,22 +688,33 @@ def availability_matrix_view(request, sensor_type='seismo'):
         row['avg_row'] = round(total_val / num_days, 2)
         tabel_data.append(row)
 
-        context = {
-                'tabel_data': tabel_data,
-                'list_tanggal': list_tanggal,
-                'selected_month': selected_month,
-                'selected_year': selected_year,
-                'month_name': month_name,
-                'years_range': range(2020, 2030),
-                'months_range': range(1, 13),
-                
-                # --- VARIABEL BARU UNTUK JUDUL DINAMIS ---
-                'page_title': page_title,    # Untuk H1
-                'sensor_name': sensor_name,  # Untuk H3 (Grafik)
-                'sensor_type': sensor_type,  # Untuk AJAX
-            }
+    # Build ON/OFF view (< 30% = OFF)
+    on_off_data = []
+    for row in tabel_data:
+        on_off_row = {
+            'nama': row['nama'],
+            'hari': [
+                {'day_num': d['day_num'], 'full_date': d['full_date'], 'on': d['val'] >= 30}
+                for d in row['hari']
+            ],
+        }
+        on_off_row['days_on'] = sum(1 for d in on_off_row['hari'] if d['on'])
+        on_off_data.append(on_off_row)
 
-    # Kita gunakan template yang sama untuk keduanya
+    context = {
+        'tabel_data': tabel_data,
+        'on_off_data': on_off_data,
+        'list_tanggal': list_tanggal,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'month_name': month_name,
+        'years_range': range(2020, 2030),
+        'months_range': range(1, 13),
+        'page_title': page_title,
+        'sensor_name': sensor_name,
+        'sensor_type': sensor_type,
+    }
+
     return render(request, 'repository/data_availability_query.html', context)
 
 
