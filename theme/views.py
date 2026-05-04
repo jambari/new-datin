@@ -181,8 +181,6 @@ def _build_album_cover(albums):
 
 
 def landing(request):
-    if request.user.is_authenticated:
-        return redirect('dashboard')
     from arsip.models import Album
     albums = list(_build_album_cover(
         Album.objects.select_related('cover_photo')
