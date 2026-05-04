@@ -1,7 +1,8 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.utils import timezone
-from django.db.models import Sum, Max
+from django.db.models import Sum, Max, Count
 import datetime
 
 
@@ -160,3 +161,42 @@ def dashboard(request):
         'latest_qc_rows':      latest_qc_rows,
     }
     return render(request, 'dashboard.html', context)
+
+
+def _build_album_cover(albums):
+    """Attach cover_url and cover_is_video to each album queryset item."""
+    media = settings.MEDIA_URL
+    for a in albums:
+        cp = a.cover_photo
+        if cp and cp.thumbnail_path:
+            a.cover_url = media + cp.thumbnail_path
+            a.cover_is_video = cp.is_video
+        elif cp and not cp.is_video:
+            a.cover_url = media + cp.file_path
+            a.cover_is_video = False
+        else:
+            a.cover_url = ''
+            a.cover_is_video = cp.is_video if cp else False
+    return albums
+
+
+def landing(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    from arsip.models import Album
+    albums = list(_build_album_cover(
+        Album.objects.select_related('cover_photo')
+        .annotate(foto_count=Count('fotos'))
+        .order_by('-created_at')[:6]
+    ))
+    return render(request, 'landing.html', {'albums': albums})
+
+
+def our_work(request):
+    from arsip.models import Album
+    albums = list(_build_album_cover(
+        Album.objects.select_related('cover_photo')
+        .annotate(foto_count=Count('fotos'))
+        .order_by('-created_at')
+    ))
+    return render(request, 'our_work.html', {'albums': albums})
