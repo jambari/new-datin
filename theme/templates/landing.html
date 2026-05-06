@@ -271,7 +271,7 @@
 
 <!-- ── Stats Panel ─────────────────────────────────────────────────────── -->
 <div id="info-panel">
-  <h4>Peta Seismisitas Papua</h4>
+  <h4>Gempa 3 Hari Terakhir</h4>
   <div class="stat-row">
     <span class="stat-label">Total tampil</span>
     <span class="stat-val" id="ev-count">—</span>
@@ -285,7 +285,7 @@
     <span class="stat-val" id="ev-latest">—</span>
   </div>
   <div style="margin-top:0.5rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.5rem; color:#64748b; font-size:0.6rem;">
-    Data 365 hari terakhir
+    Data QC 3 hari terakhir
   </div>
 </div>
 
@@ -361,15 +361,11 @@
       fillOpacity: 0.75,
     });
 
-    // nearest_city is the calculated local label; loc is the vague upstream string
-    const cityStr = e.city || e.loc || 'Papua';
-    const locSub  = e.loc && e.loc !== e.city
-      ? '<br><span style="color:#64748b;font-size:0.6rem;">' + e.loc + '</span>'
-      : '';
+    const locLabel = e.loc || 'Papua';
 
     circle.bindPopup(
       '<div class="popup-mag">M ' + e.mag.toFixed(1) + '</div>' +
-      '<div class="popup-loc">' + cityStr + locSub + '</div>' +
+      '<div class="popup-loc">' + locLabel + '</div>' +
       '<div class="popup-meta">' +
         'Kedalaman: ' + e.depth + ' km<br>' +
         e.time +

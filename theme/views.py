@@ -183,29 +183,28 @@ def _build_album_cover(albums):
 def landing(request):
     import json
     from arsip.models import Album
-    from repository.models import EventBrowser
+    from qc_review.models import Event as QCEvent
     albums = list(_build_album_cover(
         Album.objects.select_related('cover_photo')
         .annotate(foto_count=Count('fotos'))
         .order_by('-created_at')[:6]
     ))
-    cutoff = timezone.now() - datetime.timedelta(days=365)
-    events_qs = EventBrowser.objects.filter(
+    cutoff = timezone.now() - datetime.timedelta(days=3)
+    events_qs = QCEvent.objects.filter(
         origin_time__gte=cutoff
     ).order_by('-origin_time').values(
-        'event_id', 'latitude', 'longitude', 'magnitude',
-        'depth_km', 'location', 'origin_time', 'nearest_city'
-    )[:500]
+        'public_id', 'latitude', 'longitude', 'magnitude',
+        'depth_km', 'region', 'origin_time',
+    )
     events_json = json.dumps([
         {
-            'id': e['event_id'],
-            'lat': e['latitude'],
-            'lng': e['longitude'],
-            'mag': round(e['magnitude'], 1),
+            'id':    e['public_id'],
+            'lat':   e['latitude'],
+            'lng':   e['longitude'],
+            'mag':   round(e['magnitude'], 1) if e['magnitude'] is not None else 0,
             'depth': round(e['depth_km'], 1),
-            'loc': e['location'],
-            'time': e['origin_time'].strftime('%Y-%m-%d %H:%M UTC'),
-            'city': e['nearest_city'],
+            'loc':   e['region'] or '',
+            'time':  e['origin_time'].strftime('%Y-%m-%d %H:%M UTC'),
         }
         for e in events_qs
     ])
