@@ -2,6 +2,52 @@
 {% load tz %}
 
 {% block qc_extra_head %}
+{% if is_public %}
+<style>
+/* ── public mode: hide admin chrome, inject clean layout ─── */
+#sidebar,
+.flex-1.flex.flex-col.overflow-hidden > header { display: none !important; }
+.flex.h-screen.bg-gray-100.overflow-hidden { overflow: visible !important; height: auto !important; display: block !important; }
+.flex-1.flex.flex-col.overflow-hidden { overflow: visible !important; display: block !important; }
+#qc-main { overflow: visible !important; padding: 72px 1.5rem 52px !important; }
+#pub-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2000;
+  background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+}
+.pub-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 1.25rem;
+  height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.pub-brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none !important; }
+.pub-brand img { height: 40px; object-fit: contain; }
+.pub-brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; line-height: 1.2; }
+.pub-brand-sub { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+.pub-back { font-size: 0.75rem; color: #475569; text-decoration: none !important; }
+.pub-back:hover { color: #b45309 !important; }
+#pub-footer {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000;
+  height: 36px; background: rgba(255,255,255,0.96);
+  border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
+  display: flex; align-items: center; justify-content: center;
+}
+#pub-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+</style>
+{% load static %}
+<div id="pub-header">
+  <div class="pub-inner">
+    <a href="{% url 'landing' %}" class="pub-brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="pub-brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="pub-brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'gempa_public' %}" class="pub-back">← Daftar Gempa</a>
+  </div>
+</div>
+<div id="pub-footer"><span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span></div>
+{% endif %}
 <style>
 /* ── layout ──────────────────────────────────────────────── */
 .crumb { font-family:'JetBrains Mono',monospace; font-size:.8rem; color:var(--muted); margin-bottom:1rem; }
@@ -498,6 +544,7 @@
 </div>
 
 <!-- ── Petugas Jaga ─────────────────────────────────────── -->
+{% if not is_public %}
 <div class="petugas-strip">
   <span class="strip-label">Petugas Jaga</span>
   <span class="wit-time">{{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y H:i:s" }} WIT</span>
@@ -514,6 +561,7 @@
     <span class="no-jadwal">— tidak ada data jadwal untuk tanggal ini</span>
   {% endif %}
 </div>
+{% endif %}
 
 <!-- ── run bar ──────────────────────────────────────────── -->
 {% if all_runs %}
@@ -707,6 +755,7 @@
         <div style="padding:3rem;text-align:center;color:var(--muted);font-style:italic;">no waveform image available</div>
       {% endif %}
 
+      {% if not is_public %}
       <div class="diqc-strip">
         <span class="diqc-label">diQC Oleh</span><span class="diqc-colon">:</span>
         {% if on_duty_qc %}
@@ -720,6 +769,7 @@
           <span class="diqc-time">{{ run.committed_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT</span>
         {% endif %}
       </div>
+      {% endif %}
     </div>
   </div>
   {% empty %}

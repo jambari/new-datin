@@ -242,15 +242,48 @@ def public_shakemap_detail(request, pk):
 
 
 def public_gempa_detail(request, public_id):
-    from qc_review.models import Event as QCEvent
+    import json as _json
+    from qc_review.models import Event as QCEvent, QCRun
     from django.shortcuts import get_object_or_404
     event = get_object_or_404(QCEvent, public_id=public_id)
     run = event.latest_run
     stations = list(run.station_results.all()) if run else []
-    return render(request, 'public_gempa_detail.html', {
-        'event': event,
-        'run': run,
-        'stations': stations,
+    all_runs = event.runs.all()
+    has_station_coords = any(
+        s.station_lat is not None and s.station_lon is not None
+        for s in stations
+    )
+    comparison = []
+    for s in stations:
+        def _fmt(dt):
+            return dt.strftime("%H:%M:%S.%f")[:-4] if dt else None
+        comparison.append({
+            "code":            f"{s.network}.{s.station}",
+            "distance_deg":    s.distance_deg,
+            "distance_class":  s.distance_class,
+            "qc_flag":         s.qc_flag,
+            "analyst_p":       _fmt(s.analyst_p),
+            "analyst_s":       _fmt(s.analyst_s),
+            "auto_p":          _fmt(s.auto_p),
+            "auto_s":          _fmt(s.auto_s),
+            "auto_p_prob":     round(s.auto_p_prob, 3) if s.auto_p_prob is not None else None,
+            "auto_s_prob":     round(s.auto_s_prob, 3) if s.auto_s_prob is not None else None,
+            "delta_p":         round(s.delta_p, 3) if s.delta_p is not None else None,
+            "delta_s":         round(s.delta_s, 3) if s.delta_s is not None else None,
+            "filter_band":     f"{s.filter_freqmin:.1f}–{s.filter_freqmax:.1f} Hz",
+            "reviewer_action": s.reviewer_action,
+        })
+    return render(request, 'qc_review/event_detail.html', {
+        'event':             event,
+        'run':               run,
+        'stations':          stations,
+        'summary':           run.qc_summary if run else {},
+        'all_runs':          all_runs,
+        'has_station_coords': has_station_coords,
+        'comparison_json':   _json.dumps(comparison),
+        'on_duty':           [],
+        'on_duty_qc':        [],
+        'is_public':         True,
     })
 
 
