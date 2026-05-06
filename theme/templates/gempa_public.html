@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static tz %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:    #111827;
+    --muted:  #6b7280;
+    --line:   #e5e7eb;
+    --paper2: #f9fafb;
+    --blue:   #1d4ed8;
+    --red:    #dc2626;
+    --amber:  #d97706;
+    --green:  #16a34a;
+  }
+
+  body { background: #f8fafc; }
+
+  /* ── Site header (same style as landing) ── */
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #b45309; }
+
+  /* ── Page body ── */
+  .page-wrap { max-width: 1100px; margin: 80px auto 40px; padding: 0 1.25rem; }
+
+  .page-title {
+    font-size: 1.4rem; font-weight: 700; color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+  .page-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Table ── */
+  .quake-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .quake-table thead th {
+    padding: 0.65rem 1rem;
+    text-align: left;
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--paper2);
+    border-bottom: 1px solid var(--line);
+  }
+  .quake-table tbody tr {
+    border-bottom: 1px solid var(--line);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .quake-table tbody tr:last-child { border-bottom: none; }
+  .quake-table tbody tr:hover { background: #eff6ff; }
+  .quake-table td { padding: 0.7rem 1rem; vertical-align: middle; }
+
+  .mag-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92rem;
+    font-weight: 700;
+    padding: 0.2em 0.55em;
+    border-radius: 6px;
+    color: #fff;
+    min-width: 52px;
+    text-align: center;
+  }
+  .mag-sm  { background: #16a34a; }
+  .mag-md  { background: #d97706; }
+  .mag-lg  { background: #dc2626; }
+  .mag-xl  { background: #7f1d1d; }
+
+  .pid { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+  .region { font-size: 0.82rem; color: var(--ink); }
+  .depth  { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--muted); }
+  .when   { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+
+  /* ── Pagination ── */
+  .pager {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.35rem; margin-top: 1.5rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+  }
+  .pager a, .pager span {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; height: 32px; padding: 0 0.5rem;
+    border: 1px solid var(--line); border-radius: 6px;
+    text-decoration: none; color: var(--ink);
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .pager a:hover { background: #eff6ff; border-color: var(--blue); color: var(--blue); }
+  .pager .current { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
+  .pager .disabled { color: var(--muted); pointer-events: none; }
+
+  /* ── Footer ── */
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">
+      ← Kembali
+    </a>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="page-title">Daftar Gempabumi</h1>
+  <p class="page-sub">{{ page_obj.paginator.count }} event &nbsp;·&nbsp; halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</p>
+
+  <table class="quake-table">
+    <thead>
+      <tr>
+        <th>Waktu (UTC)</th>
+        <th>Waktu (WIT)</th>
+        <th>Mag</th>
+        <th>Kedalaman</th>
+        <th>Lokasi</th>
+        <th>Koordinat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in page_obj %}
+      <tr onclick="window.location='{% url "qc_review:event_detail" public_id=event.public_id %}'">
+        <td class="when">{{ event.origin_time|date:"Y-m-d H:i:s" }}</td>
+        <td class="when">{{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y H:i" }}</td>
+        <td>
+          {% if event.magnitude is not None %}
+            {% if event.magnitude >= 6.0 %}
+              <span class="mag-badge mag-xl">M {{ event.magnitude|floatformat:1 }}</span>
+            {% elif event.magnitude >= 5.0 %}
+              <span class="mag-badge mag-lg">M {{ event.magnitude|floatformat:1 }}</span>
+            {% elif event.magnitude >= 3.0 %}
+              <span class="mag-badge mag-md">M {{ event.magnitude|floatformat:1 }}</span>
+            {% else %}
+              <span class="mag-badge mag-sm">M {{ event.magnitude|floatformat:1 }}</span>
+            {% endif %}
+          {% else %}
+            <span class="mag-badge mag-sm">—</span>
+          {% endif %}
+        </td>
+        <td class="depth">{{ event.depth_km|floatformat:0 }} km</td>
+        <td class="region">{{ event.region|default:"—" }}</td>
+        <td class="depth">{{ event.latitude|floatformat:2 }}, {{ event.longitude|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--muted);font-style:italic;">Tidak ada data</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Pagination -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pager">
+    {% if page_obj.has_previous %}
+      <a href="?page=1">&laquo;</a>
+      <a href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+    {% else %}
+      <span class="disabled">&laquo;</span>
+      <span class="disabled">&lsaquo;</span>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if num == page_obj.number %}
+        <span class="current">{{ num }}</span>
+      {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}
+        <a href="?page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+    {% else %}
+      <span class="disabled">&rsaquo;</span>
+      <span class="disabled">&raquo;</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<footer id="site-footer">
+  <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
+</footer>
+
+{% endblock %}

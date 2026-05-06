@@ -214,6 +214,15 @@ def landing(request):
     })
 
 
+def gempa_public(request):
+    from qc_review.models import Event as QCEvent
+    from django.core.paginator import Paginator
+    qs = QCEvent.objects.order_by('-origin_time')
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    return render(request, 'gempa_public.html', {'page_obj': page_obj})
+
+
 def our_work(request):
     from arsip.models import Album
     albums = list(_build_album_cover(
