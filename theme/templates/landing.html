@@ -315,8 +315,8 @@
 
   // ── Map init ──────────────────────────────────────────────
   const map = L.map('map', {
-    center: [-4.5, 138.0],
-    zoom: 6,
+    center: [-4.0, 136.5],
+    zoom: 7,
     zoomControl: true,
     attributionControl: true,
   });
@@ -361,12 +361,15 @@
       fillOpacity: 0.75,
     });
 
-    const locStr  = e.loc  || e.city || 'Papua';
-    const cityStr = e.city ? '<br><span style="color:#94a3b8">± ' + e.city + '</span>' : '';
+    // nearest_city is the calculated local label; loc is the vague upstream string
+    const cityStr = e.city || e.loc || 'Papua';
+    const locSub  = e.loc && e.loc !== e.city
+      ? '<br><span style="color:#64748b;font-size:0.6rem;">' + e.loc + '</span>'
+      : '';
 
     circle.bindPopup(
       '<div class="popup-mag">M ' + e.mag.toFixed(1) + '</div>' +
-      '<div class="popup-loc">' + locStr + cityStr + '</div>' +
+      '<div class="popup-loc">' + cityStr + locSub + '</div>' +
       '<div class="popup-meta">' +
         'Kedalaman: ' + e.depth + ' km<br>' +
         e.time +
