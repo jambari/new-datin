@@ -214,6 +214,46 @@ def landing(request):
     })
 
 
+def public_shakemap_list(request):
+    from repository.models import FeltEarthquake
+    from django.core.paginator import Paginator
+    qs = FeltEarthquake.objects.order_by('-event_datetime')
+    paginator = Paginator(qs, 15)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    return render(request, 'public_shakemap_list.html', {
+        'shakemap_list': page_obj.object_list,
+        'page_obj': page_obj,
+        'record_count': paginator.count,
+    })
+
+
+def public_shakemap_detail(request, pk):
+    from repository.models import FeltEarthquake, ShakemapEvent
+    from django.shortcuts import get_object_or_404
+    from datetime import timezone as dt_timezone, timedelta
+    obj = get_object_or_404(FeltEarthquake, pk=pk)
+    _WIB = dt_timezone(timedelta(hours=7))
+    wib_ts = obj.event_datetime.astimezone(_WIB).strftime("%Y%m%d%H%M%S")
+    shk_event = ShakemapEvent.objects.filter(event_id=wib_ts).first()
+    return render(request, 'public_shakemap_detail.html', {
+        'object': obj,
+        'shk_event': shk_event,
+    })
+
+
+def public_gempa_detail(request, public_id):
+    from qc_review.models import Event as QCEvent
+    from django.shortcuts import get_object_or_404
+    event = get_object_or_404(QCEvent, public_id=public_id)
+    run = event.latest_run
+    stations = list(run.station_results.all()) if run else []
+    return render(request, 'public_gempa_detail.html', {
+        'event': event,
+        'run': run,
+        'stations': stations,
+    })
+
+
 def gempa_public(request):
     from qc_review.models import Event as QCEvent
     from django.core.paginator import Paginator

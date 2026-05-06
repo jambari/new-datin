@@ -152,7 +152,7 @@
     </thead>
     <tbody>
       {% for event in page_obj %}
-      <tr onclick="window.location='{% url "qc_review:event_detail" public_id=event.public_id %}'">
+      <tr onclick="window.location='{% url "public_gempa_detail" public_id=event.public_id %}'">
         <td class="when">{{ event.origin_time|date:"Y-m-d H:i:s" }}</td>
         <td class="when">{{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y H:i" }}</td>
         <td>

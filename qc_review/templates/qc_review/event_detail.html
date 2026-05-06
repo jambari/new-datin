@@ -3,39 +3,6 @@
 
 {% block qc_extra_head %}
 <style>
-/* ── hide sidebar + admin topbar, fix layout ─────────────── */
-#sidebar { display: none !important; }
-.flex.h-screen.bg-gray-100.overflow-hidden { overflow: visible !important; height: auto !important; display: block !important; }
-.flex-1.flex.flex-col.overflow-hidden { overflow: visible !important; display: block !important; }
-.flex-1.flex.flex-col.overflow-hidden > header { display: none !important; }
-#qc-main { overflow: visible !important; padding: 72px 1.5rem 48px !important; max-width: 1200px; margin: 0 auto; }
-
-/* ── public header / footer ──────────────────────────────── */
-#site-header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 2000;
-  background: rgba(255,255,255,0.96);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(0,0,0,0.08);
-  box-shadow: 0 1px 8px rgba(0,0,0,0.08);
-}
-.pub-header-inner {
-  max-width: 1200px; margin: 0 auto; padding: 0 1.25rem;
-  height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-}
-.pub-brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none !important; }
-.pub-brand img { height: 40px; width: auto; object-fit: contain; }
-.pub-brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; line-height: 1.2; }
-.pub-brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
-.pub-back { font-size: 0.75rem; color: #475569; text-decoration: none !important; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
-.pub-back:hover { color: #b45309 !important; }
-#site-footer {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000;
-  height: 36px; background: rgba(255,255,255,0.96);
-  border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
-  display: flex; align-items: center; justify-content: center;
-}
-#site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
-
 /* ── layout ──────────────────────────────────────────────── */
 .crumb { font-family:'JetBrains Mono',monospace; font-size:.8rem; color:var(--muted); margin-bottom:1rem; }
 .crumb a { color:var(--muted); }
@@ -500,7 +467,7 @@
 {% endblock %}
 
 {% block qc_content %}
-<div class="crumb"><a href="{% url 'gempa_public' %}">← Daftar Gempa</a></div>
+<div class="crumb"><a href="{% url 'qc_review:event_list' %}">← all events</a></div>
 
 <!-- ── event header ─────────────────────────────────────── -->
 <div class="event-header">
@@ -530,7 +497,23 @@
   </div>
 </div>
 
-<!-- Petugas Jaga hidden from public view -->
+<!-- ── Petugas Jaga ─────────────────────────────────────── -->
+<div class="petugas-strip">
+  <span class="strip-label">Petugas Jaga</span>
+  <span class="wit-time">{{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y H:i:s" }} WIT</span>
+  <span style="color:var(--line);margin-right:.3rem;">|</span>
+  {% if on_duty %}
+    {% for duty in on_duty %}
+    <span class="petugas-chip">
+      <span class="chip-pola">{{ duty.pola.kode }}</span>
+      <span>{{ duty.pegawai.nama }}</span>
+      <span class="chip-time">{{ duty.pola.jam_mulai|time:"H:i" }}–{{ duty.pola.jam_selesai|time:"H:i" }}{% if duty.overnight %}+1{% endif %}</span>
+    </span>
+    {% endfor %}
+  {% else %}
+    <span class="no-jadwal">— tidak ada data jadwal untuk tanggal ini</span>
+  {% endif %}
+</div>
 
 <!-- ── run bar ──────────────────────────────────────────── -->
 {% if all_runs %}
@@ -724,7 +707,19 @@
         <div style="padding:3rem;text-align:center;color:var(--muted);font-style:italic;">no waveform image available</div>
       {% endif %}
 
-      <!-- diQC Oleh hidden from public view -->
+      <div class="diqc-strip">
+        <span class="diqc-label">diQC Oleh</span><span class="diqc-colon">:</span>
+        {% if on_duty_qc %}
+          {% for duty in on_duty_qc %}
+            <span class="diqc-name">{{ duty.pegawai.nama }}</span>{% if not forloop.last %}<span class="diqc-sep">&amp;</span>{% endif %}
+          {% endfor %}
+        {% else %}
+          <span class="diqc-unknown">— tidak ada data jadwal</span>
+        {% endif %}
+        {% if run.committed_at %}
+          <span class="diqc-time">{{ run.committed_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT</span>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% empty %}
@@ -1600,31 +1595,5 @@ document.querySelectorAll('#cmp-table thead th[data-col]').forEach(th => {
     .catch(() => { document.getElementById('map').innerHTML='<div style="padding:2rem;text-align:center;color:#666;font-family:monospace;font-size:.85rem;">Map unavailable</div>'; });
 })();
 {% endif %}
-</script>
-<script>
-// Inject public header + footer, hide admin chrome
-(function () {
-  // Insert public header
-  var header = document.createElement('header');
-  header.id = 'site-header';
-  header.innerHTML =
-    '<div class="pub-header-inner">' +
-      '<a href="/" class="pub-brand">' +
-        '<img src="/static/repository/images/logo-bmkg.png" alt="BMKG">' +
-        '<div>' +
-          '<div class="pub-brand-title">Stasiun Geofisika Kelas I Jayapura</div>' +
-          '<div class="pub-brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>' +
-        '</div>' +
-      '</a>' +
-      '<a href="/gempa/" class="pub-back">← Daftar Gempa</a>' +
-    '</div>';
-  document.body.insertBefore(header, document.body.firstChild);
-
-  // Insert public footer
-  var footer = document.createElement('footer');
-  footer.id = 'site-footer';
-  footer.innerHTML = '<span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>';
-  document.body.appendChild(footer);
-})();
 </script>
 {% endblock %}{# /qc_scripts #}

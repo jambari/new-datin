@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+  body { background: #f8fafc; }
+
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #b45309; }
+
+  .page-wrap { max-width: 1100px; margin: 80px auto 56px; padding: 0 1.25rem; }
+
+  .event-title { font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.3rem; }
+  .event-meta  { font-size: 0.78rem; color: #6b7280; margin-bottom: 1.75rem; line-height: 1.8; }
+  .event-meta strong { color: #374151; }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .gallery-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+  .gallery-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 8px;
+  }
+  .gallery-img {
+    width: 100%; height: 200px;
+    object-fit: contain;
+    border-radius: 6px;
+    cursor: zoom-in;
+    transition: opacity 0.15s;
+  }
+  .gallery-img:hover { opacity: 0.88; }
+  .gallery-empty {
+    height: 200px; display: flex; align-items: center; justify-content: center;
+    color: #d1d5db; font-size: 0.82rem; border: 1px dashed #d1d5db; border-radius: 6px;
+  }
+
+  /* Lightbox */
+  #lightbox {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.88); align-items: center; justify-content: center;
+  }
+  #lightbox.active { display: flex; }
+  #lightbox-img {
+    max-width: 90vw; max-height: 90vh; object-fit: contain;
+    border-radius: 4px; transform-origin: center center;
+    transition: transform 0.1s ease; cursor: grab; user-select: none;
+  }
+  #lightbox-img.grabbing { cursor: grabbing; }
+  #lightbox-caption {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.6); color: #fff; font-size: 12px;
+    padding: 4px 14px; border-radius: 999px; pointer-events: none;
+  }
+  #lightbox-close {
+    position: fixed; top: 16px; right: 20px;
+    color: #fff; font-size: 28px; cursor: pointer; line-height: 1; opacity: 0.8;
+  }
+  #lightbox-close:hover { opacity: 1; }
+  .lb-nav {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    color: #fff; font-size: 36px; cursor: pointer; opacity: 0.6; padding: 0 14px; user-select: none;
+  }
+  .lb-nav:hover { opacity: 1; }
+  #lb-prev { left: 8px; }
+  #lb-next { right: 8px; }
+  #lb-zoom {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px;
+  }
+  .lb-zoom-btn {
+    background: rgba(255,255,255,0.15); color: #fff;
+    border: 1px solid rgba(255,255,255,0.3); border-radius: 6px;
+    padding: 4px 12px; font-size: 18px; cursor: pointer; line-height: 1;
+  }
+  .lb-zoom-btn:hover { background: rgba(255,255,255,0.3); }
+
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+</style>
+{% endblock %}
+
+{% block content %}
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'public_shakemap_list' %}" class="header-back">← Daftar Shakemap</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="event-title">M{{ object.magnitude|floatformat:1 }} — {{ object.wilayah }}</h1>
+  <div class="event-meta">
+    <strong>Waktu</strong>: {{ object.event_datetime|date:"d F Y, H:i:s" }} UTC &nbsp;·&nbsp;
+    <strong>Koordinat</strong>: {{ object.latitude }}°, {{ object.longitude }}° &nbsp;·&nbsp;
+    <strong>Kedalaman</strong>: {{ object.depth_km|floatformat:0 }} km
+    {% if object.dirasakan %}&nbsp;·&nbsp; <strong>Dirasakan</strong>: {{ object.dirasakan }}{% endif %}
+  </div>
+
+  <div class="gallery-grid">
+
+    {% if shk_event and shk_event.shakemap_image %}
+    <div class="gallery-card">
+      <div class="gallery-label">Peta MMI</div>
+      <img src="{{ shk_event.shakemap_image.url }}" alt="Peta MMI" class="gallery-img" data-caption="Peta MMI">
+    </div>
+    {% else %}
+    <div class="gallery-card">
+      <div class="gallery-label">Peta MMI</div>
+      <div class="gallery-empty">Tidak tersedia</div>
+    </div>
+    {% endif %}
+
+    {% if object.img_loc_map %}
+    <div class="gallery-card">
+      <div class="gallery-label">Peta Lokasi</div>
+      <img src="{{ object.img_loc_map.url }}" alt="Peta Lokasi" class="gallery-img" data-caption="Peta Lokasi">
+    </div>
+    {% else %}
+    <div class="gallery-card">
+      <div class="gallery-label">Peta Lokasi</div>
+      <div class="gallery-empty">Tidak tersedia</div>
+    </div>
+    {% endif %}
+
+    {% if object.img_stationlist %}
+    <div class="gallery-card">
+      <div class="gallery-label">Daftar Stasiun MMI</div>
+      <img src="{{ object.img_stationlist.url }}" alt="Daftar Stasiun MMI" class="gallery-img" data-caption="Daftar Stasiun MMI">
+    </div>
+    {% else %}
+    <div class="gallery-card">
+      <div class="gallery-label">Daftar Stasiun MMI</div>
+      <div class="gallery-empty">Tidak tersedia</div>
+    </div>
+    {% endif %}
+
+    {% if object.img_impact_list %}
+    <div class="gallery-card">
+      <div class="gallery-label">Daftar Dampak</div>
+      <img src="{{ object.img_impact_list.url }}" alt="Daftar Dampak" class="gallery-img" data-caption="Daftar Dampak">
+    </div>
+    {% else %}
+    <div class="gallery-card">
+      <div class="gallery-label">Daftar Dampak</div>
+      <div class="gallery-empty">Tidak tersedia</div>
+    </div>
+    {% endif %}
+
+    {% if object.img_report_1 %}
+    <div class="gallery-card">
+      <div class="gallery-label">Laporan 1</div>
+      <img src="{{ object.img_report_1.url }}" alt="Laporan 1" class="gallery-img" data-caption="Laporan 1">
+    </div>
+    {% endif %}
+
+    {% if object.img_report_2 %}
+    <div class="gallery-card">
+      <div class="gallery-label">Laporan 2</div>
+      <img src="{{ object.img_report_2.url }}" alt="Laporan 2" class="gallery-img" data-caption="Laporan 2">
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <span id="lightbox-close">&times;</span>
+  <div id="lb-zoom">
+    <button class="lb-zoom-btn" id="lb-zoom-in">+</button>
+    <button class="lb-zoom-btn" id="lb-zoom-out">−</button>
+    <button class="lb-zoom-btn" id="lb-zoom-reset" style="font-size:13px;padding:4px 10px;">Reset</button>
+  </div>
+  <span class="lb-nav" id="lb-prev">&#8249;</span>
+  <img id="lightbox-img" src="" alt="">
+  <span class="lb-nav" id="lb-next">&#8250;</span>
+  <div id="lightbox-caption"></div>
+</div>
+
+<footer id="site-footer">
+  <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const images = Array.from(document.querySelectorAll('.gallery-img'));
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCaption = document.getElementById('lightbox-caption');
+  let currentIdx = 0, scale = 1, panX = 0, panY = 0;
+  let dragging = false, startX = 0, startY = 0, originPanX = 0, originPanY = 0;
+
+  function applyTransform() {
+    lbImg.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
+  }
+  function openAt(idx) {
+    currentIdx = idx; scale = 1; panX = 0; panY = 0;
+    lbImg.src = images[idx].src;
+    lbCaption.textContent = images[idx].dataset.caption || '';
+    applyTransform();
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function close() { lb.classList.remove('active'); document.body.style.overflow = ''; }
+  function navigate(dir) {
+    let next = currentIdx + dir;
+    if (next < 0) next = images.length - 1;
+    if (next >= images.length) next = 0;
+    openAt(next);
+  }
+
+  images.forEach((img, i) => img.addEventListener('click', () => openAt(i)));
+  document.getElementById('lightbox-close').addEventListener('click', close);
+  document.getElementById('lb-prev').addEventListener('click', () => navigate(-1));
+  document.getElementById('lb-next').addEventListener('click', () => navigate(1));
+  document.getElementById('lb-zoom-in').addEventListener('click',    () => { scale = Math.min(scale+0.25,5); applyTransform(); });
+  document.getElementById('lb-zoom-out').addEventListener('click',   () => { scale = Math.max(scale-0.25,0.5); applyTransform(); });
+  document.getElementById('lb-zoom-reset').addEventListener('click', () => { scale=1; panX=0; panY=0; applyTransform(); });
+
+  lbImg.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    scale = Math.min(Math.max(scale + (e.deltaY < 0 ? 0.15 : -0.15), 0.5), 5);
+    applyTransform();
+  }, { passive: false });
+
+  lbImg.addEventListener('mousedown', function(e) {
+    if (scale <= 1) return;
+    dragging = true; startX = e.clientX; startY = e.clientY;
+    originPanX = panX; originPanY = panY; lbImg.classList.add('grabbing');
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    panX = originPanX + (e.clientX - startX); panY = originPanY + (e.clientY - startY);
+    applyTransform();
+  });
+  document.addEventListener('mouseup', function() { dragging = false; lbImg.classList.remove('grabbing'); });
+  lb.addEventListener('click', function(e) { if (e.target === lb) close(); });
+  document.addEventListener('keydown', function(e) {
+    if (!lb.classList.contains('active')) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowRight') navigate(1);
+    if (e.key === 'ArrowLeft') navigate(-1);
+    if (e.key === '+') { scale = Math.min(scale+0.25,5); applyTransform(); }
+    if (e.key === '-') { scale = Math.max(scale-0.25,0.5); applyTransform(); }
+  });
+});
+</script>
+{% endblock %}

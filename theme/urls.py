@@ -5,5 +5,8 @@ urlpatterns = [
     path('', views.dashboard, name='dashboard'),
     path('landing/', views.landing, name='landing'),
     path('gempa/', views.gempa_public, name='gempa_public'),
+    path('gempa/<str:public_id>/', views.public_gempa_detail, name='public_gempa_detail'),
+    path('shakemap/', views.public_shakemap_list, name='public_shakemap_list'),
+    path('shakemap/<int:pk>/', views.public_shakemap_detail, name='public_shakemap_detail'),
     path('kegiatan/', views.our_work, name='our_work'),
 ]

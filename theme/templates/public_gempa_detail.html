@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load static tz %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { background: #f8fafc; }
+
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; }
+  .header-back:hover { color: #b45309; }
+
+  .page-wrap { max-width: 1100px; margin: 80px auto 56px; padding: 0 1.25rem; }
+
+  .event-card {
+    background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    padding: 1.5rem 1.75rem; margin-bottom: 1.5rem;
+    display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; align-items: start;
+  }
+  .mag-block {
+    text-align: center; min-width: 90px;
+  }
+  .mag-num {
+    font-size: 2.8rem; font-weight: 800; line-height: 1;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .mag-lbl { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7280; }
+  .mag-xl { color: #7f1d1d; } .mag-lg { color: #dc2626; }
+  .mag-md { color: #d97706; } .mag-sm { color: #16a34a; }
+
+  .event-info h1 { font-size: 1.25rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem; }
+  .meta-grid { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .meta-item { font-size: 0.78rem; color: #6b7280; }
+  .meta-item strong { color: #374151; }
+
+  .pill {
+    display: inline-block; padding: 0.15em 0.6em; border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid currentColor;
+  }
+  .pill-final   { color: #16a34a; background: rgba(22,163,74,0.08); }
+  .pill-prelim  { color: #6b7280; background: rgba(107,114,128,0.08); }
+  .pill-manual  { color: #374151; background: rgba(55,65,81,0.06); }
+  .pill-auto    { color: #dc2626; background: rgba(220,38,38,0.08); }
+
+  .section-title {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #6b7280; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.4rem; margin-bottom: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .station-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .station-table thead th {
+    padding: 0.55rem 0.85rem; text-align: left;
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #6b7280; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .station-table tbody tr { border-bottom: 1px solid #e5e7eb; }
+  .station-table tbody tr:last-child { border-bottom: none; }
+  .station-table td { padding: 0.55rem 0.85rem; font-size: 0.78rem; font-family: 'JetBrains Mono', monospace; color: #374151; }
+
+  .flag-good    { color: #16a34a; font-weight: 700; }
+  .flag-warn    { color: #d97706; font-weight: 700; }
+  .flag-bad     { color: #dc2626; font-weight: 700; }
+  .flag-unknown { color: #9ca3af; }
+
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+</style>
+{% endblock %}
+
+{% block content %}
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'gempa_public' %}" class="header-back">← Daftar Gempa</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+
+  <!-- Event card -->
+  <div class="event-card">
+    <div class="mag-block">
+      {% if event.magnitude is not None %}
+        {% if event.magnitude >= 6.0 %}<div class="mag-num mag-xl">{{ event.magnitude|floatformat:1 }}</div>
+        {% elif event.magnitude >= 5.0 %}<div class="mag-num mag-lg">{{ event.magnitude|floatformat:1 }}</div>
+        {% elif event.magnitude >= 3.0 %}<div class="mag-num mag-md">{{ event.magnitude|floatformat:1 }}</div>
+        {% else %}<div class="mag-num mag-sm">{{ event.magnitude|floatformat:1 }}</div>{% endif %}
+      {% else %}<div class="mag-num mag-sm">—</div>{% endif %}
+      <div class="mag-lbl">Magnitudo</div>
+    </div>
+    <div class="event-info">
+      <h1>{{ event.region|default:event.public_id }}</h1>
+      <div class="meta-grid">
+        <div class="meta-item"><strong>ID</strong> {{ event.public_id }}</div>
+        <div class="meta-item"><strong>Waktu (UTC)</strong> {{ event.origin_time|date:"d M Y, H:i:s" }}</div>
+        <div class="meta-item"><strong>Waktu (WIT)</strong> {{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y, H:i:s" }}</div>
+        <div class="meta-item"><strong>Koordinat</strong> {{ event.latitude|floatformat:3 }}°, {{ event.longitude|floatformat:3 }}°</div>
+        <div class="meta-item"><strong>Kedalaman</strong> {{ event.depth_km|floatformat:1 }} km</div>
+        {% if run %}
+        <div class="meta-item">
+          {% if run.evaluation_status == 'final' or run.evaluation_status == 'reviewed' %}
+            <span class="pill pill-final">{{ run.evaluation_status }}</span>
+          {% else %}
+            <span class="pill pill-prelim">{{ run.evaluation_status|default:"preliminary" }}</span>
+          {% endif %}
+          {% if run.evaluation_mode == 'manual' %}
+            <span class="pill pill-manual">manual</span>
+          {% elif run.evaluation_mode == 'automatic' %}
+            <span class="pill pill-auto">auto</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Station results -->
+  {% if stations %}
+  <p class="section-title">Hasil QC Stasiun</p>
+  <table class="station-table">
+    <thead>
+      <tr>
+        <th>Stasiun</th>
+        <th>Jarak (°)</th>
+        <th>QC Flag</th>
+        <th>P Analis</th>
+        <th>P Auto</th>
+        <th>ΔP (s)</th>
+        <th>S Analis</th>
+        <th>S Auto</th>
+        <th>ΔS (s)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in stations %}
+      <tr>
+        <td>{{ s.network }}.{{ s.station }}</td>
+        <td>{{ s.distance_deg|floatformat:2|default:"—" }}</td>
+        <td>
+          {% if s.qc_flag == 'good' %}<span class="flag-good">GOOD</span>
+          {% elif s.qc_flag == 'warn' %}<span class="flag-warn">WARN</span>
+          {% elif s.qc_flag == 'bad'  %}<span class="flag-bad">BAD</span>
+          {% else %}<span class="flag-unknown">{{ s.qc_flag|upper|default:"—" }}</span>{% endif %}
+        </td>
+        <td>{{ s.analyst_p|default:"—" }}</td>
+        <td>{{ s.auto_p|default:"—" }}</td>
+        <td>{% if s.delta_p is not None %}{% if s.delta_p > 0 %}+{% endif %}{{ s.delta_p|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td>{{ s.analyst_s|default:"—" }}</td>
+        <td>{{ s.auto_s|default:"—" }}</td>
+        <td>{% if s.delta_s is not None %}{% if s.delta_s > 0 %}+{% endif %}{{ s.delta_s|floatformat:2 }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:2.5rem;color:#9ca3af;font-style:italic;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+    Tidak ada data stasiun untuk event ini.
+  </div>
+  {% endif %}
+
+</div>
+
+<footer id="site-footer">
+  <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
+</footer>
+{% endblock %}
