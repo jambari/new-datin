@@ -105,7 +105,7 @@
     left: 0;
     right: 0;
     z-index: 0;
-    background: #0a1628;
+    background: #e8eef4;
   }
 
   /* ── Footer ──────────────────────────────────────────────── */
@@ -196,9 +196,9 @@
   .latest-star {
     font-size: 22px;
     line-height: 1;
-    color: #fbbf24;
-    text-shadow: 0 0 6px rgba(251,191,36,0.8), 0 0 12px rgba(251,191,36,0.4);
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+    color: #dc2626;
+    text-shadow: 0 0 6px rgba(220,38,38,0.8), 0 0 12px rgba(220,38,38,0.4);
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6));
     animation: star-pulse 1.6s ease-in-out infinite;
     display: block;
     text-align: center;
@@ -339,8 +339,8 @@
     attributionControl: true,
   });
 
-  // Dark tile layer
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  // Light tile layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
     subdomains: 'abcd',
     maxZoom: 19,
@@ -389,7 +389,7 @@
         popupAnchor: [0, -16],
       });
       L.marker([e.lat, e.lng], { icon: starIcon })
-        .bindPopup('<div style="font-size:0.65rem;color:#fbbf24;font-weight:700;margin-bottom:2px;">&#9733; Gempa Terbaru</div>' + popupHtml)
+        .bindPopup('<div style="font-size:0.65rem;color:#dc2626;font-weight:700;margin-bottom:2px;">&#9733; Gempa Terbaru</div>' + popupHtml)
         .addTo(map);
     } else {
       L.circleMarker([e.lat, e.lng], {
