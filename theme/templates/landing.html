@@ -17,9 +17,10 @@
     left: 0;
     right: 0;
     z-index: 1000;
-    background: rgba(10, 20, 40, 0.92);
+    background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
   }
   .header-inner {
     max-width: 1400px;
@@ -52,12 +53,12 @@
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.04em;
-    color: #ffffff;
+    color: #1e293b;
     text-transform: uppercase;
   }
   .brand-sub {
     font-size: 0.6rem;
-    color: #94a3b8;
+    color: #64748b;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
@@ -73,22 +74,22 @@
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.03em;
-    color: #cbd5e1;
+    color: #475569;
     text-decoration: none;
     border-radius: 6px;
     transition: color 0.2s, background 0.2s;
     white-space: nowrap;
   }
   .site-nav a:hover {
-    color: #fbbf24;
-    background: rgba(251,191,36,0.1);
+    color: #b45309;
+    background: rgba(180,83,9,0.08);
   }
   .nav-login {
     margin-left: 0.5rem;
     padding: 0.35rem 0.9rem !important;
-    background: #1e3a5f !important;
-    color: #93c5fd !important;
-    border: 1px solid rgba(147,197,253,0.3) !important;
+    background: #1e40af !important;
+    color: #fff !important;
+    border: none !important;
     border-radius: 6px;
   }
   .nav-login:hover {
@@ -115,8 +116,9 @@
     right: 0;
     z-index: 1000;
     height: 36px;
-    background: rgba(10, 20, 40, 0.95);
-    border-top: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -190,6 +192,22 @@
     flex-shrink: 0;
   }
 
+  /* ── Latest event star ───────────────────────────────────── */
+  .latest-star {
+    font-size: 22px;
+    line-height: 1;
+    color: #fbbf24;
+    text-shadow: 0 0 6px rgba(251,191,36,0.8), 0 0 12px rgba(251,191,36,0.4);
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+    animation: star-pulse 1.6s ease-in-out infinite;
+    display: block;
+    text-align: center;
+  }
+  @keyframes star-pulse {
+    0%, 100% { transform: scale(1);   opacity: 1; }
+    50%       { transform: scale(1.3); opacity: 0.8; }
+  }
+
   /* Popup override */
   .leaflet-popup-content-wrapper {
     background: #0f172a;
@@ -210,7 +228,7 @@
   @media (max-width: 768px) {
     .brand-sub { display: none; }
     .brand-title { font-size: 0.68rem; }
-    #nav-toggle { display: block; cursor: pointer; color: #cbd5e1; }
+    #nav-toggle { display: block; cursor: pointer; color: #475569; }
     .site-nav {
       display: none;
       position: fixed;
@@ -219,10 +237,10 @@
       right: 0;
       flex-direction: column;
       align-items: flex-start;
-      background: rgba(10,20,40,0.97);
+      background: rgba(255,255,255,0.97);
       padding: 0.75rem;
       gap: 0;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
     }
     .site-nav.open { display: flex; }
     .site-nav a { width: 100%; padding: 0.6rem 0.75rem; border-radius: 6px; }
@@ -348,31 +366,41 @@
 
   // ── Plot markers ──────────────────────────────────────────
   let maxMag = 0, latestTime = '';
-  EVENTS.forEach(function (e) {
+  EVENTS.forEach(function (e, idx) {
     if (e.mag > maxMag) maxMag = e.mag;
     if (!latestTime) latestTime = e.time;
 
-    const circle = L.circleMarker([e.lat, e.lng], {
-      radius:      magRadius(e.mag),
-      fillColor:   magColor(e.mag),
-      color:       'rgba(255,255,255,0.35)',
-      weight:      1,
-      opacity:     0.9,
-      fillOpacity: 0.75,
-    });
-
     const locLabel = e.loc || 'Papua';
-
-    circle.bindPopup(
+    const popupHtml =
       '<div class="popup-mag">M ' + e.mag.toFixed(1) + '</div>' +
       '<div class="popup-loc">' + locLabel + '</div>' +
       '<div class="popup-meta">' +
         'Kedalaman: ' + e.depth + ' km<br>' +
         e.time +
-      '</div>'
-    );
+      '</div>';
 
-    circle.addTo(map);
+    if (idx === 0) {
+      // Latest event — animated star marker
+      const starIcon = L.divIcon({
+        className: '',
+        html: '<span class="latest-star" title="Gempa Terbaru">&#9733;</span>',
+        iconSize:   [26, 26],
+        iconAnchor: [13, 13],
+        popupAnchor: [0, -16],
+      });
+      L.marker([e.lat, e.lng], { icon: starIcon })
+        .bindPopup('<div style="font-size:0.65rem;color:#fbbf24;font-weight:700;margin-bottom:2px;">&#9733; Gempa Terbaru</div>' + popupHtml)
+        .addTo(map);
+    } else {
+      L.circleMarker([e.lat, e.lng], {
+        radius:      magRadius(e.mag),
+        fillColor:   magColor(e.mag),
+        color:       'rgba(255,255,255,0.35)',
+        weight:      1,
+        opacity:     0.9,
+        fillOpacity: 0.75,
+      }).bindPopup(popupHtml).addTo(map);
+    }
   });
 
   // ── Stats panel ───────────────────────────────────────────
