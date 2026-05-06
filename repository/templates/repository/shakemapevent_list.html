@@ -1,89 +1,170 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+  body { background: #f8fafc; }
+
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #b45309; }
+
+  .page-wrap { max-width: 1100px; margin: 80px auto 56px; padding: 0 1.25rem; }
+
+  .page-title { font-size: 1.4rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem; }
+  .page-sub { font-size: 0.78rem; color: #6b7280; margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; }
+
+  .shk-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .shk-table thead th {
+    padding: 0.65rem 1rem;
+    text-align: left;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7280;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .shk-table tbody tr { border-bottom: 1px solid #e5e7eb; transition: background 0.15s; cursor: pointer; }
+  .shk-table tbody tr:last-child { border-bottom: none; }
+  .shk-table tbody tr:hover { background: #eff6ff; }
+  .shk-table td { padding: 0.75rem 1rem; vertical-align: middle; }
+
+  .mag-badge {
+    display: inline-block; font-weight: 700; font-size: 0.88rem;
+    padding: 0.2em 0.6em; border-radius: 6px; color: #fff; min-width: 52px; text-align: center;
+  }
+  .mag-xl  { background: #7f1d1d; }
+  .mag-lg  { background: #dc2626; }
+  .mag-md  { background: #d97706; }
+  .mag-sm  { background: #16a34a; }
+
+  .img-pill {
+    display: inline-block; font-size: 0.62rem; font-weight: 700;
+    padding: 0.1em 0.45em; border-radius: 4px; margin-right: 2px;
+    background: #dcfce7; color: #15803d; border: 1px solid #86efac;
+  }
+  .wilayah { font-size: 0.84rem; color: #111827; }
+  .meta    { font-size: 0.75rem; color: #6b7280; font-family: monospace; }
+
+  .pager {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.35rem; margin-top: 1.5rem; font-size: 0.8rem;
+  }
+  .pager a, .pager span {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; height: 32px; padding: 0 0.5rem;
+    border: 1px solid #e5e7eb; border-radius: 6px;
+    text-decoration: none; color: #111827; transition: background 0.15s;
+  }
+  .pager a:hover { background: #eff6ff; border-color: #1d4ed8; color: #1d4ed8; }
+  .pager .current { background: #1d4ed8; color: #fff; border-color: #1d4ed8; font-weight: 700; }
+  .pager .disabled { color: #9ca3af; pointer-events: none; }
+
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="flex h-screen bg-gray-100">
-  {% include 'partials/_sidebar.html' %}
-  <div class="flex-1 flex flex-col overflow-hidden">
-    {% include 'partials/_topbar.html' %} 
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
-      <h1 class="text-3xl font-bold text-gray-900">{{ record_count }} Felt Earthquake Events</h1>
-
-      <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Time (UTC)</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wilayah</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">M</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depth (km)</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
-              <th class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            {% for event in shakemap_list %}
-            <tr>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ event.event_datetime|date:"d M Y, H:i" }} UTC</td>
-              <td class="px-6 py-4 text-sm text-gray-500">{{ event.wilayah }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">{{ event.magnitude|floatformat:1 }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ event.depth_km|floatformat:0 }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                {% if event.img_stationlist %}<span class="mr-1 text-green-600" title="Station List">S</span>{% endif %}
-                {% if event.img_impact_list %}<span class="mr-1 text-green-600" title="Impact List">I</span>{% endif %}
-                {% if event.img_loc_map %}<span class="mr-1 text-green-600" title="Loc Map">L</span>{% endif %}
-                {% if event.img_report_1 %}<span class="mr-1 text-green-600" title="Report">R</span>{% endif %}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <div class="flex items-center justify-end space-x-4">
-                  <a href="{% url 'shakemap-detail' event.pk %}" class="text-indigo-600 hover:text-indigo-900">Detail</a>
-                  <a href="{% url 'shakemap-delete' event.pk %}" class="text-red-600 hover:text-red-900">Delete</a>
-                </div>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No felt earthquake data available.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
       </div>
-
-      <div class="pagination mt-6 flex justify-center items-center">
-          <span class="step-links">
-              {# First & Previous links #}
-              {% if page_obj.has_previous %}
-                  <a href="{% url 'shakemap-list' %}?page=1" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white rounded-md hover:bg-gray-300">&laquo; First</a>
-                  <a href="{% url 'shakemap-list' %}?page={{ page_obj.previous_page_number }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white rounded-md hover:bg-gray-300">Previous</a>
-              {% endif %}
-
-              {# Current page number #}
-              <span class="current px-4 py-2 text-sm font-medium">
-                  Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-              </span>
-
-              {# Next & Last links #}
-              {% if page_obj.has_next %}
-                  <a href="{% url 'shakemap-list' %}?page={{ page_obj.next_page_number }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white rounded-md hover:bg-gray-300">Next</a>
-                  <a href="{% url 'shakemap-list' %}?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white rounded-md hover:bg-gray-300">Last &raquo;</a>
-              {% endif %}
-          </span>
-      </div>
-
-    </main>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Beranda</a>
   </div>
-</div>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
+</header>
 
-    if (sidebarToggle) {
-      sidebarToggle.addEventListener('click', function() {
-        // This toggles the 'hidden' class on the sidebar for mobile
-        sidebar.classList.toggle('hidden');
-      });
-    }
-  });
-</script>
+<div class="page-wrap">
+  <h1 class="page-title">Daftar Shakemap</h1>
+  <p class="page-sub">{{ record_count }} event &nbsp;·&nbsp; halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</p>
+
+  <table class="shk-table">
+    <thead>
+      <tr>
+        <th>Waktu (UTC)</th>
+        <th>Wilayah</th>
+        <th>Mag</th>
+        <th>Kedalaman</th>
+        <th>Gambar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in shakemap_list %}
+      <tr onclick="window.location='{% url "shakemap-detail" event.pk %}'">
+        <td class="meta">{{ event.event_datetime|date:"d M Y, H:i" }} UTC</td>
+        <td class="wilayah">{{ event.wilayah }}</td>
+        <td>
+          {% if event.magnitude >= 6.0 %}<span class="mag-badge mag-xl">M {{ event.magnitude|floatformat:1 }}</span>
+          {% elif event.magnitude >= 5.0 %}<span class="mag-badge mag-lg">M {{ event.magnitude|floatformat:1 }}</span>
+          {% elif event.magnitude >= 3.0 %}<span class="mag-badge mag-md">M {{ event.magnitude|floatformat:1 }}</span>
+          {% else %}<span class="mag-badge mag-sm">M {{ event.magnitude|floatformat:1 }}</span>{% endif %}
+        </td>
+        <td class="meta">{{ event.depth_km|floatformat:0 }} km</td>
+        <td>
+          {% if event.img_stationlist %}<span class="img-pill">Stasiun</span>{% endif %}
+          {% if event.img_impact_list %}<span class="img-pill">Dampak</span>{% endif %}
+          {% if event.img_loc_map %}<span class="img-pill">Peta</span>{% endif %}
+          {% if event.img_report_1 %}<span class="img-pill">Laporan</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="text-align:center;padding:3rem;color:#9ca3af;font-style:italic;">Tidak ada data shakemap.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pager">
+    {% if page_obj.has_previous %}
+      <a href="?page=1">&laquo;</a>
+      <a href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+    {% else %}
+      <span class="disabled">&laquo;</span>
+      <span class="disabled">&lsaquo;</span>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      {% if num == page_obj.number %}<span class="current">{{ num }}</span>
+      {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}<a href="?page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+    {% else %}
+      <span class="disabled">&rsaquo;</span>
+      <span class="disabled">&raquo;</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<footer id="site-footer">
+  <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
+</footer>
 {% endblock %}
