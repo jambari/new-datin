@@ -192,6 +192,98 @@
     flex-shrink: 0;
   }
 
+  /* ── Weather carousel ───────────────────────────────────── */
+  #weather-panel {
+    position: fixed;
+    top: 70px;
+    right: 10px;
+    z-index: 900;
+    background: rgba(10, 20, 40, 0.88);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem 0.75rem;
+    color: #e2e8f0;
+    width: 200px;
+    font-size: 0.7rem;
+    user-select: none;
+  }
+  #weather-panel h4 {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    margin-bottom: 0.55rem;
+  }
+  .wx-label {
+    font-size: 0.58rem;
+    color: #94a3b8;
+    margin-bottom: 0.3rem;
+    letter-spacing: 0.03em;
+  }
+  .wx-body {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 0.45rem;
+  }
+  .wx-icon { font-size: 1.75rem; line-height: 1; flex-shrink: 0; }
+  .wx-desc {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    line-height: 1.3;
+  }
+  .wx-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.2rem 0.5rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 0.4rem;
+    margin-top: 0.1rem;
+  }
+  .wx-stat { font-size: 0.62rem; color: #94a3b8; }
+  .wx-stat strong { color: #e2e8f0; }
+  .wx-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+  }
+  .wx-btn {
+    background: rgba(255,255,255,0.08);
+    border: none;
+    color: #94a3b8;
+    border-radius: 5px;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .wx-btn:hover { background: rgba(255,255,255,0.18); color: #f1f5f9; }
+  .wx-dots {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+  }
+  .wx-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    transition: background 0.2s;
+  }
+  .wx-dot.active { background: #fbbf24; }
+  @media (max-width: 768px) {
+    #weather-panel { display: none; }
+  }
+
   /* ── Latest event star ───────────────────────────────────── */
   .latest-star {
     font-size: 22px;
@@ -317,6 +409,26 @@
   <div class="leg-row"><span class="leg-dot" style="background:#b91c1c;"></span><span>≥ 7.0</span></div>
 </div>
 
+<!-- ── Weather Carousel ────────────────────────────────────────────────── -->
+<div id="weather-panel">
+  <h4>&#127756; Prakiraan Cuaca Jayapura</h4>
+  <div class="wx-label" id="wx-label">—</div>
+  <div class="wx-body">
+    <div class="wx-icon" id="wx-icon">—</div>
+    <div class="wx-desc" id="wx-desc">—</div>
+  </div>
+  <div class="wx-stats">
+    <div class="wx-stat">&#127777; Suhu<br><strong id="wx-t">—</strong></div>
+    <div class="wx-stat">&#128167; Kelembaban<br><strong id="wx-hu">—</strong></div>
+    <div class="wx-stat">&#129657; Angin<br><strong id="wx-ws">—</strong></div>
+  </div>
+  <div class="wx-nav">
+    <button class="wx-btn" id="wx-prev">&#8249;</button>
+    <div class="wx-dots" id="wx-dots"></div>
+    <button class="wx-btn" id="wx-next">&#8250;</button>
+  </div>
+</div>
+
 <!-- ── Footer ──────────────────────────────────────────────────────────── -->
 <footer id="site-footer">
   <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
@@ -416,6 +528,76 @@
       nav.classList.toggle('open');
     });
   }
+})();
+</script>
+
+<script>
+(function () {
+  const WX = {{ weather_json|safe }};
+  if (!WX || !WX.length) {
+    const p = document.getElementById('weather-panel');
+    if (p) p.style.display = 'none';
+    return;
+  }
+
+  function wxEmoji(code) {
+    code = parseInt(code, 10);
+    if (code === 0)                   return '☀️';
+    if (code === 1 || code === 2)     return '🌤️';
+    if (code === 3 || code === 4)     return '☁️';
+    if (code === 5 || code === 10 || code === 45) return '🌫️';
+    if (code >= 60 && code <= 63)     return '🌧️';
+    if (code === 80)                  return '🌦️';
+    if (code >= 95)                   return '⛈️';
+    return '🌡️';
+  }
+
+  let idx = 0;
+  const dotsEl  = document.getElementById('wx-dots');
+  const labelEl = document.getElementById('wx-label');
+  const iconEl  = document.getElementById('wx-icon');
+  const descEl  = document.getElementById('wx-desc');
+  const tEl     = document.getElementById('wx-t');
+  const huEl    = document.getElementById('wx-hu');
+  const wsEl    = document.getElementById('wx-ws');
+
+  // Build dots
+  WX.forEach(function (_, i) {
+    const d = document.createElement('div');
+    d.className = 'wx-dot' + (i === 0 ? ' active' : '');
+    dotsEl.appendChild(d);
+  });
+
+  function render() {
+    const p = WX[idx];
+    labelEl.textContent = p.label || '—';
+    iconEl.textContent  = wxEmoji(p.code);
+    descEl.textContent  = p.desc || '—';
+    tEl.textContent     = p.t !== undefined && p.t !== '—' ? p.t + ' °C' : '—';
+    huEl.textContent    = p.hu !== undefined && p.hu !== '—' ? p.hu + ' %' : '—';
+    const ws = p.ws !== undefined && p.ws !== '—' ? p.ws + ' m/s' : '—';
+    wsEl.textContent    = ws;
+    dotsEl.querySelectorAll('.wx-dot').forEach(function (d, i) {
+      d.classList.toggle('active', i === idx);
+    });
+  }
+
+  document.getElementById('wx-prev').addEventListener('click', function () {
+    idx = (idx - 1 + WX.length) % WX.length;
+    render();
+  });
+  document.getElementById('wx-next').addEventListener('click', function () {
+    idx = (idx + 1) % WX.length;
+    render();
+  });
+
+  // Auto-advance every 5 seconds
+  setInterval(function () {
+    idx = (idx + 1) % WX.length;
+    render();
+  }, 5000);
+
+  render();
 })();
 </script>
 {% endblock %}
