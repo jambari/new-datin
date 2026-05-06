@@ -3,200 +3,392 @@
 
 {% block extra_head %}
 <style>
-  .hero-gradient {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
   }
-  .card-hover {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  /* ── Header ─────────────────────────────────────────────── */
+  #site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(10, 20, 40, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
   }
-  .card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
   }
-  .cover-img {
-    transition: transform 0.5s ease;
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    flex-shrink: 0;
   }
-  .group:hover .cover-img {
-    transform: scale(1.05);
+  .brand img {
+    height: 42px;
+    width: auto;
+    object-fit: contain;
+  }
+  .brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+  .brand-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #ffffff;
+    text-transform: uppercase;
+  }
+  .brand-sub {
+    font-size: 0.6rem;
+    color: #94a3b8;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ── Nav ─────────────────────────────────────────────────── */
+  .site-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+  }
+  .site-nav a {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: #cbd5e1;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+    white-space: nowrap;
+  }
+  .site-nav a:hover {
+    color: #fbbf24;
+    background: rgba(251,191,36,0.1);
+  }
+  .nav-login {
+    margin-left: 0.5rem;
+    padding: 0.35rem 0.9rem !important;
+    background: #1e3a5f !important;
+    color: #93c5fd !important;
+    border: 1px solid rgba(147,197,253,0.3) !important;
+    border-radius: 6px;
+  }
+  .nav-login:hover {
+    background: #1d4ed8 !important;
+    color: #fff !important;
+  }
+
+  /* ── Map ─────────────────────────────────────────────────── */
+  #map {
+    position: fixed;
+    top: 60px;
+    bottom: 36px;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    background: #0a1628;
+  }
+
+  /* ── Footer ──────────────────────────────────────────────── */
+  #site-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    height: 36px;
+    background: rgba(10, 20, 40, 0.95);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #site-footer span {
+    font-size: 0.65rem;
+    color: #64748b;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Info Panel ──────────────────────────────────────────── */
+  #info-panel {
+    position: fixed;
+    top: 70px;
+    left: 10px;
+    z-index: 900;
+    background: rgba(10, 20, 40, 0.88);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    color: #e2e8f0;
+    min-width: 190px;
+    max-width: 220px;
+    font-size: 0.7rem;
+  }
+  #info-panel h4 {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    margin-bottom: 0.5rem;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .stat-label { color: #94a3b8; }
+  .stat-val   { font-weight: 700; color: #f1f5f9; }
+
+  /* Legend */
+  #legend {
+    position: fixed;
+    bottom: 46px;
+    right: 10px;
+    z-index: 900;
+    background: rgba(10, 20, 40, 0.88);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.63rem;
+    color: #94a3b8;
+  }
+  #legend h5 {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    margin-bottom: 0.4rem;
+  }
+  .leg-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; }
+  .leg-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.4);
+    flex-shrink: 0;
+  }
+
+  /* Popup override */
+  .leaflet-popup-content-wrapper {
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    font-size: 0.72rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  .leaflet-popup-tip { background: #0f172a; }
+  .leaflet-popup-content { margin: 10px 14px; line-height: 1.5; }
+  .popup-mag { font-size: 1.2rem; font-weight: 800; color: #fbbf24; }
+  .popup-loc { font-weight: 600; color: #f1f5f9; margin-bottom: 2px; }
+  .popup-meta { color: #94a3b8; font-size: 0.65rem; }
+
+  /* Hamburger for small screens */
+  #nav-toggle { display: none; }
+  @media (max-width: 768px) {
+    .brand-sub { display: none; }
+    .brand-title { font-size: 0.68rem; }
+    #nav-toggle { display: block; cursor: pointer; color: #cbd5e1; }
+    .site-nav {
+      display: none;
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      align-items: flex-start;
+      background: rgba(10,20,40,0.97);
+      padding: 0.75rem;
+      gap: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .site-nav.open { display: flex; }
+    .site-nav a { width: 100%; padding: 0.6rem 0.75rem; border-radius: 6px; }
+    #info-panel { max-width: calc(100vw - 20px); }
   }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ── Navbar ────────────────────────────────────────────────── -->
-<nav class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-  <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <img src="{% static 'theme/images/logo.jpeg' %}" alt="Logo" class="h-10 w-10 object-contain rounded-full">
-      <div class="leading-tight">
-        <p class="font-bold text-gray-900 text-sm">Stasiun Geofisika Papua</p>
-        <p class="text-xs text-gray-400">BMKG · Badan Meteorologi Klimatologi dan Geofisika</p>
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header id="site-header">
+  <div class="header-inner">
+    <!-- Brand -->
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div class="brand-text">
+        <span class="brand-title">Stasiun Geofisika Kelas I Jayapura</span>
+        <span class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</span>
       </div>
-    </div>
-    <a href="{% url 'login' %}" class="btn btn-sm bg-slate-800 hover:bg-slate-700 text-white border-0">
-      Masuk
     </a>
-  </div>
-</nav>
 
-<!-- ── Hero ──────────────────────────────────────────────────── -->
-<section class="hero-gradient min-h-screen flex flex-col items-center justify-center text-center px-6 pt-16">
-  <div class="max-w-3xl mx-auto">
-    <span class="inline-block px-4 py-1 rounded-full text-xs font-semibold tracking-widest uppercase bg-amber-400/20 text-amber-400 mb-8">
-      Papua · Indonesia
-    </span>
-    <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-none tracking-tight mb-6">
-      Stasiun<br>
-      <span class="text-amber-400">Geofisika</span><br>
-      Papua
-    </h1>
-    <p class="text-slate-400 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-      Pemantauan gempabumi, meteorologi, dan geomagnetik untuk
-      keselamatan dan ilmu pengetahuan di Papua dan sekitarnya.
-    </p>
-    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-      <a href="{% url 'our_work' %}" class="btn btn-lg bg-amber-400 hover:bg-amber-500 text-slate-900 border-0 font-bold px-8">
-        Lihat Kegiatan Kami
-      </a>
-      <a href="{% url 'login' %}" class="btn btn-lg btn-ghost text-slate-300 hover:text-white hover:bg-white/10 border border-white/20 px-8">
-        Akses Sistem →
-      </a>
-    </div>
-  </div>
-  <!-- scroll cue -->
-  <div class="absolute bottom-8 text-slate-600 animate-bounce">
-    <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-    </svg>
-  </div>
-</section>
+    <!-- Hamburger -->
+    <button id="nav-toggle" aria-label="Toggle menu">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
 
-<!-- ── Tugas Kami ────────────────────────────────────────────── -->
-<section class="bg-white py-24">
-  <div class="max-w-7xl mx-auto px-6">
-    <div class="text-center mb-16">
-      <p class="text-xs font-semibold tracking-widest uppercase text-amber-500 mb-3">Tugas Kami</p>
-      <h2 class="text-3xl font-bold text-gray-900">Apa yang Kami Kerjakan</h2>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <!-- Seismologi -->
-      <div class="text-center px-6 py-8">
-        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <svg class="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M3 12h2l2-6 3 12 2-9 2 7 2-4h3"/>
-          </svg>
-        </div>
-        <h3 class="text-lg font-bold text-gray-900 mb-3">Seismologi</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">
-          Pemantauan dan analisis gempabumi secara real-time menggunakan jaringan akselerograf
-          dan seismometer di seluruh Papua.
-        </p>
-      </div>
-      <!-- Meteorologi -->
-      <div class="text-center px-6 py-8">
-        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <svg class="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
-          </svg>
-        </div>
-        <h3 class="text-lg font-bold text-gray-900 mb-3">Meteorologi</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">
-          Pemantauan cuaca, petir, dan curah hujan untuk mendukung peringatan dini
-          bencana hidrometeorologi di wilayah Papua.
-        </p>
-      </div>
-      <!-- Geomagnetik -->
-      <div class="text-center px-6 py-8">
-        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <svg class="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-        </div>
-        <h3 class="text-lg font-bold text-gray-900 mb-3">Geomagnetik</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">
-          Observasi medan magnet bumi secara kontinu untuk keperluan navigasi, penelitian,
-          dan pemantauan anomali geomagnetik.
-        </p>
-      </div>
-    </div>
+    <!-- Nav -->
+    <nav class="site-nav" id="site-nav">
+      <a href="{% url 'event_browser' %}">Gempa</a>
+      <a href="{% url 'lightning:nexstorm_query_page' %}">Petir</a>
+      <a href="{% url 'observation_list' %}">Magnetbumi</a>
+      <a href="{% url 'shakemap-list' %}">Shakemap</a>
+      <a href="https://s.id/surveiSGJ" target="_blank" rel="noopener">Survey Kepuasan</a>
+      <a href="{% url 'our_work' %}">Gallery</a>
+      <a href="#about">About Us</a>
+      <a href="{% url 'login' %}" class="nav-login">Masuk</a>
+    </nav>
   </div>
-</section>
+</header>
 
-<!-- ── Album Preview ─────────────────────────────────────────── -->
-{% if albums %}
-<section class="bg-gray-50 py-24">
-  <div class="max-w-7xl mx-auto px-6">
-    <div class="flex items-end justify-between mb-12">
-      <div>
-        <p class="text-xs font-semibold tracking-widest uppercase text-amber-500 mb-3">Galeri Kegiatan</p>
-        <h2 class="text-3xl font-bold text-gray-900">Apa yang Telah Kami Lakukan</h2>
-      </div>
-      <a href="{% url 'our_work' %}" class="hidden md:inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-amber-600 transition-colors">
-        Lihat Semua
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-        </svg>
-      </a>
-    </div>
+<!-- ── Earthquake Map ──────────────────────────────────────────────────── -->
+<div id="map"></div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {% for album in albums %}
-      <a href="{% url 'our_work' %}" class="group bg-white rounded-2xl overflow-hidden shadow-sm card-hover block">
-        <!-- Cover image -->
-        <div class="aspect-video bg-slate-100 overflow-hidden relative">
-          {% if album.cover_url and not album.cover_is_video %}
-          <img src="{{ album.cover_url }}" alt="{{ album.name }}"
-               class="cover-img w-full h-full object-cover">
-          {% elif album.cover_url and album.cover_is_video %}
-          <div class="w-full h-full flex items-center justify-center bg-slate-200">
-            <svg class="w-10 h-10 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-          </div>
-          {% else %}
-          <div class="w-full h-full flex items-center justify-center">
-            <svg class="w-12 h-12 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-          </div>
-          {% endif %}
-        </div>
-        <!-- Info -->
-        <div class="p-5">
-          <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-amber-600 transition-colors text-sm">
-            {{ album.name }}
-          </h3>
-          {% if album.description %}
-          <p class="text-gray-400 text-xs leading-relaxed line-clamp-2">{{ album.description }}</p>
-          {% endif %}
-          <p class="text-xs text-gray-300 mt-2">{{ album.foto_count }} foto</p>
-        </div>
-      </a>
-      {% endfor %}
-    </div>
-
-    <div class="text-center mt-10 md:hidden">
-      <a href="{% url 'our_work' %}" class="btn btn-outline btn-neutral btn-sm">Lihat Semua Kegiatan</a>
-    </div>
+<!-- ── Stats Panel ─────────────────────────────────────────────────────── -->
+<div id="info-panel">
+  <h4>Peta Seismisitas Papua</h4>
+  <div class="stat-row">
+    <span class="stat-label">Total tampil</span>
+    <span class="stat-val" id="ev-count">—</span>
   </div>
-</section>
-{% endif %}
-
-<!-- ── Footer ────────────────────────────────────────────────── -->
-<footer class="bg-slate-900 py-10">
-  <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-    <div class="flex items-center gap-3">
-      <img src="{% static 'theme/images/logo.jpeg' %}" alt="Logo"
-           class="h-8 w-8 object-contain rounded-full opacity-60">
-      <span class="text-slate-400 text-sm font-medium">Stasiun Geofisika Papua · BMKG</span>
-    </div>
-    <p class="text-slate-600 text-xs">© 2025 Stasiun Geofisika Papua. Hak cipta dilindungi.</p>
+  <div class="stat-row">
+    <span class="stat-label">Terbesar</span>
+    <span class="stat-val" id="ev-max">—</span>
   </div>
+  <div class="stat-row">
+    <span class="stat-label">Terbaru</span>
+    <span class="stat-val" id="ev-latest">—</span>
+  </div>
+  <div style="margin-top:0.5rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.5rem; color:#64748b; font-size:0.6rem;">
+    Data 365 hari terakhir
+  </div>
+</div>
+
+<!-- ── Legend ──────────────────────────────────────────────────────────── -->
+<div id="legend">
+  <h5>Magnitudo</h5>
+  <div class="leg-row"><span class="leg-dot" style="background:#22c55e;"></span><span>&lt; 3.0</span></div>
+  <div class="leg-row"><span class="leg-dot" style="background:#facc15;"></span><span>3.0 – 4.9</span></div>
+  <div class="leg-row"><span class="leg-dot" style="background:#f97316;"></span><span>5.0 – 5.9</span></div>
+  <div class="leg-row"><span class="leg-dot" style="background:#ef4444;"></span><span>6.0 – 6.9</span></div>
+  <div class="leg-row"><span class="leg-dot" style="background:#b91c1c;"></span><span>≥ 7.0</span></div>
+</div>
+
+<!-- ── Footer ──────────────────────────────────────────────────────────── -->
+<footer id="site-footer">
+  <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
 </footer>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  // ── Data from server ──────────────────────────────────────
+  const EVENTS = {{ events_json|safe }};
+
+  // ── Map init ──────────────────────────────────────────────
+  const map = L.map('map', {
+    center: [-4.5, 138.0],
+    zoom: 6,
+    zoomControl: true,
+    attributionControl: true,
+  });
+
+  // Dark tile layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // ── Helpers ───────────────────────────────────────────────
+  function magColor(m) {
+    if (m >= 7.0) return '#b91c1c';
+    if (m >= 6.0) return '#ef4444';
+    if (m >= 5.0) return '#f97316';
+    if (m >= 3.0) return '#facc15';
+    return '#22c55e';
+  }
+
+  function magRadius(m) {
+    if (m >= 7.0) return 18;
+    if (m >= 6.0) return 13;
+    if (m >= 5.0) return 9;
+    if (m >= 4.0) return 6;
+    if (m >= 3.0) return 4;
+    return 3;
+  }
+
+  // ── Plot markers ──────────────────────────────────────────
+  let maxMag = 0, latestTime = '';
+  EVENTS.forEach(function (e) {
+    if (e.mag > maxMag) maxMag = e.mag;
+    if (!latestTime) latestTime = e.time;
+
+    const circle = L.circleMarker([e.lat, e.lng], {
+      radius:      magRadius(e.mag),
+      fillColor:   magColor(e.mag),
+      color:       'rgba(255,255,255,0.35)',
+      weight:      1,
+      opacity:     0.9,
+      fillOpacity: 0.75,
+    });
+
+    const locStr  = e.loc  || e.city || 'Papua';
+    const cityStr = e.city ? '<br><span style="color:#94a3b8">± ' + e.city + '</span>' : '';
+
+    circle.bindPopup(
+      '<div class="popup-mag">M ' + e.mag.toFixed(1) + '</div>' +
+      '<div class="popup-loc">' + locStr + cityStr + '</div>' +
+      '<div class="popup-meta">' +
+        'Kedalaman: ' + e.depth + ' km<br>' +
+        e.time +
+      '</div>'
+    );
+
+    circle.addTo(map);
+  });
+
+  // ── Stats panel ───────────────────────────────────────────
+  document.getElementById('ev-count').textContent  = EVENTS.length;
+  document.getElementById('ev-max').textContent    = maxMag ? 'M ' + maxMag.toFixed(1) : '—';
+  document.getElementById('ev-latest').textContent = latestTime ? latestTime.slice(0, 10) : '—';
+
+  // ── Hamburger toggle ──────────────────────────────────────
+  const toggle = document.getElementById('nav-toggle');
+  const nav    = document.getElementById('site-nav');
+  if (toggle && nav) {
+    toggle.addEventListener('click', function () {
+      nav.classList.toggle('open');
+    });
+  }
+})();
+</script>
 {% endblock %}

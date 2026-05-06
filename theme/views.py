@@ -181,13 +181,38 @@ def _build_album_cover(albums):
 
 
 def landing(request):
+    import json
     from arsip.models import Album
+    from repository.models import EventBrowser
     albums = list(_build_album_cover(
         Album.objects.select_related('cover_photo')
         .annotate(foto_count=Count('fotos'))
         .order_by('-created_at')[:6]
     ))
-    return render(request, 'landing.html', {'albums': albums})
+    cutoff = timezone.now() - datetime.timedelta(days=365)
+    events_qs = EventBrowser.objects.filter(
+        origin_time__gte=cutoff
+    ).order_by('-origin_time').values(
+        'event_id', 'latitude', 'longitude', 'magnitude',
+        'depth_km', 'location', 'origin_time', 'nearest_city'
+    )[:500]
+    events_json = json.dumps([
+        {
+            'id': e['event_id'],
+            'lat': e['latitude'],
+            'lng': e['longitude'],
+            'mag': round(e['magnitude'], 1),
+            'depth': round(e['depth_km'], 1),
+            'loc': e['location'],
+            'time': e['origin_time'].strftime('%Y-%m-%d %H:%M UTC'),
+            'city': e['nearest_city'],
+        }
+        for e in events_qs
+    ])
+    return render(request, 'landing.html', {
+        'albums': albums,
+        'events_json': events_json,
+    })
 
 
 def our_work(request):
