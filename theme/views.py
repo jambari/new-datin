@@ -196,7 +196,7 @@ def landing(request):
     import json
     from arsip.models import Album
     from qc_review.models import Event as QCEvent
-    from repository.models import FeltEarthquake
+    from repository.models import FeltEarthquake, ShakemapEvent
     albums = list(_build_album_cover(
         Album.objects.select_related('cover_photo')
         .annotate(foto_count=Count('fotos'))
@@ -223,12 +223,14 @@ def landing(request):
     ])
     felt_count = FeltEarthquake.objects.filter(event_datetime__gte=cutoff).count()
     latest_felt = FeltEarthquake.objects.order_by('-event_datetime').first()
+    latest_shakemap = ShakemapEvent.objects.order_by('-event_time').first()
 
     return render(request, 'landing.html', {
         'albums': albums,
         'events_json': events_json,
         'felt_count': felt_count,
         'latest_felt': latest_felt,
+        'latest_shakemap': latest_shakemap,
     })
 
 
