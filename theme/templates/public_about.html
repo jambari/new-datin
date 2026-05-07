@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --ink:   #111827;
+    --muted: #6b7280;
+    --line:  #e5e7eb;
+    --blue:  #1d4ed8;
+    --accent: #b45309;
+  }
+  body { background: #f8fafc; }
+
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: var(--accent); }
+
+  .page-wrap { max-width: 900px; margin: 80px auto 60px; padding: 0 1.25rem; }
+
+  /* ── Hero ── */
+  .about-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    border-radius: 14px; padding: 2.5rem 2rem; margin-bottom: 1.75rem;
+    display: flex; align-items: center; gap: 2rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+  .hero-logo { flex-shrink: 0; }
+  .hero-logo img { height: 72px; width: auto; filter: brightness(1.1); }
+  .hero-text h1 { font-size: 1.35rem; font-weight: 800; color: #f1f5f9; margin-bottom: 0.3rem; letter-spacing: 0.01em; }
+  .hero-text p  { font-size: 0.82rem; color: #94a3b8; line-height: 1.6; margin: 0; }
+  .hero-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+  .hero-badge  {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px; padding: 0.2rem 0.7rem;
+    font-size: 0.63rem; font-weight: 600; color: #cbd5e1; letter-spacing: 0.04em;
+  }
+
+  /* ── Sections ── */
+  .section { margin-bottom: 1.75rem; }
+  .section-title {
+    font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 0.85rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .section-title::after { content:''; flex: 1; height: 1px; background: var(--line); }
+
+  /* ── Card base ── */
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.25rem 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  /* ── Profil card ── */
+  .profil-body { font-size: 0.84rem; color: var(--ink); line-height: 1.75; }
+  .profil-body strong { color: var(--blue); }
+  .coord-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1rem;
+  }
+  .coord-item {
+    background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;
+    padding: 0.6rem 0.85rem; text-align: center;
+  }
+  .coord-val  { font-size: 0.82rem; font-weight: 700; color: var(--ink); font-family: 'JetBrains Mono', monospace; }
+  .coord-lbl  { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 0.2rem; }
+
+  /* ── Map ── */
+  #station-map { height: 280px; border-radius: 10px; margin-top: 1rem; border: 1px solid var(--line); }
+
+  /* ── Timeline (Sejarah) ── */
+  .timeline { position: relative; padding-left: 1.75rem; }
+  .timeline::before {
+    content: ''; position: absolute; left: 6px; top: 4px; bottom: 4px;
+    width: 2px; background: var(--line);
+  }
+  .tl-item { position: relative; margin-bottom: 1.1rem; }
+  .tl-dot {
+    position: absolute; left: -1.75rem; top: 3px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--blue); border: 2px solid #fff;
+    box-shadow: 0 0 0 2px var(--blue);
+    flex-shrink: 0;
+  }
+  .tl-year {
+    font-size: 0.68rem; font-weight: 700; color: var(--blue);
+    font-family: 'JetBrains Mono', monospace; margin-bottom: 0.15rem;
+  }
+  .tl-text { font-size: 0.8rem; color: #374151; line-height: 1.65; }
+
+  /* ── Equipment grid ── */
+  .equip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+  .equip-card {
+    background: #f8fafc; border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.85rem 1rem; text-align: center;
+  }
+  .equip-icon { font-size: 1.6rem; margin-bottom: 0.35rem; }
+  .equip-name { font-size: 0.72rem; font-weight: 700; color: var(--ink); }
+  .equip-cat  { font-size: 0.6rem; color: var(--muted); margin-top: 0.15rem; }
+
+  /* ── Contact ── */
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .contact-item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    background: #f8fafc; border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.85rem 1rem;
+  }
+  .contact-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+  .contact-lbl  { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.2rem; }
+  .contact-val  { font-size: 0.8rem; font-weight: 600; color: var(--ink); }
+  .contact-val a { color: var(--blue); text-decoration: none; }
+  .contact-val a:hover { text-decoration: underline; }
+
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+
+  @media (max-width: 640px) {
+    .about-hero  { flex-direction: column; gap: 1rem; padding: 1.5rem; }
+    .coord-row   { grid-template-columns: 1fr 1fr; }
+    .equip-grid  { grid-template-columns: repeat(2, 1fr); }
+    .contact-grid{ grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Beranda</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+
+  <!-- Hero -->
+  <div class="about-hero">
+    <div class="hero-logo">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG Logo">
+    </div>
+    <div class="hero-text">
+      <h1>Stasiun Geofisika Kelas I Jayapura</h1>
+      <p>Unit Pelaksana Teknis (UPT) BMKG yang melaksanakan pengamatan gempabumi, magnetbumi, listrik udara, dan kualitas udara di wilayah Papua.</p>
+      <div class="hero-badges">
+        <span class="hero-badge">Gempabumi</span>
+        <span class="hero-badge">Magnetbumi</span>
+        <span class="hero-badge">Listrik Udara</span>
+        <span class="hero-badge">Kualitas Udara</span>
+        <span class="hero-badge">UPT BMKG</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profil -->
+  <div class="section">
+    <div class="section-title">Profil Stasiun</div>
+    <div class="card">
+      <p class="profil-body">
+        <strong>Stasiun Geofisika Kelas I Jayapura</strong> terletak di Jalan Drs. Krisna Sunarya No. 26,
+        Kelurahan Distrik Jayapura Utara, Provinsi Papua. Stasiun ini merupakan salah satu dari dua
+        Stasiun Geofisika yang terdapat di Papua dan merupakan Unit Pelaksana Teknis (UPT) yang
+        bertanggung jawab langsung kepada Kepala Badan Meteorologi, Klimatologi dan Geofisika.
+      </p>
+      <div class="coord-row">
+        <div class="coord-item">
+          <div class="coord-val">02°30'52.59"</div>
+          <div class="coord-lbl">Lintang Selatan</div>
+        </div>
+        <div class="coord-item">
+          <div class="coord-val">140°42'15.52"</div>
+          <div class="coord-lbl">Bujur Timur</div>
+        </div>
+        <div class="coord-item">
+          <div class="coord-val">444.97 m</div>
+          <div class="coord-lbl">Elevasi</div>
+        </div>
+      </div>
+      <div id="station-map"></div>
+    </div>
+  </div>
+
+  <!-- Sejarah -->
+  <div class="section">
+    <div class="section-title">Sejarah</div>
+    <div class="card">
+      <div class="timeline">
+
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1972</div>
+          <div class="tl-text">Stasiun Geofisika Kelas I Jayapura mulai beroperasi di bawah Lembaga Meteorologi dan Geofisika Jakarta.</div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">9 Februari 1973</div>
+          <div class="tl-text">Diresmikan operasionalnya oleh Menteri Perhubungan Drs. Frans Seda. Pertama kali dioperasikan peralatan <em>Seismograph Fotografik Sprengnether 3 Komponen</em>.</div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1977</div>
+          <div class="tl-text">Melalui kerjasama dengan UNESCO, diperoleh peralatan <em>Visual Seismograph Short Period SPS-1 (Kinematric)</em> dan <em>Strong Motion Accelerograph SMA-1</em> untuk deteksi gempabumi kuat.</div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1998</div>
+          <div class="tl-text">Kerjasama BMG dengan ERI Tokyo University dalam proyek OHP (<em>Ocean Hemisphere of Pacific Project</em>) yang diprakarsai JAMSTEC. Mengoperasikan <em>Digital Broadband Seismograph STS-1 Very Broadband Seismometer</em>.</div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">2000</div>
+          <div class="tl-text">Kerjasama BMG dengan CTBTO sebagai <em>Auxiliary Station</em> kode <strong>AS041</strong>. Mengoperasikan <em>Digital Broadband Seismograph CMG-3T</em>, kemudian pada 10 Desember 2011 digantikan <em>Digital Broadband Seismograph Trilium</em>.</div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">2005</div>
+          <div class="tl-text">Pasca gempabumi Aceh 26 Desember 2004, dibangun peralatan InaTEWS (<em>Indonesia Tsunami Early Warning System</em>) berupa <em>Digital Broadband Seismograph STS-2</em> dengan sarana komunikasi LIBRA.</div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">2010</div>
+          <div class="tl-text">Peralatan STS-2 dipindahkan ke Nabire. Fungsi InaTEWS di Jayapura hanya mengoperasikan peralatan CTBTO. Diperoleh tambahan <em>Portable Digital Seismograph Taide TDV-23S</em>.</div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">2012</div>
+          <div class="tl-text">Penambahan <em>Accelerograph Titan_0077</em> untuk mengukur nilai PGA (<em>Peak Ground Acceleration</em>).</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Peralatan -->
+  <div class="section">
+    <div class="section-title">Peralatan</div>
+    <div class="equip-grid">
+      <div class="equip-card">
+        <div class="equip-icon">🌐</div>
+        <div class="equip-name">SeisComP3</div>
+        <div class="equip-cat">Akuisisi &amp; Analisis Seismik</div>
+      </div>
+      <div class="equip-card">
+        <div class="equip-icon">🧲</div>
+        <div class="equip-name">LEMI-018</div>
+        <div class="equip-cat">Sensor Magnetbumi</div>
+      </div>
+      <div class="equip-card">
+        <div class="equip-icon">⚡</div>
+        <div class="equip-name">NextStorm</div>
+        <div class="equip-cat">Detektor Listrik Udara</div>
+      </div>
+      <div class="equip-card">
+        <div class="equip-icon">📡</div>
+        <div class="equip-name">Streckeisen STS-1</div>
+        <div class="equip-cat">Broadband Seismometer</div>
+      </div>
+      <div class="equip-card">
+        <div class="equip-icon">📊</div>
+        <div class="equip-name">Accelerograph SMA-TITAN</div>
+        <div class="equip-cat">Pengukur PGA</div>
+      </div>
+      <div class="equip-card">
+        <div class="equip-icon">🧲</div>
+        <div class="equip-name">MAGDAS</div>
+        <div class="equip-cat">Magnetometer</div>
+      </div>
+      <div class="equip-card">
+        <div class="equip-icon">🔭</div>
+        <div class="equip-name">Teropong Hila Vixen GP-2</div>
+        <div class="equip-cat">Observasi Astronomi</div>
+      </div>
+      <div class="equip-card">
+        <div class="equip-icon">📐</div>
+        <div class="equip-name">Theodolit DIM</div>
+        <div class="equip-cat">Survei Geomagnet Absolut</div>
+      </div>
+      <div class="equip-card">
+        <div class="equip-icon">🌫️</div>
+        <div class="equip-name">HV Sampler</div>
+        <div class="equip-cat">Kualitas Udara</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kontak -->
+  <div class="section">
+    <div class="section-title">Kontak</div>
+    <div class="contact-grid">
+      <div class="contact-item">
+        <div class="contact-icon">📍</div>
+        <div>
+          <div class="contact-lbl">Alamat</div>
+          <div class="contact-val">Jl. Drs. Krisna Sunarya No. 26, Jayapura Utara, Papua 99613</div>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">📞</div>
+        <div>
+          <div class="contact-lbl">Telepon</div>
+          <div class="contact-val">(0967) 533 533</div>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">✉️</div>
+        <div>
+          <div class="contact-lbl">Email</div>
+          <div class="contact-val"><a href="mailto:stageof.angkasa@bmkg.go.id">stageof.angkasa@bmkg.go.id</a></div>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-icon">🌐</div>
+        <div>
+          <div class="contact-lbl">Website Induk</div>
+          <div class="contact-val"><a href="https://bmkg.go.id" target="_blank" rel="noopener">bmkg.go.id</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer id="site-footer">
+  <span>© {% now "Y" %} Stasiun Geofisika Kelas I Jayapura — BMKG</span>
+</footer>
+
+<script>
+(function () {
+  var map = L.map('station-map', { zoomControl: true, scrollWheelZoom: false })
+              .setView([-2.5145, 140.704], 15);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+  }).addTo(map);
+  var icon = L.divIcon({
+    className: '',
+    html: '<div style="width:14px;height:14px;background:#1d4ed8;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #1d4ed8;"></div>',
+    iconSize: [14, 14], iconAnchor: [7, 7]
+  });
+  L.marker([-2.5145, 140.704], { icon: icon })
+    .bindPopup('<strong>Stasiun Geofisika Kelas I Jayapura</strong><br>Jl. Drs. Krisna Sunarya No. 26<br>02°30\'52.59" LS · 140°42\'15.52" BT · 444.97 m')
+    .addTo(map)
+    .openPopup();
+})();
+</script>
+
+{% endblock %}

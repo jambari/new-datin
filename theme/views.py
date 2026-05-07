@@ -487,3 +487,7 @@ def public_petir_data(request):
 
     return JsonResponse({'labels': labels, 'petir': petir, 'hujan': hujan,
                          'cg_plus': cg_plus, 'cg_minus': cg_minus})
+
+
+def public_about(request):
+    return render(request, 'public_about.html')
