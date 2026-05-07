@@ -202,7 +202,7 @@
           <span><span class="map-dot" style="background:#d97706;"></span>M 3–5</span>
           <span><span class="map-dot" style="background:#dc2626;"></span>M 5–6</span>
           <span><span class="map-dot" style="background:#7f1d1d;"></span>M ≥ 6</span>
-          <span><span class="map-dot" style="background:#f59e0b;border:2px solid #92400e;"></span>Dirasakan</span>
+          <span><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:3px;"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="#f59e0b" stroke="#92400e" stroke-width="1.5"/></svg>Dirasakan</span>
         </div>
         <select id="basemap-sel" class="basemap-select" onchange="changeBasemap(this.value)">
           <option value="osm">OpenStreetMap</option>
@@ -335,11 +335,14 @@ function initMap() {
   });
 
   FELT.forEach(function(f) {
-    L.circleMarker([f.lat, f.lng], {
-      radius: Math.max(6, f.mag * 3.5), color: '#92400e',
-      fillColor: '#f59e0b', fillOpacity: 0.75, weight: 2, dashArray: '4',
+    var sz = Math.max(14, Math.min(28, f.mag * 5));
+    var star = '<svg xmlns="http://www.w3.org/2000/svg" width="' + sz + '" height="' + sz + '" viewBox="0 0 24 24">'
+             + '<polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"'
+             + ' fill="#f59e0b" stroke="#92400e" stroke-width="1.5"/></svg>';
+    L.marker([f.lat, f.lng], {
+      icon: L.divIcon({ html: star, className: '', iconSize: [sz, sz], iconAnchor: [sz/2, sz/2] })
     }).bindPopup(
-      '<b>⚠ Dirasakan — M ' + f.mag + '</b><br>' + f.wilayah +
+      '<b>★ Dirasakan — M ' + f.mag + '</b><br>' + f.wilayah +
       (f.dirasakan ? '<br><i>' + f.dirasakan + '</i>' : '') +
       '<br>' + f.depth + ' km<br><small>' + f.time + '</small>'
     ).addTo(feltLyr);
