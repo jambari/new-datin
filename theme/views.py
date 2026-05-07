@@ -306,8 +306,27 @@ def gempa_public(request):
     from repository.models import FeltEarthquake
     from django.core.paginator import Paginator
 
-    cutoff = timezone.now().date() - datetime.timedelta(days=30)
-    qs = QCEvent.objects.filter(origin_time__date__gte=cutoff).order_by('-origin_time')
+    today = timezone.now().date()
+    end_str   = request.GET.get('end')
+    start_str = request.GET.get('start')
+    try:
+        end_date   = datetime.date.fromisoformat(end_str)   if end_str   else today
+        start_date = datetime.date.fromisoformat(start_str) if start_str else today - datetime.timedelta(days=30)
+    except ValueError:
+        end_date   = today
+        start_date = today - datetime.timedelta(days=30)
+
+    if end_date > today:
+        end_date = today
+    if (end_date - start_date).days > 30:
+        start_date = end_date - datetime.timedelta(days=30)
+    if start_date > end_date:
+        start_date = end_date - datetime.timedelta(days=30)
+
+    qs = QCEvent.objects.filter(
+        origin_time__date__gte=start_date,
+        origin_time__date__lte=end_date,
+    ).order_by('-origin_time')
     paginator = Paginator(qs, 20)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
@@ -328,24 +347,26 @@ def gempa_public(request):
     ])
 
     felt_qs = FeltEarthquake.objects.filter(
-        event_datetime__date__gte=cutoff
+        event_datetime__date__gte=start_date,
+        event_datetime__date__lte=end_date,
     ).values('latitude', 'longitude', 'magnitude', 'depth_km', 'wilayah', 'dirasakan', 'event_datetime')
     felt_json = json.dumps([
         {
-            'lat':      f['latitude'],
-            'lng':      f['longitude'],
-            'mag':      round(f['magnitude'], 1),
-            'depth':    round(f['depth_km'], 1),
-            'wilayah':  f['wilayah'],
+            'lat':       f['latitude'],
+            'lng':       f['longitude'],
+            'mag':       round(f['magnitude'], 1),
+            'depth':     round(f['depth_km'], 1),
+            'wilayah':   f['wilayah'],
             'dirasakan': f['dirasakan'] or '',
-            'time':     f['event_datetime'].strftime('%Y-%m-%d %H:%M UTC'),
+            'time':      f['event_datetime'].strftime('%Y-%m-%d %H:%M UTC'),
         }
         for f in felt_qs
     ])
 
     return render(request, 'gempa_public.html', {
         'page_obj':    page_obj,
-        'cutoff':      cutoff,
+        'start_date':  start_date,
+        'end_date':    end_date,
         'events_json': events_json,
         'felt_json':   felt_json,
     })

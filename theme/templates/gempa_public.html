@@ -96,6 +96,23 @@
   .map-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 3px; vertical-align: middle; }
   .basemap-select { padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.72rem; color: var(--ink); background: #f9fafb; cursor: pointer; }
 
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem;
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.9rem 1.1rem; margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .filter-bar label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 3px; letter-spacing: 0.06em; }
+  .filter-bar input[type="date"] {
+    padding: 0.35rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 0.82rem; color: var(--ink); background: #f9fafb; color-scheme: light;
+  }
+  .filter-bar input[type="date"]:focus { outline: none; border-color: var(--blue); background: #fff; }
+  .btn-filter { padding: 0.4rem 1rem; background: var(--blue); color: #fff; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+  .btn-filter:hover { background: #1e40af; }
+  .filter-note { font-size: 0.68rem; color: var(--muted); align-self: flex-end; }
+
   /* ── Footer ── */
   #site-footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; height: 36px; background: rgba(255,255,255,0.96); border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; }
   #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
@@ -126,7 +143,22 @@
 
 <div class="page-wrap">
   <h1 class="page-title">Daftar Gempabumi</h1>
-  <p class="page-sub">31 hari terakhir &nbsp;·&nbsp; {{ page_obj.paginator.count }} event &nbsp;·&nbsp; sejak {{ cutoff|date:"d M Y" }}</p>
+  <p class="page-sub">{{ start_date|date:"d M Y" }} — {{ end_date|date:"d M Y" }} &nbsp;·&nbsp; {{ page_obj.paginator.count }} event</p>
+
+  <form method="get" action="" id="filter-form">
+    <div class="filter-bar">
+      <div>
+        <label for="inp-start">Tanggal Mulai</label>
+        <input type="date" id="inp-start" name="start" value="{{ start_date|date:'Y-m-d' }}" max="{{ end_date|date:'Y-m-d' }}">
+      </div>
+      <div>
+        <label for="inp-end">Tanggal Akhir</label>
+        <input type="date" id="inp-end" name="end" value="{{ end_date|date:'Y-m-d' }}" max="{% now 'Y-m-d' %}">
+      </div>
+      <button type="submit" class="btn-filter">Tampilkan</button>
+      <span class="filter-note">Maksimal 31 hari</span>
+    </div>
+  </form>
 
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('daftar', this)">Daftar</button>
@@ -171,24 +203,26 @@
     </table>
 
     {% if page_obj.paginator.num_pages > 1 %}
+    {% with dp="start="|add:start_date|date:"Y-m-d"|add:"&end="|add:end_date|date:"Y-m-d" %}
     <div class="pager">
       {% if page_obj.has_previous %}
-        <a href="?page=1">&laquo;</a>
-        <a href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+        <a href="?{{ dp }}&page=1">&laquo;</a>
+        <a href="?{{ dp }}&page={{ page_obj.previous_page_number }}">&lsaquo;</a>
       {% else %}
         <span class="disabled">&laquo;</span><span class="disabled">&lsaquo;</span>
       {% endif %}
       {% for num in page_obj.paginator.page_range %}
         {% if num == page_obj.number %}<span class="current">{{ num }}</span>
-        {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}<a href="?page={{ num }}">{{ num }}</a>{% endif %}
+        {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}<a href="?{{ dp }}&page={{ num }}">{{ num }}</a>{% endif %}
       {% endfor %}
       {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}">&rsaquo;</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+        <a href="?{{ dp }}&page={{ page_obj.next_page_number }}">&rsaquo;</a>
+        <a href="?{{ dp }}&page={{ page_obj.paginator.num_pages }}">&raquo;</a>
       {% else %}
         <span class="disabled">&rsaquo;</span><span class="disabled">&raquo;</span>
       {% endif %}
     </div>
+    {% endwith %}
     {% endif %}
   </div>
 
@@ -282,6 +316,20 @@
 </footer>
 
 <script>
+(function(){
+  var s = document.getElementById('inp-start');
+  var e = document.getElementById('inp-end');
+  if (!s || !e) return;
+  function clamp() {
+    var sd = new Date(s.value), ed = new Date(e.value);
+    if (isNaN(sd) || isNaN(ed)) return;
+    if ((ed - sd) / 86400000 > 30) { sd = new Date(ed); sd.setDate(sd.getDate() - 30); s.value = sd.toISOString().slice(0,10); }
+    if (ed < sd) e.value = s.value;
+  }
+  s.addEventListener('change', clamp);
+  e.addEventListener('change', clamp);
+})();
+
 const EVENTS = {{ events_json|safe }};
 const FELT   = {{ felt_json|safe }};
 
