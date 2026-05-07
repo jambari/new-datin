@@ -490,4 +490,10 @@ def public_petir_data(request):
 
 
 def public_about(request):
-    return render(request, 'public_about.html')
+    from repository.models import DataAvailability, AcceleroDataAvailability
+    seismo_count = DataAvailability.objects.values('station').distinct().count()
+    accelero_count = AcceleroDataAvailability.objects.values('station').distinct().count()
+    return render(request, 'public_about.html', {
+        'seismo_count': seismo_count,
+        'accelero_count': accelero_count,
+    })
