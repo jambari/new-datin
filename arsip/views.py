@@ -28,7 +28,6 @@ def album_list(request):
     return render(request, 'arsip/album_list.html', {'albums': albums, 'q': q})
 
 
-@login_required
 def album_detail(request, pk):
     album = get_object_or_404(Album, pk=pk)
     fotos = album.fotos.all()

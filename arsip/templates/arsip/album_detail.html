@@ -1,95 +1,156 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+  body { background: #0f172a; }
+
+  /* ── Site header ── */
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(15,23,42,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.3);
+  }
+  .header-inner {
+    max-width: 1200px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 38px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #f1f5f9; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #94a3b8; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #f59e0b; }
+
+  /* ── Page ── */
+  .page-wrap { max-width: 1200px; margin: 76px auto 48px; padding: 0 1.25rem; }
+
+  .breadcrumb { font-size: 0.72rem; color: #475569; margin-bottom: 0.75rem; }
+  .breadcrumb a { color: #64748b; text-decoration: none; }
+  .breadcrumb a:hover { color: #f59e0b; }
+
+  .album-title { font-size: 1.5rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.2rem; }
+  .album-desc  { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.3rem; }
+  .album-count { font-size: 0.72rem; color: #475569; margin-bottom: 1.25rem; }
+
+  /* ── Grid ── */
+  .foto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px;
+  }
+  .foto-item {
+    cursor: pointer; overflow: hidden; border-radius: 6px;
+    background: #1e293b; aspect-ratio: 4/3;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    transition: transform 0.15s;
+  }
+  .foto-item:hover { transform: scale(1.03); }
+  .foto-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .play-overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.3);
+  }
+  .no-thumb {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; width: 100%; height: 100%;
+  }
+  .no-thumb span { font-size: 9px; color: #94a3b8; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+
+  .empty-state { text-align: center; color: #475569; padding: 3rem 0; }
+
+  /* ── Footer ── */
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(15,23,42,0.96);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #475569; letter-spacing: 0.04em; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="flex h-screen bg-gray-100">
-  {% include 'partials/_sidebar.html' %}
-  <div class="flex-1 flex flex-col overflow-hidden">
-    {% include 'partials/_topbar.html' %}
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
 
-      <div class="flex items-center gap-2 mb-4 text-sm text-gray-500">
-        <a href="{% url 'arsip:album_list' %}" class="hover:text-blue-600">Arsip Foto</a>
-        <span>/</span>
-        <span class="text-gray-800 font-semibold">{{ album.name }}</span>
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
       </div>
-
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800">{{ album.name }}</h1>
-          {% if album.description %}<p class="text-sm text-gray-500 mt-0.5">{{ album.description }}</p>{% endif %}
-        </div>
-        <span class="text-sm text-gray-400">{{ fotos|length }} foto</span>
-      </div>
-
-      {% if not fotos %}
-        <div class="bg-white rounded-xl shadow p-10 text-center text-gray-400">Album ini kosong.</div>
-      {% else %}
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;">
-          {% for foto in fotos %}
-          <div onclick="openLightbox({{ forloop.counter0 }})"
-               style="cursor:pointer;overflow:hidden;border-radius:6px;background:#1e293b;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;position:relative;">
-            {% if foto.is_video %}
-              {% if foto.thumb_url %}
-                <img src="{{ foto.thumb_url }}"
-                     style="width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s;"
-                     onmouseover="this.style.transform='scale(1.06)'"
-                     onmouseout="this.style.transform='scale(1)'"
-                     loading="lazy" alt="{{ foto.caption }}">
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25);">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="rgba(255,255,255,.85)" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </div>
-              {% else %}
-                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;height:100%;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#94a3b8" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  <span style="font-size:9px;color:#94a3b8;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">{{ foto.caption }}</span>
-                </div>
-              {% endif %}
-            {% else %}
-              <img src="{{ foto.thumb_url }}"
-                   style="width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s;"
-                   onmouseover="this.style.transform='scale(1.06)'"
-                   onmouseout="this.style.transform='scale(1)'"
-                   loading="lazy" alt="{{ foto.caption }}">
-            {% endif %}
-          </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-
-    </main>
+    </a>
+    <a href="{% url 'our_work' %}" class="header-back">← Gallery</a>
   </div>
+</header>
+
+<div class="page-wrap">
+  <div class="breadcrumb">
+    <a href="{% url 'landing' %}">Beranda</a> / <a href="{% url 'our_work' %}">Gallery</a> / {{ album.name }}
+  </div>
+
+  <h1 class="album-title">{{ album.name }}</h1>
+  {% if album.description %}<p class="album-desc">{{ album.description }}</p>{% endif %}
+  <p class="album-count">{{ fotos|length }} foto/video</p>
+
+  {% if not fotos %}
+    <div class="empty-state">Album ini kosong.</div>
+  {% else %}
+    <div class="foto-grid">
+      {% for foto in fotos %}
+      <div class="foto-item" onclick="openLightbox({{ forloop.counter0 }})">
+        {% if foto.is_video %}
+          {% if foto.thumb_url %}
+            <img src="{{ foto.thumb_url }}" loading="lazy" alt="{{ foto.caption }}">
+            <div class="play-overlay">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="rgba(255,255,255,.85)" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          {% else %}
+            <div class="no-thumb">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#94a3b8" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <span>{{ foto.caption }}</span>
+            </div>
+          {% endif %}
+        {% else %}
+          <img src="{{ foto.thumb_url }}" loading="lazy" alt="{{ foto.caption }}">
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  {% endif %}
 </div>
+
+<footer id="site-footer">
+  <span>© {% now "Y" %} Stasiun Geofisika Kelas I Jayapura — BMKG</span>
+</footer>
 
 <!-- Lightbox -->
 <div id="lb" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);flex-direction:column;align-items:center;justify-content:center;">
 
-  <!-- top bar -->
   <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.4);">
     <span id="lbCounter" style="color:#aaa;font-size:13px;"></span>
     <div style="display:flex;gap:10px;align-items:center;">
       <span id="lbZoomControls" style="display:flex;gap:10px;align-items:center;">
-        <button onclick="zoomLb(-0.25)" title="Zoom out" style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#8722;</button>
+        <button onclick="zoomLb(-0.25)" style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#8722;</button>
         <span id="lbZoomLabel" style="color:#aaa;font-size:12px;min-width:38px;text-align:center;">100%</span>
-        <button onclick="zoomLb(0.25)"  title="Zoom in"  style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#43;</button>
-        <button onclick="resetZoom()"   title="Reset"    style="color:#ccc;background:rgba(255,255,255,.08);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:12px;">1:1</button>
+        <button onclick="zoomLb(0.25)"  style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:18px;">&#43;</button>
+        <button onclick="resetZoom()"   style="color:#ccc;background:rgba(255,255,255,.08);border:none;cursor:pointer;border-radius:4px;padding:4px 10px;font-size:12px;">1:1</button>
       </span>
       <a id="lbDownload" href="" download style="display:none;color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 12px;font-size:13px;text-decoration:none;">&#8595; Download</a>
-      <button onclick="closeLightbox()" title="Tutup"  style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 12px;font-size:20px;line-height:1;">&times;</button>
+      <button onclick="closeLightbox()" style="color:#fff;background:rgba(255,255,255,.12);border:none;cursor:pointer;border-radius:4px;padding:4px 12px;font-size:20px;line-height:1;">&times;</button>
     </div>
   </div>
 
-  <!-- prev -->
-  <button onclick="moveLb(-1)"
-    style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#fff;background:rgba(255,255,255,.1);border:none;cursor:pointer;border-radius:50%;width:44px;height:44px;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;">&#8249;</button>
+  <button onclick="moveLb(-1)" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#fff;background:rgba(255,255,255,.1);border:none;cursor:pointer;border-radius:50%;width:44px;height:44px;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;">&#8249;</button>
 
-  <!-- media container -->
   <div id="lbImgWrap" style="overflow:hidden;max-width:90vw;max-height:75vh;display:flex;align-items:center;justify-content:center;margin-top:44px;">
-    <img id="lbImg" src="" alt=""
-         style="max-width:90vw;max-height:75vh;object-fit:contain;transform-origin:center;transition:transform .15s;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);">
-    <video id="lbVideo" src="" controls
-           style="display:none;max-width:90vw;max-height:75vh;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);"></video>
+    <img id="lbImg" src="" alt="" style="max-width:90vw;max-height:75vh;object-fit:contain;transform-origin:center;transition:transform .15s;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);">
+    <video id="lbVideo" src="" controls style="display:none;max-width:90vw;max-height:75vh;border-radius:4px;box-shadow:0 4px 32px rgba(0,0,0,.6);"></video>
   </div>
 
-  <!-- caption + video notice -->
   <div style="margin-top:8px;text-align:center;">
     <span id="lbCaption" style="color:#bbb;font-size:13px;"></span>
     <div id="lbVideoNotice" style="display:none;margin-top:6px;font-size:11px;color:#f59e0b;">
@@ -97,9 +158,7 @@
     </div>
   </div>
 
-  <!-- next -->
-  <button onclick="moveLb(1)"
-    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#fff;background:rgba(255,255,255,.1);border:none;cursor:pointer;border-radius:50%;width:44px;height:44px;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;">&#8250;</button>
+  <button onclick="moveLb(1)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#fff;background:rgba(255,255,255,.1);border:none;cursor:pointer;border-radius:50%;width:44px;height:44px;font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;">&#8250;</button>
 </div>
 
 <script>
@@ -108,13 +167,10 @@ const photos = [
   { full: "{{ foto.full_url }}", caption: "{{ foto.caption|escapejs }}", is_video: {{ foto.is_video|yesno:"true,false" }} },
   {% endfor %}
 ];
-let lbIdx = 0;
-let lbZoom = 1;
+let lbIdx = 0, lbZoom = 1;
 
 function openLightbox(idx) {
-  lbIdx = idx;
-  lbZoom = 1;
-  _renderLb();
+  lbIdx = idx; lbZoom = 1; _renderLb();
   document.getElementById('lb').style.display = 'flex';
   document.addEventListener('keydown', _lbKey);
   document.getElementById('lb').addEventListener('wheel', _lbWheel, { passive: false });
@@ -124,52 +180,33 @@ function closeLightbox() {
   document.removeEventListener('keydown', _lbKey);
   document.getElementById('lb').removeEventListener('wheel', _lbWheel);
 }
-function moveLb(dir) {
-  lbIdx = (lbIdx + dir + photos.length) % photos.length;
-  lbZoom = 1;
-  _renderLb();
-}
-function zoomLb(delta) {
-  lbZoom = Math.min(5, Math.max(0.25, lbZoom + delta));
-  _applyZoom();
-}
-function resetZoom() {
-  lbZoom = 1;
-  _applyZoom();
-}
+function moveLb(dir) { lbIdx = (lbIdx + dir + photos.length) % photos.length; lbZoom = 1; _renderLb(); }
+function zoomLb(delta) { lbZoom = Math.min(5, Math.max(0.25, lbZoom + delta)); _applyZoom(); }
+function resetZoom() { lbZoom = 1; _applyZoom(); }
 function _applyZoom() {
   document.getElementById('lbImg').style.transform = `scale(${lbZoom})`;
   document.getElementById('lbZoomLabel').textContent = Math.round(lbZoom * 100) + '%';
 }
 function _renderLb() {
-  const p       = photos[lbIdx];
-  const img     = document.getElementById('lbImg');
-  const video   = document.getElementById('lbVideo');
-  const zoom    = document.getElementById('lbZoomControls');
-  const dl      = document.getElementById('lbDownload');
-  const notice  = document.getElementById('lbVideoNotice');
+  const p = photos[lbIdx];
+  const img = document.getElementById('lbImg');
+  const video = document.getElementById('lbVideo');
   document.getElementById('lbCaption').textContent = p.caption;
   document.getElementById('lbCounter').textContent = `${lbIdx + 1} / ${photos.length}`;
   document.getElementById('lbZoomLabel').textContent = '100%';
   if (p.is_video) {
-    img.style.display    = 'none';
-    zoom.style.display   = 'none';
-    dl.style.display     = 'inline-block';
-    dl.href              = p.full;
-    notice.style.display = 'block';
-    video.style.display  = 'block';
-    video.src = p.full;
-    video.load();
+    img.style.display = 'none';
+    document.getElementById('lbZoomControls').style.display = 'none';
+    document.getElementById('lbDownload').style.display = 'inline-block';
+    document.getElementById('lbDownload').href = p.full;
+    document.getElementById('lbVideoNotice').style.display = 'block';
+    video.style.display = 'block'; video.src = p.full; video.load();
   } else {
-    video.style.display  = 'none';
-    video.pause();
-    video.src            = '';
-    zoom.style.display   = 'flex';
-    dl.style.display     = 'none';
-    notice.style.display = 'none';
-    img.style.display    = 'block';
-    img.src              = p.full;
-    img.style.transform  = 'scale(1)';
+    video.style.display = 'none'; video.pause(); video.src = '';
+    document.getElementById('lbZoomControls').style.display = 'flex';
+    document.getElementById('lbDownload').style.display = 'none';
+    document.getElementById('lbVideoNotice').style.display = 'none';
+    img.style.display = 'block'; img.src = p.full; img.style.transform = 'scale(1)';
   }
 }
 function _lbKey(e) {
@@ -179,25 +216,8 @@ function _lbKey(e) {
   else if (e.key === '+' || e.key === '=') zoomLb(0.25);
   else if (e.key === '-') zoomLb(-0.25);
 }
-function _lbWheel(e) {
-  e.preventDefault();
-  zoomLb(e.deltaY < 0 ? 0.15 : -0.15);
-}
-
-// click backdrop to close
-document.getElementById('lb').addEventListener('click', function(e) {
-  if (e.target === this) closeLightbox();
-});
+function _lbWheel(e) { e.preventDefault(); zoomLb(e.deltaY < 0 ? 0.15 : -0.15); }
+document.getElementById('lb').addEventListener('click', function(e) { if (e.target === this) closeLightbox(); });
 </script>
 
-<script>
-(function() {
-  var btn = document.getElementById('sidebar-toggle');
-  if (!btn) return;
-  btn.addEventListener('click', function() {
-    var el = document.getElementById('sidebar');
-    if (el) el.classList.toggle('hidden');
-  });
-})();
-</script>
 {% endblock %}
