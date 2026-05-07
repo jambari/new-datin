@@ -165,6 +165,7 @@
   <!-- Tabs -->
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('grafik', this)">Grafik</button>
+    <button class="tab-btn"        onclick="switchTab('cg',     this)">CG+ / CG−</button>
     <button class="tab-btn"        onclick="switchTab('peta',   this)">Peta Sebaran</button>
   </div>
 
@@ -208,6 +209,63 @@
     </div>
   </div>
 
+  <!-- Tab: CG+ / CG- -->
+  <div id="tab-cg" class="tab-pane">
+    <!-- CG+ stats -->
+    <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.5rem;">CG+ (Petir Positif)</div>
+    <div class="stat-row" style="margin-bottom:1rem;">
+      <div class="stat-card">
+        <div class="stat-val" style="color:#f59e0b;" id="cg-plus-total">—</div>
+        <div class="stat-lbl">Total CG+</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#16a34a;" id="cg-plus-max">—</div>
+        <div class="stat-sub" id="cg-plus-max-date"></div>
+        <div class="stat-lbl">Tertinggi / Hari</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#6366f1;" id="cg-plus-min">—</div>
+        <div class="stat-sub" id="cg-plus-min-date"></div>
+        <div class="stat-lbl">Terendah / Hari</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#d97706;" id="cg-plus-avg">—</div>
+        <div class="stat-lbl">Rata-rata / Hari</div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:1.25rem;">
+      <div class="chart-card-title">CG+ Harian <span style="font-weight:400;color:#9ca3af;">(sambaran positif)</span></div>
+      <div class="chart-wrap"><canvas id="chart-cg-plus"></canvas></div>
+    </div>
+
+    <!-- CG- stats -->
+    <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.5rem;">CG− (Petir Negatif)</div>
+    <div class="stat-row" style="margin-bottom:1rem;">
+      <div class="stat-card">
+        <div class="stat-val" style="color:#ef4444;" id="cg-minus-total">—</div>
+        <div class="stat-lbl">Total CG−</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#16a34a;" id="cg-minus-max">—</div>
+        <div class="stat-sub" id="cg-minus-max-date"></div>
+        <div class="stat-lbl">Tertinggi / Hari</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#6366f1;" id="cg-minus-min">—</div>
+        <div class="stat-sub" id="cg-minus-min-date"></div>
+        <div class="stat-lbl">Terendah / Hari</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:#d97706;" id="cg-minus-avg">—</div>
+        <div class="stat-lbl">Rata-rata / Hari</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">CG− Harian <span style="font-weight:400;color:#9ca3af;">(sambaran negatif)</span></div>
+      <div class="chart-wrap"><canvas id="chart-cg-minus"></canvas></div>
+    </div>
+  </div>
+
   <!-- Tab: Peta Sebaran -->
   <div id="tab-peta" class="tab-pane">
     <div class="map-card">
@@ -238,8 +296,10 @@
 
 <script>
 (function () {
-  var chartInst = null;
-  var leafMap   = null;
+  var chartInst    = null;
+  var chartCGPlus  = null;
+  var chartCGMinus = null;
+  var leafMap      = null;
   var strikeLyr = null;
   var mapReady  = false;
   var activeTab = 'grafik';
@@ -289,7 +349,10 @@
   function loadChart(start, end) {
     fetch(CHART_URL + '?start=' + start + '&end=' + end)
       .then(function(r) { return r.json(); })
-      .then(function(d) { renderChart(d.labels, d.petir, d.hujan); })
+      .then(function(d) {
+        renderChart(d.labels, d.petir, d.hujan);
+        renderCGCharts(d.labels, d.cg_plus || [], d.cg_minus || []);
+      })
       .catch(function(e) { console.error('chart error', e); });
   }
 
@@ -355,6 +418,55 @@
       document.getElementById('stat-min-date').textContent = labels[minIdx] || '';
       document.getElementById('stat-avg').textContent      = avg.toFixed(1);
     }
+  }
+
+  /* ── CG charts ── */
+  function makeSingleBar(canvasId, labels, data, color, existing) {
+    var ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    if (existing) existing.destroy();
+    return new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: color.replace('rgb(', 'rgba(').replace(')', ',0.75)'),
+          borderColor: color, borderWidth: 1,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(c){ return c.raw.toLocaleString('id-ID') + ' sambaran'; } } }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#6b7280' } },
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, color: '#6b7280', precision: 0 } }
+        }
+      }
+    });
+  }
+
+  function cgStats(data, labels, ids) {
+    if (!data.length) return;
+    var total = data.reduce(function(a,b){return a+b;}, 0);
+    var maxV = Math.max.apply(null, data), minV = Math.min.apply(null, data);
+    var maxI = data.indexOf(maxV), minI = data.indexOf(minV);
+    document.getElementById(ids.total).textContent   = total.toLocaleString('id-ID');
+    document.getElementById(ids.max).textContent     = maxV.toLocaleString('id-ID');
+    document.getElementById(ids.maxDate).textContent = labels[maxI] || '';
+    document.getElementById(ids.min).textContent     = minV.toLocaleString('id-ID');
+    document.getElementById(ids.minDate).textContent = labels[minI] || '';
+    document.getElementById(ids.avg).textContent     = (total / data.length).toFixed(1);
+  }
+
+  function renderCGCharts(labels, cgPlus, cgMinus) {
+    chartCGPlus  = makeSingleBar('chart-cg-plus',  labels, cgPlus,  'rgb(245,158,11)', chartCGPlus);
+    chartCGMinus = makeSingleBar('chart-cg-minus', labels, cgMinus, 'rgb(239,68,68)',  chartCGMinus);
+    cgStats(cgPlus,  labels, { total:'cg-plus-total',  max:'cg-plus-max',  maxDate:'cg-plus-max-date',  min:'cg-plus-min',  minDate:'cg-plus-min-date',  avg:'cg-plus-avg'  });
+    cgStats(cgMinus, labels, { total:'cg-minus-total', max:'cg-minus-max', maxDate:'cg-minus-max-date', min:'cg-minus-min', minDate:'cg-minus-min-date', avg:'cg-minus-avg' });
   }
 
   /* ── basemaps ── */

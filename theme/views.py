@@ -396,7 +396,7 @@ def public_petir_data(request):
         start_date = end_date - datetime.timedelta(days=30)
 
     lightning_map = {
-        s.summary_date: s.total_count
+        s.summary_date: s
         for s in DailyStrikeSummary.objects.filter(summary_date__range=[start_date, end_date])
     }
     rain_map = {
@@ -404,12 +404,16 @@ def public_petir_data(request):
         for h in Hujan.objects.filter(tanggal__range=[start_date, end_date])
     }
 
-    labels, petir, hujan = [], [], []
+    labels, petir, hujan, cg_plus, cg_minus = [], [], [], [], []
     d = start_date
     while d <= end_date:
         labels.append(d.strftime('%d/%m'))
-        petir.append(lightning_map.get(d, 0))
+        s = lightning_map.get(d)
+        petir.append(s.total_count    if s else 0)
+        cg_plus.append(s.cg_plus_count  if s else 0)
+        cg_minus.append(s.cg_minus_count if s else 0)
         hujan.append(float(rain_map.get(d, 0)))
         d += datetime.timedelta(days=1)
 
-    return JsonResponse({'labels': labels, 'petir': petir, 'hujan': hujan})
+    return JsonResponse({'labels': labels, 'petir': petir, 'hujan': hujan,
+                         'cg_plus': cg_plus, 'cg_minus': cg_minus})
