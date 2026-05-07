@@ -4,27 +4,21 @@
 {% block extra_head %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link  rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --ink:    #111827;
-    --muted:  #6b7280;
-    --line:   #e5e7eb;
-    --paper2: #f9fafb;
-    --blue:   #1d4ed8;
-    --red:    #dc2626;
-    --amber:  #d97706;
-    --green:  #16a34a;
+    --ink:    #111827; --muted: #6b7280; --line:  #e5e7eb;
+    --paper2: #f9fafb; --blue:  #1d4ed8; --red:   #dc2626;
+    --amber:  #d97706; --green: #16a34a;
   }
-
   body { background: #f8fafc; }
 
-  /* ── Site header (same style as landing) ── */
   #site-header {
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-    background: rgba(255,255,255,0.96);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(0,0,0,0.08);
-    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
   }
   .header-inner {
     max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
@@ -37,84 +31,81 @@
   .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
   .header-back:hover { color: #b45309; }
 
-  /* ── Page body ── */
-  .page-wrap { max-width: 1100px; margin: 80px auto 40px; padding: 0 1.25rem; }
+  .page-wrap { max-width: 1100px; margin: 80px auto 50px; padding: 0 1.25rem; }
+  .page-title { font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 0.2rem; }
+  .page-sub   { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.25rem; font-family: 'JetBrains Mono', monospace; }
 
-  .page-title {
-    font-size: 1.4rem; font-weight: 700; color: var(--ink);
-    margin-bottom: 0.25rem;
+  /* ── Tabs ── */
+  .tab-nav { display: flex; gap: 4px; margin-bottom: 1rem; border-bottom: 2px solid var(--line); }
+  .tab-btn {
+    padding: 0.5rem 1.25rem; font-size: 0.8rem; font-weight: 600; border: none;
+    background: none; color: var(--muted); cursor: pointer;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    border-radius: 4px 4px 0 0; transition: all 0.15s;
   }
-  .page-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; }
+  .tab-btn:hover { background: #f1f5f9; color: var(--ink); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); background: #eff6ff; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
 
   /* ── Table ── */
   .quake-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .quake-table thead th {
-    padding: 0.65rem 1rem;
-    text-align: left;
-    font-size: 0.65rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    background: var(--paper2);
-    border-bottom: 1px solid var(--line);
+    padding: 0.65rem 1rem; text-align: left; font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); background: var(--paper2); border-bottom: 1px solid var(--line);
   }
-  .quake-table tbody tr {
-    border-bottom: 1px solid var(--line);
-    transition: background 0.15s;
-    cursor: pointer;
-  }
+  .quake-table tbody tr { border-bottom: 1px solid var(--line); transition: background 0.15s; cursor: pointer; }
   .quake-table tbody tr:last-child { border-bottom: none; }
   .quake-table tbody tr:hover { background: #eff6ff; }
   .quake-table td { padding: 0.7rem 1rem; vertical-align: middle; }
-
-  .mag-badge {
-    display: inline-block;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.92rem;
-    font-weight: 700;
-    padding: 0.2em 0.55em;
-    border-radius: 6px;
-    color: #fff;
-    min-width: 52px;
-    text-align: center;
-  }
-  .mag-sm  { background: #16a34a; }
-  .mag-md  { background: #d97706; }
-  .mag-lg  { background: #dc2626; }
-  .mag-xl  { background: #7f1d1d; }
-
-  .pid { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+  .mag-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.92rem; font-weight: 700; padding: 0.2em 0.55em; border-radius: 6px; color: #fff; min-width: 52px; text-align: center; }
+  .mag-sm { background: #16a34a; } .mag-md { background: #d97706; } .mag-lg { background: #dc2626; } .mag-xl { background: #7f1d1d; }
+  .pid    { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); }
   .region { font-size: 0.82rem; color: var(--ink); }
   .depth  { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--muted); }
   .when   { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
 
   /* ── Pagination ── */
-  .pager {
-    display: flex; align-items: center; justify-content: center;
-    gap: 0.35rem; margin-top: 1.5rem;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
-  }
-  .pager a, .pager span {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 32px; height: 32px; padding: 0 0.5rem;
-    border: 1px solid var(--line); border-radius: 6px;
-    text-decoration: none; color: var(--ink);
-    transition: background 0.15s, border-color 0.15s;
-  }
+  .pager { display: flex; align-items: center; justify-content: center; gap: 0.35rem; margin-top: 1.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+  .pager a, .pager span { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 0.5rem; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; color: var(--ink); transition: background 0.15s, border-color 0.15s; }
   .pager a:hover { background: #eff6ff; border-color: var(--blue); color: var(--blue); }
   .pager .current { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
   .pager .disabled { color: var(--muted); pointer-events: none; }
 
+  /* ── Stat row ── */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+  .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .stat-val  { font-size: 1.3rem; font-weight: 700; color: var(--ink); font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+  .stat-lbl  { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.3rem; }
+  .stat-sub  { font-size: 0.62rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 0.15rem; min-height: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── Charts ── */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .chart-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.75rem; }
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-card.full .chart-wrap { height: 240px; }
+
+  /* ── Map ── */
+  .map-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  #quake-map { height: 520px; width: 100%; }
+  .map-info { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; padding: 0.6rem 1rem; border-top: 1px solid var(--line); font-size: 0.73rem; color: var(--muted); }
+  .map-legend { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  .map-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 3px; vertical-align: middle; }
+  .basemap-select { padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.72rem; color: var(--ink); background: #f9fafb; cursor: pointer; }
+
   /* ── Footer ── */
-  #site-footer {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
-    height: 36px; background: rgba(255,255,255,0.96);
-    border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
-    display: flex; align-items: center; justify-content: center;
-  }
+  #site-footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; height: 36px; background: rgba(255,255,255,0.96); border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; }
   #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+
+  @media (max-width: 640px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+    .chart-card.full { grid-column: 1; }
+    #quake-map { height: 380px; }
+  }
 </style>
 {% endblock %}
 
@@ -129,89 +120,347 @@
         <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
       </div>
     </a>
-    <a href="{% url 'landing' %}" class="header-back">
-      ← Kembali
-    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Kembali</a>
   </div>
 </header>
 
 <div class="page-wrap">
   <h1 class="page-title">Daftar Gempabumi</h1>
-  <p class="page-sub">{{ page_obj.paginator.count }} event &nbsp;·&nbsp; halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</p>
+  <p class="page-sub">31 hari terakhir &nbsp;·&nbsp; {{ page_obj.paginator.count }} event &nbsp;·&nbsp; sejak {{ cutoff|date:"d M Y" }}</p>
 
-  <table class="quake-table">
-    <thead>
-      <tr>
-        <th>Waktu (UTC)</th>
-        <th>Waktu (WIT)</th>
-        <th>Mag</th>
-        <th>Kedalaman</th>
-        <th>Lokasi</th>
-        <th>Koordinat</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for event in page_obj %}
-      <tr onclick="window.location='{% url "public_gempa_detail" public_id=event.public_id %}'">
-        <td class="when">{{ event.origin_time|date:"Y-m-d H:i:s" }}</td>
-        <td class="when">{{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y H:i" }}</td>
-        <td>
-          {% if event.magnitude is not None %}
-            {% if event.magnitude >= 6.0 %}
-              <span class="mag-badge mag-xl">M {{ event.magnitude|floatformat:1 }}</span>
-            {% elif event.magnitude >= 5.0 %}
-              <span class="mag-badge mag-lg">M {{ event.magnitude|floatformat:1 }}</span>
-            {% elif event.magnitude >= 3.0 %}
-              <span class="mag-badge mag-md">M {{ event.magnitude|floatformat:1 }}</span>
-            {% else %}
-              <span class="mag-badge mag-sm">M {{ event.magnitude|floatformat:1 }}</span>
-            {% endif %}
-          {% else %}
-            <span class="mag-badge mag-sm">—</span>
-          {% endif %}
-        </td>
-        <td class="depth">{{ event.depth_km|floatformat:0 }} km</td>
-        <td class="region">{{ event.region|default:"—" }}</td>
-        <td class="depth">{{ event.latitude|floatformat:2 }}, {{ event.longitude|floatformat:2 }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--muted);font-style:italic;">Tidak ada data</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('daftar', this)">Daftar</button>
+    <button class="tab-btn"        onclick="switchTab('peta',    this)">Peta</button>
+    <button class="tab-btn"        onclick="switchTab('statistik', this)">Statistik</button>
+  </div>
 
-  <!-- Pagination -->
-  {% if page_obj.paginator.num_pages > 1 %}
-  <div class="pager">
-    {% if page_obj.has_previous %}
-      <a href="?page=1">&laquo;</a>
-      <a href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a>
-    {% else %}
-      <span class="disabled">&laquo;</span>
-      <span class="disabled">&lsaquo;</span>
-    {% endif %}
+  <!-- ══ TAB: DAFTAR ══ -->
+  <div id="tab-daftar" class="tab-pane active">
+    <table class="quake-table">
+      <thead>
+        <tr>
+          <th>Waktu (UTC)</th>
+          <th>Waktu (WIT)</th>
+          <th>Mag</th>
+          <th>Kedalaman</th>
+          <th>Lokasi</th>
+          <th>Koordinat</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in page_obj %}
+        <tr onclick="window.location='{% url "public_gempa_detail" public_id=event.public_id %}'">
+          <td class="when">{{ event.origin_time|date:"Y-m-d H:i:s" }}</td>
+          <td class="when">{{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y H:i" }}</td>
+          <td>
+            {% if event.magnitude is not None %}
+              {% if event.magnitude >= 6.0 %}<span class="mag-badge mag-xl">M {{ event.magnitude|floatformat:1 }}</span>
+              {% elif event.magnitude >= 5.0 %}<span class="mag-badge mag-lg">M {{ event.magnitude|floatformat:1 }}</span>
+              {% elif event.magnitude >= 3.0 %}<span class="mag-badge mag-md">M {{ event.magnitude|floatformat:1 }}</span>
+              {% else %}<span class="mag-badge mag-sm">M {{ event.magnitude|floatformat:1 }}</span>{% endif %}
+            {% else %}<span class="mag-badge mag-sm">—</span>{% endif %}
+          </td>
+          <td class="depth">{{ event.depth_km|floatformat:0 }} km</td>
+          <td class="region">{{ event.region|default:"—" }}</td>
+          <td class="depth">{{ event.latitude|floatformat:2 }}, {{ event.longitude|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--muted);font-style:italic;">Tidak ada data</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-    {% for num in page_obj.paginator.page_range %}
-      {% if num == page_obj.number %}
-        <span class="current">{{ num }}</span>
-      {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}
-        <a href="?page={{ num }}">{{ num }}</a>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pager">
+      {% if page_obj.has_previous %}
+        <a href="?page=1">&laquo;</a>
+        <a href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+      {% else %}
+        <span class="disabled">&laquo;</span><span class="disabled">&lsaquo;</span>
       {% endif %}
-    {% endfor %}
-
-    {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}">&rsaquo;</a>
-      <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
-    {% else %}
-      <span class="disabled">&rsaquo;</span>
-      <span class="disabled">&raquo;</span>
+      {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}<span class="current">{{ num }}</span>
+        {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}<a href="?page={{ num }}">{{ num }}</a>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">&rsaquo;</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+      {% else %}
+        <span class="disabled">&rsaquo;</span><span class="disabled">&raquo;</span>
+      {% endif %}
+    </div>
     {% endif %}
   </div>
-  {% endif %}
+
+  <!-- ══ TAB: PETA ══ -->
+  <div id="tab-peta" class="tab-pane">
+    <div class="map-card">
+      <div id="quake-map"></div>
+      <div class="map-info">
+        <div class="map-legend">
+          <span><span class="map-dot" style="background:#16a34a;"></span>M &lt; 3</span>
+          <span><span class="map-dot" style="background:#d97706;"></span>M 3–5</span>
+          <span><span class="map-dot" style="background:#dc2626;"></span>M 5–6</span>
+          <span><span class="map-dot" style="background:#7f1d1d;"></span>M ≥ 6</span>
+          <span><span class="map-dot" style="background:#f59e0b;border:2px solid #92400e;"></span>Dirasakan</span>
+        </div>
+        <select id="basemap-sel" class="basemap-select" onchange="changeBasemap(this.value)">
+          <option value="osm">OpenStreetMap</option>
+          <option value="dark">Dark Matter</option>
+          <option value="light">Light</option>
+          <option value="satellite">Satellite</option>
+          <option value="topo">Topografi</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: STATISTIK ══ -->
+  <div id="tab-statistik" class="tab-pane">
+    <!-- Row 1 badges -->
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-val" id="st-total" style="color:var(--blue);">—</div>
+        <div class="stat-lbl">Total Event</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-m5" style="color:#dc2626;">—</div>
+        <div class="stat-lbl">M ≥ 5.0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-felt" style="color:#f59e0b;">—</div>
+        <div class="stat-lbl">Dirasakan</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-maxmag" style="color:#7f1d1d;">—</div>
+        <div class="stat-sub" id="st-maxmag-info"></div>
+        <div class="stat-lbl">Magnitudo Terbesar</div>
+      </div>
+    </div>
+    <!-- Row 2 badges -->
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-val" id="st-avgmag" style="color:#6366f1;">—</div>
+        <div class="stat-lbl">Rata-rata Magnitudo</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-avgdep" style="color:#0891b2;">—</div>
+        <div class="stat-lbl">Rata-rata Kedalaman (km)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-shallow" style="color:#059669;">—</div>
+        <div class="stat-sub" id="st-shallow-info"></div>
+        <div class="stat-lbl">Paling Dangkal (km)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="st-deep" style="color:#475569;">—</div>
+        <div class="stat-sub" id="st-deep-info"></div>
+        <div class="stat-lbl">Paling Dalam (km)</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+      <div class="chart-card full">
+        <div class="chart-title">Jumlah Event per Hari (31 hari terakhir)</div>
+        <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Distribusi Magnitudo</div>
+        <div class="chart-wrap"><canvas id="chart-magdist"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Distribusi Kedalaman</div>
+        <div class="chart-wrap"><canvas id="chart-depdist"></canvas></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer id="site-footer">
-  <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
+  <span>© {% now "Y" %} Stasiun Geofisika Kelas I Jayapura — BMKG</span>
 </footer>
+
+<script>
+const EVENTS = {{ events_json|safe }};
+const FELT   = {{ felt_json|safe }};
+
+/* ── tabs ── */
+var mapInited = false;
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'peta' && !mapInited) { initMap(); mapInited = true; }
+  if (name === 'peta') setTimeout(function(){ if(quakeMap) quakeMap.invalidateSize(); }, 50);
+  if (name === 'statistik') initStats();
+}
+
+/* ══ MAP ══ */
+var quakeMap = null, activeTile = null, quakeLyr = null, feltLyr = null;
+
+var BASEMAPS = {
+  osm:       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap', maxZoom:19 }),
+  dark:      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO', subdomains:'abcd', maxZoom:19 }),
+  light:     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO', subdomains:'abcd', maxZoom:19 }),
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri', maxZoom:18 }),
+  topo:      L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenTopoMap', subdomains:'abc', maxZoom:17 }),
+};
+
+function magColor(m) {
+  if (m >= 6.0) return '#7f1d1d';
+  if (m >= 5.0) return '#dc2626';
+  if (m >= 3.0) return '#d97706';
+  return '#16a34a';
+}
+
+function initMap() {
+  quakeMap = L.map('quake-map').setView([-2.5, 139.0], 6);
+  activeTile = BASEMAPS.osm;
+  activeTile.addTo(quakeMap);
+
+  quakeLyr = L.layerGroup().addTo(quakeMap);
+  feltLyr  = L.layerGroup().addTo(quakeMap);
+
+  EVENTS.forEach(function(e) {
+    var r = Math.max(4, Math.min(20, e.mag * 3));
+    var c = magColor(e.mag);
+    L.circleMarker([e.lat, e.lng], {
+      radius: r, color: c, fillColor: c, fillOpacity: 0.6, weight: 1,
+    }).bindPopup(
+      '<b>M ' + e.mag + '</b><br>' + e.loc + '<br>' + e.depth + ' km<br><small>' + e.time + '</small>' +
+      '<br><a href="/gempa/' + e.id + '/" style="color:#1d4ed8;font-size:11px;">Detail →</a>'
+    ).addTo(quakeLyr);
+  });
+
+  FELT.forEach(function(f) {
+    L.circleMarker([f.lat, f.lng], {
+      radius: Math.max(6, f.mag * 3.5), color: '#92400e',
+      fillColor: '#f59e0b', fillOpacity: 0.75, weight: 2, dashArray: '4',
+    }).bindPopup(
+      '<b>⚠ Dirasakan — M ' + f.mag + '</b><br>' + f.wilayah +
+      (f.dirasakan ? '<br><i>' + f.dirasakan + '</i>' : '') +
+      '<br>' + f.depth + ' km<br><small>' + f.time + '</small>'
+    ).addTo(feltLyr);
+  });
+}
+
+window.changeBasemap = function(key) {
+  if (!quakeMap) return;
+  if (activeTile) quakeMap.removeLayer(activeTile);
+  activeTile = BASEMAPS[key] || BASEMAPS.osm;
+  activeTile.addTo(quakeMap);
+  if (quakeLyr) quakeLyr.bringToFront();
+  if (feltLyr)  feltLyr.bringToFront();
+};
+
+/* ══ STATISTICS ══ */
+var statsInited = false;
+function initStats() {
+  if (statsInited || !EVENTS.length) return;
+  statsInited = true;
+
+  var mags   = EVENTS.map(function(e){ return e.mag; }).filter(function(m){ return m > 0; });
+  var depths = EVENTS.map(function(e){ return e.depth; });
+
+  var total  = EVENTS.length;
+  var m5plus = EVENTS.filter(function(e){ return e.mag >= 5.0; }).length;
+  var avgMag = mags.length ? (mags.reduce(function(a,b){return a+b;},0) / mags.length) : 0;
+  var avgDep = depths.length ? (depths.reduce(function(a,b){return a+b;},0) / depths.length) : 0;
+
+  var maxEvt = EVENTS.reduce(function(a,b){ return b.mag > a.mag ? b : a; }, EVENTS[0]);
+  var minDep = EVENTS.reduce(function(a,b){ return b.depth < a.depth ? b : a; }, EVENTS[0]);
+  var maxDep = EVENTS.reduce(function(a,b){ return b.depth > a.depth ? b : a; }, EVENTS[0]);
+
+  document.getElementById('st-total').textContent       = total.toLocaleString('id-ID');
+  document.getElementById('st-m5').textContent          = m5plus;
+  document.getElementById('st-felt').textContent        = FELT.length;
+  document.getElementById('st-maxmag').textContent      = 'M ' + maxEvt.mag.toFixed(1);
+  document.getElementById('st-maxmag-info').textContent = maxEvt.time.slice(0,10) + ' · ' + (maxEvt.loc.slice(0,25) || '—');
+  document.getElementById('st-avgmag').textContent      = avgMag.toFixed(2);
+  document.getElementById('st-avgdep').textContent      = avgDep.toFixed(1);
+  document.getElementById('st-shallow').textContent     = minDep.depth.toFixed(0) + ' km';
+  document.getElementById('st-shallow-info').textContent = minDep.time.slice(0,10);
+  document.getElementById('st-deep').textContent        = maxDep.depth.toFixed(0) + ' km';
+  document.getElementById('st-deep-info').textContent   = maxDep.time.slice(0,10);
+
+  /* daily count chart */
+  var dayMap = {};
+  EVENTS.forEach(function(e){
+    var d = e.time.slice(0,10); dayMap[d] = (dayMap[d] || 0) + 1;
+  });
+  var today = new Date();
+  var dLabels = [], dData = [];
+  for (var i = 30; i >= 0; i--) {
+    var dt = new Date(today); dt.setDate(dt.getDate() - i);
+    var key = dt.toISOString().slice(0,10);
+    dLabels.push(key.slice(5));  // MM-DD
+    dData.push(dayMap[key] || 0);
+  }
+  new Chart(document.getElementById('chart-daily').getContext('2d'), {
+    type: 'bar',
+    data: { labels: dLabels, datasets: [{ data: dData, backgroundColor: 'rgba(29,78,216,0.65)', borderColor: '#1d4ed8', borderWidth: 1 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return c.raw + ' event'; } } } },
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 9 }, color: '#9ca3af', maxTicksLimit: 12 } },
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 9 }, color: '#6b7280', precision: 0 } }
+      }
+    }
+  });
+
+  /* magnitude distribution */
+  var magBins  = ['<2','2–3','3–4','4–5','5–6','≥6'];
+  var magCounts = [0,0,0,0,0,0];
+  var magColors = ['#16a34a','#22c55e','#d97706','#f59e0b','#dc2626','#7f1d1d'];
+  mags.forEach(function(m){
+    if (m < 2) magCounts[0]++;
+    else if (m < 3) magCounts[1]++;
+    else if (m < 4) magCounts[2]++;
+    else if (m < 5) magCounts[3]++;
+    else if (m < 6) magCounts[4]++;
+    else magCounts[5]++;
+  });
+  new Chart(document.getElementById('chart-magdist').getContext('2d'), {
+    type: 'bar',
+    data: { labels: magBins, datasets: [{ data: magCounts, backgroundColor: magColors, borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return c.raw + ' event'; } } } },
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#6b7280' } },
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 9 }, color: '#6b7280', precision: 0 } }
+      }
+    }
+  });
+
+  /* depth distribution */
+  var depBins   = ['0–10','10–30','30–60','60–100','100–300','>300'];
+  var depCounts = [0,0,0,0,0,0];
+  var depColors = ['#fbbf24','#f59e0b','#d97706','#b45309','#92400e','#1e1b4b'];
+  depths.forEach(function(d){
+    if (d < 10) depCounts[0]++;
+    else if (d < 30) depCounts[1]++;
+    else if (d < 60) depCounts[2]++;
+    else if (d < 100) depCounts[3]++;
+    else if (d < 300) depCounts[4]++;
+    else depCounts[5]++;
+  });
+  new Chart(document.getElementById('chart-depdist').getContext('2d'), {
+    type: 'bar',
+    data: { labels: depBins, datasets: [{ data: depCounts, backgroundColor: depColors, borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return c.raw + ' event'; } } } },
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#6b7280' } },
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 9 }, color: '#6b7280', precision: 0 } }
+      }
+    }
+  });
+}
+</script>
 
 {% endblock %}

@@ -301,12 +301,54 @@ def public_gempa_detail(request, public_id):
 
 
 def gempa_public(request):
+    import json
     from qc_review.models import Event as QCEvent
+    from repository.models import FeltEarthquake
     from django.core.paginator import Paginator
-    qs = QCEvent.objects.order_by('-origin_time')
+
+    cutoff = timezone.now().date() - datetime.timedelta(days=30)
+    qs = QCEvent.objects.filter(origin_time__date__gte=cutoff).order_by('-origin_time')
     paginator = Paginator(qs, 20)
     page_obj = paginator.get_page(request.GET.get('page', 1))
-    return render(request, 'gempa_public.html', {'page_obj': page_obj})
+
+    all_events = list(qs.values(
+        'public_id', 'latitude', 'longitude', 'magnitude', 'depth_km', 'region', 'origin_time'
+    ))
+    events_json = json.dumps([
+        {
+            'id':    e['public_id'],
+            'lat':   e['latitude'],
+            'lng':   e['longitude'],
+            'mag':   round(e['magnitude'], 1) if e['magnitude'] is not None else 0,
+            'depth': round(e['depth_km'], 1),
+            'loc':   e['region'] or '',
+            'time':  e['origin_time'].strftime('%Y-%m-%d %H:%M UTC'),
+        }
+        for e in all_events
+    ])
+
+    felt_qs = FeltEarthquake.objects.filter(
+        event_datetime__date__gte=cutoff
+    ).values('latitude', 'longitude', 'magnitude', 'depth_km', 'wilayah', 'dirasakan', 'event_datetime')
+    felt_json = json.dumps([
+        {
+            'lat':      f['latitude'],
+            'lng':      f['longitude'],
+            'mag':      round(f['magnitude'], 1),
+            'depth':    round(f['depth_km'], 1),
+            'wilayah':  f['wilayah'],
+            'dirasakan': f['dirasakan'] or '',
+            'time':     f['event_datetime'].strftime('%Y-%m-%d %H:%M UTC'),
+        }
+        for f in felt_qs
+    ])
+
+    return render(request, 'gempa_public.html', {
+        'page_obj':    page_obj,
+        'cutoff':      cutoff,
+        'events_json': events_json,
+        'felt_json':   felt_json,
+    })
 
 
 def our_work(request):
