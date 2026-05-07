@@ -19,10 +19,14 @@ echo "[4/6] Collecting static files..."
 $VENV/python manage.py collectstatic --noinput --clear -v 0
 
 echo "[5/6] Restarting services..."
-sudo systemctl restart datin.service datin-celery.service datin-celery-beat.service
+sudo systemctl restart datin.service
+sudo systemctl restart datin-celery.service
+sudo systemctl restart datin-celery-beat.service
 
 echo "[6/6] Checking service status..."
-sudo systemctl is-active datin.service datin-celery.service datin-celery-beat.service
+sudo systemctl is-active datin.service
+sudo systemctl is-active datin-celery.service
+sudo systemctl is-active datin-celery-beat.service
 
 echo ""
 echo "Deploy complete."
