@@ -162,6 +162,42 @@
   .stat-label { color: #94a3b8; }
   .stat-val   { font-weight: 700; color: #f1f5f9; }
 
+  /* Shakemap float panel */
+  #shakemap-panel {
+    position: fixed;
+    bottom: 46px;
+    left: 10px;
+    z-index: 900;
+    background: rgba(10, 20, 40, 0.88);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 0.5rem 0.6rem;
+    color: #e2e8f0;
+    max-width: 160px;
+    font-size: 0.62rem;
+  }
+  #shakemap-panel .sp-label {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    margin-bottom: 0.3rem;
+  }
+  #shakemap-panel img {
+    width: 100%;
+    border-radius: 6px;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  #shakemap-panel .sp-caption {
+    color: #cbd5e1;
+    font-size: 0.6rem;
+    line-height: 1.4;
+    text-align: center;
+  }
+
   /* Legend */
   #legend {
     position: fixed;
@@ -381,9 +417,9 @@
 
 <!-- ── Stats Panel ─────────────────────────────────────────────────────── -->
 <div id="info-panel">
-  <h4>Gempa 3 Hari Terakhir</h4>
+  <h4>Gempa 10 Hari Terakhir</h4>
   <div class="stat-row">
-    <span class="stat-label">Total tampil</span>
+    <span class="stat-label">Total</span>
     <span class="stat-val" id="ev-count">—</span>
   </div>
   <div class="stat-row">
@@ -394,8 +430,12 @@
     <span class="stat-label">Terbaru</span>
     <span class="stat-val" id="ev-latest">—</span>
   </div>
+  <div class="stat-row">
+    <span class="stat-label">Dirasakan</span>
+    <span class="stat-val">{{ felt_count }}</span>
+  </div>
   <div style="margin-top:0.5rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.5rem; color:#64748b; font-size:0.6rem;">
-    Data QC 3 hari terakhir
+    Data QC 10 hari terakhir
   </div>
 </div>
 
@@ -408,6 +448,18 @@
   <div class="leg-row"><span class="leg-dot" style="background:#ef4444;"></span><span>6.0 – 6.9</span></div>
   <div class="leg-row"><span class="leg-dot" style="background:#b91c1c;"></span><span>≥ 7.0</span></div>
 </div>
+
+<!-- ── Shakemap Float Panel ─────────────────────────────────────────────── -->
+{% if latest_felt and latest_felt.img_loc_map %}
+<div id="shakemap-panel">
+  <div class="sp-label">Gempa Dirasakan Terakhir</div>
+  <img src="{{ latest_felt.img_loc_map.url }}" alt="Peta Lokasi">
+  <div class="sp-caption">
+    {% if latest_felt.dirasakan %}{{ latest_felt.dirasakan }}{% endif %}
+    {% if latest_felt.wilayah %}<br>{{ latest_felt.wilayah }}{% endif %}
+  </div>
+</div>
+{% endif %}
 
 <!-- ── Weather Carousel ────────────────────────────────────────────────── -->
 <div id="weather-panel">
