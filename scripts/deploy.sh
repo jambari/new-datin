@@ -6,7 +6,8 @@ VENV="$APP_DIR/venv/bin"
 
 echo "[1/6] Pulling latest code..."
 cd "$APP_DIR"
-git pull
+git fetch origin main
+git reset --hard origin/main
 
 echo "[2/6] Installing dependencies..."
 $VENV/pip install -r requirements.txt --quiet 2>&1 | grep -v "^$" | grep -v "notice" || true
