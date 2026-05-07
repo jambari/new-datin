@@ -178,12 +178,47 @@
     border-radius: 6px;
     display: block;
     margin-bottom: 0.4rem;
+    cursor: zoom-in;
+    transition: opacity 0.15s;
   }
+  #shakemap-panel img:hover { opacity: 0.85; }
   #shakemap-panel .sp-caption {
     color: #cbd5e1;
     font-size: 0.62rem;
     line-height: 1.4;
     text-align: center;
+  }
+
+  /* ── Shakemap Lightbox ───────────────────────────────────── */
+  #sp-lb {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.92);
+    flex-direction: column; align-items: center; justify-content: center;
+  }
+  #sp-lb-toolbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; padding: 10px 16px; background: rgba(0,0,0,0.4);
+  }
+  .sp-lb-btn {
+    color: #fff; background: rgba(255,255,255,0.12); border: none;
+    cursor: pointer; border-radius: 4px; padding: 4px 10px;
+    font-size: 18px; line-height: 1;
+  }
+  .sp-lb-btn.sm { font-size: 12px; padding: 4px 10px; }
+  #sp-lb-zoom-lbl { color: #aaa; font-size: 12px; min-width: 38px; text-align: center; }
+  #sp-lb-wrap {
+    overflow: hidden; max-width: 92vw; max-height: 80vh;
+    display: flex; align-items: center; justify-content: center; margin-top: 50px;
+  }
+  #sp-lb-img {
+    max-width: 92vw; max-height: 80vh; object-fit: contain;
+    transform-origin: center; transition: transform 0.15s;
+    border-radius: 4px; box-shadow: 0 4px 32px rgba(0,0,0,0.6);
+  }
+  #sp-lb-caption {
+    margin-top: 10px; color: #bbb; font-size: 13px; text-align: center;
   }
 
   /* Legend */
@@ -434,7 +469,8 @@
   {% if latest_shakemap and latest_shakemap.shakemap_image %}
   <div id="shakemap-panel">
     <h4>Shakemap Terakhir</h4>
-    <img src="{{ latest_shakemap.shakemap_image.url }}" alt="Shakemap MMI">
+    <img src="{{ latest_shakemap.shakemap_image.url }}" alt="Shakemap MMI"
+         onclick="spLbOpen('{{ latest_shakemap.shakemap_image.url }}', 'M{{ latest_shakemap.magnitude }} — {{ latest_shakemap.location_string|escapejs }}{% if latest_felt and latest_felt.dirasakan %} · {{ latest_felt.dirasakan|escapejs }}{% endif %}')">
     <div class="sp-caption">
       M{{ latest_shakemap.magnitude }} — {{ latest_shakemap.location_string }}
       {% if latest_felt and latest_felt.dirasakan %}<br>{{ latest_felt.dirasakan }}{% endif %}
@@ -478,6 +514,21 @@
 <footer id="site-footer">
   <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
 </footer>
+
+<!-- ── Shakemap Lightbox ────────────────────────────────────────────────── -->
+<div id="sp-lb">
+  <div id="sp-lb-toolbar">
+    <button class="sp-lb-btn" onclick="spLbZoom(-0.25)">&#8722;</button>
+    <span id="sp-lb-zoom-lbl">100%</span>
+    <button class="sp-lb-btn" onclick="spLbZoom(0.25)">&#43;</button>
+    <button class="sp-lb-btn sm" onclick="spLbResetZoom()">1:1</button>
+    <button class="sp-lb-btn" onclick="spLbClose()" style="font-size:20px;">&times;</button>
+  </div>
+  <div id="sp-lb-wrap">
+    <img id="sp-lb-img" src="" alt="">
+  </div>
+  <div id="sp-lb-caption"></div>
+</div>
 
 {% endblock %}
 
@@ -675,6 +726,53 @@
       const p = document.getElementById('weather-panel');
       if (p) p.style.display = 'none';
     });
+})();
+</script>
+
+<script>
+(function () {
+  var spZoom = 1;
+
+  window.spLbOpen = function (src, caption) {
+    spZoom = 1;
+    document.getElementById('sp-lb-img').src = src;
+    document.getElementById('sp-lb-img').style.transform = 'scale(1)';
+    document.getElementById('sp-lb-zoom-lbl').textContent = '100%';
+    document.getElementById('sp-lb-caption').textContent = caption || '';
+    document.getElementById('sp-lb').style.display = 'flex';
+    document.addEventListener('keydown', _spLbKey);
+    document.getElementById('sp-lb').addEventListener('wheel', _spLbWheel, { passive: false });
+  };
+
+  window.spLbClose = function () {
+    document.getElementById('sp-lb').style.display = 'none';
+    document.removeEventListener('keydown', _spLbKey);
+    document.getElementById('sp-lb').removeEventListener('wheel', _spLbWheel);
+  };
+
+  window.spLbZoom = function (delta) {
+    spZoom = Math.min(5, Math.max(0.25, spZoom + delta));
+    _spApplyZoom();
+  };
+
+  window.spLbResetZoom = function () { spZoom = 1; _spApplyZoom(); };
+
+  function _spApplyZoom() {
+    document.getElementById('sp-lb-img').style.transform = 'scale(' + spZoom + ')';
+    document.getElementById('sp-lb-zoom-lbl').textContent = Math.round(spZoom * 100) + '%';
+  }
+
+  function _spLbKey(e) {
+    if (e.key === 'Escape') spLbClose();
+    else if (e.key === '+' || e.key === '=') spLbZoom(0.25);
+    else if (e.key === '-') spLbZoom(-0.25);
+  }
+
+  function _spLbWheel(e) { e.preventDefault(); spLbZoom(e.deltaY < 0 ? 0.15 : -0.15); }
+
+  document.getElementById('sp-lb').addEventListener('click', function (e) {
+    if (e.target === this) spLbClose();
+  });
 })();
 </script>
 {% endblock %}
