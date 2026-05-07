@@ -173,7 +173,35 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    max-height: calc(100vh - 116px);
+    overflow-y: auto;
+    scrollbar-width: none;
   }
+  #left-panels::-webkit-scrollbar { display: none; }
+
+  /* ── Datetime/Sun panel ──────────────────────────────────── */
+  #dt-clock {
+    font-size: 1.25rem; font-weight: 700; color: #f1f5f9;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em;
+    text-align: center; margin-bottom: 0.6rem;
+  }
+  .dt-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 0.4rem; margin-bottom: 0.22rem;
+  }
+  .dt-label { font-size: 0.6rem; color: #64748b; flex-shrink: 0; }
+  .dt-val   { font-size: 0.68rem; font-weight: 600; color: #e2e8f0; text-align: right; }
+  .dt-divider {
+    border: none; border-top: 1px solid rgba(255,255,255,0.08);
+    margin: 0.45rem 0;
+  }
+  .dt-sun-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;
+  }
+  .dt-sun-item { text-align: center; flex: 1; }
+  .dt-sun-icon { font-size: 1rem; display: block; }
+  .dt-sun-lbl  { font-size: 0.56rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+  .dt-sun-val  { font-size: 0.72rem; font-weight: 700; color: #fbbf24; font-family: 'JetBrains Mono', monospace; }
 
   /* Shared card style for both left panels */
   #info-panel,
@@ -522,6 +550,37 @@
   </div>
   {% endif %}
 
+  <!-- Datetime / Sun Panel -->
+  <div id="info-panel">
+    <h4>Waktu &amp; Kalender · Jayapura</h4>
+    <div id="dt-clock">--:--:-- WIT</div>
+    <div class="dt-row">
+      <span class="dt-label">Masehi</span>
+      <span class="dt-val" id="dt-gregorian">—</span>
+    </div>
+    <div class="dt-row">
+      <span class="dt-label">Julian (DOY)</span>
+      <span class="dt-val" id="dt-julian">—</span>
+    </div>
+    <div class="dt-row">
+      <span class="dt-label">Hijriah</span>
+      <span class="dt-val" id="dt-hijriah">—</span>
+    </div>
+    <hr class="dt-divider">
+    <div class="dt-sun-row">
+      <div class="dt-sun-item">
+        <span class="dt-sun-icon">🌅</span>
+        <div class="dt-sun-lbl">Terbit</div>
+        <div class="dt-sun-val" id="dt-sunrise">—</div>
+      </div>
+      <div class="dt-sun-item">
+        <span class="dt-sun-icon">🌇</span>
+        <div class="dt-sun-lbl">Terbenam</div>
+        <div class="dt-sun-val" id="dt-sunset">—</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ── Legend ──────────────────────────────────────────────────────────── -->
@@ -578,6 +637,7 @@
 
 {% block extra_scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
 <script>
 (function () {
   // ── Data from server ──────────────────────────────────────
@@ -817,6 +877,100 @@
   document.getElementById('sp-lb').addEventListener('click', function (e) {
     if (e.target === this) spLbClose();
   });
+})();
+</script>
+
+<script>
+(function () {
+  var LAT = -2.5145, LNG = 140.704, TZ = 'Asia/Jayapura';
+
+  var HIJRI_MONTHS = [
+    'Muharram','Safar','Rabiul Awal','Rabiul Akhir',
+    'Jumadil Awal','Jumadil Akhir',"Rajab","Sya'ban",
+    'Ramadan','Syawal','Zulkaidah','Zulhijjah'
+  ];
+  var ID_DAYS = {
+    'Sunday':'Minggu','Monday':'Senin','Tuesday':'Selasa',
+    'Wednesday':'Rabu','Thursday':'Kamis','Friday':'Jumat','Saturday':'Sabtu'
+  };
+  var ID_MONTHS = ['','Januari','Februari','Maret','April','Mei','Juni',
+    'Juli','Agustus','September','Oktober','November','Desember'];
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  function getWITParts(date) {
+    var parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: TZ, year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: 'numeric', second: 'numeric',
+      hour12: false, weekday: 'long'
+    }).formatToParts(date);
+    var r = {};
+    parts.forEach(function(p) { r[p.type] = p.value; });
+    return r;
+  }
+
+  function getDOY(year, month, day) {
+    return Math.floor((new Date(year, month - 1, day) - new Date(year, 0, 1)) / 86400000) + 1;
+  }
+
+  function gregorianToHijri(y, m, d) {
+    var JD = Math.floor((1461 * (y + 4800 + Math.floor((m - 14) / 12))) / 4)
+           + Math.floor((367 * (m - 2 - 12 * Math.floor((m - 14) / 12))) / 12)
+           - Math.floor((3 * Math.floor((y + 4900 + Math.floor((m - 14) / 12)) / 100)) / 4)
+           + d - 32075;
+    var l = JD - 1948440 + 10632;
+    var n = Math.floor((l - 1) / 10631);
+    l = l - 10631 * n + 354;
+    var j = Math.floor((10985 - l) / 5316) * Math.floor((50 * l) / 17719)
+          + Math.floor(l / 5670) * Math.floor((43 * l) / 15238);
+    l = l - Math.floor((30 - j) / 15) * Math.floor((17719 * j) / 50)
+          - Math.floor(j / 16) * Math.floor((15238 * j) / 43) + 29;
+    return {
+      y: 30 * n + j - 30,
+      m: Math.floor((24 * l) / 709),
+      d: l - Math.floor((709 * Math.floor((24 * l) / 709)) / 24)
+    };
+  }
+
+  var lastDay = -1;
+
+  function updateSun(year, month, day) {
+    if (!window.SunCalc) return;
+    var times = SunCalc.getTimes(new Date(year, month - 1, day), LAT, LNG);
+    var opts = { hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: false };
+    document.getElementById('dt-sunrise').textContent =
+      times.sunrise.toLocaleTimeString('id-ID', opts);
+    document.getElementById('dt-sunset').textContent =
+      times.sunset.toLocaleTimeString('id-ID', opts);
+  }
+
+  function tick() {
+    var now = new Date();
+    var p = getWITParts(now);
+    var year = +p.year, month = +p.month, day = +p.day;
+    var hr = p.hour === '24' ? 0 : +p.hour;
+
+    document.getElementById('dt-clock').textContent =
+      pad2(hr) + ':' + pad2(+p.minute) + ':' + pad2(+p.second) + ' WIT';
+
+    if (day !== lastDay) {
+      lastDay = day;
+      document.getElementById('dt-gregorian').textContent =
+        (ID_DAYS[p.weekday] || p.weekday) + ', ' + day + ' ' + ID_MONTHS[month] + ' ' + year;
+
+      var doy = getDOY(year, month, day);
+      document.getElementById('dt-julian').textContent = 'DOY ' + doy + ' / ' + year;
+
+      var h = gregorianToHijri(year, month, day);
+      document.getElementById('dt-hijriah').textContent =
+        h.d + ' ' + HIJRI_MONTHS[h.m - 1] + ' ' + h.y + ' H';
+
+      updateSun(year, month, day);
+    }
+  }
+
+  tick();
+  setInterval(tick, 1000);
 })();
 </script>
 {% endblock %}
