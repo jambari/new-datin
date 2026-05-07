@@ -9,7 +9,7 @@ cd "$APP_DIR"
 git pull
 
 echo "[2/6] Installing dependencies..."
-$VENV/pip install -r requirements.txt --quiet
+$VENV/pip install -r requirements.txt --quiet 2>&1 | grep -v "^$" | grep -v "notice" || true
 
 echo "[3/6] Running migrations..."
 $VENV/python manage.py migrate --noinput
