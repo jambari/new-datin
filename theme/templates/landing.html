@@ -533,71 +533,103 @@
 
 <script>
 (function () {
-  const WX = {{ weather_json|safe }};
-  if (!WX || !WX.length) {
-    const p = document.getElementById('weather-panel');
-    if (p) p.style.display = 'none';
-    return;
+  const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  function parseBmkgDt(dt) {
+    // dt like '202605060000'
+    try {
+      const d = new Date(
+        parseInt(dt.slice(0,4)), parseInt(dt.slice(4,6))-1, parseInt(dt.slice(6,8)),
+        parseInt(dt.slice(8,10)), 0, 0
+      );
+      return d.getDate().toString().padStart(2,'0') + ' ' + MONTHS[d.getMonth()] + ', ' +
+             d.getHours().toString().padStart(2,'0') + ':00 WIT';
+    } catch(e) { return dt; }
   }
 
   function wxEmoji(code) {
     code = parseInt(code, 10);
-    if (code === 0)                   return '☀️';
-    if (code === 1 || code === 2)     return '🌤️';
-    if (code === 3 || code === 4)     return '☁️';
+    if (code === 0)                            return '☀️';
+    if (code === 1 || code === 2)              return '🌤️';
+    if (code === 3 || code === 4)              return '☁️';
     if (code === 5 || code === 10 || code === 45) return '🌫️';
-    if (code >= 60 && code <= 63)     return '🌧️';
-    if (code === 80)                  return '🌦️';
-    if (code >= 95)                   return '⛈️';
+    if (code >= 60 && code <= 63)              return '🌧️';
+    if (code === 80)                           return '🌦️';
+    if (code >= 95)                            return '⛈️';
     return '🌡️';
   }
 
-  let idx = 0;
-  const dotsEl  = document.getElementById('wx-dots');
-  const labelEl = document.getElementById('wx-label');
-  const iconEl  = document.getElementById('wx-icon');
-  const descEl  = document.getElementById('wx-desc');
-  const tEl     = document.getElementById('wx-t');
-  const huEl    = document.getElementById('wx-hu');
-  const wsEl    = document.getElementById('wx-ws');
+  function initWidget(WX) {
+    if (!WX || !WX.length) {
+      const p = document.getElementById('weather-panel');
+      if (p) p.style.display = 'none';
+      return;
+    }
 
-  // Build dots
-  WX.forEach(function (_, i) {
-    const d = document.createElement('div');
-    d.className = 'wx-dot' + (i === 0 ? ' active' : '');
-    dotsEl.appendChild(d);
-  });
+    let idx = 0;
+    const dotsEl  = document.getElementById('wx-dots');
+    const labelEl = document.getElementById('wx-label');
+    const iconEl  = document.getElementById('wx-icon');
+    const descEl  = document.getElementById('wx-desc');
+    const tEl     = document.getElementById('wx-t');
+    const huEl    = document.getElementById('wx-hu');
+    const wsEl    = document.getElementById('wx-ws');
 
-  function render() {
-    const p = WX[idx];
-    labelEl.textContent = p.label || '—';
-    iconEl.textContent  = wxEmoji(p.code);
-    descEl.textContent  = p.desc || '—';
-    tEl.textContent     = p.t !== undefined && p.t !== '—' ? p.t + ' °C' : '—';
-    huEl.textContent    = p.hu !== undefined && p.hu !== '—' ? p.hu + ' %' : '—';
-    const ws = p.ws !== undefined && p.ws !== '—' ? p.ws + ' m/s' : '—';
-    wsEl.textContent    = ws;
-    dotsEl.querySelectorAll('.wx-dot').forEach(function (d, i) {
-      d.classList.toggle('active', i === idx);
+    WX.forEach(function (_, i) {
+      const d = document.createElement('div');
+      d.className = 'wx-dot' + (i === 0 ? ' active' : '');
+      dotsEl.appendChild(d);
     });
+
+    function render() {
+      const p = WX[idx];
+      labelEl.textContent = p.label || '—';
+      iconEl.textContent  = wxEmoji(p.code);
+      descEl.textContent  = p.desc || '—';
+      tEl.textContent     = p.t !== undefined && p.t !== '—' ? p.t + ' °C' : '—';
+      huEl.textContent    = p.hu !== undefined && p.hu !== '—' ? p.hu + ' %' : '—';
+      wsEl.textContent    = p.ws !== undefined && p.ws !== '—' ? p.ws + ' m/s' : '—';
+      dotsEl.querySelectorAll('.wx-dot').forEach(function (d, i) {
+        d.classList.toggle('active', i === idx);
+      });
+    }
+
+    document.getElementById('wx-prev').addEventListener('click', function () {
+      idx = (idx - 1 + WX.length) % WX.length; render();
+    });
+    document.getElementById('wx-next').addEventListener('click', function () {
+      idx = (idx + 1) % WX.length; render();
+    });
+    setInterval(function () { idx = (idx + 1) % WX.length; render(); }, 5000);
+    render();
   }
 
-  document.getElementById('wx-prev').addEventListener('click', function () {
-    idx = (idx - 1 + WX.length) % WX.length;
-    render();
-  });
-  document.getElementById('wx-next').addEventListener('click', function () {
-    idx = (idx + 1) % WX.length;
-    render();
-  });
-
-  // Auto-advance every 5 seconds
-  setInterval(function () {
-    idx = (idx + 1) % WX.length;
-    render();
-  }, 5000);
-
-  render();
+  // Fetch from BMKG directly in the browser (bypasses server-side Cloudflare block)
+  fetch('https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=91.71.01.1002')
+    .then(function(r) { return r.json(); })
+    .then(function(raw) {
+      const nested = (raw.data || [{}])[0].cuaca || [];
+      const periods = [];
+      for (const day of nested) {
+        for (const p of day) {
+          periods.push({
+            label: parseBmkgDt(p.datetime || ''),
+            t:     p.t    !== undefined ? p.t    : '—',
+            code:  p.weather || 0,
+            desc:  p.weather_desc || '',
+            hu:    p.hu   !== undefined ? p.hu   : '—',
+            ws:    p.ws   !== undefined ? p.ws   : '—',
+          });
+          if (periods.length >= 10) break;
+        }
+        if (periods.length >= 10) break;
+      }
+      initWidget(periods);
+    })
+    .catch(function() {
+      const p = document.getElementById('weather-panel');
+      if (p) p.style.display = 'none';
+    });
 })();
 </script>
 {% endblock %}

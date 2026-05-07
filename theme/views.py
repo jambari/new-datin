@@ -194,10 +194,6 @@ def _parse_bmkg_dt(dt_str):
 
 def landing(request):
     import json
-    import urllib.request
-    import traceback as _tb
-    import logging
-    _log = logging.getLogger(__name__)
     from arsip.models import Album
     from qc_review.models import Event as QCEvent
     albums = list(_build_album_cover(
@@ -225,43 +221,10 @@ def landing(request):
         for e in events_qs
     ])
 
-    # Fetch weather forecast for Jayapura from BMKG API
-    weather_json = '[]'
-    try:
-        _wurl = 'https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=91.71.01.1002'
-        _req = urllib.request.Request(_wurl, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(_req, timeout=5) as _resp:
-            _raw = json.loads(_resp.read().decode())
-        _cuaca_nested = _raw.get('data', [{}])[0].get('cuaca', [])
-        _periods = []
-        for _day in _cuaca_nested:
-            for _p in _day:
-                _periods.append({
-                    'label': _parse_bmkg_dt(_p.get('datetime', '')),
-                    't':     _p.get('t', '—'),
-                    'code':  _p.get('weather', 0),
-                    'desc':  _p.get('weather_desc', ''),
-                    'hu':    _p.get('hu', '—'),
-                    'ws':    _p.get('ws', '—'),
-                    'wd':    _p.get('wd_to_deg', _p.get('wd', '')),
-                })
-                if len(_periods) >= 10:
-                    break
-            if len(_periods) >= 10:
-                break
-        weather_json = json.dumps(_periods)
-    except Exception:
-        _log.exception('Weather fetch failed')
-
-    try:
-        return render(request, 'landing.html', {
-            'albums': albums,
-            'events_json': events_json,
-            'weather_json': weather_json,
-        })
-    except Exception:
-        _log.exception('Landing render failed')
-        raise
+    return render(request, 'landing.html', {
+        'albums': albums,
+        'events_json': events_json,
+    })
 
 
 def public_shakemap_list(request):
