@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+APP_DIR="/var/www/html"
+VENV="$APP_DIR/venv/bin"
+
+echo "[1/6] Pulling latest code..."
+cd "$APP_DIR"
+git pull
+
+echo "[2/6] Installing dependencies..."
+$VENV/pip install -r requirements.txt --quiet
+
+echo "[3/6] Running migrations..."
+$VENV/python manage.py migrate --noinput
+
+echo "[4/6] Collecting static files..."
+$VENV/python manage.py collectstatic --noinput --clear -v 0
+
+echo "[5/6] Restarting services..."
+sudo systemctl restart datin.service datin-celery.service datin-celery-beat.service
+
+echo "[6/6] Checking service status..."
+sudo systemctl is-active datin.service datin-celery.service datin-celery-beat.service
+
+echo ""
+echo "Deploy complete."
