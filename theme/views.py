@@ -317,3 +317,48 @@ def our_work(request):
         .order_by('-created_at')
     ))
     return render(request, 'our_work.html', {'albums': albums})
+
+
+def public_petir(request):
+    return render(request, 'public_petir.html')
+
+
+def public_petir_data(request):
+    import json
+    from django.http import JsonResponse
+    from lightning.models import DailyStrikeSummary
+    from hujan.models import Hujan
+
+    end_str   = request.GET.get('end')
+    start_str = request.GET.get('start')
+
+    today = timezone.now().date()
+    try:
+        end_date   = datetime.date.fromisoformat(end_str)   if end_str   else today
+        start_date = datetime.date.fromisoformat(start_str) if start_str else today - datetime.timedelta(days=6)
+    except ValueError:
+        end_date   = today
+        start_date = today - datetime.timedelta(days=6)
+
+    # Clamp to max 30 days
+    if (end_date - start_date).days > 29:
+        start_date = end_date - datetime.timedelta(days=29)
+
+    lightning_map = {
+        s.summary_date: s.total_count
+        for s in DailyStrikeSummary.objects.filter(summary_date__range=[start_date, end_date])
+    }
+    rain_map = {
+        h.tanggal: h.obs
+        for h in Hujan.objects.filter(tanggal__range=[start_date, end_date])
+    }
+
+    labels, petir, hujan = [], [], []
+    d = start_date
+    while d <= end_date:
+        labels.append(d.strftime('%d/%m'))
+        petir.append(lightning_map.get(d, 0))
+        hujan.append(float(rain_map.get(d, 0)))
+        d += datetime.timedelta(days=1)
+
+    return JsonResponse({'labels': labels, 'petir': petir, 'hujan': hujan})

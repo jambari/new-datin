@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink:   #111827;
+    --muted: #6b7280;
+    --line:  #e5e7eb;
+    --blue:  #1d4ed8;
+    --amber: #d97706;
+    --sky:   #0ea5e9;
+  }
+
+  body { background: #f8fafc; }
+
+  /* ── Site header ── */
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #b45309; }
+
+  /* ── Page body ── */
+  .page-wrap { max-width: 900px; margin: 80px auto 60px; padding: 0 1.25rem; }
+
+  .page-title { font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 0.25rem; }
+  .page-sub   { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem;
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.9rem 1.1rem; margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .filter-bar label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 3px; letter-spacing: 0.06em; }
+  .filter-bar input[type="date"] {
+    padding: 0.35rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 0.82rem; color: var(--ink); background: #f9fafb;
+    color-scheme: light;
+  }
+  .filter-bar input[type="date"]:focus { outline: none; border-color: var(--blue); background: #fff; }
+  .btn-filter {
+    padding: 0.4rem 1rem; background: var(--blue); color: #fff;
+    border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-filter:hover { background: #1e40af; }
+  .filter-note { font-size: 0.68rem; color: var(--muted); align-self: flex-end; }
+
+  /* ── Chart card ── */
+  .chart-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.25rem 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 1.5rem;
+  }
+  .chart-card-title {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 1rem;
+  }
+  .chart-wrap { position: relative; height: 320px; }
+
+  /* ── Stat row ── */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+  .stat-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.9rem 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .stat-val  { font-size: 1.6rem; font-weight: 700; color: var(--ink); font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+  .stat-lbl  { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.3rem; }
+  .stat-val.amber { color: var(--amber); }
+  .stat-val.sky   { color: var(--sky); }
+
+  /* ── Legend ── */
+  .legend { display: flex; gap: 1.5rem; font-size: 0.75rem; color: var(--muted); margin-top: 0.75rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+
+  /* ── Footer ── */
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+
+  @media (max-width: 600px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .chart-wrap { height: 240px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Kembali</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="page-title">Aktivitas Petir</h1>
+  <p class="page-sub">Jumlah sambaran petir dan curah hujan harian · Wilayah Jayapura</p>
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <div>
+      <label for="inp-start">Tanggal Mulai</label>
+      <input type="date" id="inp-start">
+    </div>
+    <div>
+      <label for="inp-end">Tanggal Akhir</label>
+      <input type="date" id="inp-end">
+    </div>
+    <button class="btn-filter" onclick="loadData()">Tampilkan</button>
+    <span class="filter-note">Maksimal 30 hari</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stat-row" id="stat-row">
+    <div class="stat-card">
+      <div class="stat-val amber" id="stat-petir">—</div>
+      <div class="stat-lbl">Total Sambaran Petir</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val sky" id="stat-hujan">—</div>
+      <div class="stat-lbl">Total Curah Hujan (mm)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-days">—</div>
+      <div class="stat-lbl">Jumlah Hari</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-card">
+    <div class="chart-card-title">Sambaran Petir &amp; Curah Hujan Harian</div>
+    <div class="chart-wrap">
+      <canvas id="chart-petir"></canvas>
+    </div>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:#f59e0b;"></span>Petir (sambaran)</span>
+      <span><span class="legend-dot" style="background:#0ea5e9;"></span>Hujan (mm)</span>
+    </div>
+  </div>
+</div>
+
+<footer id="site-footer">
+  <span>© {% now "Y" %} Stasiun Geofisika Kelas I Jayapura — BMKG</span>
+</footer>
+
+<script>
+(function () {
+  var chart = null;
+
+  function isoDate(d) {
+    return d.toISOString().slice(0, 10);
+  }
+
+  function initDefaults() {
+    var today = new Date();
+    var end   = new Date(today);
+    var start = new Date(today);
+    start.setDate(start.getDate() - 6);
+    document.getElementById('inp-end').value   = isoDate(end);
+    document.getElementById('inp-start').value = isoDate(start);
+    document.getElementById('inp-end').max     = isoDate(today);
+    document.getElementById('inp-start').max   = isoDate(today);
+  }
+
+  function clampRange() {
+    var s = new Date(document.getElementById('inp-start').value);
+    var e = new Date(document.getElementById('inp-end').value);
+    if (isNaN(s) || isNaN(e)) return;
+    var diff = Math.round((e - s) / 86400000);
+    if (diff > 29) {
+      s = new Date(e);
+      s.setDate(s.getDate() - 29);
+      document.getElementById('inp-start').value = isoDate(s);
+    }
+    if (e < s) {
+      document.getElementById('inp-end').value = document.getElementById('inp-start').value;
+    }
+  }
+
+  document.getElementById('inp-start').addEventListener('change', clampRange);
+  document.getElementById('inp-end').addEventListener('change', clampRange);
+
+  function renderChart(labels, petir, hujan) {
+    var ctx = document.getElementById('chart-petir').getContext('2d');
+    if (chart) { chart.destroy(); }
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Petir (sambaran)',
+            data: petir,
+            backgroundColor: 'rgba(245,158,11,0.75)',
+            borderColor: '#d97706',
+            borderWidth: 1,
+            yAxisID: 'y',
+            order: 2,
+          },
+          {
+            label: 'Hujan (mm)',
+            data: hujan,
+            type: 'line',
+            borderColor: '#0ea5e9',
+            backgroundColor: 'rgba(14,165,233,0.12)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: '#0ea5e9',
+            fill: true,
+            tension: 0.3,
+            yAxisID: 'y2',
+            order: 1,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.dataset.yAxisID === 'y2') {
+                  return 'Hujan: ' + ctx.raw.toFixed(1) + ' mm';
+                }
+                return 'Petir: ' + ctx.raw + ' sambaran';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(0,0,0,0.04)' },
+            ticks: { font: { size: 10 }, color: '#6b7280' }
+          },
+          y: {
+            position: 'left',
+            title: { display: true, text: 'Sambaran Petir', font: { size: 10 }, color: '#d97706' },
+            grid: { color: 'rgba(0,0,0,0.06)' },
+            ticks: { font: { size: 10 }, color: '#d97706', precision: 0 },
+            beginAtZero: true,
+          },
+          y2: {
+            position: 'right',
+            title: { display: true, text: 'Curah Hujan (mm)', font: { size: 10 }, color: '#0ea5e9' },
+            grid: { drawOnChartArea: false },
+            ticks: { font: { size: 10 }, color: '#0ea5e9' },
+            beginAtZero: true,
+          }
+        }
+      }
+    });
+  }
+
+  function updateStats(petir, hujan, days) {
+    var totalPetir = petir.reduce(function(a, b) { return a + b; }, 0);
+    var totalHujan = hujan.reduce(function(a, b) { return a + b; }, 0);
+    document.getElementById('stat-petir').textContent = totalPetir.toLocaleString('id-ID');
+    document.getElementById('stat-hujan').textContent = totalHujan.toFixed(1);
+    document.getElementById('stat-days').textContent  = days;
+  }
+
+  window.loadData = function () {
+    clampRange();
+    var start = document.getElementById('inp-start').value;
+    var end   = document.getElementById('inp-end').value;
+    if (!start || !end) return;
+
+    var url = '{% url "public_petir_data" %}?start=' + start + '&end=' + end;
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        renderChart(d.labels, d.petir, d.hujan);
+        updateStats(d.petir, d.hujan, d.labels.length);
+      })
+      .catch(function(e) { console.error('Failed to load petir data', e); });
+  };
+
+  initDefaults();
+  loadData();
+})();
+</script>
+
+{% endblock %}

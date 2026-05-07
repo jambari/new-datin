@@ -9,4 +9,6 @@ urlpatterns = [
     path('shakemap/', views.public_shakemap_list, name='public_shakemap_list'),
     path('shakemap/<int:pk>/', views.public_shakemap_detail, name='public_shakemap_detail'),
     path('kegiatan/', views.our_work, name='our_work'),
+    path('petir/', views.public_petir, name='public_petir'),
+    path('petir/data/', views.public_petir_data, name='public_petir_data'),
 ]
