@@ -332,13 +332,13 @@ def public_magnetbumi_data(request):
     start_str = request.GET.get('start')
     try:
         end_date   = datetime.date.fromisoformat(end_str)   if end_str   else today
-        start_date = datetime.date.fromisoformat(start_str) if start_str else today - datetime.timedelta(days=29)
+        start_date = datetime.date.fromisoformat(start_str) if start_str else today - datetime.timedelta(days=30)
     except ValueError:
         end_date   = today
-        start_date = today - datetime.timedelta(days=29)
+        start_date = today - datetime.timedelta(days=30)
 
-    if (end_date - start_date).days > 29:
-        start_date = end_date - datetime.timedelta(days=29)
+    if (end_date - start_date).days > 30:
+        start_date = end_date - datetime.timedelta(days=30)
 
     qs = (
         MagneticObservation.objects
@@ -392,8 +392,8 @@ def public_petir_data(request):
         start_date = today - datetime.timedelta(days=6)
 
     # Clamp to max 30 days
-    if (end_date - start_date).days > 29:
-        start_date = end_date - datetime.timedelta(days=29)
+    if (end_date - start_date).days > 30:
+        start_date = end_date - datetime.timedelta(days=30)
 
     lightning_map = {
         s.summary_date: s.total_count

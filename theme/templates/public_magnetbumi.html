@@ -118,7 +118,7 @@
       <input type="date" id="inp-end">
     </div>
     <button class="btn-filter" onclick="loadData()">Tampilkan</button>
-    <span class="filter-note">Maksimal 30 hari</span>
+    <span class="filter-note">Maksimal 31 hari</span>
   </div>
 
   <!-- Stats -->
@@ -199,7 +199,7 @@
 
   function initDefaults() {
     var today = new Date();
-    var start = new Date(today); start.setDate(start.getDate() - 29);
+    var start = new Date(today); start.setDate(start.getDate() - 30);
     document.getElementById('inp-end').value   = isoDate(today);
     document.getElementById('inp-start').value = isoDate(start);
     document.getElementById('inp-end').max     = isoDate(today);
@@ -210,8 +210,8 @@
     var s = new Date(document.getElementById('inp-start').value);
     var e = new Date(document.getElementById('inp-end').value);
     if (isNaN(s) || isNaN(e)) return;
-    if ((e - s) / 86400000 > 29) {
-      s = new Date(e); s.setDate(s.getDate() - 29);
+    if ((e - s) / 86400000 > 30) {
+      s = new Date(e); s.setDate(s.getDate() - 30);
       document.getElementById('inp-start').value = isoDate(s);
     }
     if (e < s) document.getElementById('inp-end').value = document.getElementById('inp-start').value;

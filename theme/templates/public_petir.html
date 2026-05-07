@@ -137,7 +137,7 @@
       <input type="date" id="inp-end">
     </div>
     <button class="btn-filter" onclick="loadData()">Tampilkan</button>
-    <span class="filter-note">Maksimal 30 hari</span>
+    <span class="filter-note">Maksimal 31 hari</span>
   </div>
 
   <!-- Stats -->
@@ -197,9 +197,9 @@
     var e = new Date(document.getElementById('inp-end').value);
     if (isNaN(s) || isNaN(e)) return;
     var diff = Math.round((e - s) / 86400000);
-    if (diff > 29) {
+    if (diff > 30) {
       s = new Date(e);
-      s.setDate(s.getDate() - 29);
+      s.setDate(s.getDate() - 30);
       document.getElementById('inp-start').value = isoDate(s);
     }
     if (e < s) {
