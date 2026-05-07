@@ -195,6 +195,9 @@ def _parse_bmkg_dt(dt_str):
 def landing(request):
     import json
     import urllib.request
+    import traceback as _tb
+    import logging
+    _log = logging.getLogger(__name__)
     from arsip.models import Album
     from qc_review.models import Event as QCEvent
     albums = list(_build_album_cover(
@@ -248,13 +251,17 @@ def landing(request):
                 break
         weather_json = json.dumps(_periods)
     except Exception:
-        pass
+        _log.exception('Weather fetch failed')
 
-    return render(request, 'landing.html', {
-        'albums': albums,
-        'events_json': events_json,
-        'weather_json': weather_json,
-    })
+    try:
+        return render(request, 'landing.html', {
+            'albums': albums,
+            'events_json': events_json,
+            'weather_json': weather_json,
+        })
+    except Exception:
+        _log.exception('Landing render failed')
+        raise
 
 
 def public_shakemap_list(request):
