@@ -236,6 +236,10 @@
     <div class="chart-card" style="margin-bottom:1.25rem;">
       <div class="chart-card-title">CG+ Harian <span style="font-weight:400;color:#9ca3af;">(sambaran positif)</span></div>
       <div class="chart-wrap"><canvas id="chart-cg-plus"></canvas></div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#f59e0b;"></span>CG+ (sambaran)</span>
+        <span><span class="legend-dot" style="background:#0ea5e9;"></span>Hujan (mm)</span>
+      </div>
     </div>
 
     <!-- CG- stats -->
@@ -263,6 +267,10 @@
     <div class="chart-card">
       <div class="chart-card-title">CG− Harian <span style="font-weight:400;color:#9ca3af;">(sambaran negatif)</span></div>
       <div class="chart-wrap"><canvas id="chart-cg-minus"></canvas></div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#ef4444;"></span>CG− (sambaran)</span>
+        <span><span class="legend-dot" style="background:#0ea5e9;"></span>Hujan (mm)</span>
+      </div>
     </div>
   </div>
 
@@ -351,7 +359,7 @@
       .then(function(r) { return r.json(); })
       .then(function(d) {
         renderChart(d.labels, d.petir, d.hujan);
-        renderCGCharts(d.labels, d.cg_plus || [], d.cg_minus || []);
+        renderCGCharts(d.labels, d.cg_plus || [], d.cg_minus || [], d.hujan || []);
       })
       .catch(function(e) { console.error('chart error', e); });
   }
@@ -421,7 +429,7 @@
   }
 
   /* ── CG charts ── */
-  function makeSingleBar(canvasId, labels, data, color, existing) {
+  function makeSingleBar(canvasId, labels, data, color, hujan, existing) {
     var ctx = document.getElementById(canvasId);
     if (!ctx) return null;
     if (existing) existing.destroy();
@@ -429,21 +437,42 @@
       type: 'bar',
       data: {
         labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: color.replace('rgb(', 'rgba(').replace(')', ',0.75)'),
-          borderColor: color, borderWidth: 1,
-        }]
+        datasets: [
+          {
+            data: data,
+            backgroundColor: color.replace('rgb(', 'rgba(').replace(')', ',0.75)'),
+            borderColor: color, borderWidth: 1,
+            yAxisID: 'y', order: 2,
+          },
+          {
+            data: hujan, type: 'line',
+            borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.1)',
+            borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#0ea5e9',
+            fill: true, tension: 0.3, yAxisID: 'y2', order: 1,
+          }
+        ]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: function(c){ return c.raw.toLocaleString('id-ID') + ' sambaran'; } } }
+          tooltip: {
+            callbacks: {
+              label: function(c) {
+                return c.dataset.yAxisID === 'y2'
+                  ? 'Hujan: ' + c.raw.toFixed(1) + ' mm'
+                  : c.raw.toLocaleString('id-ID') + ' sambaran';
+              }
+            }
+          }
         },
         scales: {
-          x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#6b7280' } },
-          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, color: '#6b7280', precision: 0 } }
+          x:  { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#6b7280' } },
+          y:  { position: 'left',  beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, color: '#6b7280', precision: 0 },
+                title: { display: true, text: 'Sambaran', font: { size: 9 }, color: color } },
+          y2: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 }, color: '#0ea5e9' },
+                title: { display: true, text: 'Hujan (mm)', font: { size: 9 }, color: '#0ea5e9' } }
         }
       }
     });
@@ -462,9 +491,9 @@
     document.getElementById(ids.avg).textContent     = (total / data.length).toFixed(1);
   }
 
-  function renderCGCharts(labels, cgPlus, cgMinus) {
-    chartCGPlus  = makeSingleBar('chart-cg-plus',  labels, cgPlus,  'rgb(245,158,11)', chartCGPlus);
-    chartCGMinus = makeSingleBar('chart-cg-minus', labels, cgMinus, 'rgb(239,68,68)',  chartCGMinus);
+  function renderCGCharts(labels, cgPlus, cgMinus, hujan) {
+    chartCGPlus  = makeSingleBar('chart-cg-plus',  labels, cgPlus,  'rgb(245,158,11)', hujan, chartCGPlus);
+    chartCGMinus = makeSingleBar('chart-cg-minus', labels, cgMinus, 'rgb(239,68,68)',  hujan, chartCGMinus);
     cgStats(cgPlus,  labels, { total:'cg-plus-total',  max:'cg-plus-max',  maxDate:'cg-plus-max-date',  min:'cg-plus-min',  minDate:'cg-plus-min-date',  avg:'cg-plus-avg'  });
     cgStats(cgMinus, labels, { total:'cg-minus-total', max:'cg-minus-max', maxDate:'cg-minus-max-date', min:'cg-minus-min', minDate:'cg-minus-min-date', avg:'cg-minus-avg' });
   }
