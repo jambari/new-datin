@@ -319,6 +319,44 @@ def our_work(request):
     return render(request, 'our_work.html', {'albums': albums})
 
 
+def public_magnetbumi(request):
+    import json
+    from magnet.models import MagneticObservation
+
+    cutoff = timezone.now().date() - datetime.timedelta(days=29)
+    qs = (
+        MagneticObservation.objects
+        .filter(observation_date__gte=cutoff)
+        .exclude(declination=None)
+        .order_by('observation_date', 'session')
+        .values(
+            'observation_date', 'session',
+            'declination', 'inclination', 'total_intensity',
+            'horizontal_intensity', 'vertical_intensity',
+            'north_component', 'east_component',
+        )
+    )
+
+    rows = []
+    for r in qs:
+        rows.append({
+            'date':    r['observation_date'].strftime('%d/%m'),
+            'session': r['session'],
+            'D':  float(r['declination'])          if r['declination']          is not None else None,
+            'I':  float(r['inclination'])          if r['inclination']          is not None else None,
+            'F':  float(r['total_intensity'])      if r['total_intensity']      is not None else None,
+            'H':  float(r['horizontal_intensity']) if r['horizontal_intensity'] is not None else None,
+            'Z':  float(r['vertical_intensity'])   if r['vertical_intensity']   is not None else None,
+            'X':  float(r['north_component'])      if r['north_component']      is not None else None,
+            'Y':  float(r['east_component'])       if r['east_component']       is not None else None,
+        })
+
+    return render(request, 'public_magnetbumi.html', {
+        'rows_json': json.dumps(rows),
+        'record_count': len(rows),
+    })
+
+
 def public_petir(request):
     return render(request, 'public_petir.html')
 

@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink:   #111827;
+    --muted: #6b7280;
+    --line:  #e5e7eb;
+    --blue:  #1d4ed8;
+  }
+
+  body { background: #f8fafc; }
+
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #b45309; }
+
+  .page-wrap { max-width: 1100px; margin: 80px auto 60px; padding: 0 1.25rem; }
+  .page-title { font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 0.2rem; }
+  .page-sub   { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Stat row ── */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+  .stat-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.85rem 1rem; text-align: center;
+  }
+  .stat-val { font-size: 1.3rem; font-weight: 700; color: var(--ink); font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+  .stat-lbl { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.3rem; }
+
+  /* ── Chart grid ── */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .chart-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 1rem 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 0.75rem;
+  }
+  .chart-unit { font-size: 0.62rem; color: #9ca3af; font-weight: 400; margin-left: 4px; }
+  .chart-wrap { position: relative; height: 200px; }
+  .chart-card.full .chart-wrap { height: 240px; }
+
+  /* ── Empty state ── */
+  .empty-state { text-align: center; color: var(--muted); padding: 4rem 0; }
+
+  /* ── Footer ── */
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+
+  @media (max-width: 640px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .chart-card.full { grid-column: 1; }
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Kembali</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="page-title">Observasi Absolut Geomagnet</h1>
+  <p class="page-sub">Data 30 hari terakhir · Stasiun Jayapura (JYP)</p>
+
+  {% if record_count == 0 %}
+    <div class="empty-state">Belum ada data observasi dalam 30 hari terakhir.</div>
+  {% else %}
+
+  <!-- Stats: latest values -->
+  <div class="stat-row" id="stat-row">
+    <div class="stat-card">
+      <div class="stat-val" id="stat-D">—</div>
+      <div class="stat-lbl">Deklinasi (D °)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-I">—</div>
+      <div class="stat-lbl">Inklinasi (I °)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-F">—</div>
+      <div class="stat-lbl">Total Intensitas F (nT)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-H">—</div>
+      <div class="stat-lbl">Komponen H (nT)</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+
+    <!-- D -->
+    <div class="chart-card">
+      <div class="chart-title">Deklinasi (D) <span class="chart-unit">derajat</span></div>
+      <div class="chart-wrap"><canvas id="chart-D"></canvas></div>
+    </div>
+
+    <!-- I -->
+    <div class="chart-card">
+      <div class="chart-title">Inklinasi (I) <span class="chart-unit">derajat</span></div>
+      <div class="chart-wrap"><canvas id="chart-I"></canvas></div>
+    </div>
+
+    <!-- F full width -->
+    <div class="chart-card full">
+      <div class="chart-title">Total Intensitas (F) <span class="chart-unit">nT</span></div>
+      <div class="chart-wrap"><canvas id="chart-F"></canvas></div>
+    </div>
+
+    <!-- H -->
+    <div class="chart-card">
+      <div class="chart-title">Intensitas Horizontal (H) <span class="chart-unit">nT</span></div>
+      <div class="chart-wrap"><canvas id="chart-H"></canvas></div>
+    </div>
+
+    <!-- Z -->
+    <div class="chart-card">
+      <div class="chart-title">Intensitas Vertikal (Z) <span class="chart-unit">nT</span></div>
+      <div class="chart-wrap"><canvas id="chart-Z"></canvas></div>
+    </div>
+
+    <!-- X -->
+    <div class="chart-card">
+      <div class="chart-title">Komponen Utara (X) <span class="chart-unit">nT</span></div>
+      <div class="chart-wrap"><canvas id="chart-X"></canvas></div>
+    </div>
+
+    <!-- Y -->
+    <div class="chart-card">
+      <div class="chart-title">Komponen Timur (Y) <span class="chart-unit">nT</span></div>
+      <div class="chart-wrap"><canvas id="chart-Y"></canvas></div>
+    </div>
+
+  </div>
+  {% endif %}
+</div>
+
+<footer id="site-footer">
+  <span>© {% now "Y" %} Stasiun Geofisika Kelas I Jayapura — BMKG</span>
+</footer>
+
+<script>
+const ROWS = {{ rows_json|safe }};
+
+function makeChart(canvasId, labels, data, color, unit) {
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        borderColor: color,
+        backgroundColor: color.replace(')', ', 0.08)').replace('rgb', 'rgba'),
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: color,
+        fill: true,
+        tension: 0.3,
+        spanGaps: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var v = ctx.raw;
+              return v !== null ? v.toFixed(4) + ' ' + unit : '—';
+            },
+            title: function(items) {
+              return ROWS[items[0].dataIndex]
+                ? ROWS[items[0].dataIndex].date + ' [' + (ROWS[items[0].dataIndex].session || '') + ']'
+                : items[0].label;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: { font: { size: 9 }, color: '#9ca3af', maxTicksLimit: 10 }
+        },
+        y: {
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          ticks: { font: { size: 9 }, color: '#6b7280' }
+        }
+      }
+    }
+  });
+}
+
+if (ROWS.length > 0) {
+  var labels = ROWS.map(function(r) { return r.date + (r.session ? ' ' + r.session : ''); });
+
+  makeChart('chart-D', labels, ROWS.map(function(r){return r.D;}), 'rgb(99,102,241)',  '°');
+  makeChart('chart-I', labels, ROWS.map(function(r){return r.I;}), 'rgb(245,158,11)', '°');
+  makeChart('chart-F', labels, ROWS.map(function(r){return r.F;}), 'rgb(220,38,38)',  'nT');
+  makeChart('chart-H', labels, ROWS.map(function(r){return r.H;}), 'rgb(16,185,129)', 'nT');
+  makeChart('chart-Z', labels, ROWS.map(function(r){return r.Z;}), 'rgb(14,165,233)', 'nT');
+  makeChart('chart-X', labels, ROWS.map(function(r){return r.X;}), 'rgb(168,85,247)', 'nT');
+  makeChart('chart-Y', labels, ROWS.map(function(r){return r.Y;}), 'rgb(251,146,60)', 'nT');
+
+  // Latest values in stat cards
+  var last = ROWS[ROWS.length - 1];
+  function fmt(v, dp) { return v !== null ? v.toFixed(dp) : '—'; }
+  document.getElementById('stat-D').textContent = fmt(last.D, 4);
+  document.getElementById('stat-I').textContent = fmt(last.I, 4);
+  document.getElementById('stat-F').textContent = last.F !== null ? Math.round(last.F) : '—';
+  document.getElementById('stat-H').textContent = last.H !== null ? Math.round(last.H) : '—';
+}
+</script>
+
+{% endblock %}
