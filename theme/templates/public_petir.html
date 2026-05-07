@@ -100,12 +100,16 @@
   #strike-map { height: 480px; width: 100%; }
   .map-info {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
-    gap: 0.5rem; padding: 0.7rem 1rem; border-top: 1px solid var(--line);
+    gap: 0.5rem; padding: 0.6rem 1rem; border-top: 1px solid var(--line);
     font-size: 0.73rem; color: var(--muted);
   }
   .map-legend { display: flex; gap: 1rem; align-items: center; }
-  .map-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
-  .map-loading { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.82rem; }
+  .bolt-icon { display: inline-block; margin-right: 3px; vertical-align: middle; }
+  .basemap-select {
+    padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; border-radius: 5px;
+    font-size: 0.72rem; color: var(--ink); background: #f9fafb; cursor: pointer;
+  }
+  .basemap-select:focus { outline: none; border-color: var(--blue); }
 
   /* ── Footer ── */
   #site-footer {
@@ -195,10 +199,19 @@
       <div id="strike-map"></div>
       <div class="map-info">
         <div class="map-legend">
-          <span><span class="map-dot" style="background:#f59e0b;"></span>CG+ (positif)</span>
-          <span><span class="map-dot" style="background:#ef4444;"></span>CG− (negatif)</span>
+          <span><svg class="bolt-icon" xmlns="http://www.w3.org/2000/svg" width="9" height="15" viewBox="0 0 9 15"><polygon points="5.5,0 1,8.5 4.5,8.5 3.5,15 8,6.5 4.5,6.5" fill="#f59e0b"/></svg>CG+ (positif)</span>
+          <span><svg class="bolt-icon" xmlns="http://www.w3.org/2000/svg" width="9" height="15" viewBox="0 0 9 15"><polygon points="5.5,0 1,8.5 4.5,8.5 3.5,15 8,6.5 4.5,6.5" fill="#ef4444"/></svg>CG− (negatif)</span>
         </div>
-        <span id="map-count">—</span>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <select id="basemap-select" class="basemap-select" onchange="changeBasemap(this.value)">
+            <option value="dark">Dark Matter</option>
+            <option value="light">Light (Positron)</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="satellite">Satellite (Esri)</option>
+            <option value="topo">Topografi</option>
+          </select>
+          <span id="map-count">—</span>
+        </div>
       </div>
     </div>
   </div>
@@ -316,14 +329,50 @@
     document.getElementById('stat-days').textContent  = labels.length;
   }
 
+  /* ── basemaps ── */
+  var BASEMAPS = {
+    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19,
+    }),
+    light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19,
+    }),
+    osm: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
+    }),
+    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri &mdash; Source: Esri, USGS', maxZoom: 18,
+    }),
+    topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors, &copy; OpenTopoMap', subdomains: 'abc', maxZoom: 17,
+    }),
+  };
+  var activeTile = null;
+
+  window.changeBasemap = function(key) {
+    if (!leafMap) return;
+    if (activeTile) leafMap.removeLayer(activeTile);
+    activeTile = BASEMAPS[key] || BASEMAPS.dark;
+    activeTile.addTo(leafMap);
+    if (strikeLyr) strikeLyr.bringToFront();
+  };
+
+  /* ── bolt icon factory ── */
+  function boltIcon(color) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="16" viewBox="0 0 9 15">'
+            + '<polygon points="5.5,0 1,8.5 4.5,8.5 3.5,15 8,6.5 4.5,6.5" fill="' + color + '" stroke="rgba(0,0,0,0.4)" stroke-width="0.5"/>'
+            + '</svg>';
+    return L.divIcon({
+      html: svg, className: '', iconSize: [10, 16], iconAnchor: [5, 15],
+    });
+  }
+
   /* ── map ── */
   function initMap() {
     mapReady = true;
     leafMap = L.map('strike-map', { zoomControl: true }).setView([-2.5, 140.7], 9);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      subdomains: 'abcd', maxZoom: 16,
-    }).addTo(leafMap);
+    activeTile = BASEMAPS.dark;
+    activeTile.addTo(leafMap);
     strikeLyr = L.layerGroup().addTo(leafMap);
     loadMap(
       document.getElementById('inp-start').value,
@@ -345,14 +394,11 @@
     strikeLyr.clearLayers();
     strikes.forEach(function(s) {
       var color = s.type === 0 ? '#f59e0b' : '#ef4444';
-      L.circleMarker([s.lat, s.lon], {
-        radius: 4, color: color, fillColor: color,
-        fillOpacity: 0.75, weight: 0.5,
-      }).addTo(strikeLyr);
+      L.marker([s.lat, s.lon], { icon: boltIcon(color) }).addTo(strikeLyr);
     });
     var shown = strikes.length;
     document.getElementById('map-count').textContent =
-      shown.toLocaleString('id-ID') + ' sambaran ditampilkan' +
+      shown.toLocaleString('id-ID') + ' sambaran' +
       (shown >= 5000 ? ' (maks 5.000)' : '');
   }
 
