@@ -5,6 +5,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
     --ink:   #111827;
@@ -17,13 +19,10 @@
 
   body { background: #f8fafc; }
 
-  /* ── Site header ── */
   #site-header {
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-    background: rgba(255,255,255,0.96);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(0,0,0,0.08);
-    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
   }
   .header-inner {
     max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
@@ -36,24 +35,21 @@
   .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
   .header-back:hover { color: #b45309; }
 
-  /* ── Page body ── */
-  .page-wrap { max-width: 900px; margin: 80px auto 60px; padding: 0 1.25rem; }
-
+  .page-wrap { max-width: 1000px; margin: 80px auto 60px; padding: 0 1.25rem; }
   .page-title { font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 0.25rem; }
-  .page-sub   { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; }
+  .page-sub   { font-size: 0.78rem; color: var(--muted); margin-bottom: 1.25rem; font-family: 'JetBrains Mono', monospace; }
 
   /* ── Filter bar ── */
   .filter-bar {
     display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem;
     background: #fff; border: 1px solid var(--line); border-radius: 10px;
-    padding: 0.9rem 1.1rem; margin-bottom: 1.5rem;
+    padding: 0.9rem 1.1rem; margin-bottom: 1.25rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   .filter-bar label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 3px; letter-spacing: 0.06em; }
   .filter-bar input[type="date"] {
     padding: 0.35rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px;
-    font-size: 0.82rem; color: var(--ink); background: #f9fafb;
-    color-scheme: light;
+    font-size: 0.82rem; color: var(--ink); background: #f9fafb; color-scheme: light;
   }
   .filter-bar input[type="date"]:focus { outline: none; border-color: var(--blue); background: #fff; }
   .btn-filter {
@@ -64,32 +60,52 @@
   .btn-filter:hover { background: #1e40af; }
   .filter-note { font-size: 0.68rem; color: var(--muted); align-self: flex-end; }
 
-  /* ── Chart card ── */
-  .chart-card {
-    background: #fff; border: 1px solid var(--line); border-radius: 12px;
-    padding: 1.25rem 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    margin-bottom: 1.5rem;
+  /* ── Tabs ── */
+  .tab-nav { display: flex; gap: 4px; margin-bottom: 1rem; border-bottom: 2px solid var(--line); }
+  .tab-btn {
+    padding: 0.5rem 1.25rem; font-size: 0.8rem; font-weight: 600; border: none;
+    background: none; color: var(--muted); cursor: pointer;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    border-radius: 4px 4px 0 0; transition: all 0.15s;
   }
-  .chart-card-title {
-    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
-    color: var(--muted); margin-bottom: 1rem;
-  }
-  .chart-wrap { position: relative; height: 320px; }
+  .tab-btn:hover { background: #f1f5f9; color: var(--ink); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); background: #eff6ff; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
 
   /* ── Stat row ── */
-  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
-  .stat-card {
-    background: #fff; border: 1px solid var(--line); border-radius: 10px;
-    padding: 0.9rem 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  }
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+  .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 0.9rem 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
   .stat-val  { font-size: 1.6rem; font-weight: 700; color: var(--ink); font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
   .stat-lbl  { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 0.3rem; }
   .stat-val.amber { color: var(--amber); }
   .stat-val.sky   { color: var(--sky); }
 
-  /* ── Legend ── */
+  /* ── Chart ── */
+  .chart-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.25rem 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 1.5rem;
+  }
+  .chart-card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 1rem; }
+  .chart-wrap { position: relative; height: 320px; }
   .legend { display: flex; gap: 1.5rem; font-size: 0.75rem; color: var(--muted); margin-top: 0.75rem; }
   .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+
+  /* ── Map ── */
+  .map-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 1.5rem;
+  }
+  #strike-map { height: 480px; width: 100%; }
+  .map-info {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    gap: 0.5rem; padding: 0.7rem 1rem; border-top: 1px solid var(--line);
+    font-size: 0.73rem; color: var(--muted);
+  }
+  .map-legend { display: flex; gap: 1rem; align-items: center; }
+  .map-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+  .map-loading { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.82rem; }
 
   /* ── Footer ── */
   #site-footer {
@@ -103,6 +119,7 @@
   @media (max-width: 600px) {
     .stat-row { grid-template-columns: repeat(2, 1fr); }
     .chart-wrap { height: 240px; }
+    #strike-map { height: 360px; }
   }
 </style>
 {% endblock %}
@@ -126,7 +143,7 @@
   <h1 class="page-title">Aktivitas Petir</h1>
   <p class="page-sub">Jumlah sambaran petir dan curah hujan harian · Wilayah Jayapura</p>
 
-  <!-- Filter -->
+  <!-- Filter (shared) -->
   <div class="filter-bar">
     <div>
       <label for="inp-start">Tanggal Mulai</label>
@@ -136,35 +153,53 @@
       <label for="inp-end">Tanggal Akhir</label>
       <input type="date" id="inp-end">
     </div>
-    <button class="btn-filter" onclick="loadData()">Tampilkan</button>
+    <button class="btn-filter" onclick="loadAll()">Tampilkan</button>
     <span class="filter-note">Maksimal 31 hari</span>
   </div>
 
-  <!-- Stats -->
-  <div class="stat-row" id="stat-row">
-    <div class="stat-card">
-      <div class="stat-val amber" id="stat-petir">—</div>
-      <div class="stat-lbl">Total Sambaran Petir</div>
+  <!-- Tabs -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('grafik', this)">Grafik</button>
+    <button class="tab-btn"        onclick="switchTab('peta',   this)">Peta Sebaran</button>
+  </div>
+
+  <!-- Tab: Grafik -->
+  <div id="tab-grafik" class="tab-pane active">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-val amber" id="stat-petir">—</div>
+        <div class="stat-lbl">Total Sambaran Petir</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val sky" id="stat-hujan">—</div>
+        <div class="stat-lbl">Total Curah Hujan (mm)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-days">—</div>
+        <div class="stat-lbl">Jumlah Hari</div>
+      </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-val sky" id="stat-hujan">—</div>
-      <div class="stat-lbl">Total Curah Hujan (mm)</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-val" id="stat-days">—</div>
-      <div class="stat-lbl">Jumlah Hari</div>
+    <div class="chart-card">
+      <div class="chart-card-title">Sambaran Petir &amp; Curah Hujan Harian</div>
+      <div class="chart-wrap"><canvas id="chart-petir"></canvas></div>
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#f59e0b;"></span>Petir (sambaran)</span>
+        <span><span class="legend-dot" style="background:#0ea5e9;"></span>Hujan (mm)</span>
+      </div>
     </div>
   </div>
 
-  <!-- Chart -->
-  <div class="chart-card">
-    <div class="chart-card-title">Sambaran Petir &amp; Curah Hujan Harian</div>
-    <div class="chart-wrap">
-      <canvas id="chart-petir"></canvas>
-    </div>
-    <div class="legend">
-      <span><span class="legend-dot" style="background:#f59e0b;"></span>Petir (sambaran)</span>
-      <span><span class="legend-dot" style="background:#0ea5e9;"></span>Hujan (mm)</span>
+  <!-- Tab: Peta Sebaran -->
+  <div id="tab-peta" class="tab-pane">
+    <div class="map-card">
+      <div id="strike-map"></div>
+      <div class="map-info">
+        <div class="map-legend">
+          <span><span class="map-dot" style="background:#f59e0b;"></span>CG+ (positif)</span>
+          <span><span class="map-dot" style="background:#ef4444;"></span>CG− (negatif)</span>
+        </div>
+        <span id="map-count">—</span>
+      </div>
     </div>
   </div>
 </div>
@@ -175,18 +210,22 @@
 
 <script>
 (function () {
-  var chart = null;
+  var chartInst = null;
+  var leafMap   = null;
+  var strikeLyr = null;
+  var mapReady  = false;
+  var activeTab = 'grafik';
 
-  function isoDate(d) {
-    return d.toISOString().slice(0, 10);
-  }
+  var CHART_URL = '{% url "public_petir_data" %}';
+  var MAP_URL   = '{% url "lightning:strike_map_data" %}';
+
+  /* ── date helpers ── */
+  function isoDate(d) { return d.toISOString().slice(0, 10); }
 
   function initDefaults() {
     var today = new Date();
-    var end   = new Date(today);
-    var start = new Date(today);
-    start.setDate(start.getDate() - 6);
-    document.getElementById('inp-end').value   = isoDate(end);
+    var start = new Date(today); start.setDate(start.getDate() - 6);
+    document.getElementById('inp-end').value   = isoDate(today);
     document.getElementById('inp-start').value = isoDate(start);
     document.getElementById('inp-end').max     = isoDate(today);
     document.getElementById('inp-start').max   = isoDate(today);
@@ -198,118 +237,140 @@
     if (isNaN(s) || isNaN(e)) return;
     var diff = Math.round((e - s) / 86400000);
     if (diff > 30) {
-      s = new Date(e);
-      s.setDate(s.getDate() - 30);
+      s = new Date(e); s.setDate(s.getDate() - 30);
       document.getElementById('inp-start').value = isoDate(s);
     }
-    if (e < s) {
-      document.getElementById('inp-end').value = document.getElementById('inp-start').value;
-    }
+    if (e < s) document.getElementById('inp-end').value = document.getElementById('inp-start').value;
   }
 
   document.getElementById('inp-start').addEventListener('change', clampRange);
   document.getElementById('inp-end').addEventListener('change', clampRange);
 
+  /* ── tabs ── */
+  window.switchTab = function (name, btn) {
+    activeTab = name;
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'peta' && !mapReady) { initMap(); }
+    if (name === 'peta') { setTimeout(function(){ if(leafMap) leafMap.invalidateSize(); }, 50); }
+  };
+
+  /* ── chart ── */
+  function loadChart(start, end) {
+    fetch(CHART_URL + '?start=' + start + '&end=' + end)
+      .then(function(r) { return r.json(); })
+      .then(function(d) { renderChart(d.labels, d.petir, d.hujan); })
+      .catch(function(e) { console.error('chart error', e); });
+  }
+
   function renderChart(labels, petir, hujan) {
     var ctx = document.getElementById('chart-petir').getContext('2d');
-    if (chart) { chart.destroy(); }
-    chart = new Chart(ctx, {
+    if (chartInst) { chartInst.destroy(); }
+    chartInst = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [
           {
-            label: 'Petir (sambaran)',
-            data: petir,
-            backgroundColor: 'rgba(245,158,11,0.75)',
-            borderColor: '#d97706',
-            borderWidth: 1,
-            yAxisID: 'y',
-            order: 2,
+            label: 'Petir (sambaran)', data: petir,
+            backgroundColor: 'rgba(245,158,11,0.75)', borderColor: '#d97706', borderWidth: 1,
+            yAxisID: 'y', order: 2,
           },
           {
-            label: 'Hujan (mm)',
-            data: hujan,
-            type: 'line',
-            borderColor: '#0ea5e9',
-            backgroundColor: 'rgba(14,165,233,0.12)',
-            borderWidth: 2,
-            pointRadius: 3,
-            pointBackgroundColor: '#0ea5e9',
-            fill: true,
-            tension: 0.3,
-            yAxisID: 'y2',
-            order: 1,
+            label: 'Hujan (mm)', data: hujan, type: 'line',
+            borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.12)',
+            borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#0ea5e9',
+            fill: true, tension: 0.3, yAxisID: 'y2', order: 1,
           }
         ]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
               label: function(ctx) {
-                if (ctx.dataset.yAxisID === 'y2') {
-                  return 'Hujan: ' + ctx.raw.toFixed(1) + ' mm';
-                }
-                return 'Petir: ' + ctx.raw + ' sambaran';
+                return ctx.dataset.yAxisID === 'y2'
+                  ? 'Hujan: ' + ctx.raw.toFixed(1) + ' mm'
+                  : 'Petir: ' + ctx.raw + ' sambaran';
               }
             }
           }
         },
         scales: {
-          x: {
-            grid: { color: 'rgba(0,0,0,0.04)' },
-            ticks: { font: { size: 10 }, color: '#6b7280' }
-          },
-          y: {
-            position: 'left',
-            title: { display: true, text: 'Sambaran Petir', font: { size: 10 }, color: '#d97706' },
-            grid: { color: 'rgba(0,0,0,0.06)' },
-            ticks: { font: { size: 10 }, color: '#d97706', precision: 0 },
-            beginAtZero: true,
-          },
-          y2: {
-            position: 'right',
-            title: { display: true, text: 'Curah Hujan (mm)', font: { size: 10 }, color: '#0ea5e9' },
-            grid: { drawOnChartArea: false },
-            ticks: { font: { size: 10 }, color: '#0ea5e9' },
-            beginAtZero: true,
-          }
+          x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#6b7280' } },
+          y:  { position: 'left',  beginAtZero: true, title: { display: true, text: 'Sambaran Petir', font: { size: 10 }, color: '#d97706' }, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, color: '#d97706', precision: 0 } },
+          y2: { position: 'right', beginAtZero: true, title: { display: true, text: 'Curah Hujan (mm)', font: { size: 10 }, color: '#0ea5e9' }, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 }, color: '#0ea5e9' } }
         }
       }
     });
-  }
 
-  function updateStats(petir, hujan, days) {
-    var totalPetir = petir.reduce(function(a, b) { return a + b; }, 0);
-    var totalHujan = hujan.reduce(function(a, b) { return a + b; }, 0);
+    var totalPetir = petir.reduce(function(a,b){return a+b;}, 0);
+    var totalHujan = hujan.reduce(function(a,b){return a+b;}, 0);
     document.getElementById('stat-petir').textContent = totalPetir.toLocaleString('id-ID');
     document.getElementById('stat-hujan').textContent = totalHujan.toFixed(1);
-    document.getElementById('stat-days').textContent  = days;
+    document.getElementById('stat-days').textContent  = labels.length;
   }
 
-  window.loadData = function () {
+  /* ── map ── */
+  function initMap() {
+    mapReady = true;
+    leafMap = L.map('strike-map', { zoomControl: true }).setView([-2.5, 140.7], 9);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      subdomains: 'abcd', maxZoom: 16,
+    }).addTo(leafMap);
+    strikeLyr = L.layerGroup().addTo(leafMap);
+    loadMap(
+      document.getElementById('inp-start').value,
+      document.getElementById('inp-end').value
+    );
+  }
+
+  function loadMap(start, end) {
+    if (!mapReady) return;
+    strikeLyr.clearLayers();
+    document.getElementById('map-count').textContent = 'Memuat…';
+    fetch(MAP_URL + '?start_date=' + start + '&end_date=' + end)
+      .then(function(r) { return r.json(); })
+      .then(function(d) { renderStrikes(d.strikes || []); })
+      .catch(function(e) { console.error('map error', e); });
+  }
+
+  function renderStrikes(strikes) {
+    strikeLyr.clearLayers();
+    strikes.forEach(function(s) {
+      var color = s.type === 0 ? '#f59e0b' : '#ef4444';
+      L.circleMarker([s.lat, s.lon], {
+        radius: 4, color: color, fillColor: color,
+        fillOpacity: 0.75, weight: 0.5,
+      }).addTo(strikeLyr);
+    });
+    var shown = strikes.length;
+    document.getElementById('map-count').textContent =
+      shown.toLocaleString('id-ID') + ' sambaran ditampilkan' +
+      (shown >= 5000 ? ' (maks 5.000)' : '');
+  }
+
+  /* ── load all ── */
+  window.loadAll = function () {
     clampRange();
     var start = document.getElementById('inp-start').value;
     var end   = document.getElementById('inp-end').value;
     if (!start || !end) return;
-
-    var url = '{% url "public_petir_data" %}?start=' + start + '&end=' + end;
-    fetch(url)
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        renderChart(d.labels, d.petir, d.hujan);
-        updateStats(d.petir, d.hujan, d.labels.length);
-      })
-      .catch(function(e) { console.error('Failed to load petir data', e); });
+    loadChart(start, end);
+    if (mapReady) loadMap(start, end);
   };
 
   initDefaults();
-  loadData();
+  loadChart(
+    document.getElementById('inp-start').value,
+    document.getElementById('inp-end').value
+  );
 })();
 </script>
 
