@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,91 +9,186 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
+/* ── Theme variables ─────────────────────────────────────── */
+:root[data-theme="dark"] {
+  --bg:              #0f172a;
+  --bg-card:         #1e293b;
+  --bg-hover:        #1e2d3d;
+  --border:          #1e293b;
+  --border-input:    #334155;
+  --text:            #e2e8f0;
+  --text-muted:      #94a3b8;
+  --text-soft:       #64748b;
+  --text-title:      #f1f5f9;
+  --text-korban:     #cbd5e1;
+  --accent:          #38bdf8;
+  --btn-bg:          #0369a1;
+  --btn-hover:       #0284c7;
+  --btn-reset-bg:    #374151;
+  --btn-reset-hover: #4b5563;
+  --btn-reset-fg:    #e2e8f0;
+  --badge-tsun-bg:   #1e3a5f;
+  --badge-tsun-fg:   #38bdf8;
+  --badge-notsu-bg:  #1a2e1a;
+  --badge-notsu-fg:  #4ade80;
+  --badge-loc-bg:    #1e293b;
+  --badge-loc-fg:    #94a3b8;
+  --badge-laut-fg:   #38bdf8;
+  --tab-active:      #38bdf8;
+  --th-bg:           #1e293b;
+  --th-fg:           #94a3b8;
+  --toggle-bg:       #334155;
+  --toggle-fg:       #94a3b8;
+  --header-bg:       #0f172a;
+  --header-border:   #1e293b;
+  --shadow-hdr:      none;
+}
+:root[data-theme="light"] {
+  --bg:              #f8fafc;
+  --bg-card:         #ffffff;
+  --bg-hover:        #f1f5f9;
+  --border:          #e2e8f0;
+  --border-input:    #cbd5e1;
+  --text:            #1e293b;
+  --text-muted:      #64748b;
+  --text-soft:       #94a3b8;
+  --text-title:      #0f172a;
+  --text-korban:     #475569;
+  --accent:          #0369a1;
+  --btn-bg:          #0369a1;
+  --btn-hover:       #0284c7;
+  --btn-reset-bg:    #e2e8f0;
+  --btn-reset-hover: #cbd5e1;
+  --btn-reset-fg:    #475569;
+  --badge-tsun-bg:   #dbeafe;
+  --badge-tsun-fg:   #1d4ed8;
+  --badge-notsu-bg:  #dcfce7;
+  --badge-notsu-fg:  #15803d;
+  --badge-loc-bg:    #f1f5f9;
+  --badge-loc-fg:    #475569;
+  --badge-laut-fg:   #2563eb;
+  --tab-active:      #0369a1;
+  --th-bg:           #f1f5f9;
+  --th-fg:           #64748b;
+  --toggle-bg:       #e2e8f0;
+  --toggle-fg:       #475569;
+  --header-bg:       #ffffff;
+  --header-border:   #e2e8f0;
+  --shadow-hdr:      0 1px 3px rgba(0,0,0,.07);
+}
+
+/* ── Base ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background .3s, color .3s;
+}
 
 /* ── Header ─────────────────────────────────────────────── */
-header { background: #0f172a; border-bottom: 1px solid #1e293b; position: sticky; top: 0; z-index: 100; }
+header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+  box-shadow: var(--shadow-hdr);
+  position: sticky; top: 0; z-index: 100;
+  transition: background .3s, border-color .3s;
+}
 .hdr-inner { max-width: 1200px; margin: 0 auto; padding: 0 1.2rem; display: flex; align-items: center; gap: 1rem; height: 56px; }
 .brand { display: flex; align-items: center; gap: .7rem; text-decoration: none; flex: 1; }
 .brand img { height: 36px; }
-.brand-title { font-size: .85rem; font-weight: 700; color: #f1f5f9; display: block; }
-.brand-sub   { font-size: .65rem; color: #94a3b8; display: block; }
-.header-back { font-size: .8rem; color: #94a3b8; text-decoration: none; white-space: nowrap; }
-.header-back:hover { color: #e2e8f0; }
+.brand-title { font-size: .85rem; font-weight: 700; color: var(--text-title); display: block; }
+.brand-sub   { font-size: .65rem; color: var(--text-muted); display: block; }
+.header-back { font-size: .8rem; color: var(--text-muted); text-decoration: none; white-space: nowrap; }
+.header-back:hover { color: var(--text); }
+
+/* ── Theme toggle ────────────────────────────────────────── */
+.theme-toggle {
+  background: var(--toggle-bg); border: none; cursor: pointer;
+  border-radius: 6px; padding: .3rem .45rem; color: var(--toggle-fg);
+  font-size: .75rem; display: flex; align-items: center; gap: .3rem;
+  transition: background .2s, color .2s; white-space: nowrap;
+}
+.theme-toggle:hover { background: var(--border-input); color: var(--text); }
 
 /* ── Page layout ─────────────────────────────────────────── */
 .page-wrap { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.2rem 3rem; }
-.page-title { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; margin-bottom: .25rem; }
-.page-sub   { font-size: .8rem; color: #64748b; margin-bottom: 1.5rem; }
+.page-title { font-size: 1.4rem; font-weight: 700; color: var(--text-title); margin-bottom: .25rem; }
+.page-sub   { font-size: .8rem; color: var(--text-soft); margin-bottom: 1.5rem; }
 
 /* ── Tabs ───────────────────────────────────────────────── */
-.tabs { display: flex; gap: 0; border-bottom: 2px solid #1e293b; margin-bottom: 1.5rem; }
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; }
 .tab-btn {
   padding: .55rem 1.3rem; font-size: .82rem; font-weight: 600; cursor: pointer;
-  border: none; background: none; color: #64748b;
+  border: none; background: none; color: var(--text-soft);
   border-bottom: 2px solid transparent; margin-bottom: -2px;
   transition: color .15s, border-color .15s;
 }
-.tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; }
-.tab-btn:hover:not(.active) { color: #cbd5e1; }
+.tab-btn.active { color: var(--tab-active); border-bottom-color: var(--tab-active); }
+.tab-btn:hover:not(.active) { color: var(--text-muted); }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
 /* ── Filter bar ─────────────────────────────────────────── */
 .filter-bar { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.2rem; align-items: center; }
 .filter-bar input, .filter-bar select {
-  background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+  background: var(--bg-card); border: 1px solid var(--border-input); color: var(--text);
   border-radius: 6px; padding: .4rem .75rem; font-size: .8rem; outline: none;
+  transition: background .3s, border-color .3s, color .3s;
 }
 .filter-bar input { flex: 1; min-width: 180px; }
 .filter-bar select { min-width: 140px; }
 .filter-bar button {
-  background: #0369a1; color: #fff; border: none; border-radius: 6px;
+  background: var(--btn-bg); color: #fff; border: none; border-radius: 6px;
   padding: .4rem 1rem; font-size: .8rem; cursor: pointer; font-weight: 600;
+  transition: background .2s;
 }
-.filter-bar button:hover { background: #0284c7; }
-.filter-bar .btn-reset { background: #374151; }
-.filter-bar .btn-reset:hover { background: #4b5563; }
-.result-count { font-size: .75rem; color: #64748b; margin-left: auto; white-space: nowrap; }
+.filter-bar button:hover { background: var(--btn-hover); }
+.filter-bar .btn-reset { background: var(--btn-reset-bg); color: var(--btn-reset-fg); }
+.filter-bar .btn-reset:hover { background: var(--btn-reset-hover); }
+.result-count { font-size: .75rem; color: var(--text-soft); margin-left: auto; white-space: nowrap; }
 
 /* ── Table ──────────────────────────────────────────────── */
-.table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #1e293b; }
+.table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
 table { width: 100%; border-collapse: collapse; font-size: .78rem; }
 thead th {
-  background: #1e293b; color: #94a3b8; font-weight: 600; text-transform: uppercase;
+  background: var(--th-bg); color: var(--th-fg); font-weight: 600; text-transform: uppercase;
   font-size: .68rem; letter-spacing: .04em; padding: .6rem .85rem; text-align: left;
-  white-space: nowrap;
+  white-space: nowrap; transition: background .3s;
 }
-tbody tr { border-bottom: 1px solid #1e293b; transition: background .1s; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: #1e2d3d; }
+tbody tr:hover { background: var(--bg-hover); }
 td { padding: .55rem .85rem; vertical-align: top; }
-.td-no { color: #64748b; font-size: .72rem; }
+.td-no { color: var(--text-soft); font-size: .72rem; }
 .td-date { white-space: nowrap; }
 .td-mag { font-weight: 700; text-align: center; }
 .mag-xl { color: #ef4444; }
 .mag-lg { color: #f97316; }
-.mag-md { color: #eab308; }
-.mag-sm { color: #22c55e; }
+.mag-md { color: #d97706; }
+.mag-sm { color: #16a34a; }
 .badge {
   display: inline-block; padding: .15rem .5rem; border-radius: 999px;
   font-size: .65rem; font-weight: 600; white-space: nowrap;
+  transition: background .3s, color .3s;
 }
-.badge-tsunami { background: #1e3a5f; color: #38bdf8; }
-.badge-no-tsunami { background: #1a2e1a; color: #4ade80; }
-.badge-darat { background: #1e293b; color: #94a3b8; }
-.badge-laut  { background: #1e293b; color: #38bdf8; }
-.text-muted { color: #64748b; }
-.korban-cell { max-width: 280px; font-size: .74rem; color: #cbd5e1; }
+.badge-tsunami    { background: var(--badge-tsun-bg);  color: var(--badge-tsun-fg); }
+.badge-no-tsunami { background: var(--badge-notsu-bg); color: var(--badge-notsu-fg); }
+.badge-darat { background: var(--badge-loc-bg); color: var(--badge-loc-fg); }
+.badge-laut  { background: var(--badge-loc-bg); color: var(--badge-laut-fg); }
+.text-muted { color: var(--text-muted); }
+.korban-cell { max-width: 280px; font-size: .74rem; color: var(--text-korban); }
 
 /* ── Map ────────────────────────────────────────────────── */
-#merusak-map { width: 100%; height: 540px; border-radius: 10px; border: 1px solid #1e293b; }
+#merusak-map { width: 100%; height: 540px; border-radius: 10px; border: 1px solid var(--border); }
 .map-legend {
-  margin-top: .75rem; display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: .72rem; color: #94a3b8;
+  margin-top: .75rem; display: flex; gap: 1.2rem; flex-wrap: wrap;
+  font-size: .72rem; color: var(--text-muted);
 }
 .legend-dot {
-  display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle;
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  margin-right: 4px; vertical-align: middle;
 }
 
 /* ── Responsive ─────────────────────────────────────────── */
@@ -116,6 +211,10 @@ td { padding: .55rem .85rem; vertical-align: top; }
       </div>
     </a>
     <a href="{% url 'gempa_public' %}" class="header-back">← Daftar Gempa</a>
+    <button class="theme-toggle" id="themeToggle" title="Ganti tema">
+      <span id="themeIcon">🌙</span>
+      <span id="themeLabel">Malam</span>
+    </button>
   </div>
 </header>
 
@@ -146,7 +245,7 @@ td { padding: .55rem .85rem; vertical-align: top; }
         <option value="0" {% if filter_tsunami == '0' %}selected{% endif %}>Tidak Tsunami</option>
       </select>
       <button type="submit">Cari</button>
-      <a href="{% url 'public_gempa_merusak' %}" class="filter-bar"><button type="button" class="btn-reset">Reset</button></a>
+      <a href="{% url 'public_gempa_merusak' %}"><button type="button" class="btn-reset">Reset</button></a>
       <span class="result-count">{{ object_list.count }} hasil</span>
     </form>
 
@@ -192,7 +291,7 @@ td { padding: .55rem .85rem; vertical-align: top; }
             <td class="korban-cell">{{ obj.korban_kerusakan|default:"—"|truncatechars:120 }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="9" style="text-align:center;color:#64748b;padding:2rem;">Tidak ada data ditemukan.</td></tr>
+          <tr><td colspan="9" style="text-align:center;padding:2rem;" class="text-muted">Tidak ada data ditemukan.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -205,8 +304,8 @@ td { padding: .55rem .85rem; vertical-align: top; }
     <div class="map-legend">
       <span><span class="legend-dot" style="background:#ef4444;"></span>M ≥ 7.0</span>
       <span><span class="legend-dot" style="background:#f97316;"></span>M 6.0–6.9</span>
-      <span><span class="legend-dot" style="background:#eab308;"></span>M 5.0–5.9</span>
-      <span><span class="legend-dot" style="background:#22c55e;"></span>M &lt; 5.0</span>
+      <span><span class="legend-dot" style="background:#d97706;"></span>M 5.0–5.9</span>
+      <span><span class="legend-dot" style="background:#16a34a;"></span>M &lt; 5.0</span>
       <span><span class="legend-dot" style="background:#38bdf8; border:2px solid #0ea5e9;"></span>Disertai Tsunami</span>
     </div>
   </div><!-- /tab-peta -->
@@ -215,6 +314,37 @@ td { padding: .55rem .85rem; vertical-align: top; }
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// ── Theme ──────────────────────────────────────────────────
+const DARK_TILE  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const LIGHT_TILE = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+function isDarkHour() {
+  const h = new Date().getHours();
+  return h < 6 || h >= 18;   // 18:00–06:00 = dark
+}
+
+function applyTheme(dark, save) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('themeIcon').textContent  = dark ? '☀️' : '🌙';
+  document.getElementById('themeLabel').textContent = dark ? 'Siang' : 'Malam';
+  if (save) localStorage.setItem('gmTheme', dark ? 'dark' : 'light');
+  // Swap map tile if map is already initialised
+  if (window._map && window._tileLayer) {
+    window._tileLayer.setUrl(dark ? DARK_TILE : LIGHT_TILE);
+  }
+}
+
+// On load: honour manual override, otherwise follow time
+(function () {
+  const saved = localStorage.getItem('gmTheme');
+  applyTheme(saved ? saved === 'dark' : isDarkHour(), false);
+})();
+
+document.getElementById('themeToggle').addEventListener('click', function () {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  applyTheme(!isDark, true);   // toggle and save preference
+});
+
 // ── Tab switcher ──────────────────────────────────────────
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -231,8 +361,8 @@ function magColor(m) {
   if (!m) return '#94a3b8';
   if (m >= 7.0) return '#ef4444';
   if (m >= 6.0) return '#f97316';
-  if (m >= 5.0) return '#eab308';
-  return '#22c55e';
+  if (m >= 5.0) return '#d97706';
+  return '#16a34a';
 }
 function magRadius(m) {
   if (!m) return 5;
@@ -244,35 +374,35 @@ function magRadius(m) {
 
 function initMap() {
   window._mapInit = true;
-  const map = L.map('merusak-map', { center: [-4, 136], zoom: 6 });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  window._map = L.map('merusak-map', { center: [-2, 118], zoom: 5 });
+  window._tileLayer = L.tileLayer(dark ? DARK_TILE : LIGHT_TILE, {
     attribution: '&copy; OpenStreetMap &copy; CARTO',
     subdomains: 'abcd', maxZoom: 19,
-  }).addTo(map);
+  }).addTo(window._map);
 
   MAP_DATA.forEach(function(e) {
     if (!e.lat || !e.lng) return;
-    const color  = magColor(e.mag);
-    const radius = magRadius(e.mag);
+    const color     = magColor(e.mag);
+    const radius    = magRadius(e.mag);
     const isTsunami = e.tsunami === true;
     const circle = L.circleMarker([e.lat, e.lng], {
-      radius:      radius,
-      fillColor:   color,
+      radius, fillColor: color,
       color:       isTsunami ? '#38bdf8' : color,
       weight:      isTsunami ? 2.5 : 1,
-      opacity:     1,
-      fillOpacity: 0.6,
+      opacity: 1, fillOpacity: 0.7,
     });
     const magStr = e.mag ? 'M' + parseFloat(e.mag).toFixed(1) : '?';
     circle.bindPopup(
       '<div style="font-size:0.82rem;line-height:1.6;">' +
       '<b style="font-size:1rem;">' + magStr + '</b>' +
       (isTsunami ? ' <span style="background:#1e3a5f;color:#38bdf8;padding:1px 6px;border-radius:9px;font-size:.7rem;">Tsunami</span>' : '') +
-      '<br><b>' + e.loc + '</b>' +
-      '<br><span style="color:#94a3b8;">' + e.tgl + '</span>' +
+      '<br><b>' + (e.loc || '') + '</b>' +
+      '<br>' + (e.prov ? '<span style="font-size:.7rem;color:#64748b;">' + e.prov + '</span><br>' : '') +
+      '<span style="color:#94a3b8;">' + (e.tgl || '') + '</span>' +
       '</div>'
     );
-    circle.addTo(map);
+    circle.addTo(window._map);
   });
 }
 </script>

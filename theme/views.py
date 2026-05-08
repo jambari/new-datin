@@ -337,6 +337,7 @@ def public_gempa_merusak(request):
             'loc': e['wilayah'],
             'tgl': e['tanggal_text'],
             'tsunami': e['tsunami'],
+            'prov': e['provinsi'],
         }
         for e in events
         if e['latitude'] and e['longitude']
