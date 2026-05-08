@@ -8,7 +8,11 @@ from .models import Station, StationStatus, StationAvailabilitySample
 
 
 def api_stations(request):
-    stations = Station.objects.filter(is_active=True).select_related('status')
+    qs = Station.objects.filter(is_active=True)
+    stype = request.GET.get('type')          # 'seismic' | 'accelero' | omit for all
+    if stype in ('seismic', 'accelero'):
+        qs = qs.filter(station_type=stype)
+    stations = qs.select_related('status')
     data = []
     for station in stations:
         try:

@@ -282,7 +282,7 @@
             <div class="lat-stat off"><span class="lv" id="cnt-off">–</span><span class="ll">OFF</span></div>
             <div class="lat-hdiv"></div>
             <span style="font-size:.75rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;">
-              SeedLink: 202.90.199.206:18123 · Auto-refresh 10 menit
+              {% if sensor_type == 'accelero' %}SeedLink: 202.90.199.206:18123{% else %}SeisComP Push: 202.90.198.101{% endif %} · Auto-refresh 10 menit
             </span>
             <button class="lat-btn" id="btn-refresh" onclick="loadStations()">
               <span class="rdot" id="rdot"></span><span>Refresh</span>
@@ -524,7 +524,8 @@ async function loadStations() {
   const dot = document.getElementById('rdot');
   if (dot) dot.style.background = '#ffd600';
   try {
-    const res = await fetch("{% url 'api_stations' %}");
+    const stationType = currentSensorType === 'accelero' ? 'accelero' : 'seismic';
+    const res = await fetch("{% url 'api_stations' %}?type=" + stationType);
     const data = await res.json();
     latMarkers.clearLayers();
     let on=0, gap=0, off=0;
