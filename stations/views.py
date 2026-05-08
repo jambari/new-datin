@@ -1,5 +1,10 @@
+import json
+from datetime import datetime, timezone
+from django.conf import settings
 from django.http import JsonResponse
-from .models import Station, StationStatus
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from .models import Station, StationStatus, StationAvailabilitySample
 
 
 def api_stations(request):
@@ -49,3 +54,63 @@ def api_stations(request):
         })
 
     return JsonResponse({'stations': data, 'count': len(data)})
+
+
+@csrf_exempt
+@require_POST
+def api_push_seismic_status(request):
+    """
+    Receive seismic station status pushed from the SeisComP acquisition server.
+    POST /api/stations/push-seismic/
+    Header: Authorization: Token <SEISMIC_STATUS_TOKEN>
+    Body (JSON):
+      {"stations": [{"network":"IA","code":"JAY","channel":"BHZ",
+                     "latency":45.2,"last_packet":"2026-05-08T10:30:00Z"}, ...]}
+    """
+    token = getattr(settings, 'SEISMIC_STATUS_TOKEN', '')
+    auth  = request.headers.get('Authorization', '')
+    if not token or auth != f'Token {token}':
+        return JsonResponse({'error': 'unauthorized'}, status=401)
+
+    try:
+        payload = json.loads(request.body)
+        stations_data = payload.get('stations', [])
+    except (json.JSONDecodeError, KeyError):
+        return JsonResponse({'error': 'invalid JSON'}, status=400)
+
+    updated = skipped = 0
+    now = datetime.now(timezone.utc)
+
+    for item in stations_data:
+        try:
+            station = Station.objects.get(
+                network=item['network'], code=item['code'], station_type='seismic'
+            )
+        except Station.DoesNotExist:
+            skipped += 1
+            continue
+
+        latency = item.get('latency')
+        status  = StationStatus.compute_status(latency)
+
+        last_packet = None
+        lp_str = item.get('last_packet')
+        if lp_str:
+            try:
+                last_packet = datetime.fromisoformat(lp_str.replace('Z', '+00:00'))
+            except ValueError:
+                pass
+
+        obj, _ = StationStatus.objects.get_or_create(station=station)
+        obj.status          = status
+        obj.latency         = latency
+        obj.last_packet_time = last_packet
+        obj.channel_info    = item.get('channel', '')
+        obj.save()
+
+        StationAvailabilitySample.objects.create(
+            station=station, sampled_at=now, status=status
+        )
+        updated += 1
+
+    return JsonResponse({'updated': updated, 'skipped': skipped})
