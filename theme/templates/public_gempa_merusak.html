@@ -4,7 +4,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gempa Merusak Indonesia · BMKG Jayapura</title>
+<title>Katalog Gempa Merusak Indonesia · BMKG Jayapura</title>
+<meta name="description" content="Katalog historis gempa bumi merusak di Indonesia sejak tahun 1821. Data magnitude, korban, kerusakan, dan informasi tsunami dari BMKG Jayapura.">
+<meta name="keywords"    content="gempa merusak Indonesia, katalog gempa bumi, gempa bumi bersejarah, tsunami Indonesia, BMKG gempa merusak">
+<meta name="author"      content="Stasiun Geofisika Kelas I Jayapura BMKG">
+<meta name="robots"      content="index, follow">
+<link rel="canonical"    href="{{ SITE_URL }}{% url 'public_gempa_merusak' %}">
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="Stasiun Geofisika Kelas I Jayapura · BMKG">
+<meta property="og:locale"      content="id_ID">
+<meta property="og:title"       content="Katalog Gempa Merusak Indonesia · BMKG Jayapura">
+<meta property="og:description" content="Katalog historis gempa bumi merusak di Indonesia sejak 1821. Data magnitude, korban, kerusakan, dan tsunami.">
+<meta property="og:image"       content="{{ SITE_URL }}{% static 'repository/images/logo-bmkg.png' %}">
+<meta name="twitter:card"        content="summary">
+<meta name="twitter:title"       content="Katalog Gempa Merusak Indonesia · BMKG Jayapura">
+<meta name="twitter:description" content="Katalog historis gempa bumi merusak di Indonesia sejak 1821.">
+{% if GA_MEASUREMENT_ID %}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ GA_MEASUREMENT_ID }}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '{{ GA_MEASUREMENT_ID }}');
+</script>
+{% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -191,6 +214,25 @@ td { padding: .55rem .85rem; vertical-align: top; }
   margin-right: 4px; vertical-align: middle;
 }
 
+/* ── Pagination ─────────────────────────────────────────── */
+.pagination {
+  display: flex; align-items: center; justify-content: center;
+  gap: .4rem; margin-top: 1.25rem; flex-wrap: wrap;
+}
+.pagination a, .pagination span {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; padding: 0 .55rem;
+  border-radius: 6px; font-size: .78rem; font-weight: 600;
+  text-decoration: none; transition: background .15s, color .15s;
+  border: 1px solid var(--border);
+  color: var(--text-muted); background: var(--bg-card);
+}
+.pagination a:hover { background: var(--bg-hover); color: var(--text); }
+.pagination .current {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+.pagination .disabled { opacity: .4; pointer-events: none; }
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 640px) {
   .page-title { font-size: 1.1rem; }
@@ -220,7 +262,7 @@ td { padding: .55rem .85rem; vertical-align: top; }
 
 <div class="page-wrap">
   <h1 class="page-title">Katalog Gempa Merusak Indonesia</h1>
-  <p class="page-sub">Data historis gempa bumi yang menyebabkan kerusakan di wilayah Indonesia · {{ object_list.count }} kejadian</p>
+  <p class="page-sub">Data historis gempa bumi yang menyebabkan kerusakan di wilayah Indonesia · {{ total_count }} kejadian</p>
 
   <!-- Tabs -->
   <div class="tabs">
@@ -246,7 +288,7 @@ td { padding: .55rem .85rem; vertical-align: top; }
       </select>
       <button type="submit">Cari</button>
       <a href="{% url 'public_gempa_merusak' %}"><button type="button" class="btn-reset">Reset</button></a>
-      <span class="result-count">{{ object_list.count }} hasil</span>
+      <span class="result-count">{{ total_count }} hasil</span>
     </form>
 
     <div class="table-wrap">
@@ -296,6 +338,36 @@ td { padding: .55rem .85rem; vertical-align: top; }
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?{% if filter_q %}q={{ filter_q }}&{% endif %}{% if filter_provinsi %}provinsi={{ filter_provinsi }}&{% endif %}{% if filter_tsunami %}tsunami={{ filter_tsunami }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+      {% else %}
+        <span class="disabled">&lsaquo;</span>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <span class="current">{{ num }}</span>
+        {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}
+          <a href="?{% if filter_q %}q={{ filter_q }}&{% endif %}{% if filter_provinsi %}provinsi={{ filter_provinsi }}&{% endif %}{% if filter_tsunami %}tsunami={{ filter_tsunami }}&{% endif %}page={{ num }}">{{ num }}</a>
+        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+          <a href="?{% if filter_q %}q={{ filter_q }}&{% endif %}{% if filter_provinsi %}provinsi={{ filter_provinsi }}&{% endif %}{% if filter_tsunami %}tsunami={{ filter_tsunami }}&{% endif %}page={{ num }}">{{ num }}</a>
+        {% elif num == page_obj.number|add:"-4" or num == page_obj.number|add:"4" %}
+          <span class="disabled">…</span>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <a href="?{% if filter_q %}q={{ filter_q }}&{% endif %}{% if filter_provinsi %}provinsi={{ filter_provinsi }}&{% endif %}{% if filter_tsunami %}tsunami={{ filter_tsunami }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      {% else %}
+        <span class="disabled">&rsaquo;</span>
+      {% endif %}
+    </nav>
+    {% endif %}
+
   </div><!-- /tab-daftar -->
 
   <!-- ── Tab: Peta ──────────────────────────────────────── -->

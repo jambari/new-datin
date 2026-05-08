@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     'rest_framework',
     'rest_framework.authtoken',
     'tailwind',
@@ -107,6 +108,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'theme.context_processors.seo',
             ],
         },
     },
@@ -300,6 +302,10 @@ FDSNWS_URL = config('FDSNWS_URL', default='http://172.21.63.51:8080')
 
 QUAKELINK_PUSH_TOKEN = config('QUAKELINK_PUSH_TOKEN', default='')
 LEMI_MONITOR_TOKEN   = config('LEMI_MONITOR_TOKEN',   default='')
+
+# SEO / Analytics
+GA_MEASUREMENT_ID = config('GA_MEASUREMENT_ID', default='')
+SITE_URL          = config('SITE_URL', default='http://36.91.166.189')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

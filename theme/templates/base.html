@@ -1,13 +1,143 @@
 {% load static tailwind_tags %}
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light">
-    <title>Aplikasi Chang'e</title>
+
+    <!-- ── SEO: Title & Description ────────────────────────── -->
+    <title>{% block seo_title %}Stasiun Geofisika Kelas I Jayapura · BMKG{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Stasiun Geofisika Kelas I Jayapura BMKG — informasi gempa bumi, shakemap, magnetbumi, petir, dan peringatan dini untuk wilayah Papua.{% endblock %}">
+    <meta name="keywords"    content="{% block meta_keywords %}gempa bumi Papua, BMKG Jayapura, shakemap, magnetbumi, petir, peringatan dini, geofisika{% endblock %}">
+    <meta name="author"      content="Stasiun Geofisika Kelas I Jayapura BMKG">
+    <meta name="robots"      content="{% block meta_robots %}index, follow{% endblock %}">
+    <link rel="canonical"    href="{% block canonical_url %}{{ SITE_URL }}{{ request.path }}{% endblock %}">
+
+    <!-- ── Open Graph ─────────────────────────────────────── -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="{{ SITE_NAME }}">
+    <meta property="og:locale"      content="id_ID">
+    <meta property="og:title"       content="{% block og_title %}Stasiun Geofisika Kelas I Jayapura · BMKG{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Informasi gempa bumi, shakemap, magnetbumi, petir, dan peringatan dini wilayah Papua dari BMKG Jayapura.{% endblock %}">
+    <meta property="og:image"       content="{% block og_image %}{{ SITE_URL }}{% static 'repository/images/logo-bmkg.png' %}{% endblock %}">
+    <meta property="og:url"         content="{{ SITE_URL }}{{ request.path }}">
+
+    <!-- ── Twitter Card ───────────────────────────────────── -->
+    <meta name="twitter:card"        content="summary">
+    <meta name="twitter:title"       content="{% block twitter_title %}Stasiun Geofisika Kelas I Jayapura · BMKG{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Informasi gempa bumi, shakemap, dan peringatan dini Papua · BMKG.{% endblock %}">
+    <meta name="twitter:image"       content="{% block twitter_image %}{{ SITE_URL }}{% static 'repository/images/logo-bmkg.png' %}{% endblock %}">
+
+    <!-- ── Structured Data (JSON-LD) ──────────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "GovernmentOrganization",
+      "name": "Stasiun Geofisika Kelas I Jayapura",
+      "alternateName": "BMKG Jayapura",
+      "url": "{{ SITE_URL }}",
+      "logo": "{{ SITE_URL }}{% static 'repository/images/logo-bmkg.png' %}",
+      "description": "Unit Pelaksana Teknis BMKG yang melaksanakan pengamatan gempabumi, magnetbumi, listrik udara di wilayah Papua.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Jayapura",
+        "addressRegion": "Papua",
+        "addressCountry": "ID"
+      },
+      "parentOrganization": {
+        "@type": "GovernmentOrganization",
+        "name": "Badan Meteorologi Klimatologi dan Geofisika",
+        "alternateName": "BMKG"
+      }
+    }
+    </script>
+
+    <!-- ── Google Analytics ───────────────────────────────── -->
+    {% if GA_MEASUREMENT_ID %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GA_MEASUREMENT_ID }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{{ GA_MEASUREMENT_ID }}');
+    </script>
+    {% endif %}
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     {% tailwind_css %}
+
+    <!-- Day/night theme: init before paint to prevent flash -->
+    <script>
+    (function(){
+      var s = localStorage.getItem('landingTheme');
+      var h = new Date().getHours();
+      var dark = s ? s === 'dark' : (h < 6 || h >= 18);
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    })();
+    </script>
+    <style>
+    /* ── Shared public header CSS variables ── */
+    :root {
+      --hdr-bg:       rgba(255,255,255,0.96);
+      --hdr-border:   rgba(0,0,0,0.08);
+      --hdr-shadow:   0 1px 8px rgba(0,0,0,0.08);
+      --brand-title:  #1e293b;
+      --brand-sub:    #64748b;
+      --nav-text:     #475569;
+      --nav-hover-fg: #b45309;
+      --nav-hover-bg: rgba(180,83,9,0.08);
+      --drop-bg:      rgba(255,255,255,0.98);
+      --drop-border:  rgba(0,0,0,0.08);
+      --drop-link:    #475569;
+      --ftr-bg:       rgba(255,255,255,0.96);
+      --ftr-border:   rgba(0,0,0,0.08);
+      --ftr-shadow:   0 -1px 8px rgba(0,0,0,0.06);
+      --ftr-text:     #64748b;
+      --mob-nav-bg:   rgba(255,255,255,0.97);
+      --thm-btn-bg:   rgba(0,0,0,0.05);
+      --thm-btn-fg:   #64748b;
+    }
+    [data-theme="dark"] {
+      --hdr-bg:       rgba(15,23,42,0.97);
+      --hdr-border:   rgba(255,255,255,0.08);
+      --hdr-shadow:   0 1px 8px rgba(0,0,0,0.4);
+      --brand-title:  #f1f5f9;
+      --brand-sub:    #475569;
+      --nav-text:     #94a3b8;
+      --nav-hover-fg: #fbbf24;
+      --nav-hover-bg: rgba(251,191,36,0.1);
+      --drop-bg:      rgba(15,23,42,0.98);
+      --drop-border:  rgba(255,255,255,0.1);
+      --drop-link:    #94a3b8;
+      --ftr-bg:       rgba(15,23,42,0.97);
+      --ftr-border:   rgba(255,255,255,0.08);
+      --ftr-shadow:   0 -1px 8px rgba(0,0,0,0.4);
+      --ftr-text:     #475569;
+      --mob-nav-bg:   rgba(15,23,42,0.97);
+      --thm-btn-bg:   rgba(255,255,255,0.08);
+      --thm-btn-fg:   #94a3b8;
+    }
+    /* Override hardcoded header colors on all public pages */
+    #site-header {
+      background:    var(--hdr-bg)     !important;
+      border-bottom: 1px solid var(--hdr-border) !important;
+      box-shadow:    var(--hdr-shadow) !important;
+      transition: background .35s, border-color .35s !important;
+    }
+    .brand-title {
+      color: var(--brand-title) !important;
+      transition: color .35s !important;
+    }
+    .brand-sub {
+      color: var(--brand-sub) !important;
+      transition: color .35s !important;
+    }
+    .header-back {
+      color: var(--nav-text) !important;
+      transition: color .35s !important;
+    }
+    .header-back:hover { color: var(--nav-hover-fg) !important; }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -15,8 +145,5 @@
     {% endblock %}
 
     {% block extra_scripts %}{% endblock %}
-
-
-
 </body>
 </html>

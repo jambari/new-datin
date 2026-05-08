@@ -1,0 +1,24 @@
+User-agent: *
+Allow: /
+Allow: /landing/
+Allow: /gempa/
+Allow: /gempa-merusak/
+Allow: /shakemap/
+Allow: /petir/
+Allow: /magnetbumi/
+Allow: /tentang/
+Allow: /glosarium/
+Allow: /kegiatan/
+
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /accounts/
+Disallow: /api/
+Disallow: /logbook/
+Disallow: /jadwal/
+Disallow: /maintenance/
+Disallow: /perjadin/
+Disallow: /wrsng/
+Disallow: /qc/
+
+Sitemap: {{ SITE_URL }}/sitemap.xml
