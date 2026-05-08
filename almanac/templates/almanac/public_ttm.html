@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load tz %}
+{% load tz almanac_extras %}
 {% block seo_title %}Terbit & Terbenam Matahari dan Bulan Papua · BMKG Jayapura{% endblock %}
 {% block meta_description %}Jadwal terbit dan terbenam matahari serta bulan untuk kota-kota di Papua. Data almanak bulanan dari Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
 {% block og_title %}TTM Papua · BMKG Jayapura{% endblock %}
@@ -163,7 +163,7 @@
               <th rowspan="2" class="col-date">Tanggal</th>
               <th colspan="2" style="color:#b45309;">☀ Matahari</th>
               <th colspan="2" style="color:#3b82f6;">🌙 Bulan</th>
-              <th rowspan="2" class="col-phase">Fase<br>Bulan</th>
+              <th rowspan="2" class="col-phase">Fase Bulan</th>
             </tr>
             <tr>
               <th>Terbit</th>
@@ -175,17 +175,12 @@
           <tbody>
             {% for event in item.events %}
             <tr>
-              <td class="col-date">{{ event.date|date:"D, d M Y" }}</td>
+              <td class="col-date">{{ event.date|tanggal_indo }}</td>
               <td class="col-sun">{{ event.sun_rise|timezone:"Asia/Jayapura"|date:"H:i"|default:"—" }}</td>
               <td class="col-sun">{{ event.sun_set|timezone:"Asia/Jayapura"|date:"H:i"|default:"—" }}</td>
               <td class="col-moon">{{ event.moon_rise|timezone:"Asia/Jayapura"|date:"H:i"|default:"—" }}</td>
               <td class="col-moon">{{ event.moon_set|timezone:"Asia/Jayapura"|date:"H:i"|default:"—" }}</td>
-              <td class="col-phase">
-                {% if event.moon_phase is not None %}
-                  {% if event.moon_phase < 0.1 %}🌑{% elif event.moon_phase < 0.35 %}🌒{% elif event.moon_phase < 0.65 %}🌕{% elif event.moon_phase < 0.9 %}🌖{% else %}🌑{% endif %}
-                  {{ event.moon_phase|floatformat:2 }}
-                {% else %}—{% endif %}
-              </td>
+              <td class="col-phase">{{ event.moon_phase|fase_bulan }}</td>
             </tr>
             {% endfor %}
           </tbody>
