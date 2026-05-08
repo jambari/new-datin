@@ -76,8 +76,11 @@ INSTALLED_APPS = [
     'stations',
 ]
 
-SEEDLINK_HOST = '202.90.199.206'
+SEEDLINK_HOST = '202.90.199.206'   # Accelerometer SeedLink
 SEEDLINK_PORT = 18123
+
+SEISMIC_SEEDLINK_HOST = config('SEISMIC_SEEDLINK_HOST', default='202.90.198.101')  # Seismic SeedLink
+SEISMIC_SEEDLINK_PORT = config('SEISMIC_SEEDLINK_PORT', default=18000, cast=int)
 
 # Add this to the bottom of the file
 INTERNAL_IPS = [

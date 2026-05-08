@@ -1,9 +1,14 @@
 """
 Fetch real-time station status from SeedLink via slinktool -Q.
-Updates StationStatus for every Station in the database.
+Updates StationStatus for every Station of the given type.
+
+Usage:
+  python manage.py fetch_slinktool --type accelero   (default)
+  python manage.py fetch_slinktool --type seismic
 
 Cron (add to /etc/crontab on production):
-  */10 * * * * cd /var/www/html && venv/bin/python manage.py fetch_slinktool >> /var/log/fetch_slinktool.log 2>&1
+  */10 * * * * cd /var/www/html && venv/bin/python manage.py fetch_slinktool --type accelero >> /var/log/fetch_slinktool_accelero.log 2>&1
+  */10 * * * * cd /var/www/html && venv/bin/python manage.py fetch_slinktool --type seismic  >> /var/log/fetch_slinktool_seismic.log  2>&1
 """
 import re
 import subprocess
@@ -14,11 +19,13 @@ from django.core.management.base import BaseCommand
 
 from stations.models import Station, StationStatus, StationAvailabilitySample
 
-PRIORITY_CHANNELS = ['HNN', 'HNE', 'HNZ', 'HLN', 'HLE', 'HLZ', 'BHN', 'BHE', 'BHZ']
+SEISMIC_CHANNELS  = ['BHZ', 'BHN', 'BHE', 'HHZ', 'HHN', 'HHE', 'SHZ', 'SHN', 'SHE', 'EHZ', 'EHN', 'EHE']
+ACCELERO_CHANNELS = ['HNN', 'HNE', 'HNZ', 'HLN', 'HLE', 'HLZ', 'BHN', 'BHE', 'BHZ']
+
 _DT_RE = re.compile(r'\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+')
 
 
-def _parse_q(output):
+def _parse_q(output, priority_channels):
     """Return {(net, sta): {'channel', 'latency', 'last_packet'}} from slinktool -Q output."""
     station_map = {}
 
@@ -54,9 +61,8 @@ def _parse_q(output):
         if existing is None:
             station_map[key] = {'channel': cha, 'latency': latency, 'last_packet': end_time}
         else:
-            # Prefer higher-priority channel
-            ep = PRIORITY_CHANNELS.index(existing['channel']) if existing['channel'] in PRIORITY_CHANNELS else 99
-            np_ = PRIORITY_CHANNELS.index(cha) if cha in PRIORITY_CHANNELS else 99
+            ep = priority_channels.index(existing['channel']) if existing['channel'] in priority_channels else 99
+            np_ = priority_channels.index(cha) if cha in priority_channels else 99
             if np_ < ep:
                 station_map[key] = {'channel': cha, 'latency': latency, 'last_packet': end_time}
 
@@ -66,12 +72,30 @@ def _parse_q(output):
 class Command(BaseCommand):
     help = 'Fetch station status from SeedLink via slinktool -Q and update StationStatus'
 
-    def handle(self, *args, **options):
-        host = getattr(settings, 'SEEDLINK_HOST', '202.90.199.206')
-        port = getattr(settings, 'SEEDLINK_PORT', 18123)
-        server = f'{host}:{port}'
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--type',
+            dest='station_type',
+            choices=['seismic', 'accelero'],
+            default='accelero',
+            help='Station type to update (seismic → 202.90.198.101:18000, accelero → 202.90.199.206:18123)',
+        )
 
-        self.stdout.write(f'Connecting to {server} ...')
+    def handle(self, *args, **options):
+        stype = options['station_type']
+
+        if stype == 'seismic':
+            host = getattr(settings, 'SEISMIC_SEEDLINK_HOST', '202.90.198.101')
+            port = getattr(settings, 'SEISMIC_SEEDLINK_PORT', 18000)
+            priority_channels = SEISMIC_CHANNELS
+        else:
+            host = getattr(settings, 'SEEDLINK_HOST', '202.90.199.206')
+            port = getattr(settings, 'SEEDLINK_PORT', 18123)
+            priority_channels = ACCELERO_CHANNELS
+
+        server = f'{host}:{port}'
+        self.stdout.write(f'[{stype}] Connecting to {server} ...')
+
         try:
             result = subprocess.run(
                 ['slinktool', '-Q', server],
@@ -79,23 +103,25 @@ class Command(BaseCommand):
             )
             output = result.stdout
         except subprocess.TimeoutExpired:
-            self.stderr.write('ERROR: slinktool timeout')
+            self.stderr.write(f'ERROR: slinktool timeout ({server})')
             return
         except Exception as e:
             self.stderr.write(f'ERROR: {e}')
             return
 
         if not output.strip():
-            self.stderr.write('No output from slinktool')
+            self.stderr.write(f'No output from slinktool ({server})')
             return
 
-        parsed = _parse_q(output)
+        parsed = _parse_q(output, priority_channels)
         self.stdout.write(f'Parsed {len(parsed)} unique stations from ring buffer')
+
+        stations_qs = Station.objects.filter(is_active=True, station_type=stype)
 
         updated = skipped = 0
         for (net, sta_code), info in parsed.items():
             try:
-                station = Station.objects.get(network=net, code=sta_code)
+                station = stations_qs.get(network=net, code=sta_code)
             except Station.DoesNotExist:
                 skipped += 1
                 continue
@@ -116,7 +142,7 @@ class Command(BaseCommand):
 
         # Stations absent from ring buffer → mark OFF
         now = datetime.now(timezone.utc)
-        for sta in Station.objects.filter(is_active=True):
+        for sta in stations_qs:
             if (sta.network, sta.code) not in parsed:
                 obj, _ = StationStatus.objects.get_or_create(station=sta)
                 obj.status = 'off'
@@ -129,5 +155,5 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write(self.style.SUCCESS(
-            f'Done. Updated: {updated}, not in DB (skipped): {skipped}'
+            f'[{stype}] Done. Updated: {updated}, not in DB (skipped): {skipped}'
         ))

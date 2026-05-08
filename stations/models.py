@@ -2,6 +2,10 @@ from django.db import models
 
 
 class Station(models.Model):
+    TYPE_SEISMIC   = 'seismic'
+    TYPE_ACCELERO  = 'accelero'
+    TYPE_CHOICES   = [(TYPE_SEISMIC, 'Seismograph'), (TYPE_ACCELERO, 'Accelerometer')]
+
     network = models.CharField(max_length=10)
     code = models.CharField(max_length=10)
     name = models.CharField(max_length=100, blank=True)
@@ -14,6 +18,7 @@ class Station(models.Model):
     kota = models.CharField(max_length=50, blank=True)
     provinsi = models.CharField(max_length=50, blank=True)
     is_active = models.BooleanField(default=True)
+    station_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=TYPE_ACCELERO, db_index=True)
 
     class Meta:
         unique_together = ('network', 'code')
