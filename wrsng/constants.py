@@ -7,8 +7,7 @@ WRS_CODE_MAP = {
     "BPBD PROVINSI PAPUA": ["BPBD_PROV"],
     "BASARNAS PAPUA":      ["basarnas_jay"],
     "BPBD KAB. JAYAPURA":  ["bpbd_kabjay"],
-    "BPBD BIAK NUMFOR":    ["BPBD_BIAK"],
-    "BPBD WAROPEN":        [],
+    "BPBD BIAK NUMFOR":    ["BPBD_BIAK", "bpbd_biak", "bpbd biak"],
     "BASARNAS MERAUKE":    ["BASARNAS_MERAUKE"],
     "BPBD KAB. MIMIKA":    ["bpbd-mimika"],
 }

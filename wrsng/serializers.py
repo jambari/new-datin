@@ -29,15 +29,9 @@ class WRSNGStatusSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'display_status_display', 'chrome_status_display']
 
     def validate(self, data):
-        """
-        Validasi kustom.
-        Hanya memastikan 'wrs_code' ada.
-        """
         if not data.get('wrs_code'):
             raise serializers.ValidationError("wrs_code is required.")
-        
-        # DIHAPUS: Logika 'date' tidak diperlukan lagi.
-        # if not data.get('date'):
-        #     data['date'] = datetime.date.today()
-            
+        # Normalize all BIAK variants to a single canonical code
+        if data['wrs_code'] in ('bpbd biak', 'BPBD_BIAK', 'bpbd_biak'):
+            data['wrs_code'] = 'bpbd_biak'
         return data
