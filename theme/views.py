@@ -311,6 +311,7 @@ def public_gempa_merusak(request):
     import json
     from repository.models import GempaMemusak
     from django.db.models import Q
+    from django.core.paginator import Paginator
     qs = GempaMemusak.objects.all().order_by('-tanggal', '-no')
     q        = request.GET.get('q', '').strip()
     provinsi = request.GET.get('provinsi', '').strip()
@@ -323,6 +324,8 @@ def public_gempa_merusak(request):
         qs = qs.filter(tsunami=True)
     elif tsunami == '0':
         qs = qs.filter(tsunami=False)
+    total_count = qs.count()
+    # Map data uses ALL matching events (not just current page)
     events = list(qs.values(
         'no', 'tanggal_text', 'tanggal', 'wilayah', 'provinsi',
         'latitude', 'longitude', 'depth_km', 'magnitude',
@@ -342,8 +345,12 @@ def public_gempa_merusak(request):
         for e in events
         if e['latitude'] and e['longitude']
     ])
+    paginator   = Paginator(qs, 10)
+    page_obj    = paginator.get_page(request.GET.get('page'))
     return render(request, 'public_gempa_merusak.html', {
-        'object_list':      qs,
+        'object_list':      page_obj,
+        'page_obj':         page_obj,
+        'total_count':      total_count,
         'map_data':         map_data,
         'province_choices': GempaMemusak.PROVINCE_CHOICES,
         'filter_q':         q,
@@ -546,6 +553,10 @@ def public_about(request):
 
 def public_glosarium(request):
     return render(request, 'public_glosarium.html')
+
+
+def poster_datin(request):
+    return render(request, 'poster_datin.html')
 
 
 def public_peringatan_dini_data(request):

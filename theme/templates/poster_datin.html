@@ -1,0 +1,443 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920">
+<title>Poster DATIN · BMKG Jayapura</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #060d1a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* ── Export toolbar ─────────────────────────────────── */
+.toolbar {
+  display: flex; gap: 10px; margin-bottom: 16px;
+  width: 1920px;
+  justify-content: flex-end;
+}
+.btn-export {
+  background: #f59e0b; color: #1a1a1a; border: none;
+  padding: 10px 22px; border-radius: 8px; font-size: 14px;
+  font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  transition: background .2s;
+}
+.btn-export:hover { background: #fbbf24; }
+.btn-export svg { width: 16px; height: 16px; }
+
+/* ── Poster canvas ──────────────────────────────────── */
+#poster {
+  width: 1920px;
+  height: 1080px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #060d1a 0%, #0a1628 40%, #0d1f3c 70%, #091629 100%);
+  flex-shrink: 0;
+}
+
+/* ── Background decorations ─────────────────────────── */
+.bg-circle {
+  position: absolute; border-radius: 50%;
+  opacity: 0.06; pointer-events: none;
+}
+.bg-c1 { width: 900px; height: 900px; background: radial-gradient(circle, #3b82f6, transparent); top: -200px; right: -150px; }
+.bg-c2 { width: 600px; height: 600px; background: radial-gradient(circle, #f59e0b, transparent); bottom: -150px; left: -100px; }
+.bg-c3 { width: 400px; height: 400px; background: radial-gradient(circle, #22d3ee, transparent); top: 300px; left: 600px; opacity: 0.04; }
+
+.grid-lines {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+/* Glowing top accent bar */
+.accent-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, #f59e0b, #3b82f6, #22d3ee, #f59e0b);
+  background-size: 200% 100%;
+  animation: shimmer 4s linear infinite;
+}
+@keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
+
+/* ── Left column ─────────────────────────────────────── */
+.col-left {
+  position: absolute; left: 70px; top: 0; bottom: 0; width: 560px;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 60px 0;
+}
+
+.brand-row {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 40px;
+}
+.brand-logo {
+  width: 70px; height: 70px; object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(245,158,11,0.5));
+}
+.brand-text .line1 { font-size: 13px; font-weight: 700; color: #f59e0b; letter-spacing: .12em; text-transform: uppercase; }
+.brand-text .line2 { font-size: 11px; color: #64748b; letter-spacing: .08em; margin-top: 2px; }
+
+.app-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  color: #38bdf8; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.app-label::before {
+  content: ''; display: block; width: 28px; height: 2px; background: #38bdf8;
+}
+
+.app-title {
+  font-size: 96px; font-weight: 900; line-height: 1;
+  color: #f8fafc; letter-spacing: -.02em; margin-bottom: 8px;
+}
+.app-title span { color: #f59e0b; }
+
+.app-subtitle {
+  font-size: 18px; font-weight: 600; color: #94a3b8;
+  letter-spacing: .03em; margin-bottom: 28px; line-height: 1.4;
+}
+
+.app-desc {
+  font-size: 15px; color: #64748b; line-height: 1.7;
+  max-width: 480px; margin-bottom: 44px;
+}
+
+/* Stats row */
+.stats-row { display: flex; gap: 32px; margin-bottom: 48px; }
+.stat-box {
+  display: flex; flex-direction: column;
+}
+.stat-num {
+  font-size: 38px; font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: #f8fafc; line-height: 1;
+}
+.stat-num.amber { color: #f59e0b; }
+.stat-num.blue  { color: #38bdf8; }
+.stat-num.green { color: #4ade80; }
+.stat-label {
+  font-size: 11px; color: #475569; margin-top: 4px;
+  text-transform: uppercase; letter-spacing: .07em;
+}
+
+/* URL badge */
+.url-badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px; padding: 12px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; color: #94a3b8;
+  width: fit-content;
+}
+.url-badge .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74,222,128,0.6);
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.url-badge span { color: #e2e8f0; }
+
+/* ── Right column: feature grid ─────────────────────── */
+.col-right {
+  position: absolute; right: 60px; top: 60px; bottom: 60px;
+  width: 1100px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.feat-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 24px 22px;
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+  transition: transform .3s;
+}
+.feat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--card-color, #3b82f6);
+  opacity: .8;
+}
+.feat-card.wide { grid-column: span 2; }
+.feat-card.tall { grid-row: span 2; }
+
+.feat-icon {
+  font-size: 32px; margin-bottom: 12px; line-height: 1;
+}
+.feat-name {
+  font-size: 13px; font-weight: 700; color: #e2e8f0;
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 6px;
+}
+.feat-desc {
+  font-size: 12px; color: #475569; line-height: 1.5; flex: 1;
+}
+.feat-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.07); border-radius: 20px;
+  padding: 3px 10px; font-size: 11px; color: #94a3b8;
+  margin-top: 10px; width: fit-content;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Hero card — gempa */
+.feat-card.hero {
+  background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(15,23,42,0.6));
+  border-color: rgba(239,68,68,0.2);
+}
+
+/* ── Bottom strip ────────────────────────────────────── */
+.bottom-strip {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 52px;
+  background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 70px;
+}
+.bs-text { font-size: 12px; color: #334155; letter-spacing: .06em; }
+.bs-tag {
+  display: flex; gap: 16px;
+}
+.bs-chip {
+  font-size: 11px; color: #334155; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05); border-radius: 20px;
+  padding: 3px 12px; font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Divider ─────────────────────────────────────────── */
+.v-divider {
+  position: absolute; left: 700px; top: 60px; bottom: 60px;
+  width: 1px; background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.08) 30%, rgba(255,255,255,0.08) 70%, transparent);
+}
+
+/* ── Fade-in animation ───────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.col-left > * { animation: fadeUp .6s ease both; }
+.col-left > *:nth-child(1) { animation-delay: .1s; }
+.col-left > *:nth-child(2) { animation-delay: .2s; }
+.col-left > *:nth-child(3) { animation-delay: .3s; }
+.col-left > *:nth-child(4) { animation-delay: .4s; }
+.col-left > *:nth-child(5) { animation-delay: .5s; }
+.col-left > *:nth-child(6) { animation-delay: .6s; }
+.col-left > *:nth-child(7) { animation-delay: .7s; }
+.feat-card { animation: fadeUp .5s ease both; }
+.feat-card:nth-child(1)  { animation-delay: .3s; }
+.feat-card:nth-child(2)  { animation-delay: .35s; }
+.feat-card:nth-child(3)  { animation-delay: .4s; }
+.feat-card:nth-child(4)  { animation-delay: .45s; }
+.feat-card:nth-child(5)  { animation-delay: .5s; }
+.feat-card:nth-child(6)  { animation-delay: .55s; }
+.feat-card:nth-child(7)  { animation-delay: .6s; }
+.feat-card:nth-child(8)  { animation-delay: .65s; }
+.feat-card:nth-child(9)  { animation-delay: .7s; }
+.feat-card:nth-child(10) { animation-delay: .75s; }
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar (tidak ikut di-export) ─────────────────── -->
+<div class="toolbar" id="toolbar">
+  <button class="btn-export" onclick="exportPNG()">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+    </svg>
+    Download PNG
+  </button>
+</div>
+
+<!-- ── Poster 1920×1080 ────────────────────────────────── -->
+<div id="poster">
+
+  <!-- BG decoration -->
+  <div class="bg-circle bg-c1"></div>
+  <div class="bg-circle bg-c2"></div>
+  <div class="bg-circle bg-c3"></div>
+  <div class="grid-lines"></div>
+  <div class="accent-bar"></div>
+  <div class="v-divider"></div>
+
+  <!-- LEFT COLUMN -->
+  <div class="col-left">
+
+    <div class="brand-row">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG" class="brand-logo">
+      <div class="brand-text">
+        <div class="line1">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="line2">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </div>
+
+    <div class="app-label">Platform Digital</div>
+
+    <div class="app-title">DA<span>TIN</span></div>
+
+    <div class="app-subtitle">Sistem Informasi Geofisika Digital<br>Papua Terpadu</div>
+
+    <div class="app-desc">
+      Platform pemantauan dan informasi geofisika berbasis web yang mengintegrasikan
+      data gempa bumi, shakemap, magnetbumi, petir, dan layanan peringatan dini
+      untuk mendukung keselamatan masyarakat Papua.
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num amber">607+</div>
+        <div class="stat-label">Gempa Merusak</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num blue">190+</div>
+        <div class="stat-label">Shakemap</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num green">11</div>
+        <div class="stat-label">WRSNG Sites</div>
+      </div>
+    </div>
+
+    <div class="url-badge">
+      <div class="dot"></div>
+      <span>http://36.91.166.189/landing/</span>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN: Feature Grid -->
+  <div class="col-right">
+
+    <!-- Row 1 -->
+    <div class="feat-card hero wide" style="--card-color:#ef4444;">
+      <div class="feat-icon">🌏</div>
+      <div class="feat-name">Monitoring Gempa Bumi</div>
+      <div class="feat-desc">Peta interaktif gempa bumi real-time wilayah Papua dengan data 10 hari terakhir, info magnitudo, kedalaman, dan lokasi.</div>
+      <div class="feat-badge">🔴 Live · Leaflet Maps</div>
+    </div>
+
+    <div class="feat-card" style="--card-color:#f97316;">
+      <div class="feat-icon">🗺️</div>
+      <div class="feat-name">Shakemap</div>
+      <div class="feat-desc">Peta guncangan MMI hasil processing GMT untuk setiap event gempa signifikan.</div>
+      <div class="feat-badge">190+ peta</div>
+    </div>
+
+    <div class="feat-card" style="--card-color:#f59e0b;">
+      <div class="feat-icon">⚡</div>
+      <div class="feat-name">Data Petir</div>
+      <div class="feat-desc">Monitoring sambaran petir harian dari sensor NexStorm.</div>
+      <div class="feat-badge">NexStorm</div>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="feat-card" style="--card-color:#22d3ee;">
+      <div class="feat-icon">🧲</div>
+      <div class="feat-name">Magnetbumi</div>
+      <div class="feat-desc">Grafik variasi komponen H, D, Z medan magnet bumi Papua.</div>
+      <div class="feat-badge">H · D · Z</div>
+    </div>
+
+    <div class="feat-card wide" style="--card-color:#a78bfa;">
+      <div class="feat-icon">📖</div>
+      <div class="feat-name">Katalog Gempa Merusak</div>
+      <div class="feat-desc">Arsip historis 607+ gempa merusak Indonesia sejak tahun 1821 — lengkap dengan data korban, kerusakan, dan tsunami. Dilengkapi filter provinsi dan peta sebaran nasional.</div>
+      <div class="feat-badge">1821 – Sekarang</div>
+    </div>
+
+    <div class="feat-card" style="--card-color:#4ade80;">
+      <div class="feat-icon">📡</div>
+      <div class="feat-name">WRSNG Status</div>
+      <div class="feat-desc">Monitor status 11 titik WRS New Generation real-time.</div>
+      <div class="feat-badge">11 sites</div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="feat-card" style="--card-color:#f472b6;">
+      <div class="feat-icon">🌧️</div>
+      <div class="feat-name">Prakiraan Cuaca</div>
+      <div class="feat-desc">Data cuaca BMKG 3-jam untuk kota-kota di Papua.</div>
+      <div class="feat-badge">BMKG API</div>
+    </div>
+
+    <div class="feat-card" style="--card-color:#38bdf8;">
+      <div class="feat-icon">🔔</div>
+      <div class="feat-name">Peringatan Dini</div>
+      <div class="feat-desc">Panel peringatan dini cuaca ekstrem wilayah Papua secara real-time.</div>
+      <div class="feat-badge">Auto Refresh</div>
+    </div>
+
+    <div class="feat-card" style="--card-color:#fb923c;">
+      <div class="feat-icon">📸</div>
+      <div class="feat-name">Gallery Kegiatan</div>
+      <div class="feat-desc">Dokumentasi kegiatan, survei lapangan, dan pelatihan stasiun.</div>
+      <div class="feat-badge">Album · Foto</div>
+    </div>
+
+    <div class="feat-card" style="--card-color:#86efac;">
+      <div class="feat-icon">☀️</div>
+      <div class="feat-name">Kalender Astronomis</div>
+      <div class="feat-desc">Waktu terbit/terbenam matahari dan bulan untuk 20 kota di Papua.</div>
+      <div class="feat-badge">SunCalc</div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM STRIP -->
+  <div class="bottom-strip">
+    <div class="bs-text">© 2026 Stasiun Geofisika Kelas I Jayapura · BMKG</div>
+    <div class="bs-tag">
+      <span class="bs-chip">Django 5.2</span>
+      <span class="bs-chip">PostgreSQL</span>
+      <span class="bs-chip">Celery</span>
+      <span class="bs-chip">Leaflet.js</span>
+      <span class="bs-chip">Tailwind CSS</span>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+function exportPNG() {
+  const btn = document.querySelector('.btn-export');
+  const toolbar = document.getElementById('toolbar');
+  btn.textContent = 'Memproses...';
+  btn.disabled = true;
+  toolbar.style.visibility = 'hidden';
+
+  html2canvas(document.getElementById('poster'), {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#060d1a',
+    width: 1920,
+    height: 1080,
+    logging: false,
+  }).then(function(canvas) {
+    const link = document.createElement('a');
+    link.download = 'poster-datin-bmkg-jayapura.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    toolbar.style.visibility = 'visible';
+    btn.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Download PNG`;
+    btn.disabled = false;
+  });
+}
+</script>
+</body>
+</html>

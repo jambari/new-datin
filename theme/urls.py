@@ -17,4 +17,5 @@ urlpatterns = [
     path('tentang/', views.public_about, name='public_about'),
     path('glosarium/', views.public_glosarium, name='public_glosarium'),
     path('peringatan-dini/', views.public_peringatan_dini_data, name='public_peringatan_dini_data'),
+    path('poster/', views.poster_datin, name='poster_datin'),
 ]
