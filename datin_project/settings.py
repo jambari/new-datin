@@ -229,6 +229,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'monitor.tasks.export_and_sync_gmt_history',
         'schedule': crontab(minute=53, hour=21),  # Runs every day at 21:37
     },
+
+    'check-gempa-merusak-daily': {
+        'task': 'repository.tasks.check_gempa_merusak_task',
+        'schedule': crontab(minute=30, hour=1),  # 01:30 UTC = 08:30 WIB / 10:30 WIT
+    },
 }
 
 # settings.py
