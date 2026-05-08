@@ -5,4 +5,5 @@ from . import views
 urlpatterns = [
     path('events/', views.eventmoon_list, name='event_list'),
     path('report/', views.sunmoon_monthly_report, name='sunmoon_report'),
+    path('ttm/', views.public_ttm, name='public_ttm'),
 ]

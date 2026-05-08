@@ -9,6 +9,7 @@ Allow: /magnetbumi/
 Allow: /tentang/
 Allow: /glosarium/
 Allow: /kegiatan/
+Allow: /ttm/
 
 Disallow: /admin/
 Disallow: /dashboard/

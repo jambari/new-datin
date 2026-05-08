@@ -2,8 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
-    path('landing/', views.landing, name='landing'),
+    path('dashboard/', views.dashboard, name='dashboard'),
+    path('', views.landing, name='landing'),
     path('gempa/', views.gempa_public, name='gempa_public'),
     path('gempa/<str:public_id>/', views.public_gempa_detail, name='public_gempa_detail'),
     path('gempa-merusak/', views.public_gempa_merusak, name='public_gempa_merusak'),

@@ -20,6 +20,7 @@ class StaticViewSitemap(Sitemap):
             'public_about',
             'public_glosarium',
             'our_work',
+            'public_ttm',
         ]
 
     def location(self, item):
