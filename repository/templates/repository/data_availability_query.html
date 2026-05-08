@@ -237,14 +237,7 @@
 
           <div class="overflow-x-auto p-1">
             <table class="matrix-table">
-              <thead class="bg-gray-800 text-white">
-                <tr>
-                  <th class="sticky-col py-1" style="width:30px;">No</th>
-                  <th class="sticky-col py-1" style="left:30px;width:60px;">Kode</th>
-                  {% for d in list_tanggal %}<th class="col-day">{{ d }}</th>{% endfor %}
-                  <th style="width:60px;">Hidup/bln</th>
-                </tr>
-              </thead>
+              <thead class="bg-gray-800 text-white" style="display:none;">
               <tbody class="bg-white">
                 {% for row in on_off_data %}
                 <tr>
