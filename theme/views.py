@@ -542,8 +542,11 @@ def public_petir_data(request):
 
 
 def public_about(request):
-    from repository.models import DataAvailability, AcceleroDataAvailability
-    seismo_count = DataAvailability.objects.values('station').distinct().count()
+    from repository.models import AcceleroDataAvailability
+    # Seismic station count is a fixed infrastructure fact (27 BMKG-managed sites).
+    # DataAvailability also stores stations from external networks and pseudo-channels
+    # (REPORT, SLINKTOOL), so a raw DB count overstates the real number.
+    seismo_count = 27
     accelero_count = AcceleroDataAvailability.objects.values('station').distinct().count()
     return render(request, 'public_about.html', {
         'seismo_count': seismo_count,
