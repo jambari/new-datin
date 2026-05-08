@@ -1,0 +1,1672 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:   #111827;
+    --muted: #6b7280;
+    --line:  #e5e7eb;
+    --blue:  #1d4ed8;
+    --amber: #b45309;
+  }
+
+  body { background: #f8fafc; }
+
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: var(--amber); }
+
+  .page-wrap { max-width: 1100px; margin: 80px auto 60px; padding: 0 1.25rem; }
+
+  /* Hero */
+  .page-hero { margin-bottom: 1.5rem; }
+  .page-title { font-size: 1.6rem; font-weight: 800; color: var(--ink); margin-bottom: 0.25rem; }
+  .page-sub   { font-size: 0.8rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  /* Alphabet nav */
+  .alpha-nav {
+    position: sticky; top: 60px; z-index: 100;
+    background: rgba(248,250,252,0.96); backdrop-filter: blur(4px);
+    border-bottom: 1px solid var(--line);
+    padding: 0.5rem 0 0.45rem;
+    margin-bottom: 1.5rem;
+    display: flex; flex-wrap: wrap; gap: 3px;
+  }
+  .alpha-btn {
+    min-width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); border-radius: 5px;
+    font-size: 0.7rem; font-weight: 700; color: var(--muted);
+    cursor: pointer; background: #fff; transition: all 0.15s;
+    text-decoration: none;
+  }
+  .alpha-btn:hover { border-color: var(--amber); color: var(--amber); background: rgba(180,83,9,0.05); }
+  .alpha-btn.active { border-color: var(--blue); color: #fff; background: var(--blue); }
+  .alpha-btn.empty { opacity: 0.35; cursor: default; pointer-events: none; }
+
+  /* Section header */
+  .alpha-section { margin-bottom: 2rem; scroll-margin-top: 110px; }
+  .alpha-heading {
+    font-size: 1.1rem; font-weight: 800; color: var(--blue);
+    border-bottom: 2px solid var(--blue);
+    padding-bottom: 0.3rem; margin-bottom: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Entry card */
+  .entry {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 10px; padding: 1rem 1.1rem;
+    margin-bottom: 0.75rem;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 1rem; align-items: start;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: box-shadow 0.15s;
+  }
+  .entry:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
+  .entry-text {}
+  .entry-term {
+    font-size: 0.88rem; font-weight: 700; color: var(--ink);
+    margin-bottom: 0.35rem; line-height: 1.3;
+  }
+  .entry-def {
+    font-size: 0.8rem; color: #374151; line-height: 1.65;
+  }
+  .entry-def em { font-style: italic; color: #4b5563; }
+  .entry-img {
+    width: 100px; flex-shrink: 0;
+    border-radius: 6px; overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .entry-img img {
+    width: 100%; display: block;
+    object-fit: contain; background: #f9fafb;
+    cursor: zoom-in; transition: opacity 0.15s;
+  }
+  .entry-img img:hover { opacity: 0.82; }
+
+  /* ── Lightbox ── */
+  #gl-lb {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.92);
+    flex-direction: column; align-items: center; justify-content: center;
+  }
+  #gl-lb-toolbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; padding: 10px 16px; background: rgba(0,0,0,0.4);
+  }
+  .gl-lb-btn {
+    color: #fff; background: rgba(255,255,255,0.12); border: none;
+    cursor: pointer; border-radius: 4px; padding: 4px 10px;
+    font-size: 18px; line-height: 1;
+  }
+  .gl-lb-btn.sm { font-size: 12px; }
+  #gl-lb-zoom-lbl { color: #aaa; font-size: 12px; min-width: 38px; text-align: center; }
+  #gl-lb-wrap {
+    overflow: hidden; max-width: 92vw; max-height: 80vh;
+    display: flex; align-items: center; justify-content: center; margin-top: 50px;
+  }
+  #gl-lb-img {
+    max-width: 92vw; max-height: 80vh; object-fit: contain;
+    transform-origin: center; transition: transform 0.15s;
+    border-radius: 4px; box-shadow: 0 4px 32px rgba(0,0,0,0.6);
+  }
+  #gl-lb-caption {
+    margin-top: 10px; color: #bbb; font-size: 13px; text-align: center;
+    max-width: 80vw;
+  }
+
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+
+  @media (max-width: 600px) {
+    .entry { grid-template-columns: 1fr; }
+    .entry-img { width: 80px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Kembali</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <div class="page-hero">
+    <h1 class="page-title">Glosarium Gempa Bumi</h1>
+    <p class="page-sub">Kamus istilah teknis seismologi &amp; bahaya gempa bumi · Sumber: USGS Earthquake Hazards Program</p>
+  </div>
+
+  <!-- Alphabet nav -->
+  <nav class="alpha-nav" id="alpha-nav">
+    {% for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" %}
+    <a class="alpha-btn" href="#sec-{{ letter }}" data-letter="{{ letter }}">{{ letter }}</a>
+    {% endfor %}
+  </nav>
+
+  <!-- ── A ── -->
+  <div class="alpha-section" id="sec-A">
+    <div class="alpha-heading">A</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Percepatan / <em>Peak Acceleration</em></div>
+        <div class="entry-def">Laju perubahan kecepatan terhadap waktu. Saat gempa, <em>peak acceleration</em> merupakan peningkatan kecepatan terbesar yang tercatat pada stasiun pemantauan tertentu.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/list_item/public/media/images/acceleration%20velocity%20displacement.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Accelerogram</em></div>
+        <div class="entry-def">Rekaman yang mendokumentasikan percepatan tanah selama kejadian seismik berlangsung.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/list_item/public/media/images/accelerograph.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Accelerograph</em> (Akselerograf)</div>
+        <div class="entry-def">Instrumen yang merekam percepatan tanah selama gempa, umumnya disebut juga <em>accelerometer</em>.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/list_item/public/media/images/accelerograph.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Accretionary Wedge</em> (Baji Akresi)</div>
+        <div class="entry-def">Sedimen yang terakumulasi dan terdeformasi di zona tumbukan antara lempeng samudra dan benua. Sedimen ini dikerok dari kerak samudra yang menunjam dan ditambahkan ke tepi lempeng benua.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/thumbnails/image/eq-ed-accretionary-wedge.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar Aktif (<em>Active Fault</em>)</div>
+        <div class="entry-def">Sesar yang menunjukkan kemungkinan aktivitas seismik di masa depan, umumnya memperlihatkan pergerakan dalam 10.000 tahun terakhir.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/active_fault.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gempa Susulan (<em>Aftershocks</em>)</div>
+        <div class="entry-def">Gempa-gempa yang lebih kecil yang mengikuti guncangan utama, terjadi dalam jarak ruptur dan dapat berlanjut selama berminggu-minggu, berbulan-bulan, atau bahkan bertahun-tahun.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/aftershocks1.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Alluvium</em> (Aluvium)</div>
+        <div class="entry-def">Endapan kerikil, pasir, lanau, atau lempung yang tidak terkonsolidasi, ditinggalkan oleh aliran air.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/alluvium-salt-river-arizona.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Amplifikasi (<em>Amplification</em>)</div>
+        <div class="entry-def">Peningkatan level guncangan di suatu lokasi akibat fokus energi seismik yang disebabkan oleh geometri sedimen bawah permukaan atau topografi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/amplification.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Amplitudo (<em>Amplitude</em>)</div>
+        <div class="entry-def">Besaran osilasi pada rekaman seismik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/amplitude1.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Arc</em> (Busur Vulkanik)</div>
+        <div class="entry-def">Rangkaian gunung berapi yang terbentuk ketika lempeng samudra bertumbukan dengan lempeng benua dan menunjam melalui proses subduksi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/arc.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Aseismic</em> (Asismik)</div>
+        <div class="entry-def">Sesar yang tidak menunjukkan aktivitas gempa yang terdokumentasi; bergerak secara perlahan tanpa menimbulkan gempa signifikan (<em>creep</em>).</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/thumbnails/image/creep_GardeniaEE_crax.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Asperity</em></div>
+        <div class="entry-def">Bagian sesar yang "terkunci" di mana ruptur gempa umumnya dimulai.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/ASPERITY.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Astenosfer (<em>Asthenosphere</em>)</div>
+        <div class="entry-def">Zona lunak di bawah litosfer, mencakup material mantel atas setebal sekitar 180 km, bersifat plastis dan dapat mengalir.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/asthenosphere_0.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Atenuasi (<em>Attenuation</em>)</div>
+        <div class="entry-def">Pengurangan amplitudo gelombang seismik saat energi merambat menjauhi sumber gempa.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/attenuation%20ripples.jpg" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── B ── -->
+  <div class="alpha-section" id="sec-B">
+    <div class="alpha-heading">B</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Backarc</em></div>
+        <div class="entry-def">Wilayah di daratan di belakang busur vulkanik, berlawanan posisi dengan zona subduksi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/arc.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Batuan Dasar (<em>Basement</em>)</div>
+        <div class="entry-def">Batuan beku dan metamorf yang lebih tua dan lebih keras, berada di bawah urutan batuan sedimen yang lebih muda, membentang hingga dasar kerak.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/basement.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Bedrock</em> (Batuan Pejal)</div>
+        <div class="entry-def">Batuan keras padat yang umumnya berada di bawah material lunak; merupakan bagian dari batuan dasar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/basement.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Zona Benioff (<em>Benioff Zone</em>)</div>
+        <div class="entry-def">Zona gempa berbentuk bidang miring yang dihasilkan dari interaksi lempeng samudra dengan lempeng benua; disebut juga zona Wadati-Benioff.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/benioff_zone.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar Naik Tersembunyi (<em>Blind Thrust Fault</em>)</div>
+        <div class="entry-def">Sesar naik yang tidak mencapai permukaan, tetap terkubur di bawah lapisan batuan di atasnya.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/blindthrust.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gelombang Tubuh (<em>Body Wave</em>)</div>
+        <div class="entry-def">Gelombang seismik yang merambat melalui interior bumi (gelombang P dan S), berbeda dengan gelombang permukaan yang merambat di sepanjang permukaan bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/P%26S-waves.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Batas <em>Brittle-Ductile</em></div>
+        <div class="entry-def">Kedalaman yang menandai transisi dari kerak rapuh (mudah retak) di atas ke kerak plastis (mudah lentur) di bawah. Sebagian besar gempa terjadi di atas batas ini.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/brittle_ductile.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── C ── -->
+  <div class="alpha-section" id="sec-C">
+    <div class="alpha-heading">C</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Penanggalan Karbon-14 (<em>Carbon 14 Age</em>)</div>
+        <div class="entry-def">Metode penanggalan absolut menggunakan rasio karbon radioaktif untuk menentukan waktu terjadinya gempa purba (<em>paleoearthquake</em>) pada sesar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/CARBON14.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tegangan Kompresi (<em>Compressional Stress</em>)</div>
+        <div class="entry-def">Komponen tegangan tegak lurus terhadap permukaan, dihasilkan dari gaya yang bekerja ke dalam sehingga material tertekan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/stress_types.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Inti Bumi (<em>Core</em>)</div>
+        <div class="entry-def">Bagian terdalam bumi: inti luar berupa logam cair (kedalaman 4.000–5.600 km) dan inti dalam yang padat (radius ~1.200 km).</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/CORE.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Merayap / <em>Fault Creep</em></div>
+        <div class="entry-def">Pergerakan sesar yang lambat dan terus-menerus akibat deformasi tektonik; sesar yang merayap umumnya jarang menghasilkan gempa besar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/CREEP.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kerak Bumi (<em>Crust</em>)</div>
+        <div class="entry-def">Lapisan terluar bumi dengan ketebalan 10–65 km; bagian atas setebal 15–35 km adalah sumber utama gempa bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/CRUST.jpg" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── D ── -->
+  <div class="alpha-section" id="sec-D">
+    <div class="alpha-heading">D</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Deformasi (<em>Deformation</em>)</div>
+        <div class="entry-def">Perubahan bentuk material akibat tegangan dan regangan selama proses tektonik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/deformation.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kemiringan (<em>Dip</em>)</div>
+        <div class="entry-def">Sudut pengukuran bidang geologi (sesar) dari posisi horisontal.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/DIP.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Direktivitas (<em>Directivity</em>)</div>
+        <div class="entry-def">Intensitas guncangan tanah yang lebih kuat ke arah propagasi ruptur dibandingkan arah lain dari episenter.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/directivity.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Perpindahan (<em>Displacement</em>)</div>
+        <div class="entry-def">Jarak pergeseran titik-titik di permukaan tanah dari posisi sebelum gempa.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/acceleration%20velocity%20displacement.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── E ── -->
+  <div class="alpha-section" id="sec-E">
+    <div class="alpha-heading">E</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gempa Bumi (<em>Earthquake</em>)</div>
+        <div class="entry-def">Slip sesar tiba-tiba yang menghasilkan guncangan tanah dari energi seismik yang terpancar; disebabkan oleh perubahan tegangan atau aktivitas vulkanik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/earthquake%20seismogram.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Bahaya Gempa (<em>Earthquake Hazard</em>)</div>
+        <div class="entry-def">Segala fenomena terkait gempa yang memengaruhi aktivitas manusia, termasuk patahan, guncangan tanah, likuefaksi, tanah longsor, tsunami, dan <em>seiche</em>.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/earthquake%20seismic%20hazard%20map.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Risiko Gempa (<em>Earthquake Risk</em>)</div>
+        <div class="entry-def">Perkiraan kerusakan bangunan dan korban jiwa akibat gempa yang mungkin terjadi pada sesar tertentu.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/earthquake%20seismic%20hazard%20map.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Episenter (<em>Epicenter</em>)</div>
+        <div class="entry-def">Titik di permukaan bumi tepat di atas hiposenter, yaitu tempat ruptur seismik berasal.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/Epicenter%20Hypocenter.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── F ── -->
+  <div class="alpha-section" id="sec-F">
+    <div class="alpha-heading">F</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar (<em>Fault</em>)</div>
+        <div class="entry-def">Rekahan pada kerak bumi di mana blok-blok di kedua sisinya bergerak relatif satu sama lain sejajar rekahan tersebut.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/FAULT.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Fault Gouge</em></div>
+        <div class="entry-def">Batuan yang hancur dan tergiling akibat gesekan selama pergerakan sesar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/Fault-Gouge_0.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Bidang Sesar (<em>Fault Plane</em>)</div>
+        <div class="entry-def">Permukaan datar tempat terjadinya slip sesar saat gempa.</div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tebing Sesar (<em>Fault Scarp</em>)</div>
+        <div class="entry-def">Fitur permukaan menyerupai tangga yang terbentuk akibat perpindahan tanah karena sesar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/FAULT-SCARP.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Jejak Sesar (<em>Fault Trace</em>)</div>
+        <div class="entry-def">Persimpangan sesar dengan permukaan tanah; garis yang merepresentasikan sesar pada peta geologi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/FAULT-TRACE.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gerak Pertama (<em>First Motion</em>)</div>
+        <div class="entry-def">Arah gerak tanah pertama yang terekam pada seismogram saat gelombang P tiba; menunjukkan ekspansi atau kontraksi pada sumber ruptur.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/firstmotion.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kedalaman Fokus (<em>Focal Depth</em>)</div>
+        <div class="entry-def">Kedalaman hiposenter gempa di bawah permukaan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/focal%20depth.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Mekanisme Fokal (<em>Focal Mechanism Solution</em>)</div>
+        <div class="entry-def">Representasi bergaya "bola pantai" (<em>beach ball</em>) yang menampilkan orientasi sesar dan arah slip dari data gempa.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/focal_mechanism.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Forearc</em></div>
+        <div class="entry-def">Wilayah antara zona subduksi dan busur vulkanik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/arc.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gempa Pendahulu (<em>Foreshocks</em>)</div>
+        <div class="entry-def">Gempa-gempa yang lebih kecil yang mendahului guncangan utama dalam suatu rangkaian seismik; tidak semua gempa utama didahului foreshock.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/foreshock.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Frekuensi (<em>Frequency</em>)</div>
+        <div class="entry-def">Jumlah pengulangan osilasi dalam suatu rentang waktu tertentu selama guncangan gempa.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/frequency.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── G ── -->
+  <div class="alpha-section" id="sec-G">
+    <div class="alpha-heading">G</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">G atau g (Gravitasi)</div>
+        <div class="entry-def">Percepatan gravitasi (9,8 m/s²); guncangan gempa umumnya dinyatakan sebagai persentase dari nilai gravitasi standar ini.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/GRAVITY.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Geodesi (<em>Geodesy</em>)</div>
+        <div class="entry-def">Ilmu yang menentukan ukuran, bentuk bumi, dan lokasi titik-titik tepat di permukaannya.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/GEODESY.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Skala Waktu Geologi (<em>Geologic Time Scale</em>)</div>
+        <div class="entry-def">Urutan kronologis kejadian geologi, biasanya ditampilkan sebagai bagan yang menunjukkan nama lapisan batuan beserta estimasi durasinya.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/geologic%20timescale.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Geologi (<em>Geology</em>)</div>
+        <div class="entry-def">Ilmu yang mempelajari komposisi, proses, produk, dan sejarah perkembangan planet termasuk bentuk kehidupannya.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/photo-of-zion-canyon-_geology_.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Geomorfologi (<em>Geomorphology</em>)</div>
+        <div class="entry-def">Ilmu yang menyelidiki karakteristik dan asal-usul bentang alam, termasuk pegunungan dan lembah.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/photo%20of%20grand%20canyon%20%28geomorphology%29.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Geofisika (<em>Geophysics</em>)</div>
+        <div class="entry-def">Cabang ilmu bumi yang menerapkan pengukuran fisika dan pemodelan matematika untuk memeriksa struktur dan dinamika bumi padat.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/GPS%20site%20%28geophysics%29.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Geotechnical</em> (Geoteknik)</div>
+        <div class="entry-def">Penerapan metodologi ilmiah dan prinsip rekayasa untuk menyelesaikan tantangan konstruksi yang berkaitan dengan material bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/bridge%20%28geotechnical%29.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Graben</em></div>
+        <div class="entry-def">Blok kerak yang amblas akibat regangan/ekstensi kerak bumi; diapit oleh <em>horst</em> di kedua sisinya.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/horst_graben.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gravitasi (<em>Gravity</em>)</div>
+        <div class="entry-def">Tarikan timbal balik antarmassa; perubahan medan gravitasi mengungkap informasi struktur litosfer dan mantel atas.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/GRAVITY.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Lingkaran Besar (<em>Great Circle</em>)</div>
+        <div class="entry-def">Jalur terpendek yang menghubungkan dua titik di permukaan bola, berada pada busur lingkaran besar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/great%20circle.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kegagalan Tanah (<em>Ground Failure</em>)</div>
+        <div class="entry-def">Tanah longsor, likuefaksi, penyebaran lateral, dan konsekuensi lain dari ketidakstabilan tanah akibat guncangan gempa.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/lateral%20spreading%20and%20liquefaction.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gerak Tanah (<em>Ground Motion</em>)</div>
+        <div class="entry-def">Pergerakan permukaan bumi akibat gempa atau ledakan, dihasilkan oleh gelombang yang merambat melalui dan di sepanjang bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/earthquake%20seismogram.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── H ── -->
+  <div class="alpha-section" id="sec-H">
+    <div class="alpha-heading">H</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Halfspace</em></div>
+        <div class="entry-def">Model bumi matematis sederhana yang digunakan dalam perhitungan seismologi, jauh lebih sederhana dari struktur bumi nyata.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/halfspace.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Harmonic Tremor</em></div>
+        <div class="entry-def">Gempa-gempa ritmis berkelanjutan yang terdeteksi oleh seismograf, sering mendahului atau menyertai letusan gunung berapi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/harmonic_tremor.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Hertz (Hz)</div>
+        <div class="entry-def">Satuan frekuensi yang mengukur siklus per detik, dinamai sesuai fisikawan Heinrich Hertz.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/HERTZ.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Holosen (<em>Holocene</em>)</div>
+        <div class="entry-def">10.000 tahun terakhir sejak akhir zaman es; sesar dengan slip Holosen umumnya dianggap aktif.</div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Horst</em></div>
+        <div class="entry-def">Blok kerak yang terangkat dalam setting ekstensi, berada di samping blok <em>graben</em> yang amblas.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/horst_graben.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Hiposenter / Fokus (<em>Hypocenter / Focus</em>)</div>
+        <div class="entry-def">Titik di dalam bumi tempat ruptur gempa dimulai; episenter adalah titik di permukaan tepat di atasnya.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/Epicenter%20Hypocenter.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── I ── -->
+  <div class="alpha-section" id="sec-I">
+    <div class="alpha-heading">I</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Intensitas / Skala MMI (<em>Modified Mercalli Intensity</em>)</div>
+        <div class="entry-def">Peringkat angka Romawi yang mendeskripsikan keparahan gempa berdasarkan efek di permukaan dan kerusakan struktur. Setiap gempa memiliki banyak nilai intensitas (berbeda tiap lokasi), berbeda dengan magnitudo yang hanya satu nilai.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/thumbnails/image/intensity-Nisq.vs_.Northridge.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Antarlempeng (<em>Interplate</em>)</div>
+        <div class="entry-def">Proses yang terjadi di antara lempeng-lempeng kerak bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/intraplate%20events.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kopling Antarlempeng (<em>Interplate Coupling</em>)</div>
+        <div class="entry-def">Kemampuan sesar untuk mengunci dan mengakumulasi tegangan; kopling kuat menandakan sesar terkunci yang sedang menumpuk tegangan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/intraplate%20events.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Intralempeng (<em>Intraplate</em>)</div>
+        <div class="entry-def">Proses yang terjadi di dalam lempeng kerak bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/intraplate%20events.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Isoseismal (<em>Isoseismal Line</em>)</div>
+        <div class="entry-def">Kontur pada peta yang menghubungkan titik-titik dengan intensitas gempa yang sama untuk suatu kejadian seismik tertentu.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/thumbnails/image/1811-1812_iso.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── K ── -->
+  <div class="alpha-section" id="sec-K">
+    <div class="alpha-heading">K</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kinematik (<em>Kinematic</em>)</div>
+        <div class="entry-def">Pola dan arah pergerakan umum deformasi batuan di dalam bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/iceland%20and%20plate%20motions%20%28kinematic%29.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── L ── -->
+  <div class="alpha-section" id="sec-L">
+    <div class="alpha-heading">L</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tanah Longsor (<em>Landslide</em>)</div>
+        <div class="entry-def">Pergerakan material permukaan menuruni lereng.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/landslide.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kuarter Akhir (<em>Late Quaternary</em>)</div>
+        <div class="entry-def">Istilah informal untuk sekitar 0,5–1,0 juta tahun lalu; sesar dengan slip Kuarter Akhir kadang dianggap aktif.</div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Aliran Lateral (<em>Lateral Spread or Flow</em>)</div>
+        <div class="entry-def">Jenis longsor pada lereng landai yang bergerak cepat seperti aliran fluida mirip air.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/lateral%20spreading%20and%20liquefaction.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar Lateral Kiri (<em>Left-Lateral</em>)</div>
+        <div class="entry-def">Jenis sesar geser di mana, jika berdiri di atas sesar dan memandang sepanjang sesarnya, blok di sisi kiri bergerak ke arah Anda.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/LEFT%20LATERAL.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Jalur Vital (<em>Lifelines</em>)</div>
+        <div class="entry-def">Infrastruktur penting komunitas: jalan, pipa, jaringan listrik, saluran air, komunikasi, dan fasilitas pelabuhan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/lifelines.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Likuefaksi (<em>Liquefaction</em>)</div>
+        <div class="entry-def">Proses di mana sedimen jenuh air sementara kehilangan kekuatan dan berperilaku seperti fluida, mirip menggoyangkan jari kaki di pasir pantai basah.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/liquefaction.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Litologi (<em>Lithology</em>)</div>
+        <div class="entry-def">Deskripsi komposisi dan tekstur batuan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/lithology.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Litosfer (<em>Lithosphere</em>)</div>
+        <div class="entry-def">Lapisan luar bumi yang kaku, mencakup kerak dan mantel atas, setebal sekitar 100 km; litosfer yang lebih tua cenderung lebih tebal.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/asthenosphere_0.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar Terkunci (<em>Locked Fault</em>)</div>
+        <div class="entry-def">Sesar yang tidak bergeser karena hambatan gesekan melebihi tegangan geser; berpotensi menyimpan regangan yang dapat lepas sebagai gempa di masa depan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/locked_fault.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gelombang Love (<em>Love Wave</em>)</div>
+        <div class="entry-def">Gelombang permukaan dengan gerak horizontal transversal tegak lurus arah rambat gelombang.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/LOVEWAVE.jpg" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── M ── -->
+  <div class="alpha-section" id="sec-M">
+    <div class="alpha-heading">M</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Ma (Juta Tahun Lalu)</div>
+        <div class="entry-def">Singkatan untuk satu juta tahun lalu (<em>Megannum</em>).</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/geologic%20time%20scale%203.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Pembalikan Polaritas Magnetik (<em>Magnetic Polarity Reversal</em>)</div>
+        <div class="entry-def">Pembalikan medan magnet bumi yang terjadi pada interval tidak teratur; terekam pada batuan yang mendingin dan digunakan untuk estimasi umur geologi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/magnetic_polrev.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Magnitudo (<em>Magnitude</em>)</div>
+        <div class="entry-def">Angka yang mencirikan ukuran relatif gempa berdasarkan gerakan maksimum seismograf. Skala umum meliputi magnitudo lokal (ML), magnitudo gelombang permukaan (Ms), magnitudo gelombang tubuh (mb), dan magnitudo momen (Mw).</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/magnitude.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gempa Utama (<em>Mainshock</em>)</div>
+        <div class="entry-def">Gempa terbesar dalam suatu rangkaian seismik; sering didahului <em>foreshock</em> dan selalu diikuti banyak <em>aftershock</em>.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/landers%20and%20hector%20mine%20aftershocks.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Mantel (<em>Mantle</em>)</div>
+        <div class="entry-def">Lapisan interior bumi antara inti luar logam dan kerak bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/CORE.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Mikrozonasi (<em>Microzonation</em>)</div>
+        <div class="entry-def">Identifikasi zona-zona terpisah yang menunjukkan potensi bahaya gempa berbeda-beda.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/liquefaction%20potential%20bay%20area.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Moho (Batas Mohorovičić)</div>
+        <div class="entry-def">Batas antara kerak dan mantel tempat gelombang seismik berubah kecepatan dan komposisi kimia berganti; berada 25–60 km di bawah benua, 5–8 km di bawah dasar samudra.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/asthenosphere_0.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tensor Momen (<em>Moment Tensor</em>)</div>
+        <div class="entry-def">Representasi matematis pergerakan sesar selama gempa, terdiri dari sembilan <em>couple</em> umum; sering digambarkan sebagai diagram bola pantai.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/moment_tensor.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── N ── -->
+  <div class="alpha-section" id="sec-N">
+    <div class="alpha-heading">N</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Frekuensi Alami (<em>Natural Frequency</em>)</div>
+        <div class="entry-def">Frekuensi getaran objek atau sistem ketika didorong oleh gaya tunggal tanpa pengaruh eksternal atau efek redaman.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/natural_freq.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar Normal / <em>Dip-Slip</em> / Sesar Naik (<em>Normal / Thrust Fault</em>)</div>
+        <div class="entry-def">Rekahan miring dengan pergeseran blok dominan vertikal. Sesar normal: blok atas bergerak ke bawah. Sesar naik (<em>reverse</em>): blok atas bergerak ke atas. Sesar naik (<em>thrust</em>): sesar naik dengan sudut kemiringan ≤ 45°.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/thumbnails/image/eq-ed-fault-labeled.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tegangan Normal (<em>Normal Stress</em>)</div>
+        <div class="entry-def">Komponen tegangan tegak lurus terhadap bidang tertentu; dapat berupa kompresi atau tarik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/stress_types.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── O ── -->
+  <div class="alpha-section" id="sec-O">
+    <div class="alpha-heading">O</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Punggung Tengah Samudra (<em>Oceanic Spreading Ridge</em>)</div>
+        <div class="entry-def">Zona rekahan di dasar samudra tempat material mantel cair naik ke permukaan, membentuk kerak baru saat mengeras.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/oceanic_spreading.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Palung Samudra (<em>Oceanic Trench</em>)</div>
+        <div class="entry-def">Depresi linier di dasar laut akibat satu lempeng menunjam di bawah lempeng lain.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/oceanic_spreading.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── P ── -->
+  <div class="alpha-section" id="sec-P">
+    <div class="alpha-heading">P</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gelombang P / Gelombang Kompresi (<em>P Wave</em>)</div>
+        <div class="entry-def">Gelombang tubuh seismik yang mengguncang tanah ke depan-belakang sejajar arah rambat gelombang.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/p%20waves%20s%20waves%20surface%20waves.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Paleoseismisitas (<em>Paleoseismicity</em>)</div>
+        <div class="entry-def">Gempa-gempa yang terekam secara geologis, sebagian besar tidak tercatat dalam sejarah. Bukti mencakup lapisan sedimen yang tersesar, injeksi likuefaksi, tanah longsor, dan endapan tsunami.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/Seattle%20Fault%20Strand.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Periode (<em>Period</em>)</div>
+        <div class="entry-def">Interval waktu yang diperlukan untuk satu siklus gelombang penuh.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/PERIOD.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tektonik Lempeng (<em>Plate Tectonics</em>)</div>
+        <div class="entry-def">Teori yang didukung kuat yang menyatakan bahwa kerak dan mantel atas bumi terdiri dari lempeng-lempeng besar, tipis, dan kaku yang bergerak saling relatif satu sama lain.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/plate_tectonics.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Pleistosen (<em>Pleistocene</em>)</div>
+        <div class="entry-def">Periode geologi dari sekitar 10.000 hingga 1.650.000 tahun lalu; diterapkan untuk batuan atau sesar yang menunjukkan aktivitas Pleistosen.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Q ── -->
+  <div class="alpha-section" id="sec-Q">
+    <div class="alpha-heading">Q</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Q (Faktor Kualitas)</div>
+        <div class="entry-def">Kebalikan dari atenuasi; nilai Q tinggi menandakan atenuasi rendah (gelombang merambat jauh tanpa banyak melemah).</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/pond%20ripples%20attenuation.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kuarter (<em>Quaternary</em>)</div>
+        <div class="entry-def">Periode waktu geologi yang mencakup sekitar 1,65 juta tahun terakhir.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/geologic%20time%20scale%203.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── R ── -->
+  <div class="alpha-section" id="sec-R">
+    <div class="alpha-heading">R</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Radiometrik (<em>Radiometric</em>)</div>
+        <div class="entry-def">Berkaitan dengan pengukuran waktu geologi melalui analisis radioisotop dan laju peluruhan yang diketahui.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/CARBON14.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gelombang Rayleigh (<em>Rayleigh Wave</em>)</div>
+        <div class="entry-def">Gelombang permukaan seismik yang menyebabkan gerak tanah eliptis tanpa gerak transversal tegak lurus.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/LOVEWAVE.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Periode Ulang / <em>Recurrence Interval</em></div>
+        <div class="entry-def">Rentang waktu rata-rata antara kejadian gempa pada suatu sesar atau zona sumber.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/recurrence_interval.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Refleksi (<em>Reflection</em>)</div>
+        <div class="entry-def">Energi gelombang seismik yang dikembalikan dari batas antara material bumi berbeda, mirip seperti pemantulan cahaya.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/reflected%20wave.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Refraksi (<em>Refraction</em>)</div>
+        <div class="entry-def">Pembelokan jalur gelombang seismik akibat melewati material dengan sifat elastik berbeda; atau pembelokan depan gelombang tsunami akibat variasi kedalaman air.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/refraction%20.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Skala Richter (<em>Richter Scale</em>)</div>
+        <div class="entry-def">Skala magnitudo yang dikembangkan pada 1935 oleh Charles F. Richter untuk membandingkan ukuran gempa menggunakan pengukuran amplitudo logaritmik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/richter_scale.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar Lateral Kanan (<em>Right-Lateral</em>)</div>
+        <div class="entry-def">Jenis sesar geser di mana, jika berdiri di atas sesar dan memandang sepanjang sesarnya, blok di sisi kanan bergerak ke arah Anda.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/RIGHTLAT.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Cincin Api (<em>Ring of Fire</em>)</div>
+        <div class="entry-def">Sabuk Sirkum-Pasifik yang mengelilingi Samudra Pasifik, menjadi lokasi sekitar 90% gempa di seluruh dunia.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/ringoffire.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Depan Ruptur (<em>Rupture Front</em>)</div>
+        <div class="entry-def">Batas sesaat antara bagian sesar yang sedang bergeser dan bagian yang masih terkunci selama gempa berlangsung.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/rupture_front.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kecepatan Ruptur (<em>Rupture Velocity</em>)</div>
+        <div class="entry-def">Kecepatan depan ruptur merambat di sepanjang permukaan sesar selama gempa.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/rupture_front.jpg" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── S ── -->
+  <div class="alpha-section" id="sec-S">
+    <div class="alpha-heading">S</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gelombang S / Gelombang Geser (<em>S Wave / Shear Wave</em>)</div>
+        <div class="entry-def">Gelombang tubuh seismik yang mengguncang tanah tegak lurus terhadap arah rambat gelombang.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/s%20waves.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Semburan Pasir (<em>Sand Boil</em>)</div>
+        <div class="entry-def">Pasir dan air yang muncul ke permukaan tanah saat gempa akibat likuefaksi dangkal.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/SANDBOIL.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Pemekaran Dasar Laut (<em>Sea-Floor Spreading</em>)</div>
+        <div class="entry-def">Proses di punggung tengah samudra di mana batas divergen menyebabkan pemisahan lempeng dan pembentukan dasar laut baru.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/oceanic_spreading.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Segmentasi (<em>Segmentation</em>)</div>
+        <div class="entry-def">Pembagian sesar menjadi segmen-segmen yang lebih kecil akibat sesar silang, perubahan topografi, atau belokan jurus; membatasi panjang ruptur dalam satu kejadian gempa.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/segmentation.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Seiche</em></div>
+        <div class="entry-def">Goyangan air di badan air tertutup akibat guncangan gempa; umumnya terlihat di kolam renang.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/seiche%20in%20lake%20geneva.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Celah Seismik (<em>Seismic Gap</em>)</div>
+        <div class="entry-def">Segmen sesar yang sebelumnya menghasilkan gempa tetapi saat ini tenang; beberapa celah tidak memiliki aktivitas historis yang terdokumentasi meski potensi seismiknya diakui.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/seismic_gap.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Momen Seismik (<em>Seismic Moment</em>)</div>
+        <div class="entry-def">Ukuran besar gempa berdasarkan luas ruptur, rata-rata slip, dan gaya yang mengatasi gesekan; dapat dihitung dari spektrum amplitudo gelombang seismik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/seismogenic%20zone.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gelombang Seismik (<em>Seismic Wave</em>)</div>
+        <div class="entry-def">Gelombang elastik yang dihasilkan oleh impuls seperti gempa atau ledakan, merambat melalui atau di dekat permukaan bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/P%26S-waves.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Zona Seismik (<em>Seismic Zone</em>)</div>
+        <div class="entry-def">Wilayah kegempaan yang kemungkinan memiliki penyebab yang sama.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/seismic_zone.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Seismisitas (<em>Seismicity</em>)</div>
+        <div class="entry-def">Pola distribusi geografis dan historis gempa bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/seismicity_0.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Seismogenik (<em>Seismogenic</em>)</div>
+        <div class="entry-def">Mampu menghasilkan gempa; dasar zona seismogenik menandai transisi ke astenosfer plastis.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/seismogenic%20zone.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Seismogram (<em>Seismogram</em>)</div>
+        <div class="entry-def">Rekaman yang dibuat oleh seismograf sebagai respons terhadap gerak tanah dari gempa, ledakan, atau sumber lain.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/seismogram.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Seismologi (<em>Seismology</em>)</div>
+        <div class="entry-def">Ilmu yang mempelajari gempa bumi dan struktur bumi menggunakan gelombang seismik yang terjadi secara alami maupun buatan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/charles-richter.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Seismometer / Seismograf (<em>Seismometer / Seismograph</em>)</div>
+        <div class="entry-def">Instrumen yang mendeteksi dan merekam gempa; umumnya terdiri dari sistem massa-basa dengan transformasi gerak menjadi rekaman tegangan listrik.</div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Zona Bayangan (<em>Shadow Zone</em>)</div>
+        <div class="entry-def">Wilayah bumi pada jarak sudut 104–140° dari gempa yang tidak menerima gelombang P langsung, akibat refraksi oleh inti cair.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/shadow_zone.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tegangan Geser (<em>Shear Stress</em>)</div>
+        <div class="entry-def">Komponen tegangan sejajar terhadap permukaan dari gaya yang bekerja sejajar permukaan atau ditransmisikan melalui batuan sekitar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/stress_types.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Slab (Lempengan)</div>
+        <div class="entry-def">Lempeng kerak samudra yang menunjam di bawah lempeng benua dalam zona subduksi dan dikonsumsi oleh mantel.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/SLAB.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Slickensides</em></div>
+        <div class="entry-def">Permukaan batuan yang mengilap dan bergores akibat pergerakan massa batuan di sepanjang sesar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/slickensides.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Slip (Pergeseran Sesar)</div>
+        <div class="entry-def">Perpindahan relatif titik-titik yang semula berdekatan pada sisi berlawanan sesar, diukur pada permukaan sesar.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/landers%20slip%20model.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Laju Slip (<em>Slip Rate</em>)</div>
+        <div class="entry-def">Kecepatan relatif pergeseran kedua sisi sesar dari pengukuran geodetik atau analisis fitur buatan/geologi yang tergeser.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/slip_rate.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tanah (<em>Soil</em>)</div>
+        <div class="entry-def">Dalam rekayasa: semua material tidak terkonsolidasi di atas batuan pejal. Dalam ilmu tanah: lapisan mineral/organik yang terjadi secara alami, berbeda dari material induknya.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/soilprofile.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Profil Tanah (<em>Soil Profile</em>)</div>
+        <div class="entry-def">Susunan vertikal lapisan tanah hingga batuan pejal.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/soilprofile.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Percepatan Spektral (<em>Spectral Acceleration / SA</em>)</div>
+        <div class="entry-def">Percepatan yang dialami bangunan, dimodelkan sebagai partikel pada batang vertikal tanpa massa dengan periode getaran alami bangunan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/spectral_accel.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Spektrum (<em>Spectrum</em>)</div>
+        <div class="entry-def">Kurva yang menunjukkan amplitudo dan fase sebagai fungsi frekuensi/periode, menampilkan distribusi jenis guncangan gempa.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/SPECTRUM.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Deviasi Standar (<em>Standard Deviation</em>)</div>
+        <div class="entry-def">Ukuran statistik sebaran data dari kurva yang diharapkan, mewakili rata-rata kuadrat deviasi dari nilai tengah.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/standard_dev.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Stasiun (<em>Station</em>)</div>
+        <div class="entry-def">Lokasi di mana instrumen geofisika dipasang.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/STATION-EMS.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Stick-Slip</em></div>
+        <div class="entry-def">Gerakan cepat yang terjadi ketika sisi sesar yang terkunci akhirnya terlepas; batuan yang terdeformasi kembali ke posisi semula (<em>elastic rebound</em>), memancarkan gelombang seismik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/stickslip_0.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Regangan (<em>Strain</em>)</div>
+        <div class="entry-def">Perubahan kecil panjang dan volume yang terkait dengan deformasi tegangan tektonik atau lewatnya gelombang seismik.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/strain%20types.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tegangan (<em>Stress</em>)</div>
+        <div class="entry-def">Gaya per satuan luas yang bekerja di dalam benda; memerlukan enam nilai (tiga normal, tiga geser) untuk karakterisasi lengkap.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/stress_types.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Penurunan Tegangan (<em>Stress Drop</em>)</div>
+        <div class="entry-def">Selisih antara tegangan sesar sebelum dan sesudah gempa terjadi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/recurrence_interval.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Jurus (<em>Strike</em>)</div>
+        <div class="entry-def">Arah atau azimut relatif terhadap utara dari garis yang didefinisikan oleh perpotongan permukaan geologi planar dengan permukaan horisontal.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/STRIKE.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar Geser (<em>Strike-Slip Fault</em>)</div>
+        <div class="entry-def">Rekahan vertikal atau hampir vertikal dengan gerak blok dominan horisontal; gerak lateral kanan: blok di seberang bergerak ke kanan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/FAULT.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gerak Kuat (<em>Strong Motion</em>)</div>
+        <div class="entry-def">Gerak tanah dengan amplitudo dan durasi yang cukup untuk berpotensi merusak struktur bangunan.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/strongmotion.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Subduksi (<em>Subduction</em>)</div>
+        <div class="entry-def">Proses litosfer samudra yang bertumbukan dengan dan menunjam di bawah litosfer benua.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/subduction%20zone.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Zona Subduksi (<em>Subduction Zone</em>)</div>
+        <div class="entry-def">Lokasi di mana lempeng-lempeng litosfer bertemu dengan satu lempeng menunggang lempeng lainnya; sebagian besar gunung berapi di daratan terbentuk sejajar dan di sisi dalam batas ini.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/subduction%20zone.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Patahan Permukaan (<em>Surface Faulting</em>)</div>
+        <div class="entry-def">Perpindahan yang mencapai permukaan bumi saat slip sesar terjadi, umumnya pada gempa dangkal (episenter &lt; 20 km).</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/hector%20mine%20surface%20rupture.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Gelombang Permukaan (<em>Surface Wave</em>)</div>
+        <div class="entry-def">Gelombang seismik yang terperangkap di dekat permukaan bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/surface_waves.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── T ── -->
+  <div class="alpha-section" id="sec-T">
+    <div class="alpha-heading">T</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tektonik (<em>Tectonic</em>)</div>
+        <div class="entry-def">Mengacu pada proses deformasi batuan dan struktur yang dihasilkan yang mencakup bagian litosfer yang luas.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/plate_tectonics.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Lempeng Tektonik (<em>Tectonic Plates</em>)</div>
+        <div class="entry-def">Lempeng besar, tipis, dan relatif kaku di permukaan luar bumi yang bergerak saling relatif satu sama lain.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/plate_tectonics.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Teleseismik (<em>Teleseismic</em>)</div>
+        <div class="entry-def">Mengacu pada gempa yang terjadi pada jarak lebih dari 1.000 km dari lokasi pengukuran.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/teleseismic.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tegangan Tarik (<em>Tensional Stress</em>)</div>
+        <div class="entry-def">Tegangan yang cenderung menarik material terpisah, tegak lurus terhadap permukaan dari gaya yang diterapkan atau ditransmisikan dari jauh.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/stress_types.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Riwayat Waktu (<em>Time History</em>)</div>
+        <div class="entry-def">Urutan nilai besaran yang berubah terhadap waktu, diukur pada interval tetap; disebut juga deret waktu (<em>time series</em>).</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/timehistory.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Sesar Transform (<em>Transform Fault</em>)</div>
+        <div class="entry-def">Jenis sesar geser khusus yang mengakomodasi slip horizontal relatif antara elemen tektonik, sering memanjang dari punggung samudra.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/transform_fault.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tsunami</div>
+        <div class="entry-def">Gelombang laut dari sumber lokal atau jauh akibat perpindahan dasar laut berskala besar dari gempa bumi, longsor bawah laut, atau letusan gunung berapi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/TSUNAMI.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Magnitudo Tsunami (Mt)</div>
+        <div class="entry-def">Angka yang membandingkan ukuran tsunami dihitung dari pengukuran amplitudo gelombang maksimum dari alat ukur pasang surut.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/TSUNAMI.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Tsunamigenik (<em>Tsunamigenic</em>)</div>
+        <div class="entry-def">Mengacu pada gempa—umumnya di sepanjang batas zona subduksi seperti tepi Samudra Pasifik—yang mampu membangkitkan tsunami.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/tsunamigenic.jpg" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term"><em>Turbidites</em></div>
+        <div class="entry-def">Endapan di dasar laut dari keruntuhan lereng masif; penanggalan karbon memberikan metode penanggalan gempa purba.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/turbidites.jpg" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── V ── -->
+  <div class="alpha-section" id="sec-V">
+    <div class="alpha-heading">V</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Kecepatan (<em>Velocity</em>)</div>
+        <div class="entry-def">Kecepatan di mana titik-titik di tanah bergetar akibat gempa bumi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/acceleration%20velocity%20displacement.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Struktur Kecepatan (<em>Velocity Structure</em>)</div>
+        <div class="entry-def">Model kerak regional umum yang merepresentasikan struktur melalui lapisan-lapisan dengan kecepatan seismik yang berbeda.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/velocity_struct.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── W ── -->
+  <div class="alpha-section" id="sec-W">
+    <div class="alpha-heading">W</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Muka Gelombang (<em>Wavefront</em>)</div>
+        <div class="entry-def">Batas sesaat antara gelombang seismik yang sedang merambat di material bumi dan material yang belum terganggu.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/SOURCE.gif" alt="" loading="lazy"></div>
+    </div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">Panjang Gelombang (<em>Wavelength</em>)</div>
+        <div class="entry-def">Jarak antara titik-titik berurutan dengan amplitudo dan fase yang sama pada suatu gelombang.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/PERIOD.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+  <!-- ── Y ── -->
+  <div class="alpha-section" id="sec-Y">
+    <div class="alpha-heading">Y</div>
+
+    <div class="entry">
+      <div class="entry-text">
+        <div class="entry-term">YBP (Tahun Sebelum Sekarang)</div>
+        <div class="entry-def">Singkatan dari "<em>years before present</em>" — tahun sebelum masa kini; digunakan dalam konteks penanggalan geologi.</div>
+      </div>
+      <div class="entry-img"><img onclick="glLbOpen(this.src,this.closest('.entry').querySelector('.entry-term').textContent)" src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/YBP.gif" alt="" loading="lazy"></div>
+    </div>
+  </div>
+
+</div><!-- end page-wrap -->
+
+<footer id="site-footer">
+  <span>© {% now "Y" %} Stasiun Geofisika Kelas I Jayapura — BMKG</span>
+</footer>
+
+<script>
+(function () {
+  // Highlight active letter in alpha-nav based on scroll
+  var sections = document.querySelectorAll('.alpha-section');
+  var buttons  = document.querySelectorAll('.alpha-btn');
+  var letterMap = {};
+  buttons.forEach(function(b) { letterMap[b.dataset.letter] = b; });
+
+  // Mark letters with no section as empty
+  var existingIds = new Set();
+  sections.forEach(function(s) { existingIds.add(s.id.replace('sec-','')); });
+  buttons.forEach(function(b) {
+    if (!existingIds.has(b.dataset.letter)) b.classList.add('empty');
+  });
+
+  function onScroll() {
+    var scrollY = window.scrollY + 130;
+    var active = null;
+    sections.forEach(function(s) {
+      if (s.offsetTop <= scrollY) active = s.id.replace('sec-','');
+    });
+    buttons.forEach(function(b) { b.classList.remove('active'); });
+    if (active && letterMap[active]) letterMap[active].classList.add('active');
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+<!-- ── Lightbox ── -->
+<div id="gl-lb">
+  <div id="gl-lb-toolbar">
+    <button class="gl-lb-btn" onclick="glLbZoom(-0.25)">&#8722;</button>
+    <span id="gl-lb-zoom-lbl">100%</span>
+    <button class="gl-lb-btn" onclick="glLbZoom(0.25)">&#43;</button>
+    <button class="gl-lb-btn sm" onclick="glLbResetZoom()">1:1</button>
+    <button class="gl-lb-btn" onclick="glLbClose()" style="font-size:20px;">&times;</button>
+  </div>
+  <div id="gl-lb-wrap">
+    <img id="gl-lb-img" src="" alt="">
+  </div>
+  <div id="gl-lb-caption"></div>
+</div>
+
+<script>
+(function () {
+  var zoom = 1;
+  var lb   = document.getElementById('gl-lb');
+  var img  = document.getElementById('gl-lb-img');
+  var lbl  = document.getElementById('gl-lb-zoom-lbl');
+  var cap  = document.getElementById('gl-lb-caption');
+
+  function applyZoom() {
+    img.style.transform = 'scale(' + zoom + ')';
+    lbl.textContent = Math.round(zoom * 100) + '%';
+  }
+
+  window.glLbOpen = function (src, caption) {
+    zoom = 1;
+    img.src = src;
+    img.style.transform = 'scale(1)';
+    lbl.textContent = '100%';
+    cap.textContent = caption ? caption.trim() : '';
+    lb.style.display = 'flex';
+    document.addEventListener('keydown', onKey);
+    lb.addEventListener('wheel', onWheel, { passive: false });
+  };
+
+  window.glLbClose = function () {
+    lb.style.display = 'none';
+    document.removeEventListener('keydown', onKey);
+    lb.removeEventListener('wheel', onWheel);
+  };
+
+  window.glLbZoom = function (delta) {
+    zoom = Math.min(5, Math.max(0.25, zoom + delta));
+    applyZoom();
+  };
+
+  window.glLbResetZoom = function () { zoom = 1; applyZoom(); };
+
+  function onKey(e) {
+    if (e.key === 'Escape') glLbClose();
+    else if (e.key === '+' || e.key === '=') glLbZoom(0.25);
+    else if (e.key === '-') glLbZoom(-0.25);
+  }
+
+  function onWheel(e) { e.preventDefault(); glLbZoom(e.deltaY < 0 ? 0.15 : -0.15); }
+
+  lb.addEventListener('click', function (e) { if (e.target === lb) glLbClose(); });
+})();
+</script>
+
+{% endblock %}

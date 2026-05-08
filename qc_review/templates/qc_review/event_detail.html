@@ -513,7 +513,7 @@
 {% endblock %}
 
 {% block qc_content %}
-<div class="crumb"><a href="{% url 'qc_review:event_list' %}">← all events</a></div>
+<div class="crumb"><a href="{% if is_public %}{% url 'gempa_public' %}{% else %}{% url 'qc_review:event_list' %}{% endif %}">← all events</a></div>
 
 <!-- ── event header ─────────────────────────────────────── -->
 <div class="event-header">

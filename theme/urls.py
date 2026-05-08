@@ -6,6 +6,7 @@ urlpatterns = [
     path('landing/', views.landing, name='landing'),
     path('gempa/', views.gempa_public, name='gempa_public'),
     path('gempa/<str:public_id>/', views.public_gempa_detail, name='public_gempa_detail'),
+    path('gempa-merusak/', views.public_gempa_merusak, name='public_gempa_merusak'),
     path('shakemap/', views.public_shakemap_list, name='public_shakemap_list'),
     path('shakemap/<int:pk>/', views.public_shakemap_detail, name='public_shakemap_detail'),
     path('kegiatan/', views.our_work, name='our_work'),
@@ -14,4 +15,6 @@ urlpatterns = [
     path('petir/', views.public_petir, name='public_petir'),
     path('petir/data/', views.public_petir_data, name='public_petir_data'),
     path('tentang/', views.public_about, name='public_about'),
+    path('glosarium/', views.public_glosarium, name='public_glosarium'),
+    path('peringatan-dini/', views.public_peringatan_dini_data, name='public_peringatan_dini_data'),
 ]

@@ -1,0 +1,280 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gempa Merusak Indonesia · BMKG Jayapura</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+/* ── Header ─────────────────────────────────────────────── */
+header { background: #0f172a; border-bottom: 1px solid #1e293b; position: sticky; top: 0; z-index: 100; }
+.hdr-inner { max-width: 1200px; margin: 0 auto; padding: 0 1.2rem; display: flex; align-items: center; gap: 1rem; height: 56px; }
+.brand { display: flex; align-items: center; gap: .7rem; text-decoration: none; flex: 1; }
+.brand img { height: 36px; }
+.brand-title { font-size: .85rem; font-weight: 700; color: #f1f5f9; display: block; }
+.brand-sub   { font-size: .65rem; color: #94a3b8; display: block; }
+.header-back { font-size: .8rem; color: #94a3b8; text-decoration: none; white-space: nowrap; }
+.header-back:hover { color: #e2e8f0; }
+
+/* ── Page layout ─────────────────────────────────────────── */
+.page-wrap { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.2rem 3rem; }
+.page-title { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; margin-bottom: .25rem; }
+.page-sub   { font-size: .8rem; color: #64748b; margin-bottom: 1.5rem; }
+
+/* ── Tabs ───────────────────────────────────────────────── */
+.tabs { display: flex; gap: 0; border-bottom: 2px solid #1e293b; margin-bottom: 1.5rem; }
+.tab-btn {
+  padding: .55rem 1.3rem; font-size: .82rem; font-weight: 600; cursor: pointer;
+  border: none; background: none; color: #64748b;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+.tab-btn:hover:not(.active) { color: #cbd5e1; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── Filter bar ─────────────────────────────────────────── */
+.filter-bar { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.2rem; align-items: center; }
+.filter-bar input, .filter-bar select {
+  background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+  border-radius: 6px; padding: .4rem .75rem; font-size: .8rem; outline: none;
+}
+.filter-bar input { flex: 1; min-width: 180px; }
+.filter-bar select { min-width: 140px; }
+.filter-bar button {
+  background: #0369a1; color: #fff; border: none; border-radius: 6px;
+  padding: .4rem 1rem; font-size: .8rem; cursor: pointer; font-weight: 600;
+}
+.filter-bar button:hover { background: #0284c7; }
+.filter-bar .btn-reset { background: #374151; }
+.filter-bar .btn-reset:hover { background: #4b5563; }
+.result-count { font-size: .75rem; color: #64748b; margin-left: auto; white-space: nowrap; }
+
+/* ── Table ──────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #1e293b; }
+table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+thead th {
+  background: #1e293b; color: #94a3b8; font-weight: 600; text-transform: uppercase;
+  font-size: .68rem; letter-spacing: .04em; padding: .6rem .85rem; text-align: left;
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid #1e293b; transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #1e2d3d; }
+td { padding: .55rem .85rem; vertical-align: top; }
+.td-no { color: #64748b; font-size: .72rem; }
+.td-date { white-space: nowrap; }
+.td-mag { font-weight: 700; text-align: center; }
+.mag-xl { color: #ef4444; }
+.mag-lg { color: #f97316; }
+.mag-md { color: #eab308; }
+.mag-sm { color: #22c55e; }
+.badge {
+  display: inline-block; padding: .15rem .5rem; border-radius: 999px;
+  font-size: .65rem; font-weight: 600; white-space: nowrap;
+}
+.badge-tsunami { background: #1e3a5f; color: #38bdf8; }
+.badge-no-tsunami { background: #1a2e1a; color: #4ade80; }
+.badge-darat { background: #1e293b; color: #94a3b8; }
+.badge-laut  { background: #1e293b; color: #38bdf8; }
+.text-muted { color: #64748b; }
+.korban-cell { max-width: 280px; font-size: .74rem; color: #cbd5e1; }
+
+/* ── Map ────────────────────────────────────────────────── */
+#merusak-map { width: 100%; height: 540px; border-radius: 10px; border: 1px solid #1e293b; }
+.map-legend {
+  margin-top: .75rem; display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: .72rem; color: #94a3b8;
+}
+.legend-dot {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle;
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .page-title { font-size: 1.1rem; }
+  .hdr-inner { gap: .5rem; }
+  .brand-sub { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <span class="brand-title">Stasiun Geofisika Kelas I Jayapura</span>
+        <span class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</span>
+      </div>
+    </a>
+    <a href="{% url 'gempa_public' %}" class="header-back">← Daftar Gempa</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="page-title">Katalog Gempa Merusak Indonesia</h1>
+  <p class="page-sub">Data historis gempa bumi yang menyebabkan kerusakan di wilayah Indonesia · {{ object_list.count }} kejadian</p>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('daftar', this)">Daftar</button>
+    <button class="tab-btn"        onclick="switchTab('peta',   this)">Peta Sebaran</button>
+  </div>
+
+  <!-- ── Tab: Daftar ───────────────────────────────────── -->
+  <div id="tab-daftar" class="tab-pane active">
+
+    <form method="get" class="filter-bar">
+      <input type="text" name="q" value="{{ filter_q }}" placeholder="Cari wilayah, korban…">
+      <select name="provinsi">
+        <option value="">Semua Provinsi</option>
+        {% for val, lbl in province_choices %}
+          <option value="{{ val }}" {% if filter_provinsi == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+      <select name="tsunami">
+        <option value="">Semua</option>
+        <option value="1" {% if filter_tsunami == '1' %}selected{% endif %}>Tsunami ✓</option>
+        <option value="0" {% if filter_tsunami == '0' %}selected{% endif %}>Tidak Tsunami</option>
+      </select>
+      <button type="submit">Cari</button>
+      <a href="{% url 'public_gempa_merusak' %}" class="filter-bar"><button type="button" class="btn-reset">Reset</button></a>
+      <span class="result-count">{{ object_list.count }} hasil</span>
+    </form>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Tanggal</th>
+            <th>Wilayah</th>
+            <th>Provinsi</th>
+            <th style="text-align:center;">M</th>
+            <th>Kedalaman</th>
+            <th>Lokasi</th>
+            <th>Tsunami</th>
+            <th>Korban / Kerusakan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for obj in object_list %}
+          <tr>
+            <td class="td-no">{{ obj.no }}</td>
+            <td class="td-date">{{ obj.tanggal_text }}</td>
+            <td><strong>{{ obj.wilayah }}</strong></td>
+            <td class="text-muted">{{ obj.provinsi }}</td>
+            <td class="td-mag">
+              {% if obj.magnitude %}
+                {% if obj.magnitude >= 7.0 %}<span class="mag-xl">{{ obj.magnitude|floatformat:1 }}</span>
+                {% elif obj.magnitude >= 6.0 %}<span class="mag-lg">{{ obj.magnitude|floatformat:1 }}</span>
+                {% elif obj.magnitude >= 5.0 %}<span class="mag-md">{{ obj.magnitude|floatformat:1 }}</span>
+                {% else %}<span class="mag-sm">{{ obj.magnitude|floatformat:1 }}</span>{% endif %}
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td class="text-muted">{% if obj.depth_km %}{{ obj.depth_km|floatformat:0 }} km{% else %}—{% endif %}</td>
+            <td>
+              {% if obj.lokasi %}<span class="badge badge-{{ obj.lokasi|lower }}">{{ obj.lokasi }}</span>{% endif %}
+            </td>
+            <td>
+              {% if obj.tsunami is True %}<span class="badge badge-tsunami">Ya</span>
+              {% elif obj.tsunami is False %}<span class="badge badge-no-tsunami">Tidak</span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td class="korban-cell">{{ obj.korban_kerusakan|default:"—"|truncatechars:120 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" style="text-align:center;color:#64748b;padding:2rem;">Tidak ada data ditemukan.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div><!-- /tab-daftar -->
+
+  <!-- ── Tab: Peta ──────────────────────────────────────── -->
+  <div id="tab-peta" class="tab-pane">
+    <div id="merusak-map"></div>
+    <div class="map-legend">
+      <span><span class="legend-dot" style="background:#ef4444;"></span>M ≥ 7.0</span>
+      <span><span class="legend-dot" style="background:#f97316;"></span>M 6.0–6.9</span>
+      <span><span class="legend-dot" style="background:#eab308;"></span>M 5.0–5.9</span>
+      <span><span class="legend-dot" style="background:#22c55e;"></span>M &lt; 5.0</span>
+      <span><span class="legend-dot" style="background:#38bdf8; border:2px solid #0ea5e9;"></span>Disertai Tsunami</span>
+    </div>
+  </div><!-- /tab-peta -->
+
+</div><!-- /page-wrap -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Tab switcher ──────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'peta' && !window._mapInit) initMap();
+}
+
+// ── Map ───────────────────────────────────────────────────
+const MAP_DATA = {{ map_data|safe }};
+
+function magColor(m) {
+  if (!m) return '#94a3b8';
+  if (m >= 7.0) return '#ef4444';
+  if (m >= 6.0) return '#f97316';
+  if (m >= 5.0) return '#eab308';
+  return '#22c55e';
+}
+function magRadius(m) {
+  if (!m) return 5;
+  if (m >= 7.0) return 18;
+  if (m >= 6.0) return 13;
+  if (m >= 5.0) return 9;
+  return 6;
+}
+
+function initMap() {
+  window._mapInit = true;
+  const map = L.map('merusak-map', { center: [-4, 136], zoom: 6 });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    subdomains: 'abcd', maxZoom: 19,
+  }).addTo(map);
+
+  MAP_DATA.forEach(function(e) {
+    if (!e.lat || !e.lng) return;
+    const color  = magColor(e.mag);
+    const radius = magRadius(e.mag);
+    const isTsunami = e.tsunami === true;
+    const circle = L.circleMarker([e.lat, e.lng], {
+      radius:      radius,
+      fillColor:   color,
+      color:       isTsunami ? '#38bdf8' : color,
+      weight:      isTsunami ? 2.5 : 1,
+      opacity:     1,
+      fillOpacity: 0.6,
+    });
+    const magStr = e.mag ? 'M' + parseFloat(e.mag).toFixed(1) : '?';
+    circle.bindPopup(
+      '<div style="font-size:0.82rem;line-height:1.6;">' +
+      '<b style="font-size:1rem;">' + magStr + '</b>' +
+      (isTsunami ? ' <span style="background:#1e3a5f;color:#38bdf8;padding:1px 6px;border-radius:9px;font-size:.7rem;">Tsunami</span>' : '') +
+      '<br><b>' + e.loc + '</b>' +
+      '<br><span style="color:#94a3b8;">' + e.tgl + '</span>' +
+      '</div>'
+    );
+    circle.addTo(map);
+  });
+}
+</script>
+</body>
+</html>

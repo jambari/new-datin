@@ -202,7 +202,7 @@ def landing(request):
         .annotate(foto_count=Count('fotos'))
         .order_by('-created_at')[:6]
     ))
-    cutoff = timezone.now() - datetime.timedelta(days=10)
+    cutoff = timezone.now() - datetime.timedelta(days=30)
     events_qs = QCEvent.objects.filter(
         origin_time__gte=cutoff
     ).order_by('-origin_time').values(
@@ -304,6 +304,50 @@ def public_gempa_detail(request, public_id):
         'on_duty':           [],
         'on_duty_qc':        [],
         'is_public':         True,
+    })
+
+
+def public_gempa_merusak(request):
+    import json
+    from repository.models import GempaMemusak
+    from django.db.models import Q
+    qs = GempaMemusak.objects.all().order_by('-tanggal', '-no')
+    q        = request.GET.get('q', '').strip()
+    provinsi = request.GET.get('provinsi', '').strip()
+    tsunami  = request.GET.get('tsunami', '').strip()
+    if q:
+        qs = qs.filter(Q(tanggal_text__icontains=q) | Q(wilayah__icontains=q) | Q(korban_kerusakan__icontains=q))
+    if provinsi:
+        qs = qs.filter(provinsi=provinsi)
+    if tsunami == '1':
+        qs = qs.filter(tsunami=True)
+    elif tsunami == '0':
+        qs = qs.filter(tsunami=False)
+    events = list(qs.values(
+        'no', 'tanggal_text', 'tanggal', 'wilayah', 'provinsi',
+        'latitude', 'longitude', 'depth_km', 'magnitude',
+        'lokasi', 'tsunami', 'korban_kerusakan',
+    ))
+    map_data = json.dumps([
+        {
+            'no':  e['no'],
+            'lat': e['latitude'],
+            'lng': e['longitude'],
+            'mag': e['magnitude'],
+            'loc': e['wilayah'],
+            'tgl': e['tanggal_text'],
+            'tsunami': e['tsunami'],
+        }
+        for e in events
+        if e['latitude'] and e['longitude']
+    ])
+    return render(request, 'public_gempa_merusak.html', {
+        'object_list':      qs,
+        'map_data':         map_data,
+        'province_choices': GempaMemusak.PROVINCE_CHOICES,
+        'filter_q':         q,
+        'filter_provinsi':  provinsi,
+        'filter_tsunami':   tsunami,
     })
 
 
@@ -497,3 +541,55 @@ def public_about(request):
         'seismo_count': seismo_count,
         'accelero_count': accelero_count,
     })
+
+
+def public_glosarium(request):
+    return render(request, 'public_glosarium.html')
+
+
+def public_peringatan_dini_data(request):
+    import requests as http_req
+    from xml.etree import ElementTree as ET
+    from django.http import JsonResponse
+    from django.core.cache import cache
+    from email.utils import parsedate_to_datetime
+    import datetime as dt_
+
+    cached = cache.get('peringatan_dini_papua')
+    if cached is not None:
+        return JsonResponse({'items': cached})
+
+    try:
+        resp = http_req.get('https://www.bmkg.go.id/alerts/nowcast/id', timeout=6)
+        root = ET.fromstring(resp.content)
+        channel = root.find('channel')
+        cutoff = dt_.datetime.now(dt_.timezone.utc) - dt_.timedelta(hours=4)
+
+        items = []
+        for item in (channel.findall('item') if channel is not None else []):
+            title = item.findtext('title', '')
+            if 'Papua' not in title:
+                continue
+            pub = item.findtext('pubDate', '')
+            try:
+                pub_dt = parsedate_to_datetime(pub)
+                if pub_dt < cutoff:
+                    continue
+                pub_iso = pub_dt.isoformat()
+            except Exception:
+                pub_iso = pub
+
+            event    = title.split(' di ')[0] if ' di ' in title else title
+            province = title.split(' di ', 1)[-1] if ' di ' in title else ''
+            desc     = item.findtext('description', '')
+            link     = item.findtext('link', '')
+
+            items.append({
+                'event': event, 'province': province,
+                'desc': desc, 'pubDate': pub_iso, 'link': link,
+            })
+
+        cache.set('peringatan_dini_papua', items, 180)
+        return JsonResponse({'items': items})
+    except Exception as e:
+        return JsonResponse({'items': [], 'error': str(e)})
