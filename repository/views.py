@@ -1554,6 +1554,7 @@ def push_events_api(request):
 # ── Laporan Bulanan API ────────────────────────────────────────────────────────
 def gempa_laporan_bulanan_api(request):
     from datetime import date
+    from .models import EventBrowser
     today = date.today()
     try:
         year  = int(request.GET.get('year',  today.year))
@@ -1563,18 +1564,11 @@ def gempa_laporan_bulanan_api(request):
     except (ValueError, TypeError):
         year, month = today.year, today.month
 
-    SOURCE_MAP = {
-        'PGR5': 'Balai', 'BMKG-PGR5': 'Balai',
-        'NBPI': 'Nabire', 'BMKG-NBPI': 'Nabire',
-        'SWI':  'Sorong', 'BMKG-SWI':  'Sorong',
-        'JAY':  'JAY',    'BMKG-JAY':  'JAY',
-    }
-
-    qs = Gempa.objects.filter(
-        origin_datetime__year=year,
-        origin_datetime__month=month,
-    ).values('latitude', 'longitude', 'magnitudo', 'depth',
-             'origin_datetime', 'remark', 'felt', 'station_code')
+    qs = EventBrowser.objects.filter(
+        origin_time__year=year,
+        origin_time__month=month,
+    ).values('latitude', 'longitude', 'magnitude', 'depth_km',
+             'origin_time', 'location', 'author')
 
     events = []
     for obj in qs:
@@ -1582,13 +1576,13 @@ def gempa_laporan_bulanan_api(request):
             events.append({
                 'lat':     float(obj['latitude']),
                 'lon':     float(obj['longitude']),
-                'mag':     round(float(obj['magnitudo']), 1),
-                'depth':   int(obj['depth']),
-                'tanggal': obj['origin_datetime'].strftime('%Y-%m-%d'),
-                'origin':  obj['origin_datetime'].strftime('%H:%M:%S'),
-                'ket':     obj['remark'] or '',
-                'terasa':  bool(obj['felt']),
-                'source':  SOURCE_MAP.get(obj['station_code'], obj['station_code']),
+                'mag':     round(float(obj['magnitude']), 1),
+                'depth':   int(obj['depth_km']),
+                'tanggal': obj['origin_time'].strftime('%Y-%m-%d'),
+                'origin':  obj['origin_time'].strftime('%H:%M:%S'),
+                'ket':     obj['location'] or '',
+                'terasa':  False,
+                'source':  'Integrasi',
             })
         except Exception:
             continue
