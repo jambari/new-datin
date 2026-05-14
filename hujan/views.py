@@ -105,6 +105,22 @@ def query_laporan_hujan(request):
 
     return render(request, 'hujan/laporan_query.html', context)
 
+def tambah_hujan(request):
+    if request.method == 'POST':
+        form = HujanForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('daftar_hujan')
+    else:
+        form = HujanForm()
+
+    context = {
+        'form': form,
+        'title': 'Tambah Data Hujan',
+        'submit_label': 'Simpan',
+    }
+    return render(request, 'hujan/form_hujan.html', context)
+
 def edit_hujan(request, id):
     # Get the specific record or return 404 if not found
     hujan_instance = get_object_or_404(Hujan, id=id)
@@ -120,6 +136,7 @@ def edit_hujan(request, id):
 
     context = {
         'form': form,
-        'title': 'Edit Data Hujan'
+        'title': 'Edit Data Hujan',
+        'submit_label': 'Simpan Perubahan',
     }
     return render(request, 'hujan/form_hujan.html', context)
