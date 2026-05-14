@@ -1588,3 +1588,38 @@ def gempa_laporan_bulanan_api(request):
             continue
 
     return JsonResponse(events, safe=False)
+
+
+def gempa_dirasakan_api(request):
+    from .models import FeltEarthquake
+    today = date.today()
+    try:
+        year  = int(request.GET.get('year',  today.year))
+        month = int(request.GET.get('month', today.month))
+        if not (1 <= month <= 12):
+            month = today.month
+    except (ValueError, TypeError):
+        year, month = today.year, today.month
+
+    qs = FeltEarthquake.objects.filter(
+        event_datetime__year=year,
+        event_datetime__month=month,
+    )
+
+    events = []
+    for obj in qs:
+        try:
+            events.append({
+                'lat':       float(obj.latitude),
+                'lon':       float(obj.longitude),
+                'mag':       round(float(obj.magnitude), 1),
+                'depth':     int(obj.depth_km),
+                'tanggal':   obj.event_datetime.strftime('%Y-%m-%d'),
+                'origin':    obj.event_datetime.strftime('%H:%M:%S'),
+                'wilayah':   obj.wilayah or '',
+                'dirasakan': obj.dirasakan or '',
+            })
+        except Exception:
+            continue
+
+    return JsonResponse(events, safe=False)
