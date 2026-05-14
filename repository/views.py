@@ -1549,3 +1549,48 @@ def push_events_api(request):
             continue
 
     return JsonResponse({'new': new_count, 'updated': updated_count})
+
+
+# ── Laporan Bulanan API ────────────────────────────────────────────────────────
+def gempa_laporan_bulanan_api(request):
+    from datetime import date
+    today = date.today()
+    try:
+        year  = int(request.GET.get('year',  today.year))
+        month = int(request.GET.get('month', today.month))
+        if not (1 <= month <= 12):
+            month = today.month
+    except (ValueError, TypeError):
+        year, month = today.year, today.month
+
+    SOURCE_MAP = {
+        'PGR5': 'Balai', 'BMKG-PGR5': 'Balai',
+        'NBPI': 'Nabire', 'BMKG-NBPI': 'Nabire',
+        'SWI':  'Sorong', 'BMKG-SWI':  'Sorong',
+        'JAY':  'JAY',    'BMKG-JAY':  'JAY',
+    }
+
+    qs = Gempa.objects.filter(
+        origin_datetime__year=year,
+        origin_datetime__month=month,
+    ).values('latitude', 'longitude', 'magnitudo', 'depth',
+             'origin_datetime', 'remark', 'felt', 'station_code')
+
+    events = []
+    for obj in qs:
+        try:
+            events.append({
+                'lat':     float(obj['latitude']),
+                'lon':     float(obj['longitude']),
+                'mag':     round(float(obj['magnitudo']), 1),
+                'depth':   int(obj['depth']),
+                'tanggal': obj['origin_datetime'].strftime('%Y-%m-%d'),
+                'origin':  obj['origin_datetime'].strftime('%H:%M:%S'),
+                'ket':     obj['remark'] or '',
+                'terasa':  bool(obj['felt']),
+                'source':  SOURCE_MAP.get(obj['station_code'], obj['station_code']),
+            })
+        except Exception:
+            continue
+
+    return JsonResponse(events, safe=False)
