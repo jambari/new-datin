@@ -1587,7 +1587,9 @@ def gempa_laporan_bulanan_api(request):
         except Exception:
             continue
 
-    return JsonResponse(events, safe=False)
+    resp = JsonResponse(events, safe=False)
+    resp['Access-Control-Allow-Origin'] = '*'
+    return resp
 
 
 def gempa_dirasakan_api(request):
@@ -1622,4 +1624,6 @@ def gempa_dirasakan_api(request):
         except Exception:
             continue
 
-    return JsonResponse(events, safe=False)
+    resp = JsonResponse(events, safe=False)
+    resp['Access-Control-Allow-Origin'] = '*'
+    return resp
