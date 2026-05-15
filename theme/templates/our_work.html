@@ -16,25 +16,46 @@
   .group:hover .cover-img {
     transform: scale(1.07);
   }
+  /* Day/night theme for gallery navbar */
+  #gallery-nav {
+    background: var(--hdr-bg) !important;
+    border-color: var(--hdr-border) !important;
+    transition: background .35s, border-color .35s;
+  }
+  #gallery-nav .nav-brand-title {
+    color: var(--brand-title) !important;
+    transition: color .35s;
+  }
+  #gallery-nav .nav-brand-sub {
+    color: var(--brand-sub) !important;
+    transition: color .35s;
+  }
+  #gallery-nav .nav-back-link {
+    color: var(--nav-text) !important;
+    transition: color .35s;
+  }
+  #gallery-nav .nav-back-link:hover {
+    color: var(--nav-hover-fg) !important;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
 <!-- ── Navbar ────────────────────────────────────────────────── -->
-<nav class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+<nav id="gallery-nav" class="fixed top-0 left-0 right-0 z-50 border-b shadow-sm">
   <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <a href="{% url 'landing' %}" class="flex items-center gap-3">
-        <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="Logo" class="h-10 w-10 object-contain rounded-full">
+        <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="Logo" class="h-10 w-10 object-contain">
         <div class="leading-tight">
-          <p class="font-bold text-gray-900 text-sm">Stasiun Geofisika Kelas I Jayapura</p>
-          <p class="text-xs text-gray-400">BMKG · Badan Meteorologi Klimatologi dan Geofisika</p>
+          <p class="nav-brand-title font-bold text-sm">Stasiun Geofisika Kelas I Jayapura</p>
+          <p class="nav-brand-sub text-xs">BMKG · Badan Meteorologi Klimatologi dan Geofisika</p>
         </div>
       </a>
     </div>
     <div class="flex items-center gap-3">
-      <a href="{% url 'landing' %}" class="text-sm text-gray-500 hover:text-gray-900 transition-colors hidden sm:block">
+      <a href="{% url 'landing' %}" class="nav-back-link text-sm hidden sm:block">
         Beranda
       </a>
       <a href="{% url 'login' %}" class="btn btn-sm bg-slate-800 hover:bg-slate-700 text-white border-0">
