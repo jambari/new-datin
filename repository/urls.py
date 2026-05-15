@@ -32,6 +32,12 @@ urlpatterns = [
 
     path('event-browser/', views.event_browser, name='event_browser'),
 
+    # ── Integrasi (EventBrowser CRUD) ──────────────────────────────────────────
+    path('integrasi/', views.event_browser_list, name='event_browser_list'),
+    path('integrasi/<int:pk>/', views.event_browser_detail, name='event_browser_detail'),
+    path('integrasi/<int:pk>/edit/', views.event_browser_edit, name='event_browser_edit'),
+    path('integrasi/<int:pk>/hapus/', views.event_browser_delete, name='event_browser_delete'),
+
     # ── Gempa Merusak CRUD ─────────────────────────────────────────────────────
     path('gempa-merusak/', views.gempa_merusak_list, name='gempa_merusak_list'),
     path('gempa-merusak/tambah/', views.gempa_merusak_create, name='gempa_merusak_create'),

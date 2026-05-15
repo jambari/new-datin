@@ -20,7 +20,7 @@ LOCAL_DB_PASS=Jay97696
 
 PROD_DB=datin
 PROD_DB_USER=jambari
-PROD_DB_PASS=Jay97696
+PROD_DB_PASS=HIWQMk2LN7ON5H_LYqnuVrpNUoI
 
 mkdir -p "$PROJ_DIR/logs"
 exec >> "$LOG" 2>&1

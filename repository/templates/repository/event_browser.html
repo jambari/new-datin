@@ -631,6 +631,7 @@
     const elH = document.getElementById('legendHighMag');
     if (elT) elT.textContent = active.length;
     if (elH) elH.textContent = active.filter(e => e.magnitude >= 5).length;
+    refreshStats();
   }
 
   function plotSeismicityMarkers(data) {
@@ -712,7 +713,7 @@
   // --- REKAPITULASI TABEL FREKUENSI (PETA UTAMA) ---
   function generateDailyFrequencyTable() {
     const dailyData = {};
-    mapData.forEach(event => {
+    getActiveData().forEach(event => {
       const date = event.time.split('T')[0].split(' ')[0];
       if (!dailyData[date]) dailyData[date] = { total: 0, m_lt3: 0, m_35: 0, m_gte5: 0, d_lt60: 0, d_mid: 0, d_deep: 0 };
       dailyData[date].total++;
@@ -873,15 +874,34 @@
   function toggleFaults() { if(mapInstance && faultsLayer) { if(document.getElementById('swFaults').checked) mapInstance.addLayer(faultsLayer); else mapInstance.removeLayer(faultsLayer); } }
   function toggleSlabFelt() { if(mapFeltInstance && slabLayer) { if(document.getElementById('swSlabFelt').checked) mapFeltInstance.addLayer(slabLayer); else mapFeltInstance.removeLayer(slabLayer); } }
 
+  // --- SOURCE FILTER HELPER ---
+  function getActiveData() {
+    const showExisting = document.getElementById('swSrcExisting')?.checked ?? true;
+    const showQC       = document.getElementById('swSrcQC')?.checked ?? true;
+    return [
+      ...(showExisting ? mapData    : []),
+      ...(showQC       ? qcMapData  : []),
+    ];
+  }
+
+  function refreshStats() {
+    const statsPane = document.getElementById('pane-stats');
+    if (!statsPane || !statsPane.classList.contains('show')) return;
+    renderCharts();
+    generateDailyFrequencyTable();
+    eventsTableInit = false;
+    initEventsTable();
+  }
+
   // --- CHARTS ---
   Chart.register(ChartDataLabels);
   function renderCharts() {
     if (cmbInst) cmbInst.destroy(); if (cmpInst) cmpInst.destroy();
     if (cdbInst) cdbInst.destroy(); if (cdpInst) cdpInst.destroy();
 
-    // Compute stats from the currently filtered mapData
-    const mags   = mapData.map(e => e.magnitude);
-    const depths = mapData.map(e => e.depth);
+    const active = getActiveData();
+    const mags   = active.map(e => e.magnitude);
+    const depths = active.map(e => e.depth);
     const curMag   = [mags.filter(m => m < 3).length, mags.filter(m => m >= 3 && m < 5).length, mags.filter(m => m >= 5).length];
     const curDepth = [depths.filter(d => d < 60).length, depths.filter(d => d >= 60 && d < 300).length, depths.filter(d => d >= 300).length];
 
@@ -968,11 +988,12 @@
 
   function renderEventsPage(page) {
     eventsCurrentPage = page;
-    const total = mapData.length;
+    const active = getActiveData();
+    const total = active.length;
     const totalPages = Math.max(1, Math.ceil(total / EVENTS_PER_PAGE));
     eventsCurrentPage = Math.min(Math.max(1, page), totalPages);
     const start = (eventsCurrentPage - 1) * EVENTS_PER_PAGE;
-    const slice = mapData.slice(start, start + EVENTS_PER_PAGE);
+    const slice = active.slice(start, start + EVENTS_PER_PAGE);
 
     const tbody = document.getElementById('eventsTableBody');
     tbody.innerHTML = '';
@@ -1025,12 +1046,12 @@
 
   function updateEventsCount() {
     const el = document.getElementById('eventsCount');
-    if (el) el.textContent = mapData.length + ' events';
+    if (el) el.textContent = getActiveData().length + ' events';
   }
 
   function getEventsTableData() {
     const headers = ['No', 'Waktu (UTC)', 'Lintang', 'Bujur', 'Magnitudo', 'Kedalaman (km)', 'Lokasi'];
-    const rows = mapData.map((ev, i) => [
+    const rows = getActiveData().map((ev, i) => [
       i + 1,
       ev.time,
       ev.latitude.toFixed(4),

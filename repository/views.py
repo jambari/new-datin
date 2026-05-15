@@ -1300,6 +1300,89 @@ def _handle_media_uploads(request, obj):
         GempaMemusakMedia.objects.create(event=obj, file=f, media_type=media_type, caption=caption)
 
 
+# ── Event Browser CRUD ────────────────────────────────────────────────────────
+
+@login_required
+def event_browser_list(request):
+    qs = EventBrowser.objects.exclude(depth_km=0)
+
+    start_date = request.GET.get('start_date', '').strip()
+    end_date   = request.GET.get('end_date', '').strip()
+    min_mag    = request.GET.get('min_mag', '').strip()
+    max_mag    = request.GET.get('max_mag', '').strip()
+    min_depth  = request.GET.get('min_depth', '').strip()
+    max_depth  = request.GET.get('max_depth', '').strip()
+
+    if start_date:
+        qs = qs.filter(origin_time__date__gte=start_date)
+    if end_date:
+        qs = qs.filter(origin_time__date__lte=end_date)
+    if min_mag:
+        qs = qs.filter(magnitude__gte=float(min_mag))
+    if max_mag:
+        qs = qs.filter(magnitude__lte=float(max_mag))
+    if min_depth:
+        qs = qs.filter(depth_km__gte=float(min_depth))
+    if max_depth:
+        qs = qs.filter(depth_km__lte=float(max_depth))
+
+    paginator = Paginator(qs, 10)
+    page = request.GET.get('page')
+    try:
+        events = paginator.page(page)
+    except PageNotAnInteger:
+        events = paginator.page(1)
+    except EmptyPage:
+        events = paginator.page(paginator.num_pages)
+
+    filters = request.GET.copy()
+    filters.pop('page', None)
+
+    return render(request, 'repository/event_browser_list.html', {
+        'events':     events,
+        'filters':    filters,
+        'start_date': start_date,
+        'end_date':   end_date,
+        'min_mag':    min_mag,
+        'max_mag':    max_mag,
+        'min_depth':  min_depth,
+        'max_depth':  max_depth,
+    })
+
+
+@login_required
+def event_browser_detail(request, pk):
+    obj = get_object_or_404(EventBrowser, pk=pk)
+    return render(request, 'repository/event_browser_detail.html', {'object': obj})
+
+
+@login_required
+def event_browser_edit(request, pk):
+    obj = get_object_or_404(EventBrowser, pk=pk)
+    if request.method == 'POST':
+        p = request.POST
+        obj.origin_time  = p.get('origin_time') or obj.origin_time
+        obj.magnitude    = float(p['magnitude']) if p.get('magnitude') else obj.magnitude
+        obj.latitude     = float(p['latitude'])  if p.get('latitude')  else obj.latitude
+        obj.longitude    = float(p['longitude']) if p.get('longitude') else obj.longitude
+        obj.depth_km     = float(p['depth_km'])  if p.get('depth_km')  else obj.depth_km
+        obj.location     = p.get('location', obj.location).strip()
+        obj.author       = p.get('author', obj.author).strip()
+        obj.nearest_city = p.get('nearest_city', obj.nearest_city).strip()
+        obj.save()
+        return redirect('event_browser_list')
+    return render(request, 'repository/event_browser_form.html', {'object': obj})
+
+
+@login_required
+def event_browser_delete(request, pk):
+    obj = get_object_or_404(EventBrowser, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+        return redirect('event_browser_list')
+    return render(request, 'repository/event_browser_confirm_delete.html', {'object': obj})
+
+
 # ── Event Browser ─────────────────────────────────────────────────────────────
 def _qc_entry(e):
     """Build a map-data dict from a QCEvent using its latest run snapshot."""
