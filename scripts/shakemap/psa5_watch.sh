@@ -9,6 +9,7 @@
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
 SPECTRA_DIR="/home/sysop/seiscomp3/shakemaps_waveform_spectra/spectra"
 SEND_SCRIPT="/home/sysop/scripts/psa5_send.sh"
+MSEED_SEND_SCRIPT="/home/sysop/scripts/mseed_send.sh"
 LOG_FILE="/home/sysop/scripts/psa5_watch.log"
 WRITE_SETTLE_SECS=2
 # ──────────────────────────────────────────────────────────────────────────────
@@ -33,4 +34,13 @@ inotifywait -m -r -e close_write --format '%w%f' "$SPECTRA_DIR" \
     log "New .psa5 detected: $FILEPATH"
     sleep "$WRITE_SETTLE_SECS"
     bash "$SEND_SCRIPT" "$FILEPATH" >> "$LOG_FILE" 2>&1 &
+
+    # Matching .mseed lives in the parallel waveforms tree with the same basename.
+    MSEED_PATH="${FILEPATH/\/spectra\//\/waveforms\/}"
+    MSEED_PATH="${MSEED_PATH%.psa5}.mseed"
+    if [[ -f "$MSEED_PATH" ]]; then
+        bash "$MSEED_SEND_SCRIPT" "$MSEED_PATH" >> "$LOG_FILE" 2>&1 &
+    else
+        log "  (no matching mseed at $MSEED_PATH)"
+    fi
 done

@@ -303,3 +303,30 @@ class EventResponseSpectrum(models.Model):
 
     def __str__(self):
         return f"{self.event_id} {self.station_code}/{self.component}"
+
+
+def _waveform_image_path(instance, filename):
+    return f"event_waveforms/{instance.event_id}/{instance.station_code}_{instance.component}.png"
+
+
+class EventStationWaveform(models.Model):
+    """Pre-rendered PNG of one .mseed trace for an event/station/component.
+
+    Rendered server-side by `waveform_upload_api` from the raw .mseed bytes
+    uploaded from the shakemap host. One image per event/station/component,
+    same key shape as EventResponseSpectrum.
+    """
+    event_id     = models.CharField(max_length=100, db_index=True)
+    station_code = models.CharField(max_length=10)
+    component    = models.CharField(max_length=10)
+    image        = models.ImageField(upload_to=_waveform_image_path)
+    uploaded_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('event_id', 'station_code', 'component')
+        ordering = ['station_code', 'component']
+        verbose_name = 'Event Station Waveform'
+        verbose_name_plural = 'Event Station Waveforms'
+
+    def __str__(self):
+        return f"{self.event_id} {self.station_code}/{self.component} waveform"

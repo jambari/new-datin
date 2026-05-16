@@ -19,13 +19,14 @@ log "Deploying PSA5 scripts to ${SHAKEMAP_USER}@${SHAKEMAP_HOST}:${REMOTE_SCRIPT
 ssh "${SHAKEMAP_USER}@${SHAKEMAP_HOST}" "mkdir -p ${REMOTE_SCRIPTS_DIR}"
 
 # Copy scripts
-scp "$SCRIPTS_DIR/psa5_send.sh"  "${SHAKEMAP_USER}@${SHAKEMAP_HOST}:${REMOTE_SCRIPTS_DIR}/"
-scp "$SCRIPTS_DIR/psa5_watch.sh" "${SHAKEMAP_USER}@${SHAKEMAP_HOST}:${REMOTE_SCRIPTS_DIR}/"
-scp "$SCRIPTS_DIR/psa5_daily.sh" "${SHAKEMAP_USER}@${SHAKEMAP_HOST}:${REMOTE_SCRIPTS_DIR}/"
+scp "$SCRIPTS_DIR/psa5_send.sh"   "${SHAKEMAP_USER}@${SHAKEMAP_HOST}:${REMOTE_SCRIPTS_DIR}/"
+scp "$SCRIPTS_DIR/psa5_watch.sh"  "${SHAKEMAP_USER}@${SHAKEMAP_HOST}:${REMOTE_SCRIPTS_DIR}/"
+scp "$SCRIPTS_DIR/psa5_daily.sh"  "${SHAKEMAP_USER}@${SHAKEMAP_HOST}:${REMOTE_SCRIPTS_DIR}/"
+scp "$SCRIPTS_DIR/mseed_send.sh"  "${SHAKEMAP_USER}@${SHAKEMAP_HOST}:${REMOTE_SCRIPTS_DIR}/"
 
 # Make executable
 ssh "${SHAKEMAP_USER}@${SHAKEMAP_HOST}" \
-    "chmod +x ${REMOTE_SCRIPTS_DIR}/psa5_send.sh ${REMOTE_SCRIPTS_DIR}/psa5_watch.sh ${REMOTE_SCRIPTS_DIR}/psa5_daily.sh"
+    "chmod +x ${REMOTE_SCRIPTS_DIR}/psa5_send.sh ${REMOTE_SCRIPTS_DIR}/psa5_watch.sh ${REMOTE_SCRIPTS_DIR}/psa5_daily.sh ${REMOTE_SCRIPTS_DIR}/mseed_send.sh"
 
 # Copy systemd service (requires sudo on remote)
 scp "$SCRIPTS_DIR/psa5-watcher.service" \

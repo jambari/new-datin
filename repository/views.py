@@ -1807,6 +1807,100 @@ def psa5_upload_api(request):
     })
 
 
+def _render_mseed_png(mseed_bytes, station_code, component):
+    """Render one mseed trace to a PNG and return raw bytes."""
+    import io
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from obspy import read
+
+    st = read(io.BytesIO(mseed_bytes))
+    if not st:
+        raise ValueError('empty mseed stream')
+    tr = st[0]
+
+    fig, ax = plt.subplots(figsize=(9, 2.6))
+    ax.plot(tr.times(), tr.data, lw=0.6, color='#2563eb')
+    ax.set_xlabel('Waktu (detik dari awal trace)', fontsize=9, color='#6b7280')
+    ax.set_ylabel('Counts', fontsize=9, color='#6b7280')
+    ax.tick_params(labelsize=8, colors='#6b7280')
+    ax.grid(True, alpha=0.25)
+    ax.set_title(
+        f'{station_code}/{component} — {tr.stats.starttime} ({tr.stats.npts} pts @ {tr.stats.sampling_rate:.0f} Hz)',
+        fontsize=10, color='#1e293b',
+    )
+    for spine in ax.spines.values():
+        spine.set_color('#e5e7eb')
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=110)
+    plt.close(fig)
+    return buf.getvalue()
+
+
+@csrf_exempt
+def waveform_upload_api(request):
+    """POST endpoint: receive one .mseed file, render PNG, store EventStationWaveform.
+
+    Required POST fields:
+      event_id      — WIB timestamp string
+      station_code  — e.g. 'ARKPI'
+      component     — e.g. 'HNE'
+      mseed         — raw .mseed file upload
+
+    Auth: same Bearer token as the psa5 endpoint (PSA5_API_TOKEN setting).
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=405)
+
+    token = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+    expected = getattr(dj_settings, 'PSA5_API_TOKEN', '')
+    if not expected or token != expected:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    event_id     = request.POST.get('event_id', '').strip()
+    station_code = request.POST.get('station_code', '').strip()
+    component    = request.POST.get('component', '').strip()
+    if not (event_id and station_code and component):
+        return JsonResponse({'error': 'Missing event_id, station_code, or component'}, status=400)
+
+    mseed_file = request.FILES.get('mseed')
+    if not mseed_file:
+        return JsonResponse({'error': 'Missing mseed file'}, status=400)
+
+    try:
+        png_bytes = _render_mseed_png(mseed_file.read(), station_code, component)
+    except Exception as exc:
+        return JsonResponse({'error': f'Render error: {exc}'}, status=400)
+
+    from .models import EventStationWaveform
+    from django.core.files.base import ContentFile
+    obj, created = EventStationWaveform.objects.update_or_create(
+        event_id=event_id,
+        station_code=station_code,
+        component=component,
+    )
+    # Delete the prior file if updating so we don't leak orphans.
+    if obj.image:
+        obj.image.delete(save=False)
+    obj.image.save(
+        f'{station_code}_{component}.png',
+        ContentFile(png_bytes),
+        save=True,
+    )
+
+    return JsonResponse({
+        'event_id':     event_id,
+        'station_code': station_code,
+        'component':    component,
+        'bytes':        len(png_bytes),
+        'url':          obj.image.url,
+        'created':      created,
+    })
+
+
 def spectrum_json_api(request, event_id):
     """GET endpoint: return design spectrum + full earthquake response spectrum for a shakemap event.
 
@@ -1822,7 +1916,7 @@ def spectrum_json_api(request, event_id):
         ]
       }
     """
-    from .models import EventResponseSpectrum, StationDesignSpectrum
+    from .models import EventResponseSpectrum, StationDesignSpectrum, EventStationWaveform
 
     qs = list(
         EventResponseSpectrum.objects
@@ -1838,13 +1932,20 @@ def spectrum_json_api(request, event_id):
         .select_related('station')
     }
 
+    waveform_map = {
+        (w.station_code, w.component): w.image.url
+        for w in EventStationWaveform.objects.filter(event_id=event_id)
+        if w.image
+    }
+
     stations_out = []
     for sp in qs:
         ds = design_map.get(sp.station_code)
         stations_out.append({
-            'code':        sp.station_code,
-            'component':   sp.component,
-            'eq_spectrum': _downsample(sp.spectrum or []),
+            'code':         sp.station_code,
+            'component':    sp.component,
+            'eq_spectrum':  _downsample(sp.spectrum or []),
+            'waveform_url': waveform_map.get((sp.station_code, sp.component)),
             'design_spectrum': {
                 'c': _downsample(ds.spectrum_c),
                 'd': _downsample(ds.spectrum_d),
