@@ -1,214 +1,194 @@
 {% extends "base.html" %}
-{% load tz %}
-{% block content %}
+{% load tz almanac_extras %}
+{% block seo_title %}Laporan Bulanan Terbit & Terbenam Matahari dan Bulan · BMKG Jayapura{% endblock %}
+{% block meta_description %}Laporan bulanan jadwal terbit dan terbenam matahari serta bulan untuk kota-kota di Papua, lengkap dengan fase bulan.{% endblock %}
 
+{% block extra_head %}
 <style>
-    /* Container Laporan */
-    .report-container {
-        padding: 20px;
-        background-color: white;
-        font-family: 'Arial', sans-serif;
-        color: black;
-        width: fit-content; /* Container menyesuaikan konten tabel */
-        min-width: 100%;    /* Tapi minimal selebar layar */
-    }
+  body { background: #f8fafc; }
 
-    /* Filter Form */
-    .filter-box {
-        margin-bottom: 20px;
-        padding: 15px;
-        border: 1px solid #ddd;
-        background-color: #f9f9f9;
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        border-radius: 6px;
-        width: fit-content; /* Agar filter tidak melar */
-    }
-    .filter-box select, .filter-box button {
-        padding: 6px 12px;
-        font-size: 14px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-    .filter-box button {
-        background-color: #4f46e5;
-        color: white;
-        border: none;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    .btn-print {
-        background-color: #059669 !important;
-        margin-left: auto;
-    }
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1200px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #b45309; }
 
-    /* Judul Kota */
-    .city-header {
-        background-color: #1f2937;
-        color: white;
-        padding: 5px 15px; /* Padding dikurangi */
-        font-size: 12px;   /* Font diperkecil agar header tidak terlalu tebal */
-        font-weight: bold;
-        margin-top: 20px;  /* Margin dikurangi */
-        margin-bottom: 0; 
-        border-top-left-radius: 4px;
-        border-top-right-radius: 4px;
-        /* Lebar disesuaikan dengan total lebar kolom tabel di bawah (100 + 80*4 = 420px) */
-        width: 420px;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
+  .page-wrap { max-width: 1200px; margin: 80px auto 60px; padding: 0 1.25rem; }
+  .page-title { font-size: 1.4rem; font-weight: 700; color: #111827; margin-bottom: 0.2rem; }
+  .page-sub   { font-size: 0.78rem; color: #6b7280; margin-bottom: 1.25rem; }
 
-    /* Tabel Data FIX PIXEL */
-    .almanac-table {
-        width: auto; /* Jangan 100% agar tidak melar */
-        border-collapse: collapse;
-        font-size: 10px; /* Font diperkecil menjadi 10px */
-        margin-bottom: 20px; /* Margin bawah dikurangi */
-        page-break-inside: avoid;
-        table-layout: fixed; /* KUNCI: Lebar kolom kaku */
-    }
+  /* Filter bar */
+  .filter-bar {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 0.9rem 1.1rem; margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .filter-bar label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #6b7280; display: block; margin-bottom: 3px; letter-spacing: 0.06em; }
+  .filter-bar select {
+    padding: 0.35rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 0.82rem; color: #111827; background: #f9fafb;
+  }
+  .filter-bar select:focus { outline: none; border-color: #3b82f6; background: #fff; }
+  .btn-filter {
+    padding: 0.4rem 1rem; background: #1d4ed8; color: #fff;
+    border: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-filter:hover { background: #1e40af; }
+  .btn-print {
+    padding: 0.4rem 1rem; background: #059669; color: #fff;
+    border: none; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-print:hover { background: #047857; }
 
-    .almanac-table th, .almanac-table td {
-        border: 1px solid #333;
-        padding: 2px 4px; /* Padding diperkecil */
-        text-align: center;
-        height: 16px; /* Tinggi baris diperkecil menjadi 16px */
-        overflow: hidden;
-        white-space: nowrap;
-    }
+  /* City section */
+  .city-section { margin-bottom: 2rem; }
+  .city-header {
+    background: #1e3a5f; color: #fff;
+    padding: 0.4rem 0.9rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.07em;
+    border-radius: 6px 6px 0 0; text-transform: uppercase;
+  }
 
-    .almanac-table thead th {
-        background-color: #e5e7eb;
-        font-weight: bold;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
+  /* Table */
+  .ttm-table {
+    width: 100%; border-collapse: collapse; font-size: 0.78rem;
+    background: #fff; border: 1px solid #e5e7eb; border-top: none;
+    border-radius: 0 0 6px 6px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .ttm-table th, .ttm-table td {
+    border: 1px solid #e5e7eb; padding: 0.3rem 0.6rem;
+    text-align: center; white-space: nowrap;
+  }
+  .ttm-table thead th { background: #f1f5f9; font-weight: 700; color: #374151; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .ttm-table tbody tr:hover { background: #fef9f0; }
+  .col-date { text-align: left; font-weight: 600; color: #374151; background: #f8fafc; min-width: 100px; }
+  .col-sun  { color: #b45309; font-weight: 500; }
+  .col-moon { color: #3b82f6; font-weight: 500; }
+  .col-phase { font-size: 0.68rem; color: #6b7280; }
 
-    /* Kolom Tanggal (Spesifik) */
-    .col-date { 
-        background-color: #f3f4f6; 
-        font-weight: bold; 
-        text-align: left; 
-        padding-left: 10px; 
-    }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: #9ca3af; font-style: italic; }
 
-    /* Print Styles */
-    @media print {
-        @page { margin: 1.5cm; }
-        body * { visibility: hidden; }
-        .report-container, .report-container * { visibility: visible; }
-        .report-container {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 0;
-        }
-        .filter-box, nav, aside, header { display: none !important; }
-    }
+  /* City grid for all-cities view */
+  .cities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 1.5rem; }
+
+  @media print {
+    @page { margin: 1cm; size: A4 landscape; }
+    #site-header, .filter-bar, .btn-print { display: none !important; }
+    .page-wrap { margin-top: 0; }
+    .city-section { break-inside: avoid; margin-bottom: 1rem; }
+    body { background: white; }
+  }
+
+  @media (max-width: 640px) {
+    .cities-grid { grid-template-columns: 1fr; }
+    .ttm-table { font-size: 0.7rem; }
+  }
 </style>
+{% endblock %}
 
-<div class="flex h-screen bg-gray-100">
-  {% include 'partials/_sidebar.html' %}
-  
-  <div class="flex-1 flex flex-col overflow-hidden">
-    {% include 'partials/_topbar.html' %} 
-
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
-        <div class="report-container">
-            
-            <h2 style="margin-bottom: 20px; font-size: 22px; font-weight: bold; text-align: left; padding-left: 10px;">
-                {{ page_title }}
-            </h2>
-
-            <!-- Form Filter -->
-            <form method="get" class="filter-box">
-                <label>Bulan:</label>
-                <select name="month">
-                    {% for m in months_range %}
-                    <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
-                    {% endfor %}
-                </select>
-                
-                <label>Tahun:</label>
-                <select name="year">
-                    {% for y in years_range %}
-                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
-                    {% endfor %}
-                </select>
-                
-                <button type="submit">Tampilkan</button>
-                <button type="button" class="btn-print" onclick="window.print()">Cetak / PDF</button>
-            </form>
-
-            <!-- Loop Per Kota -->
-            {% if report_data %}
-                {% for item in report_data %}
-                <div class="city-section">
-                    <!-- Header Kota -->
-                    <div class="city-header">{{ item.city|upper }}</div>
-                    
-                    <!-- Tabel Data -->
-                    <table class="almanac-table">
-                        <!-- Definisi Lebar Kolom FIX (Pixel) - TOTAL 560px -->
-                        <colgroup>
-                            <col style="width: 100px;"> <!-- Tanggal -->
-                            <col style="width: 80px;">  <!-- Matahari Terbit -->
-                            <col style="width: 80px;">  <!-- Matahari Terbenam -->
-                            <col style="width: 80px;">  <!-- Bulan Terbit -->
-                            <col style="width: 80px;">  <!-- Bulan Terbenam -->
-                        </colgroup>
-
-                        <thead>
-                            <tr>
-                                <th rowspan="2">TANGGAL</th>
-                                <th colspan="2">MATAHARI</th>
-                                <th colspan="2">BULAN</th>
-                            </tr>
-                            <tr>
-                                <th>TERBIT</th>
-                                <th>TERBENAM</th>
-                                <th>TERBIT</th>
-                                <th>TERBENAM</th>
-                            </tr>
-                        </thead>
-                            <tbody>
-                                {% for event in item.events %}
-                                <tr>
-                                    <td class="col-date">{{ event.date|date:"d-m-Y" }}</td>
-                                    <td>{{ event.sun_rise|timezone:"Asia/Jayapura"|date:"H:i:s"|default:"-" }}</td>
-                                    <td>{{ event.sun_set|timezone:"Asia/Jayapura"|date:"H:i:s"|default:"-" }}</td>
-                                    <td>{{ event.moon_rise|timezone:"Asia/Jayapura"|date:"H:i:s"|default:"-" }}</td>
-                                    <td>{{ event.moon_set|timezone:"Asia/Jayapura"|date:"H:i:s"|default:"-" }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                    </table>
-                </div>
-                {% endfor %}
-            
-            {% else %}
-                <div style="text-align: center; padding: 40px; color: #666; font-style: italic;">
-                    <p>Tidak ada data almanak untuk periode ini.</p>
-                    <p class="text-sm">Pastikan database SunMoonEvent sudah diisi.</p>
-                </div>
-            {% endif %}
-
-        </div>
-    </main>
+{% block content %}
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      {% load static %}
+      <img src="{% static 'theme/images/logo.jpeg' %}" alt="BMKG Logo">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Kembali</a>
   </div>
-</div>
+</header>
 
-<script>
-(function() {
-  var btn = document.getElementById('sidebar-toggle');
-  if (!btn) return;
-  btn.addEventListener('click', function() {
-    var el = document.getElementById('sidebar');
-    if (el) el.classList.toggle('hidden');
-  });
-})();
-</script>
+<div class="page-wrap">
+  <h1 class="page-title">📋 Laporan Bulanan Terbit &amp; Terbenam</h1>
+  <p class="page-sub">{{ page_title }} · Waktu dalam WIT (UTC+9)</p>
+
+  <form method="get" class="filter-bar">
+    <div>
+      <label>Bulan</label>
+      <select name="month">
+        {% for m in months_range %}
+        <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>
+          {% if m == 1 %}Januari{% elif m == 2 %}Februari{% elif m == 3 %}Maret{% elif m == 4 %}April{% elif m == 5 %}Mei{% elif m == 6 %}Juni{% elif m == 7 %}Juli{% elif m == 8 %}Agustus{% elif m == 9 %}September{% elif m == 10 %}Oktober{% elif m == 11 %}November{% else %}Desember{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Tahun</label>
+      <select name="year">
+        {% for y in years_range %}
+        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Kota</label>
+      <select name="city">
+        <option value="">— Semua Kota —</option>
+        {% for c in city_names %}
+        <option value="{{ c }}" {% if c == selected_city %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn-filter">Tampilkan</button>
+    <button type="button" class="btn-print" onclick="window.print()">Cetak / PDF</button>
+  </form>
+
+  {% if report_data %}
+    <div class="{% if not selected_city %}cities-grid{% endif %}">
+      {% for item in report_data %}
+      <div class="city-section">
+        <div class="city-header">{{ item.city }}</div>
+        <table class="ttm-table">
+          <thead>
+            <tr>
+              <th rowspan="2" class="col-date">Tanggal</th>
+              <th colspan="2" style="color:#b45309;">☀ Matahari</th>
+              <th colspan="2" style="color:#3b82f6;">🌙 Bulan</th>
+              <th rowspan="2" class="col-phase">Fase Bulan</th>
+            </tr>
+            <tr>
+              <th>Terbit</th>
+              <th>Terbenam</th>
+              <th>Terbit</th>
+              <th>Terbenam</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in item.events %}
+            <tr>
+              <td class="col-date">{{ event.date|tanggal_indo }}</td>
+              <td class="col-sun">{{ event.sun_rise|timezone:"Asia/Jayapura"|date:"H:i"|default:"—" }}</td>
+              <td class="col-sun">{{ event.sun_set|timezone:"Asia/Jayapura"|date:"H:i"|default:"—" }}</td>
+              <td class="col-moon">{{ event.moon_rise|timezone:"Asia/Jayapura"|date:"H:i"|default:"—" }}</td>
+              <td class="col-moon">{{ event.moon_set|timezone:"Asia/Jayapura"|date:"H:i"|default:"—" }}</td>
+              <td class="col-phase">{{ event.moon_phase|fase_bulan }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <p style="font-size:2rem;">📅</p>
+      <p>Tidak ada data almanak untuk periode <strong>{{ month_name }} {{ selected_year }}</strong>.</p>
+    </div>
+  {% endif %}
+</div>
 {% endblock %}
