@@ -41,11 +41,14 @@ send_one() {
     fi
 
     # Convert UTC timestamp → WIB (+7h) to match ShakemapEvent.event_id format.
-    EVENT_TS=$(date -d "${EVENT_TS_UTC:0:4}-${EVENT_TS_UTC:4:2}-${EVENT_TS_UTC:6:2} ${EVENT_TS_UTC:8:2}:${EVENT_TS_UTC:10:2}:${EVENT_TS_UTC:12:2} UTC +7 hours" "+%Y%m%d%H%M%S" 2>/dev/null)
-    if [[ -z "$EVENT_TS" ]]; then
-        log "SKIP: failed UTC→WIB conversion of $EVENT_TS_UTC"
+    # Use epoch arithmetic so the result is independent of the host's local TZ.
+    local epoch_utc
+    epoch_utc=$(date -d "${EVENT_TS_UTC:0:4}-${EVENT_TS_UTC:4:2}-${EVENT_TS_UTC:6:2} ${EVENT_TS_UTC:8:2}:${EVENT_TS_UTC:10:2}:${EVENT_TS_UTC:12:2} UTC" "+%s" 2>/dev/null)
+    if [[ -z "$epoch_utc" ]]; then
+        log "SKIP: failed UTC parse of $EVENT_TS_UTC"
         return 0
     fi
+    EVENT_TS=$(date -u -d "@$((epoch_utc + 25200))" "+%Y%m%d%H%M%S")
 
     local sent_key="${EVENT_TS}:${STATION}:${COMPONENT}:${base}"
     mkdir -p "$(dirname "$SENT_LOG")"
