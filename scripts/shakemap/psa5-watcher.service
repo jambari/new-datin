@@ -8,7 +8,7 @@ Wants=network-online.target
 Type=simple
 User=sysop
 Group=sysop
-ExecStart=/usr/bin/bash /home/sysop/scripts/psa5_watch.sh
+ExecStart=/bin/bash /home/sysop/scripts/psa5_watch.sh
 Restart=on-failure
 RestartSec=15s
 # Give it 10 s to start before systemd considers it failed
