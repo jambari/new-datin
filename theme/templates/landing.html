@@ -636,7 +636,16 @@
       </div>
       <a href="{% url 'public_petir' %}">Petir</a>
       <a href="{% url 'public_magnetbumi' %}">Magnetbumi</a>
-      <a href="{% url 'public_shakemap_list' %}">Shakemap</a>
+      <div class="nav-dropdown">
+        <span class="nav-dropdown-trigger">
+          Shakemap
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+        <div class="nav-dropdown-menu">
+          <a href="{% url 'public_shakemap_list' %}">Shakemap</a>
+          <a href="{% url 'public_spectra_list' %}">Spectra Acceleration</a>
+        </div>
+      </div>
       <div class="nav-dropdown">
         <span class="nav-dropdown-trigger">
           Survey Kepuasan

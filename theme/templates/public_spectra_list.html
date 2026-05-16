@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load static %}
+{% block seo_title %}Spectra Acceleration · Stasiun Geofisika Kelas I Jayapura BMKG{% endblock %}
+{% block meta_description %}Daftar event gempa dengan data perbandingan respon spektra (SNI 1726 vs PSA Gempa). Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
+{% block og_title %}Spectra Acceleration · BMKG Jayapura{% endblock %}
+{% block og_description %}Perbandingan respon spektra desain SNI 1726 dengan PSA gempa terukur untuk wilayah Papua.{% endblock %}
+
+{% block extra_head %}
+<style>
+  body { background: #f8fafc; }
+
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #b45309; }
+
+  .page-wrap { max-width: 1100px; margin: 80px auto 56px; padding: 0 1.25rem; }
+
+  .page-title { font-size: 1.4rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem; }
+  .page-sub { font-size: 0.78rem; color: #6b7280; margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; }
+
+  .shk-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .shk-table thead th {
+    padding: 0.65rem 1rem;
+    text-align: left;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7280;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .shk-table tbody tr { border-bottom: 1px solid #e5e7eb; transition: background 0.15s; cursor: pointer; }
+  .shk-table tbody tr:last-child { border-bottom: none; }
+  .shk-table tbody tr:hover { background: #eff6ff; }
+  .shk-table td { padding: 0.75rem 1rem; vertical-align: middle; }
+
+  .mag-badge {
+    display: inline-block; font-weight: 700; font-size: 0.88rem;
+    padding: 0.2em 0.6em; border-radius: 6px; color: #fff; min-width: 52px; text-align: center;
+  }
+  .mag-xl  { background: #7f1d1d; }
+  .mag-lg  { background: #dc2626; }
+  .mag-md  { background: #d97706; }
+  .mag-sm  { background: #16a34a; }
+
+  .sta-pill {
+    display: inline-block; font-size: 0.7rem; font-weight: 700;
+    padding: 0.18em 0.55em; border-radius: 999px;
+    background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd;
+  }
+  .wilayah { font-size: 0.84rem; color: #111827; }
+  .meta    { font-size: 0.75rem; color: #6b7280; font-family: monospace; }
+
+  .pager {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.35rem; margin-top: 1.5rem; font-size: 0.8rem;
+  }
+  .pager a, .pager span {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; height: 32px; padding: 0 0.5rem;
+    border: 1px solid #e5e7eb; border-radius: 6px;
+    text-decoration: none; color: #111827; transition: background 0.15s;
+  }
+  .pager a:hover { background: #eff6ff; border-color: #1d4ed8; color: #1d4ed8; }
+  .pager .current { background: #1d4ed8; color: #fff; border-color: #1d4ed8; font-weight: 700; }
+  .pager .disabled { color: #9ca3af; pointer-events: none; }
+
+  #site-footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    height: 36px; background: rgba(255,255,255,0.96);
+    border-top: 1px solid rgba(0,0,0,0.08); box-shadow: 0 -1px 8px rgba(0,0,0,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
+</style>
+{% endblock %}
+
+{% block content %}
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Beranda</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="page-title">Perbandingan Respon Spektra</h1>
+  <p class="page-sub">{{ record_count }} event &nbsp;·&nbsp; halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</p>
+
+  <table class="shk-table">
+    <thead>
+      <tr>
+        <th>Waktu (UTC)</th>
+        <th>Wilayah</th>
+        <th>Mag</th>
+        <th>Kedalaman</th>
+        <th>Komponen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr onclick="window.location='{% url "public_shakemap_spectrum" item.event.pk %}'">
+        <td class="meta">{{ item.event.event_datetime|date:"d M Y, H:i" }} UTC</td>
+        <td class="wilayah">{{ item.event.wilayah }}</td>
+        <td>
+          {% if item.event.magnitude >= 6.0 %}<span class="mag-badge mag-xl">M {{ item.event.magnitude|floatformat:1 }}</span>
+          {% elif item.event.magnitude >= 5.0 %}<span class="mag-badge mag-lg">M {{ item.event.magnitude|floatformat:1 }}</span>
+          {% elif item.event.magnitude >= 3.0 %}<span class="mag-badge mag-md">M {{ item.event.magnitude|floatformat:1 }}</span>
+          {% else %}<span class="mag-badge mag-sm">M {{ item.event.magnitude|floatformat:1 }}</span>{% endif %}
+        </td>
+        <td class="meta">{{ item.event.depth_km|floatformat:0 }} km</td>
+        <td><span class="sta-pill">{{ item.station_components }}</span></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="text-align:center;padding:3rem;color:#9ca3af;font-style:italic;">Belum ada event dengan data respon spektra.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="pager">
+    {% if page_obj.has_previous %}
+      <a href="?page=1">&laquo;</a>
+      <a href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+    {% else %}
+      <span class="disabled">&laquo;</span>
+      <span class="disabled">&lsaquo;</span>
+    {% endif %}
+    {% for num in page_obj.paginator.page_range %}
+      {% if num == page_obj.number %}<span class="current">{{ num }}</span>
+      {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}<a href="?page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">&rsaquo;</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+    {% else %}
+      <span class="disabled">&rsaquo;</span>
+      <span class="disabled">&raquo;</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<footer id="site-footer">
+  <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
+</footer>
+{% endblock %}

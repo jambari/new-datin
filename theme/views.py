@@ -247,6 +247,54 @@ def public_shakemap_list(request):
     })
 
 
+def public_spectra_list(request):
+    """List events that have response-spectrum data (one card per FeltEarthquake)."""
+    from repository.models import FeltEarthquake, EventResponseSpectrum
+    from django.core.paginator import Paginator
+    from django.db.models import Count
+    from datetime import datetime, timezone as dt_timezone, timedelta
+
+    _WIB = dt_timezone(timedelta(hours=7))
+
+    # Each EventResponseSpectrum.event_id is a WIB-formatted timestamp.
+    # Convert distinct event_ids back to UTC datetimes and count rows per event.
+    counts_by_wib = dict(
+        EventResponseSpectrum.objects
+        .values_list('event_id')
+        .annotate(n=Count('id'))
+        .values_list('event_id', 'n')
+    )
+
+    utc_times = []
+    counts_by_utc = {}
+    for wib_ts, n in counts_by_wib.items():
+        try:
+            dt_wib = datetime.strptime(wib_ts, "%Y%m%d%H%M%S").replace(tzinfo=_WIB)
+        except ValueError:
+            continue
+        dt_utc = dt_wib.astimezone(dt_timezone.utc)
+        utc_times.append(dt_utc)
+        counts_by_utc[dt_utc] = n
+
+    qs = (
+        FeltEarthquake.objects
+        .filter(event_datetime__in=utc_times)
+        .order_by('-event_datetime')
+    )
+    paginator = Paginator(qs, 15)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    items = [
+        {'event': e, 'station_components': counts_by_utc.get(e.event_datetime, 0)}
+        for e in page_obj.object_list
+    ]
+    return render(request, 'public_spectra_list.html', {
+        'items': items,
+        'page_obj': page_obj,
+        'record_count': paginator.count,
+    })
+
+
 def _resolve_shakemap_context(pk):
     from repository.models import FeltEarthquake, ShakemapEvent
     from django.shortcuts import get_object_or_404
