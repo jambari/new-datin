@@ -1715,34 +1715,24 @@ def gempa_dirasakan_api(request):
 # ── PSA5 Response Spectrum API ─────────────────────────────────────────────────
 
 def _parse_psa5(text):
-    """Parse SeisComP3 default .psa5 format.
+    """Parse one SeisComP3 .psa5 file (2-column: period_s  Sa_g).
 
-    Expected columns: LON LAT DIST STA COMP PSA03 PSA10 PSA30
-    Lines starting with '#' are comments/headers.
-    PSA values assumed in g.
+    Returns a list of {'T': period, 'Sa': value} sorted by T.
     """
-    records = []
+    points = []
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith('#'):
             continue
         parts = line.split()
-        if len(parts) < 8:
+        if len(parts) < 2:
             continue
         try:
-            records.append({
-                'lon':       float(parts[0]),
-                'lat':       float(parts[1]),
-                'dist':      float(parts[2]),
-                'station':   parts[3],
-                'component': parts[4],
-                'psa03':     float(parts[5]),
-                'psa10':     float(parts[6]),
-                'psa30':     float(parts[7]),
-            })
+            points.append({'T': float(parts[0]), 'Sa': float(parts[1])})
         except (ValueError, IndexError):
             continue
-    return records
+    points.sort(key=lambda p: p['T'])
+    return points
 
 
 def _downsample(points, n=200):
@@ -1759,11 +1749,13 @@ from django.conf import settings as dj_settings
 
 @csrf_exempt
 def psa5_upload_api(request):
-    """POST endpoint: receive a .psa5 file from the shakemap machine.
+    """POST endpoint: receive one .psa5 file (single station-component) from the shakemap machine.
 
     Required POST fields:
-      event_id  — WIB timestamp string, e.g. '20251016101252'
-      psa5      — the .psa5 file upload
+      event_id      — WIB timestamp string, e.g. '20251016101252'
+      station_code  — e.g. 'ARKPI'
+      component     — e.g. 'HNE', 'HNN', 'HNZ'
+      psa5          — the .psa5 file upload (2-col period/Sa)
 
     Auth: Bearer token in Authorization header (PSA5_API_TOKEN setting).
     """
@@ -1775,9 +1767,15 @@ def psa5_upload_api(request):
     if not expected or token != expected:
         return JsonResponse({'error': 'Unauthorized'}, status=401)
 
-    event_id = request.POST.get('event_id', '').strip()
+    event_id     = request.POST.get('event_id', '').strip()
+    station_code = request.POST.get('station_code', '').strip()
+    component    = request.POST.get('component', '').strip()
     if not event_id:
         return JsonResponse({'error': 'Missing event_id'}, status=400)
+    if not station_code:
+        return JsonResponse({'error': 'Missing station_code'}, status=400)
+    if not component:
+        return JsonResponse({'error': 'Missing component'}, status=400)
 
     psa5_file = request.FILES.get('psa5')
     if not psa5_file:
@@ -1785,48 +1783,40 @@ def psa5_upload_api(request):
 
     try:
         text = psa5_file.read().decode('utf-8', errors='replace')
-        records = _parse_psa5(text)
+        points = _parse_psa5(text)
     except Exception as exc:
         return JsonResponse({'error': f'Parse error: {exc}'}, status=400)
 
-    if not records:
+    if not points:
         return JsonResponse({'error': 'No valid data rows in psa5 file'}, status=400)
 
     from .models import EventResponseSpectrum
-    saved = updated = 0
-    for rec in records:
-        _, created = EventResponseSpectrum.objects.update_or_create(
-            event_id=event_id,
-            station_code=rec['station'],
-            component=rec['component'],
-            defaults={
-                'latitude':    rec['lat'],
-                'longitude':   rec['lon'],
-                'distance_km': rec['dist'],
-                'psa03':       rec['psa03'],
-                'psa10':       rec['psa10'],
-                'psa30':       rec['psa30'],
-            },
-        )
-        if created:
-            saved += 1
-        else:
-            updated += 1
+    _, created = EventResponseSpectrum.objects.update_or_create(
+        event_id=event_id,
+        station_code=station_code,
+        component=component,
+        defaults={'spectrum': points},
+    )
 
-    return JsonResponse({'event_id': event_id, 'saved': saved, 'updated': updated})
+    return JsonResponse({
+        'event_id':     event_id,
+        'station_code': station_code,
+        'component':    component,
+        'points':       len(points),
+        'created':      created,
+    })
 
 
 def spectrum_json_api(request, event_id):
-    """GET endpoint: return design spectrum + earthquake PSA for a shakemap event.
+    """GET endpoint: return design spectrum + full earthquake response spectrum for a shakemap event.
 
     Response JSON:
       {
         "event_id": "...",
         "stations": [
           {
-            "code": "JAY", "component": "EHE",
-            "lat": ..., "lon": ..., "distance_km": ...,
-            "eq_spectrum": [{"T": 0.3, "Sa": ...}, {"T": 1.0, "Sa": ...}, {"T": 3.0, "Sa": ...}],
+            "code": "ARKPI", "component": "HNE",
+            "eq_spectrum": [{"T": ..., "Sa": ...}, ...],     # full spectrum, downsampled
             "design_spectrum": {"c": [{x, y},...], "d": [...], "e": [...]}  // null if no match
           }
         ]
@@ -1837,7 +1827,7 @@ def spectrum_json_api(request, event_id):
     qs = list(
         EventResponseSpectrum.objects
         .filter(event_id=event_id)
-        .order_by('distance_km', 'station_code', 'component')
+        .order_by('station_code', 'component')
     )
 
     station_codes = list({r.station_code for r in qs})
@@ -1849,31 +1839,17 @@ def spectrum_json_api(request, event_id):
     }
 
     stations_out = []
-    seen = set()
     for sp in qs:
-        key = (sp.station_code, sp.component)
-        if key in seen:
-            continue
-        seen.add(key)
-
         ds = design_map.get(sp.station_code)
-        entry = {
+        stations_out.append({
             'code':        sp.station_code,
             'component':   sp.component,
-            'lat':         sp.latitude,
-            'lon':         sp.longitude,
-            'distance_km': sp.distance_km,
-            'eq_spectrum': [
-                {'T': 0.3, 'Sa': sp.psa03},
-                {'T': 1.0, 'Sa': sp.psa10},
-                {'T': 3.0, 'Sa': sp.psa30},
-            ],
+            'eq_spectrum': _downsample(sp.spectrum or []),
             'design_spectrum': {
                 'c': _downsample(ds.spectrum_c),
                 'd': _downsample(ds.spectrum_d),
                 'e': _downsample(ds.spectrum_e),
             } if ds else None,
-        }
-        stations_out.append(entry)
+        })
 
     return JsonResponse({'event_id': event_id, 'stations': stations_out})

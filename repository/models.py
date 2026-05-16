@@ -283,27 +283,23 @@ class StationDesignSpectrum(models.Model):
 
 
 class EventResponseSpectrum(models.Model):
-    """Per-station PSA values from SeisComP3 shakemap .psa5 output.
+    """Full PSA response spectrum from one SeisComP3 .psa5 file.
 
-    Columns parsed: LON LAT DIST STA COMP PSA03 PSA10 PSA30
-    event_id matches ShakemapEvent.event_id (WIB timestamp YYYYMMDDHHMMSS).
+    Each .psa5 file is a single station-component for one event, containing
+    ~100 (period, Sa) samples from T≈0 to T=6 s. Station code and component
+    are extracted from the filename on the uploader side, not the file body.
     """
     event_id     = models.CharField(max_length=100, db_index=True)
     station_code = models.CharField(max_length=10)
-    component    = models.CharField(max_length=10, help_text='e.g. EHE, EHN, EHZ')
-    latitude     = models.FloatField()
-    longitude    = models.FloatField()
-    distance_km  = models.FloatField()
-    psa03        = models.FloatField(help_text='PSA at T=0.3s (g)')
-    psa10        = models.FloatField(help_text='PSA at T=1.0s (g)')
-    psa30        = models.FloatField(help_text='PSA at T=3.0s (g)')
+    component    = models.CharField(max_length=10, help_text='e.g. HNE, HNN, HNZ')
+    spectrum     = models.JSONField(help_text='List of {"T": period_s, "Sa": value_g}')
     uploaded_at  = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('event_id', 'station_code', 'component')
-        ordering = ['distance_km']
+        ordering = ['station_code', 'component']
         verbose_name = 'Event Response Spectrum'
         verbose_name_plural = 'Event Response Spectra'
 
     def __str__(self):
-        return f"{self.event_id} {self.station_code}/{self.component} {self.distance_km}km"
+        return f"{self.event_id} {self.station_code}/{self.component}"

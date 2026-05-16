@@ -388,11 +388,10 @@ document.addEventListener('DOMContentLoaded', function () {
       backgroundColor: PSA_COLOR,
       borderWidth:     2,
       borderDash:      [6, 4],
-      pointRadius:     9,
-      pointHoverRadius: 11,
-      pointStyle:      'circle',
+      pointRadius:     0,
+      pointHoverRadius: 4,
       fill:            false,
-      tension:         0,
+      tension:         0.15,
       hidden:          hiddenState[lbl] ?? false,
     };
   }
@@ -452,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function () {
     allStations.forEach((st, i) => {
       const btn = document.createElement('button');
       btn.dataset.idx = i;
-      btn.textContent = `${st.code}/${st.component} · ${st.distance_km.toFixed(1)} km`;
+      btn.textContent = `${st.code}/${st.component}`;
       btn.style.cssText =
         'font-size:.72rem;padding:4px 12px;border-radius:20px;border:1px solid #e2e8f0;' +
         'cursor:pointer;transition:background .15s,color .15s,border-color .15s;' +
@@ -476,13 +475,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ── Chart render / station switch ────────────────────────────────────────────
 
+  function saAt(spectrum, T) {
+    if (!spectrum || !spectrum.length) return null;
+    let best = spectrum[0];
+    let bestDiff = Math.abs(best.T - T);
+    for (let i = 1; i < spectrum.length; i++) {
+      const d = Math.abs(spectrum[i].T - T);
+      if (d < bestDiff) { best = spectrum[i]; bestDiff = d; }
+    }
+    return best.Sa;
+  }
+
   function updateSubtitle(station) {
-    const psa = station.eq_spectrum;
+    const sp = station.eq_spectrum;
+    const s03 = saAt(sp, 0.3), s10 = saAt(sp, 1.0), s30 = saAt(sp, 3.0);
     document.getElementById('spectrum-subtitle').textContent =
-      `${station.code}/${station.component} · jarak: ${station.distance_km.toFixed(1)} km` +
-      ` · PSA₀.₃ = ${psa[0].Sa.toFixed(4)} g` +
-      ` · PSA₁.₀ = ${psa[1].Sa.toFixed(4)} g` +
-      ` · PSA₃.₀ = ${psa[2].Sa.toFixed(4)} g`;
+      `${station.code}/${station.component}` +
+      ` · PSA₀.₃ = ${s03 != null ? s03.toFixed(4) : '—'} g` +
+      ` · PSA₁.₀ = ${s10 != null ? s10.toFixed(4) : '—'} g` +
+      ` · PSA₃.₀ = ${s30 != null ? s30.toFixed(4) : '—'} g`;
   }
 
   function switchStation(idx) {
