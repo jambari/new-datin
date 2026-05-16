@@ -5,21 +5,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .models import Station, StationStatus, StationAvailabilitySample
-
-# Authoritative station rosters. Many stations are colocated (run both
-# seismometer and accelerograph at the same site), so a single
-# Station.station_type enum can't represent them — we filter by code.
-ACCELEROGRAPH_STATIONS = [
-    'ARKPI', 'ARPI', 'BMPI', 'BTSPI', 'DYPI', 'EDMPI', 'ELMPI', 'FKMPM',
-    'GENI', 'JBPI', 'JGPI', 'JMPI', 'KIMPI', 'LJPI', 'MIBPI', 'MMPI',
-    'MTJPI', 'MTMPI', 'OBMPI', 'SATPI', 'SKPM', 'SMPI', 'SOMPI', 'TMPI',
-    'TRPI', 'WAMI',
-]
-SEISMIC_STATIONS = [
-    'ARPI', 'ARKPI', 'BTSPI', 'DYPI', 'EDMPI', 'ELMPI', 'FKMPM', 'GENI', 'JAY',
-    'KIMPI', 'LJPI', 'MIBPI', 'MMPI', 'MTJPI', 'MTMPI', 'OBMPI', 'SATPI', 'SJPM',
-    'SKPM', 'SMPI', 'SOMPI', 'SUSPI', 'TRPI', 'UWNPI', 'WAMI', 'WANPI', 'YBYPI',
-]
+from .constants import ACCELEROGRAPH_STATIONS, SEISMIC_STATIONS
 
 
 def api_stations(request):

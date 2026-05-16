@@ -583,34 +583,17 @@ def availability_matrix_view(request, sensor_type='seismo'):
     Bisa menangani 'seismo' maupun 'accelero'.
     """
     # 1. Setup Konfigurasi Berdasarkan Tipe Sensor
+    from stations.constants import ACCELEROGRAPH_STATIONS, SEISMIC_STATIONS
     if sensor_type == 'accelero':
         ModelClass = AcceleroDataAvailability
-        # Judul Halaman (H1)
         page_title = "Rekapitulasi Persentasi Hasil Monitoring Ketersediaan Data Akselerograf"
-        # Nama Sensor untuk Judul Grafik
         sensor_name = "Akselerograf"
-        
-        # Daftar Stasiun Accelero
-        station_list = [
-            'ARKPI', 'ARPI', 'BMPI', 'BTSPI', 'DYPI', 'EDMPI', 'ELMPI', 'FKMPM', 
-            'GENI', 'JBPI', 'JGPI', 'JMPI', 'KIMPI', 'LJPI', 'MIBPI', 'MMPI', 
-            'MTJPI', 'MTMPI', 'OBMPI', 'SATPI', 'SKPM', 'SMPI', 'SOMPI', 'TMPI', 
-            'TRPI', 'WAMI'
-        ]
+        station_list = ACCELEROGRAPH_STATIONS
     else:
-        # Default Seismo
         ModelClass = DataAvailability
-        # Judul Halaman (H1)
         page_title = "Rekapitulasi Persentasi Hasil Monitoring Ketersediaan Data Seismik"
-        # Nama Sensor untuk Judul Grafik
         sensor_name = "Seismik"
-        
-        # Daftar Stasiun Seismo
-        station_list = [
-            'ARPI', 'ARKPI', 'BTSPI', 'DYPI', 'EDMPI', 'ELMPI', 'FKMPM', 'GENI', 'JAY', 'KIMPI', 
-            'LJPI', 'MIBPI', 'MMPI', 'MTJPI', 'MTMPI', 'OBMPI', 'SATPI', 'SJPM', 'SKPM','SMPI', 'SOMPI', 
-            'SUSPI', 'TRPI', 'UWNPI', 'WAMI', 'WANPI', 'YBYPI'
-        ]
+        station_list = SEISMIC_STATIONS
 
     # 2. Setup Waktu
     today = datetime.now()
