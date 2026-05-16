@@ -6,12 +6,29 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .models import Station, StationStatus, StationAvailabilitySample
 
+# Authoritative station rosters. Many stations are colocated (run both
+# seismometer and accelerograph at the same site), so a single
+# Station.station_type enum can't represent them — we filter by code.
+ACCELEROGRAPH_STATIONS = [
+    'ARKPI', 'ARPI', 'BMPI', 'BTSPI', 'DYPI', 'EDMPI', 'ELMPI', 'FKMPM',
+    'GENI', 'JBPI', 'JGPI', 'JMPI', 'KIMPI', 'LJPI', 'MIBPI', 'MMPI',
+    'MTJPI', 'MTMPI', 'OBMPI', 'SATPI', 'SKPM', 'SMPI', 'SOMPI', 'TMPI',
+    'TRPI', 'WAMI',
+]
+SEISMIC_STATIONS = [
+    'ARPI', 'ARKPI', 'BTSPI', 'DYPI', 'EDMPI', 'ELMPI', 'FKMPM', 'GENI', 'JAY',
+    'KIMPI', 'LJPI', 'MIBPI', 'MMPI', 'MTJPI', 'MTMPI', 'OBMPI', 'SATPI', 'SJPM',
+    'SKPM', 'SMPI', 'SOMPI', 'SUSPI', 'TRPI', 'UWNPI', 'WAMI', 'WANPI', 'YBYPI',
+]
+
 
 def api_stations(request):
     qs = Station.objects.filter(is_active=True)
     stype = request.GET.get('type')          # 'seismic' | 'accelero' | omit for all
-    if stype in ('seismic', 'accelero'):
-        qs = qs.filter(station_type=stype)
+    if stype == 'accelero':
+        qs = qs.filter(code__in=ACCELEROGRAPH_STATIONS)
+    elif stype == 'seismic':
+        qs = qs.filter(code__in=SEISMIC_STATIONS)
     stations = qs.select_related('status')
     data = []
     for station in stations:
