@@ -60,7 +60,9 @@
   .quake-table tbody tr:hover { background: #eff6ff; }
   .quake-table td { padding: 0.7rem 1rem; vertical-align: middle; }
   .mag-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.92rem; font-weight: 700; padding: 0.2em 0.55em; border-radius: 6px; color: #fff; min-width: 52px; text-align: center; }
-  .mag-sm { background: #16a34a; } .mag-md { background: #d97706; } .mag-lg { background: #dc2626; } .mag-xl { background: #7f1d1d; }
+  .mag-sm { background: #16a34a; } .mag-md { background: #d97706; } .mag-lg { background: #dc2626; }
+  .depth-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 600; padding: 0.18em 0.5em; border-radius: 6px; color: #fff; min-width: 60px; text-align: center; }
+  .depth-shallow { background: #dc2626; } .depth-mid { background: #d97706; } .depth-deep { background: #16a34a; }
   .pid    { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted); }
   .region { font-size: 0.82rem; color: var(--ink); }
   .depth  { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--muted); }
@@ -186,13 +188,18 @@
           <td class="when">{{ event.origin_time|timezone:"Asia/Jayapura"|date:"d M Y H:i" }}</td>
           <td>
             {% if event.magnitude is not None %}
-              {% if event.magnitude >= 6.0 %}<span class="mag-badge mag-xl">M {{ event.magnitude|floatformat:1 }}</span>
-              {% elif event.magnitude >= 5.0 %}<span class="mag-badge mag-lg">M {{ event.magnitude|floatformat:1 }}</span>
+              {% if event.magnitude >= 5.0 %}<span class="mag-badge mag-lg">M {{ event.magnitude|floatformat:1 }}</span>
               {% elif event.magnitude >= 3.0 %}<span class="mag-badge mag-md">M {{ event.magnitude|floatformat:1 }}</span>
               {% else %}<span class="mag-badge mag-sm">M {{ event.magnitude|floatformat:1 }}</span>{% endif %}
             {% else %}<span class="mag-badge mag-sm">—</span>{% endif %}
           </td>
-          <td class="depth">{{ event.depth_km|floatformat:0 }} km</td>
+          <td class="depth">
+            {% if event.depth_km is not None %}
+              {% if event.depth_km < 60 %}<span class="depth-badge depth-shallow">{{ event.depth_km|floatformat:0 }} km</span>
+              {% elif event.depth_km < 300 %}<span class="depth-badge depth-mid">{{ event.depth_km|floatformat:0 }} km</span>
+              {% else %}<span class="depth-badge depth-deep">{{ event.depth_km|floatformat:0 }} km</span>{% endif %}
+            {% else %}<span class="depth-badge depth-shallow">—</span>{% endif %}
+          </td>
           <td class="region">{{ event.region|default:"—" }}</td>
           <td class="depth">{{ event.latitude|floatformat:2 }}, {{ event.longitude|floatformat:2 }}</td>
         </tr>
