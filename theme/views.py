@@ -247,7 +247,7 @@ def public_shakemap_list(request):
     })
 
 
-def public_shakemap_detail(request, pk):
+def _resolve_shakemap_context(pk):
     from repository.models import FeltEarthquake, ShakemapEvent
     from django.shortcuts import get_object_or_404
     from datetime import timezone as dt_timezone, timedelta
@@ -255,11 +255,15 @@ def public_shakemap_detail(request, pk):
     _WIB = dt_timezone(timedelta(hours=7))
     wib_ts = obj.event_datetime.astimezone(_WIB).strftime("%Y%m%d%H%M%S")
     shk_event = ShakemapEvent.objects.filter(event_id=wib_ts).first()
-    return render(request, 'public_shakemap_detail.html', {
-        'object': obj,
-        'shk_event': shk_event,
-        'wib_ts': wib_ts,
-    })
+    return {'object': obj, 'shk_event': shk_event, 'wib_ts': wib_ts}
+
+
+def public_shakemap_detail(request, pk):
+    return render(request, 'public_shakemap_detail.html', _resolve_shakemap_context(pk))
+
+
+def public_shakemap_spectrum(request, pk):
+    return render(request, 'public_shakemap_spectrum.html', _resolve_shakemap_context(pk))
 
 
 def public_gempa_detail(request, public_id):

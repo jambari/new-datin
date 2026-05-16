@@ -9,6 +9,7 @@ urlpatterns = [
     path('gempa-merusak/', views.public_gempa_merusak, name='public_gempa_merusak'),
     path('shakemap/', views.public_shakemap_list, name='public_shakemap_list'),
     path('shakemap/<int:pk>/', views.public_shakemap_detail, name='public_shakemap_detail'),
+    path('shakemap/<int:pk>/spectrum/', views.public_shakemap_spectrum, name='public_shakemap_spectrum'),
     path('kegiatan/', views.our_work, name='our_work'),
     path('magnetbumi/', views.public_magnetbumi, name='public_magnetbumi'),
     path('magnetbumi/data/', views.public_magnetbumi_data, name='public_magnetbumi_data'),

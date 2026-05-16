@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+  body { background: #f8fafc; }
+
+  #site-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 1.25rem;
+    height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+  .brand img { height: 40px; width: auto; object-fit: contain; }
+  .brand-title { font-size: 0.76rem; font-weight: 800; letter-spacing: 0.04em; color: #1e293b; text-transform: uppercase; }
+  .brand-sub   { font-size: 0.58rem; color: #64748b; letter-spacing: 0.06em; text-transform: uppercase; }
+  .header-back { font-size: 0.75rem; color: #475569; text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+  .header-back:hover { color: #b45309; }
+
+  .page-wrap { max-width: 1100px; margin: 80px auto 56px; padding: 0 1.25rem; }
+
+  .event-title { font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.3rem; }
+  .event-meta  { font-size: 0.78rem; color: #6b7280; margin-bottom: 1.75rem; line-height: 1.8; }
+  .event-meta strong { color: #374151; }
+
+  #site-footer {
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<header id="site-header">
+  <div class="header-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
+        <div class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</div>
+      </div>
+    </a>
+    <a href="{% url 'public_shakemap_detail' object.pk %}" class="header-back">← Detail Shakemap</a>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="event-title">M{{ object.magnitude|floatformat:1 }} — {{ object.wilayah }}</h1>
+  <div class="event-meta">
+    <strong>Waktu</strong>: {{ object.event_datetime|date:"d F Y, H:i:s" }} UTC &nbsp;·&nbsp;
+    <strong>Koordinat</strong>: {{ object.latitude }}°, {{ object.longitude }}° &nbsp;·&nbsp;
+    <strong>Kedalaman</strong>: {{ object.depth_km|floatformat:0 }} km
+  </div>
+
+  <div id="spectrum-card" style="
+    background:#fff; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,0.09);
+    padding:1.25rem 1.5rem; margin-bottom:1.5rem;
+  ">
+    <h2 style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 .25rem;">
+      Perbandingan Respon Spektra
+    </h2>
+    <div id="spectrum-subtitle" style="font-size:.72rem;color:#6b7280;min-height:1.2em;margin-bottom:.75rem;"></div>
+
+    <div id="spectrum-loading" style="color:#9ca3af;font-size:.82rem;text-align:center;padding:2.5rem 0;">
+      Memuat data…
+    </div>
+    <div id="spectrum-empty" style="display:none;color:#9ca3af;font-size:.82rem;text-align:center;padding:2.5rem 0;">
+      Data respon spektra belum tersedia untuk kejadian ini.
+    </div>
+
+    <div id="spectrum-chart-wrap" style="display:none;">
+      <div style="position:relative;height:420px;">
+        <canvas id="spectrumChart"></canvas>
+      </div>
+
+      <div id="spectrum-legend"
+        style="display:flex;flex-wrap:wrap;gap:.5rem .9rem;margin-top:.9rem;padding:.6rem .75rem;
+               background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+      </div>
+
+      <div id="station-picker" style="margin-top:.75rem;display:none;">
+        <div style="font-size:.68rem;font-weight:600;color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:.07em;margin-bottom:.35rem;">Pilih Stasiun</div>
+        <div id="station-btns" style="display:flex;flex-wrap:wrap;gap:.35rem;"></div>
+      </div>
+
+      <p style="font-size:.67rem;color:#9ca3af;margin-top:.75rem;margin-bottom:0;line-height:1.5;">
+        Spektra desain: SNI 1726-2019 (rsa.ciptakarya.pu.go.id) · 5% damping ·
+        PSA gempa: SeisComP3 ShakeMap (<code style="font-size:.65rem;">.psa5</code>) ·
+        Klik label di atas untuk tampilkan/sembunyikan kurva.
+      </p>
+    </div>
+  </div>
+</div>
+
+<footer id="site-footer">
+  <span>Stasiun Geofisika Kelas I Jayapura &copy; 2026</span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const EVENT_ID = '{{ wib_ts }}';
+  if (!EVENT_ID) return;
+
+  const API_URL = `/api/shakemap/${EVENT_ID}/spectrum.json`;
+
+  const DESIGN = [
+    { key: 'c', label: 'Desain Kelas C', color: '#16a34a' },
+    { key: 'd', label: 'Desain Kelas D', color: '#d97706' },
+    { key: 'e', label: 'Desain Kelas E', color: '#dc2626' },
+  ];
+  const COMP_COLORS = {
+    HNE:    '#2563eb',
+    HNN:    '#7c3aed',
+    HNZ:    '#0891b2',
+    '00HNE': '#2563eb',
+    '00HNN': '#7c3aed',
+    '00HNZ': '#0891b2',
+  };
+  const PSA_FALLBACK_COLOR = '#475569';
+
+  let stationGroups = [];
+  let chartInst    = null;
+  let activeIdx    = 0;
+  const hiddenState = {};
+
+  function designDatasets(group) {
+    const ds = group.design_spectrum;
+    return DESIGN.map(d => ({
+      label:       d.label,
+      type:        'line',
+      data:        ds ? ds[d.key].map(p => ({ x: p.x, y: p.y })) : [],
+      borderColor: d.color,
+      borderWidth: 2,
+      pointRadius: 0,
+      fill:        false,
+      tension:     0.15,
+      hidden:      hiddenState[d.label] ?? false,
+    }));
+  }
+
+  function psaDatasets(group) {
+    return group.components.map(c => {
+      const lbl   = `PSA Gempa — ${c.component}`;
+      const color = COMP_COLORS[c.component] || PSA_FALLBACK_COLOR;
+      return {
+        label:           lbl,
+        type:            'line',
+        data:            c.eq_spectrum.map(p => ({ x: p.T, y: p.Sa })),
+        borderColor:     color,
+        backgroundColor: color,
+        borderWidth:     2,
+        borderDash:      [6, 4],
+        pointRadius:     0,
+        pointHoverRadius: 4,
+        fill:            false,
+        tension:         0.15,
+        hidden:          hiddenState[lbl] ?? false,
+      };
+    });
+  }
+
+  function buildLegend() {
+    const el = document.getElementById('spectrum-legend');
+    el.innerHTML = '';
+
+    chartInst.data.datasets.forEach((ds, i) => {
+      const color = ds.borderColor || '#888';
+      const isDash = Array.isArray(ds.borderDash) && ds.borderDash.length;
+
+      const wrap = document.createElement('label');
+      wrap.style.cssText =
+        'display:flex;align-items:center;gap:.35rem;cursor:pointer;' +
+        'font-size:.73rem;color:#374151;user-select:none;white-space:nowrap;';
+
+      const cb = document.createElement('input');
+      cb.type    = 'checkbox';
+      cb.checked = !ds.hidden;
+      cb.style.accentColor = color;
+      cb.addEventListener('change', () => {
+        chartInst.data.datasets[i].hidden = !cb.checked;
+        hiddenState[ds.label] = !cb.checked;
+        chartInst.update('none');
+      });
+
+      const swatch = document.createElement('span');
+      if (isDash) {
+        swatch.style.cssText =
+          `display:inline-flex;align-items:center;width:26px;height:10px;overflow:hidden;`;
+        swatch.innerHTML =
+          `<svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5"
+            stroke="${color}" stroke-width="2.5" stroke-dasharray="5 3"/></svg>`;
+      } else {
+        swatch.style.cssText =
+          `display:inline-block;width:24px;height:3px;background:${color};border-radius:2px;`;
+      }
+
+      wrap.appendChild(cb);
+      wrap.appendChild(swatch);
+      wrap.appendChild(document.createTextNode(' ' + ds.label));
+      el.appendChild(wrap);
+    });
+  }
+
+  function buildStationPicker() {
+    const picker = document.getElementById('station-picker');
+    const btns   = document.getElementById('station-btns');
+    btns.innerHTML = '';
+
+    stationGroups.forEach((g, i) => {
+      const btn = document.createElement('button');
+      btn.dataset.idx = i;
+      btn.textContent = g.code;
+      btn.style.cssText =
+        'font-size:.72rem;padding:4px 12px;border-radius:20px;border:1px solid #e2e8f0;' +
+        'cursor:pointer;transition:background .15s,color .15s,border-color .15s;' +
+        'background:#f8fafc;color:#374151;';
+      btn.addEventListener('click', () => switchStation(i));
+      btns.appendChild(btn);
+    });
+
+    if (stationGroups.length > 1) picker.style.display = 'block';
+    highlightActiveBtn();
+  }
+
+  function highlightActiveBtn() {
+    document.querySelectorAll('#station-btns button').forEach(btn => {
+      const active = +btn.dataset.idx === activeIdx;
+      btn.style.background   = active ? '#2563eb' : '#f8fafc';
+      btn.style.color        = active ? '#fff'    : '#374151';
+      btn.style.borderColor  = active ? '#2563eb' : '#e2e8f0';
+    });
+  }
+
+  function updateSubtitle(group) {
+    const comps = group.components.map(c => c.component).join(', ');
+    document.getElementById('spectrum-subtitle').textContent =
+      `Stasiun ${group.code} · komponen: ${comps}`;
+  }
+
+  function switchStation(idx) {
+    activeIdx = idx;
+    const group = stationGroups[idx];
+    chartInst.data.datasets = [...designDatasets(group), ...psaDatasets(group)];
+    chartInst.update('none');
+    buildLegend();
+    updateSubtitle(group);
+    highlightActiveBtn();
+  }
+
+  function initChart(group) {
+    const datasets = [...designDatasets(group), ...psaDatasets(group)];
+    const ctx = document.getElementById('spectrumChart').getContext('2d');
+    chartInst = new Chart(ctx, {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 200 },
+        scales: {
+          x: {
+            type: 'linear',
+            title: { display: true, text: 'Periode  T  (detik)', font: { size: 11 }, color: '#6b7280' },
+            min: 0, max: 4,
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { size: 10 }, color: '#6b7280' },
+          },
+          y: {
+            type: 'linear',
+            title: { display: true, text: 'Sa  (g)', font: { size: 11 }, color: '#6b7280' },
+            min: 0,
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { size: 10 }, color: '#6b7280' },
+          },
+        },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const p = ctx.parsed;
+                return `  ${ctx.dataset.label}: T=${p.x.toFixed(3)}s, Sa=${p.y.toFixed(5)}g`;
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  fetch(API_URL)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('spectrum-loading').style.display = 'none';
+      if (!data.stations || !data.stations.length) {
+        document.getElementById('spectrum-empty').style.display = 'block';
+        return;
+      }
+      const byCode = new Map();
+      data.stations.forEach(s => {
+        if (!byCode.has(s.code)) {
+          byCode.set(s.code, {
+            code: s.code,
+            design_spectrum: s.design_spectrum,
+            components: [],
+          });
+        }
+        byCode.get(s.code).components.push({
+          component:   s.component,
+          eq_spectrum: s.eq_spectrum,
+        });
+      });
+      stationGroups = Array.from(byCode.values());
+      stationGroups.forEach(g => g.components.sort((a, b) => a.component.localeCompare(b.component)));
+
+      document.getElementById('spectrum-chart-wrap').style.display = 'block';
+      initChart(stationGroups[0]);
+      buildLegend();
+      buildStationPicker();
+      updateSubtitle(stationGroups[0]);
+    })
+    .catch(() => {
+      document.getElementById('spectrum-loading').style.display = 'none';
+      document.getElementById('spectrum-empty').style.display = 'block';
+    });
+})();
+</script>
+{% endblock %}
