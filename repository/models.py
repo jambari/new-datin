@@ -257,3 +257,53 @@ class EventBrowser(models.Model):
 
     def __str__(self):
         return f"{self.event_id} M{self.magnitude} {self.origin_time:%Y-%m-%d %H:%M}"
+
+
+class StationDesignSpectrum(models.Model):
+    """SNI 1726 design response spectrum for each accelerograph station."""
+    station     = models.OneToOneField(Station, on_delete=models.CASCADE,
+                                       related_name='design_spectrum')
+    pga         = models.FloatField(help_text='Peak Ground Acceleration (g)')
+    ss          = models.FloatField(help_text='Short-period spectral accel (g)')
+    s1          = models.FloatField(help_text='1-second spectral accel (g)')
+    tl          = models.FloatField(null=True, blank=True, help_text='Long-period transition (s)')
+    # Each field: list of {"x": T_seconds, "y": SA_g} — 6001 points, T 0–6 s
+    spectrum_b  = models.JSONField(help_text='Site class B (rock)')
+    spectrum_c  = models.JSONField(help_text='Site class C (very dense soil/soft rock)')
+    spectrum_d  = models.JSONField(help_text='Site class D (stiff soil)')
+    spectrum_e  = models.JSONField(help_text='Site class E (soft clay)')
+    fetched_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Station Design Spectrum'
+        verbose_name_plural = 'Station Design Spectra'
+
+    def __str__(self):
+        return f"{self.station.code} — PGA={self.pga} Ss={self.ss} S1={self.s1}"
+
+
+class EventResponseSpectrum(models.Model):
+    """Per-station PSA values from SeisComP3 shakemap .psa5 output.
+
+    Columns parsed: LON LAT DIST STA COMP PSA03 PSA10 PSA30
+    event_id matches ShakemapEvent.event_id (WIB timestamp YYYYMMDDHHMMSS).
+    """
+    event_id     = models.CharField(max_length=100, db_index=True)
+    station_code = models.CharField(max_length=10)
+    component    = models.CharField(max_length=10, help_text='e.g. EHE, EHN, EHZ')
+    latitude     = models.FloatField()
+    longitude    = models.FloatField()
+    distance_km  = models.FloatField()
+    psa03        = models.FloatField(help_text='PSA at T=0.3s (g)')
+    psa10        = models.FloatField(help_text='PSA at T=1.0s (g)')
+    psa30        = models.FloatField(help_text='PSA at T=3.0s (g)')
+    uploaded_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('event_id', 'station_code', 'component')
+        ordering = ['distance_km']
+        verbose_name = 'Event Response Spectrum'
+        verbose_name_plural = 'Event Response Spectra'
+
+    def __str__(self):
+        return f"{self.event_id} {self.station_code}/{self.component} {self.distance_km}km"
