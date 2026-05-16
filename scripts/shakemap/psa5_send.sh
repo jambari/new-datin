@@ -32,11 +32,18 @@ send_one() {
     local psa5="$1"
     local base="$(basename "$psa5")"
 
-    # Filename: <event_ts>_<NET>_<STA>_<COMP>_BP4_0.1_40.psa5
-    IFS='_' read -r EVENT_TS NETWORK STATION COMPONENT _REST <<< "$base"
+    # Filename: <event_ts_utc>_<NET>_<STA>_<COMP>_BP4_0.1_40.psa5
+    IFS='_' read -r EVENT_TS_UTC NETWORK STATION COMPONENT _REST <<< "$base"
 
-    if ! [[ "$EVENT_TS" =~ ^[0-9]{14}$ ]] || [[ -z "$STATION" || -z "$COMPONENT" ]]; then
+    if ! [[ "$EVENT_TS_UTC" =~ ^[0-9]{14}$ ]] || [[ -z "$STATION" || -z "$COMPONENT" ]]; then
         log "SKIP: cannot parse station/component from $base"
+        return 0
+    fi
+
+    # Convert UTC timestamp → WIB (+7h) to match ShakemapEvent.event_id format.
+    EVENT_TS=$(date -d "${EVENT_TS_UTC:0:4}-${EVENT_TS_UTC:4:2}-${EVENT_TS_UTC:6:2} ${EVENT_TS_UTC:8:2}:${EVENT_TS_UTC:10:2}:${EVENT_TS_UTC:12:2} UTC +7 hours" "+%Y%m%d%H%M%S" 2>/dev/null)
+    if [[ -z "$EVENT_TS" ]]; then
+        log "SKIP: failed UTC→WIB conversion of $EVENT_TS_UTC"
         return 0
     fi
 
