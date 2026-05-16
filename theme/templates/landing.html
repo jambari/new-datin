@@ -965,12 +965,10 @@
   const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
   function parseBmkgDt(dt) {
-    // dt like '202605060000'
+    // BMKG returns ISO 8601 in UTC, e.g. '2026-05-16T11:00:00Z'.
     try {
-      const d = new Date(
-        parseInt(dt.slice(0,4)), parseInt(dt.slice(4,6))-1, parseInt(dt.slice(6,8)),
-        parseInt(dt.slice(8,10)), 0, 0
-      );
+      const d = new Date(dt);
+      if (isNaN(d.getTime())) return dt;
       return d.getDate().toString().padStart(2,'0') + ' ' + MONTHS[d.getMonth()] + ', ' +
              d.getHours().toString().padStart(2,'0') + ':00 WIT';
     } catch(e) { return dt; }
