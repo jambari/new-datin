@@ -11,9 +11,11 @@
 
 # ── CONFIG ──────────────────────────────────────────────────────────────────
 YOLO_DIR="/home/sysop/yolo-training"
-WEIGHTS="$YOLO_DIR/runs/detect/runs/yolov11s_training/weights/last.pt"
-RESULTS_CSV="$YOLO_DIR/runs/detect/runs/yolov11s_training/results.csv"
+RUN_DIR="$YOLO_DIR/runs/detect/runs/yolov11s_training"
+WEIGHTS="$RUN_DIR/weights/last.pt"
+RESULTS_CSV="$RUN_DIR/results.csv"
 TRAIN_LOG="$YOLO_DIR/train_resume.log"
+ARCHIVE_BASE="/home/sysop/Documents"   # final archive lands at $ARCHIVE_BASE/yolov11s_<timestamp>/
 HOT_TEMP=87       # pause at or above this (°C)
 COOL_TEMP=78      # resume at or below this (°C)
 CHECK_INTERVAL=30 # seconds between polls
@@ -50,6 +52,20 @@ start_training() {
     log "  spawned pid=${pid:-unknown}"
 }
 
+archive_run() {
+    local stamp dest
+    stamp=$(date +%Y%m%d_%H%M%S)
+    dest="${ARCHIVE_BASE}/yolov11s_${stamp}"
+    log "ARCHIVING run dir → $dest"
+    mkdir -p "$dest" || { log "  ERROR: mkdir failed"; return 1; }
+    if cp -r "$RUN_DIR"/. "$dest/"; then
+        log "  archive complete ($(du -sh "$dest" | cut -f1))"
+    else
+        log "  ERROR: cp failed"
+        return 1
+    fi
+}
+
 stop_training() {
     local pid
     pid=$(train_pid)
@@ -78,6 +94,7 @@ while true; do
     if (( epoch >= TARGET_EPOCHS )); then
         log "DONE: last epoch=$epoch >= target=$TARGET_EPOCHS — stopping watchdog"
         stop_training
+        archive_run
         exit 0
     fi
 
