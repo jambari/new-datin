@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load static %}
+{% block seo_title %}YOLO Progress · BMKG Jayapura{% endblock %}
+
+{% block extra_head %}
+<meta http-equiv="refresh" content="60">
+<style>
+  body { background: #0f172a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+  .wrap { max-width: 1100px; margin: 1.5rem auto; padding: 0 1.25rem; }
+  h1 { font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0 0 .25rem; }
+  .sub { color: #94a3b8; font-size: .78rem; margin-bottom: 1.25rem; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: .9rem; margin-bottom: 1.25rem;
+  }
+  .card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    padding: .9rem 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .card h3 { font-size: .6rem; font-weight: 700; color: #64748b; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 .5rem; }
+  .card .v { font-size: 1.4rem; font-weight: 700; color: #f8fafc; font-family: 'JetBrains Mono', monospace; }
+  .card .u { font-size: .7rem; color: #94a3b8; margin-left: .2rem; }
+  .stale .v { color: #f59e0b; }
+  .fresh .v { color: #22d3ee; }
+  pre.log {
+    background: #0b1220; border: 1px solid #334155; border-radius: 8px;
+    padding: .75rem .9rem; font-size: .72rem; line-height: 1.45;
+    color: #cbd5e1; max-height: 260px; overflow-y: auto; white-space: pre-wrap;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .chartbox { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: .9rem; height: 280px; position: relative; }
+  .empty { color: #64748b; font-style: italic; padding: 2.5rem 1rem; text-align: center; }
+  .age-fresh { color: #22d3ee; }
+  .age-stale { color: #f59e0b; }
+  .age-dead  { color: #ef4444; }
+  a.tinybtn { font-size: .7rem; color: #94a3b8; text-decoration: none; border: 1px solid #334155; padding: .25rem .55rem; border-radius: 6px; }
+  a.tinybtn:hover { color: #f8fafc; background: #334155; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;">
+    <div>
+      <h1>YOLOv11s Training — Private Dashboard</h1>
+      <div class="sub">
+        Auto-refresh: 60 s ·
+        {% if age_seconds is not None %}
+          last update
+          <span class="{% if age_seconds < 360 %}age-fresh{% elif age_seconds < 900 %}age-stale{% else %}age-dead{% endif %}">
+            {{ age_seconds }} s ago
+          </span>
+        {% else %}
+          <span class="age-dead">no data received yet</span>
+        {% endif %}
+      </div>
+    </div>
+    <a href="?" class="tinybtn">↻ Reload now</a>
+  </div>
+
+  {% if state %}
+    <div class="grid">
+      <div class="card fresh">
+        <h3>Epoch</h3>
+        <div class="v">{{ last_row.epoch|default:"—" }}<span class="u">/ 200</span></div>
+      </div>
+      <div class="card fresh">
+        <h3>mAP@50</h3>
+        <div class="v">{{ last_row.mAP50|floatformat:4|default:"—" }}</div>
+      </div>
+      <div class="card fresh">
+        <h3>mAP@50-95</h3>
+        <div class="v">{{ last_row.mAP50_95|floatformat:4|default:"—" }}</div>
+      </div>
+      <div class="card">
+        <h3>GPU Temp</h3>
+        <div class="v">{{ state.gpu.temp|default:"—" }}<span class="u">°C</span></div>
+      </div>
+      <div class="card">
+        <h3>GPU Util</h3>
+        <div class="v">{{ state.gpu.util|default:"—" }}<span class="u">%</span></div>
+      </div>
+      <div class="card">
+        <h3>GPU Power</h3>
+        <div class="v">{{ state.gpu.power|default:"—" }}<span class="u">W</span></div>
+      </div>
+      <div class="card">
+        <h3>Fan</h3>
+        <div class="v">{{ state.gpu.fan|default:"—" }}<span class="u">%</span></div>
+      </div>
+      <div class="card">
+        <h3>Train Box Loss</h3>
+        <div class="v">{{ last_row.box_loss|floatformat:4|default:"—" }}</div>
+      </div>
+    </div>
+
+    <h3 style="font-size:.75rem;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin:1.25rem 0 .5rem;">mAP Curve</h3>
+    <div class="chartbox">
+      <canvas id="mapChart"></canvas>
+    </div>
+
+    <h3 style="font-size:.75rem;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin:1.5rem 0 .5rem;">Watchdog Log Tail</h3>
+    <pre class="log">{{ state.watchdog_tail|default:"(empty)" }}</pre>
+
+  {% else %}
+    <div class="card empty">
+      <p>No state pushed from the YOLO host yet.</p>
+      <p style="font-size:.75rem;">Once the push script runs on 172.21.63.51, this dashboard will populate. First push happens within ~5 minutes after cron is installed.</p>
+    </div>
+  {% endif %}
+</div>
+
+{% if state %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const metrics = {{ metrics_json|safe }};
+  if (!metrics.length) return;
+  const ctx = document.getElementById('mapChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: metrics.map(m => m.epoch),
+      datasets: [
+        { label: 'mAP@50',     data: metrics.map(m => m.mAP50),    borderColor: '#22d3ee', backgroundColor: '#22d3ee', pointRadius: 0, borderWidth: 2, tension: 0.15, fill: false },
+        { label: 'mAP@50-95',  data: metrics.map(m => m.mAP50_95), borderColor: '#a78bfa', backgroundColor: '#a78bfa', pointRadius: 0, borderWidth: 2, tension: 0.15, fill: false },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#64748b' }, grid: { color: '#1f2937' }, title: { display: true, text: 'Epoch', color: '#94a3b8' } },
+        y: { ticks: { color: '#64748b' }, grid: { color: '#1f2937' }, min: 0, max: 1 }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

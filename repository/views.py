@@ -1937,3 +1937,105 @@ def spectrum_json_api(request, event_id):
         })
 
     return JsonResponse({'event_id': event_id, 'stations': stations_out})
+
+
+# ── YOLO training progress (private dashboard) ───────────────────────────────
+
+_YOLO_STATE_FILE = '/var/www/html/cache/yolo_state.json'
+
+
+@csrf_exempt
+def yolo_state_upload_api(request):
+    """POST endpoint: receive a JSON snapshot of YOLO training progress from the yolo host.
+
+    Body (JSON): {
+      "results_csv": "<full results.csv as text>",
+      "gpu":         {"temp": 87, "fan": 65, "power": 50.1, "util": 95},
+      "watchdog_tail": "<last N lines of thermal_watchdog.log>",
+      "pushed_at":   "<ISO timestamp from sender>"
+    }
+
+    Auth: Bearer token (PSA5_API_TOKEN — shared with the other pipelines).
+    """
+    import os, json
+    from datetime import datetime, timezone
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=405)
+
+    token = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+    expected = getattr(dj_settings, 'PSA5_API_TOKEN', '')
+    if not expected or token != expected:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        payload = json.loads(request.body or b'{}')
+    except json.JSONDecodeError as exc:
+        return JsonResponse({'error': f'Bad JSON: {exc}'}, status=400)
+
+    payload['received_at'] = datetime.now(timezone.utc).isoformat()
+    os.makedirs(os.path.dirname(_YOLO_STATE_FILE), exist_ok=True)
+    with open(_YOLO_STATE_FILE, 'w') as f:
+        json.dump(payload, f)
+    return JsonResponse({'ok': True, 'bytes': len(request.body or b'')})
+
+
+from django.contrib.auth.decorators import login_required, user_passes_test
+
+
+def _is_jambari(user):
+    return user.is_authenticated and user.username == 'jambari'
+
+
+@login_required
+@user_passes_test(_is_jambari)
+def yolo_progress_view(request):
+    """Private dashboard at /yolo-progress/. Reads the pushed state and renders."""
+    import os, json
+    from datetime import datetime, timezone
+
+    state = None
+    if os.path.exists(_YOLO_STATE_FILE):
+        try:
+            with open(_YOLO_STATE_FILE) as f:
+                state = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            state = None
+
+    # Parse results.csv into compact metric rows for the chart.
+    metrics = []
+    last_row = None
+    if state and state.get('results_csv'):
+        import csv as _csv
+        from io import StringIO
+        reader = _csv.DictReader(StringIO(state['results_csv']))
+        for row in reader:
+            try:
+                metrics.append({
+                    'epoch':       int(float(row.get('epoch', 0))),
+                    'box_loss':    float(row.get('train/box_loss', 0)),
+                    'cls_loss':    float(row.get('train/cls_loss', 0)),
+                    'mAP50':       float(row.get('metrics/mAP50(B)', 0)),
+                    'mAP50_95':    float(row.get('metrics/mAP50-95(B)', 0)),
+                })
+            except (ValueError, TypeError):
+                continue
+        if metrics:
+            last_row = metrics[-1]
+
+    age_seconds = None
+    if state and state.get('received_at'):
+        try:
+            recv = datetime.fromisoformat(state['received_at'])
+            age_seconds = int((datetime.now(timezone.utc) - recv).total_seconds())
+        except (ValueError, TypeError):
+            pass
+
+    context = {
+        'state':        state,
+        'last_row':     last_row,
+        'metrics':      metrics,
+        'metrics_json': json.dumps(metrics),
+        'age_seconds':  age_seconds,
+    }
+    return render(request, 'repository/yolo_progress.html', context)
