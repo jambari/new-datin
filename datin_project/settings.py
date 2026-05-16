@@ -306,6 +306,7 @@ FDSNWS_URL = config('FDSNWS_URL', default='http://172.21.63.51:8080')
 QUAKELINK_PUSH_TOKEN    = config('QUAKELINK_PUSH_TOKEN',    default='')
 LEMI_MONITOR_TOKEN      = config('LEMI_MONITOR_TOKEN',      default='')
 SEISMIC_STATUS_TOKEN    = config('SEISMIC_STATUS_TOKEN',    default='')
+PSA5_API_TOKEN          = config('PSA5_API_TOKEN',          default='')
 
 # SEO / Analytics
 GA_MEASUREMENT_ID = config('GA_MEASUREMENT_ID', default='')

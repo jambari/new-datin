@@ -1710,3 +1710,170 @@ def gempa_dirasakan_api(request):
     resp = JsonResponse(events, safe=False)
     resp['Access-Control-Allow-Origin'] = '*'
     return resp
+
+
+# ── PSA5 Response Spectrum API ─────────────────────────────────────────────────
+
+def _parse_psa5(text):
+    """Parse SeisComP3 default .psa5 format.
+
+    Expected columns: LON LAT DIST STA COMP PSA03 PSA10 PSA30
+    Lines starting with '#' are comments/headers.
+    PSA values assumed in g.
+    """
+    records = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        parts = line.split()
+        if len(parts) < 8:
+            continue
+        try:
+            records.append({
+                'lon':       float(parts[0]),
+                'lat':       float(parts[1]),
+                'dist':      float(parts[2]),
+                'station':   parts[3],
+                'component': parts[4],
+                'psa03':     float(parts[5]),
+                'psa10':     float(parts[6]),
+                'psa30':     float(parts[7]),
+            })
+        except (ValueError, IndexError):
+            continue
+    return records
+
+
+def _downsample(points, n=200):
+    """Reduce a list of {x, y} dicts to at most n evenly spaced points."""
+    if not points or len(points) <= n:
+        return points
+    step = len(points) / n
+    return [points[int(i * step)] for i in range(n)]
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings as dj_settings
+
+
+@csrf_exempt
+def psa5_upload_api(request):
+    """POST endpoint: receive a .psa5 file from the shakemap machine.
+
+    Required POST fields:
+      event_id  — WIB timestamp string, e.g. '20251016101252'
+      psa5      — the .psa5 file upload
+
+    Auth: Bearer token in Authorization header (PSA5_API_TOKEN setting).
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=405)
+
+    token = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+    expected = getattr(dj_settings, 'PSA5_API_TOKEN', '')
+    if not expected or token != expected:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    event_id = request.POST.get('event_id', '').strip()
+    if not event_id:
+        return JsonResponse({'error': 'Missing event_id'}, status=400)
+
+    psa5_file = request.FILES.get('psa5')
+    if not psa5_file:
+        return JsonResponse({'error': 'Missing psa5 file'}, status=400)
+
+    try:
+        text = psa5_file.read().decode('utf-8', errors='replace')
+        records = _parse_psa5(text)
+    except Exception as exc:
+        return JsonResponse({'error': f'Parse error: {exc}'}, status=400)
+
+    if not records:
+        return JsonResponse({'error': 'No valid data rows in psa5 file'}, status=400)
+
+    from .models import EventResponseSpectrum
+    saved = updated = 0
+    for rec in records:
+        _, created = EventResponseSpectrum.objects.update_or_create(
+            event_id=event_id,
+            station_code=rec['station'],
+            component=rec['component'],
+            defaults={
+                'latitude':    rec['lat'],
+                'longitude':   rec['lon'],
+                'distance_km': rec['dist'],
+                'psa03':       rec['psa03'],
+                'psa10':       rec['psa10'],
+                'psa30':       rec['psa30'],
+            },
+        )
+        if created:
+            saved += 1
+        else:
+            updated += 1
+
+    return JsonResponse({'event_id': event_id, 'saved': saved, 'updated': updated})
+
+
+def spectrum_json_api(request, event_id):
+    """GET endpoint: return design spectrum + earthquake PSA for a shakemap event.
+
+    Response JSON:
+      {
+        "event_id": "...",
+        "stations": [
+          {
+            "code": "JAY", "component": "EHE",
+            "lat": ..., "lon": ..., "distance_km": ...,
+            "eq_spectrum": [{"T": 0.3, "Sa": ...}, {"T": 1.0, "Sa": ...}, {"T": 3.0, "Sa": ...}],
+            "design_spectrum": {"c": [{x, y},...], "d": [...], "e": [...]}  // null if no match
+          }
+        ]
+      }
+    """
+    from .models import EventResponseSpectrum, StationDesignSpectrum
+
+    qs = list(
+        EventResponseSpectrum.objects
+        .filter(event_id=event_id)
+        .order_by('distance_km', 'station_code', 'component')
+    )
+
+    station_codes = list({r.station_code for r in qs})
+    design_map = {
+        ds.station.code: ds
+        for ds in StationDesignSpectrum.objects
+        .filter(station__code__in=station_codes)
+        .select_related('station')
+    }
+
+    stations_out = []
+    seen = set()
+    for sp in qs:
+        key = (sp.station_code, sp.component)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        ds = design_map.get(sp.station_code)
+        entry = {
+            'code':        sp.station_code,
+            'component':   sp.component,
+            'lat':         sp.latitude,
+            'lon':         sp.longitude,
+            'distance_km': sp.distance_km,
+            'eq_spectrum': [
+                {'T': 0.3, 'Sa': sp.psa03},
+                {'T': 1.0, 'Sa': sp.psa10},
+                {'T': 3.0, 'Sa': sp.psa30},
+            ],
+            'design_spectrum': {
+                'c': _downsample(ds.spectrum_c),
+                'd': _downsample(ds.spectrum_d),
+                'e': _downsample(ds.spectrum_e),
+            } if ds else None,
+        }
+        stations_out.append(entry)
+
+    return JsonResponse({'event_id': event_id, 'stations': stations_out})

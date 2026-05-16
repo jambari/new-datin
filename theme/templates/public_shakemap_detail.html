@@ -203,6 +203,58 @@
   </div>
 </div>
 
+<!-- Comparison Spectrum Section -->
+<div class="page-wrap" id="spectrum-section" style="margin-top:0;padding-top:0;">
+  <div id="spectrum-card" style="
+    background:#fff; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,0.09);
+    padding:1.25rem 1.5rem; margin-bottom:1.5rem;
+  ">
+    <!-- Header -->
+    <h2 style="font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 .25rem;">
+      Perbandingan Respon Spektra
+    </h2>
+    <div id="spectrum-subtitle" style="font-size:.72rem;color:#6b7280;min-height:1.2em;margin-bottom:.75rem;"></div>
+
+    <!-- States -->
+    <div id="spectrum-loading" style="color:#9ca3af;font-size:.82rem;text-align:center;padding:2.5rem 0;">
+      Memuat data…
+    </div>
+    <div id="spectrum-empty" style="display:none;color:#9ca3af;font-size:.82rem;text-align:center;padding:2.5rem 0;">
+      Data respon spektra belum tersedia untuk kejadian ini.
+    </div>
+
+    <!-- Chart + controls -->
+    <div id="spectrum-chart-wrap" style="display:none;">
+
+      <!-- Canvas -->
+      <div style="position:relative;height:320px;">
+        <canvas id="spectrumChart"></canvas>
+      </div>
+
+      <!-- Toggle legend (checkboxes) -->
+      <div id="spectrum-legend"
+        style="display:flex;flex-wrap:wrap;gap:.5rem .9rem;margin-top:.9rem;padding:.6rem .75rem;
+               background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Station picker (shown only if >1 station) -->
+      <div id="station-picker" style="margin-top:.75rem;display:none;">
+        <div style="font-size:.68rem;font-weight:600;color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:.07em;margin-bottom:.35rem;">Pilih Stasiun</div>
+        <div id="station-btns" style="display:flex;flex-wrap:wrap;gap:.35rem;"></div>
+      </div>
+
+      <!-- Footer note -->
+      <p style="font-size:.67rem;color:#9ca3af;margin-top:.75rem;margin-bottom:0;line-height:1.5;">
+        Spektra desain: SNI 1726-2019 (rsa.ciptakarya.pu.go.id) · 5% damping ·
+        PSA gempa: SeisComP3 ShakeMap (<code style="font-size:.65rem;">.psa5</code>) ·
+        Klik label di atas untuk tampilkan/sembunyikan kurva.
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- Lightbox -->
 <div id="lightbox">
   <span id="lightbox-close">&times;</span>
@@ -284,5 +336,229 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === '-') { scale = Math.max(scale-0.25,0.5); applyTransform(); }
   });
 });
+</script>
+
+<!-- Spectrum chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const EVENT_ID = '{{ wib_ts }}';
+  if (!EVENT_ID) return;
+
+  const API_URL = `/api/shakemap/${EVENT_ID}/spectrum.json`;
+
+  // Design curve colours + labels
+  const DESIGN = [
+    { key: 'c', label: 'Desain Kelas C', color: '#16a34a' },
+    { key: 'd', label: 'Desain Kelas D', color: '#d97706' },
+    { key: 'e', label: 'Desain Kelas E', color: '#dc2626' },
+  ];
+  const PSA_COLOR = '#2563eb';
+
+  let allStations = [];
+  let chartInst   = null;
+  let activeIdx   = 0;
+  // Remember hidden state per dataset label across station switches
+  const hiddenState = {};
+
+  // ── Dataset builders ────────────────────────────────────────────────────────
+
+  function designDatasets(station) {
+    const ds = station.design_spectrum;
+    return DESIGN.map(d => ({
+      label:       d.label,
+      type:        'line',
+      data:        ds ? ds[d.key].map(p => ({ x: p.x, y: p.y })) : [],
+      borderColor: d.color,
+      borderWidth: 2,
+      pointRadius: 0,
+      fill:        false,
+      tension:     0.15,
+      hidden:      hiddenState[d.label] ?? false,
+    }));
+  }
+
+  function psaDataset(station) {
+    const lbl = `PSA Gempa — ${station.code}/${station.component}`;
+    return {
+      label:           lbl,
+      type:            'line',
+      data:            station.eq_spectrum.map(p => ({ x: p.T, y: p.Sa })),
+      borderColor:     PSA_COLOR,
+      backgroundColor: PSA_COLOR,
+      borderWidth:     2,
+      borderDash:      [6, 4],
+      pointRadius:     9,
+      pointHoverRadius: 11,
+      pointStyle:      'circle',
+      fill:            false,
+      tension:         0,
+      hidden:          hiddenState[lbl] ?? false,
+    };
+  }
+
+  // ── Legend ───────────────────────────────────────────────────────────────────
+
+  function buildLegend() {
+    const el = document.getElementById('spectrum-legend');
+    el.innerHTML = '';
+
+    chartInst.data.datasets.forEach((ds, i) => {
+      const color = ds.borderColor || '#888';
+      const isDash = Array.isArray(ds.borderDash) && ds.borderDash.length;
+
+      const wrap = document.createElement('label');
+      wrap.style.cssText =
+        'display:flex;align-items:center;gap:.35rem;cursor:pointer;' +
+        'font-size:.73rem;color:#374151;user-select:none;white-space:nowrap;';
+
+      const cb = document.createElement('input');
+      cb.type    = 'checkbox';
+      cb.checked = !ds.hidden;
+      cb.style.accentColor = color;
+      cb.addEventListener('change', () => {
+        chartInst.data.datasets[i].hidden = !cb.checked;
+        hiddenState[ds.label] = !cb.checked;
+        chartInst.update('none');
+      });
+
+      // Swatch: dashed line for PSA, solid for design
+      const swatch = document.createElement('span');
+      if (isDash) {
+        swatch.style.cssText =
+          `display:inline-flex;align-items:center;width:26px;height:10px;overflow:hidden;`;
+        swatch.innerHTML =
+          `<svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5"
+            stroke="${color}" stroke-width="2.5" stroke-dasharray="5 3"/></svg>`;
+      } else {
+        swatch.style.cssText =
+          `display:inline-block;width:24px;height:3px;background:${color};border-radius:2px;`;
+      }
+
+      wrap.appendChild(cb);
+      wrap.appendChild(swatch);
+      wrap.appendChild(document.createTextNode(' ' + ds.label));
+      el.appendChild(wrap);
+    });
+  }
+
+  // ── Station picker ───────────────────────────────────────────────────────────
+
+  function buildStationPicker() {
+    const picker = document.getElementById('station-picker');
+    const btns   = document.getElementById('station-btns');
+    btns.innerHTML = '';
+
+    allStations.forEach((st, i) => {
+      const btn = document.createElement('button');
+      btn.dataset.idx = i;
+      btn.textContent = `${st.code}/${st.component} · ${st.distance_km.toFixed(1)} km`;
+      btn.style.cssText =
+        'font-size:.72rem;padding:4px 12px;border-radius:20px;border:1px solid #e2e8f0;' +
+        'cursor:pointer;transition:background .15s,color .15s,border-color .15s;' +
+        'background:#f8fafc;color:#374151;';
+      btn.addEventListener('click', () => switchStation(i));
+      btns.appendChild(btn);
+    });
+
+    if (allStations.length > 1) picker.style.display = 'block';
+    highlightActiveBtn();
+  }
+
+  function highlightActiveBtn() {
+    document.querySelectorAll('#station-btns button').forEach(btn => {
+      const active = +btn.dataset.idx === activeIdx;
+      btn.style.background   = active ? '#2563eb' : '#f8fafc';
+      btn.style.color        = active ? '#fff'    : '#374151';
+      btn.style.borderColor  = active ? '#2563eb' : '#e2e8f0';
+    });
+  }
+
+  // ── Chart render / station switch ────────────────────────────────────────────
+
+  function updateSubtitle(station) {
+    const psa = station.eq_spectrum;
+    document.getElementById('spectrum-subtitle').textContent =
+      `${station.code}/${station.component} · jarak: ${station.distance_km.toFixed(1)} km` +
+      ` · PSA₀.₃ = ${psa[0].Sa.toFixed(4)} g` +
+      ` · PSA₁.₀ = ${psa[1].Sa.toFixed(4)} g` +
+      ` · PSA₃.₀ = ${psa[2].Sa.toFixed(4)} g`;
+  }
+
+  function switchStation(idx) {
+    activeIdx = idx;
+    const station = allStations[idx];
+    const dSets = [...designDatasets(station), psaDataset(station)];
+    chartInst.data.datasets = dSets;
+    chartInst.update('none');
+    buildLegend();
+    updateSubtitle(station);
+    highlightActiveBtn();
+  }
+
+  function initChart(station) {
+    const datasets = [...designDatasets(station), psaDataset(station)];
+    const ctx = document.getElementById('spectrumChart').getContext('2d');
+    chartInst = new Chart(ctx, {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: { duration: 200 },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            type: 'linear',
+            title: { display: true, text: 'Periode  T  (detik)', font: { size: 11 }, color: '#6b7280' },
+            min: 0, max: 4,
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { size: 10 }, color: '#6b7280' },
+          },
+          y: {
+            type: 'linear',
+            title: { display: true, text: 'Sa  (g)', font: { size: 11 }, color: '#6b7280' },
+            min: 0,
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { size: 10 }, color: '#6b7280' },
+          },
+        },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const p = ctx.parsed;
+                return `  ${ctx.dataset.label}: T=${p.x.toFixed(3)}s, Sa=${p.y.toFixed(5)}g`;
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Bootstrap ────────────────────────────────────────────────────────────────
+
+  fetch(API_URL)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('spectrum-loading').style.display = 'none';
+      if (!data.stations || !data.stations.length) {
+        document.getElementById('spectrum-empty').style.display = 'block';
+        return;
+      }
+      allStations = data.stations;
+      document.getElementById('spectrum-chart-wrap').style.display = 'block';
+      initChart(allStations[0]);
+      buildLegend();
+      buildStationPicker();
+      updateSubtitle(allStations[0]);
+    })
+    .catch(() => {
+      document.getElementById('spectrum-loading').style.display = 'none';
+      document.getElementById('spectrum-empty').style.display = 'block';
+    });
+})();
 </script>
 {% endblock %}

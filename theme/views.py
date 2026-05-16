@@ -258,6 +258,7 @@ def public_shakemap_detail(request, pk):
     return render(request, 'public_shakemap_detail.html', {
         'object': obj,
         'shk_event': shk_event,
+        'wib_ts': wib_ts,
     })
 
 
