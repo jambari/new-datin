@@ -3,6 +3,7 @@ lightning/db3/
 magnet/raw/
 archive_shakemaps/
 archive_shakemaps_backfill/
+yolo_progress/
 
 # --- Standar Django & Python (Sangat Disarankan) ---
 __pycache__/
