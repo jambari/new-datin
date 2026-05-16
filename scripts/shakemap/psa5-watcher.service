@@ -1,0 +1,23 @@
+[Unit]
+Description=PSA5 Shakemap Watcher — auto-send .psa5 files to new-datin
+Documentation=https://github.com/your-org/new-datin
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sysop
+Group=sysop
+ExecStart=/usr/bin/bash /home/sysop/scripts/psa5_watch.sh
+Restart=on-failure
+RestartSec=15s
+# Give it 10 s to start before systemd considers it failed
+TimeoutStartSec=10
+
+# Log via journald — view with: journalctl -u psa5-watcher -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=psa5-watcher
+
+[Install]
+WantedBy=multi-user.target
