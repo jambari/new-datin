@@ -27,11 +27,9 @@ fi
 
 log "PSA5 watcher started. Watching $SPECTRA_DIR …"
 
-inotifywait -m -r -e close_write \
-    --format '%w%f' \
-    --includei '\.psa5$' \
-    "$SPECTRA_DIR" 2>/dev/null \
+inotifywait -m -r -e close_write --format '%w%f' "$SPECTRA_DIR" \
 | while IFS= read -r FILEPATH; do
+    [[ "$FILEPATH" =~ \.psa5$ ]] || continue
     log "New .psa5 detected: $FILEPATH"
     sleep "$WRITE_SETTLE_SECS"
     bash "$SEND_SCRIPT" "$FILEPATH" >> "$LOG_FILE" 2>&1 &
