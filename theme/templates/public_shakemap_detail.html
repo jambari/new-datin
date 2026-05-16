@@ -353,18 +353,27 @@ document.addEventListener('DOMContentLoaded', function () {
     { key: 'd', label: 'Desain Kelas D', color: '#d97706' },
     { key: 'e', label: 'Desain Kelas E', color: '#dc2626' },
   ];
-  const PSA_COLOR = '#2563eb';
+  // Distinct colours per accelerometer component (avoid clashing with design palette)
+  const COMP_COLORS = {
+    HNE:    '#2563eb',  // blue
+    HNN:    '#7c3aed',  // purple
+    HNZ:    '#0891b2',  // cyan
+    '00HNE': '#2563eb',
+    '00HNN': '#7c3aed',
+    '00HNZ': '#0891b2',
+  };
+  const PSA_FALLBACK_COLOR = '#475569';
 
-  let allStations = [];
-  let chartInst   = null;
-  let activeIdx   = 0;
+  let stationGroups = [];   // [{ code, design_spectrum, components: [{component, eq_spectrum}] }]
+  let chartInst    = null;
+  let activeIdx    = 0;
   // Remember hidden state per dataset label across station switches
   const hiddenState = {};
 
   // ── Dataset builders ────────────────────────────────────────────────────────
 
-  function designDatasets(station) {
-    const ds = station.design_spectrum;
+  function designDatasets(group) {
+    const ds = group.design_spectrum;
     return DESIGN.map(d => ({
       label:       d.label,
       type:        'line',
@@ -378,22 +387,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }));
   }
 
-  function psaDataset(station) {
-    const lbl = `PSA Gempa — ${station.code}/${station.component}`;
-    return {
-      label:           lbl,
-      type:            'line',
-      data:            station.eq_spectrum.map(p => ({ x: p.T, y: p.Sa })),
-      borderColor:     PSA_COLOR,
-      backgroundColor: PSA_COLOR,
-      borderWidth:     2,
-      borderDash:      [6, 4],
-      pointRadius:     0,
-      pointHoverRadius: 4,
-      fill:            false,
-      tension:         0.15,
-      hidden:          hiddenState[lbl] ?? false,
-    };
+  function psaDatasets(group) {
+    return group.components.map(c => {
+      const lbl   = `PSA Gempa — ${c.component}`;
+      const color = COMP_COLORS[c.component] || PSA_FALLBACK_COLOR;
+      return {
+        label:           lbl,
+        type:            'line',
+        data:            c.eq_spectrum.map(p => ({ x: p.T, y: p.Sa })),
+        borderColor:     color,
+        backgroundColor: color,
+        borderWidth:     2,
+        borderDash:      [6, 4],
+        pointRadius:     0,
+        pointHoverRadius: 4,
+        fill:            false,
+        tension:         0.15,
+        hidden:          hiddenState[lbl] ?? false,
+      };
+    });
   }
 
   // ── Legend ───────────────────────────────────────────────────────────────────
@@ -448,10 +460,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const btns   = document.getElementById('station-btns');
     btns.innerHTML = '';
 
-    allStations.forEach((st, i) => {
+    stationGroups.forEach((g, i) => {
       const btn = document.createElement('button');
       btn.dataset.idx = i;
-      btn.textContent = `${st.code}/${st.component}`;
+      btn.textContent = g.code;
       btn.style.cssText =
         'font-size:.72rem;padding:4px 12px;border-radius:20px;border:1px solid #e2e8f0;' +
         'cursor:pointer;transition:background .15s,color .15s,border-color .15s;' +
@@ -460,7 +472,7 @@ document.addEventListener('DOMContentLoaded', function () {
       btns.appendChild(btn);
     });
 
-    if (allStations.length > 1) picker.style.display = 'block';
+    if (stationGroups.length > 1) picker.style.display = 'block';
     highlightActiveBtn();
   }
 
@@ -475,40 +487,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ── Chart render / station switch ────────────────────────────────────────────
 
-  function saAt(spectrum, T) {
-    if (!spectrum || !spectrum.length) return null;
-    let best = spectrum[0];
-    let bestDiff = Math.abs(best.T - T);
-    for (let i = 1; i < spectrum.length; i++) {
-      const d = Math.abs(spectrum[i].T - T);
-      if (d < bestDiff) { best = spectrum[i]; bestDiff = d; }
-    }
-    return best.Sa;
-  }
-
-  function updateSubtitle(station) {
-    const sp = station.eq_spectrum;
-    const s03 = saAt(sp, 0.3), s10 = saAt(sp, 1.0), s30 = saAt(sp, 3.0);
+  function updateSubtitle(group) {
+    const comps = group.components.map(c => c.component).join(', ');
     document.getElementById('spectrum-subtitle').textContent =
-      `${station.code}/${station.component}` +
-      ` · PSA₀.₃ = ${s03 != null ? s03.toFixed(4) : '—'} g` +
-      ` · PSA₁.₀ = ${s10 != null ? s10.toFixed(4) : '—'} g` +
-      ` · PSA₃.₀ = ${s30 != null ? s30.toFixed(4) : '—'} g`;
+      `Stasiun ${group.code} · komponen: ${comps}`;
   }
 
   function switchStation(idx) {
     activeIdx = idx;
-    const station = allStations[idx];
-    const dSets = [...designDatasets(station), psaDataset(station)];
-    chartInst.data.datasets = dSets;
+    const group = stationGroups[idx];
+    chartInst.data.datasets = [...designDatasets(group), ...psaDatasets(group)];
     chartInst.update('none');
     buildLegend();
-    updateSubtitle(station);
+    updateSubtitle(group);
     highlightActiveBtn();
   }
 
-  function initChart(station) {
-    const datasets = [...designDatasets(station), psaDataset(station)];
+  function initChart(group) {
+    const datasets = [...designDatasets(group), ...psaDatasets(group)];
     const ctx = document.getElementById('spectrumChart').getContext('2d');
     chartInst = new Chart(ctx, {
       type: 'scatter',
@@ -559,12 +555,29 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('spectrum-empty').style.display = 'block';
         return;
       }
-      allStations = data.stations;
+      // Group flat [code, component, eq_spectrum, design_spectrum] rows by station code.
+      const byCode = new Map();
+      data.stations.forEach(s => {
+        if (!byCode.has(s.code)) {
+          byCode.set(s.code, {
+            code: s.code,
+            design_spectrum: s.design_spectrum,
+            components: [],
+          });
+        }
+        byCode.get(s.code).components.push({
+          component:   s.component,
+          eq_spectrum: s.eq_spectrum,
+        });
+      });
+      stationGroups = Array.from(byCode.values());
+      stationGroups.forEach(g => g.components.sort((a, b) => a.component.localeCompare(b.component)));
+
       document.getElementById('spectrum-chart-wrap').style.display = 'block';
-      initChart(allStations[0]);
+      initChart(stationGroups[0]);
       buildLegend();
       buildStationPicker();
-      updateSubtitle(allStations[0]);
+      updateSubtitle(stationGroups[0]);
     })
     .catch(() => {
       document.getElementById('spectrum-loading').style.display = 'none';
