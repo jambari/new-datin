@@ -239,6 +239,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'repository.tasks.check_gempa_merusak_task',
         'schedule': crontab(minute=30, hour=1),  # 01:30 UTC = 08:30 WIB / 10:30 WIT
     },
+
+    'send-birthday-wishes-daily': {
+        'task': 'jadwal.tasks.send_birthday_wishes_task',
+        'schedule': crontab(minute=0, hour=22),  # 22:00 UTC = 07:00 WIT next day
+    },
 }
 
 # settings.py
