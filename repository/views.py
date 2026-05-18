@@ -2031,11 +2031,101 @@ def yolo_progress_view(request):
         except (ValueError, TypeError):
             pass
 
+    # Available download artifacts (size + mtime)
+    artifacts = []
+    snap_dir = '/var/www/html/cache/yolo_snapshots'
+    if state and state.get('results_csv'):
+        artifacts.append({
+            'key':   'results.csv',
+            'name':  'results.csv',
+            'size':  len(state['results_csv'].encode('utf-8')),
+            'mtime': state.get('received_at'),
+        })
+    for fname in ('best.pt', 'last.pt'):
+        fpath = os.path.join(snap_dir, fname)
+        if os.path.exists(fpath):
+            stat = os.stat(fpath)
+            artifacts.append({
+                'key':   fname,
+                'name':  fname,
+                'size':  stat.st_size,
+                'mtime': datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+            })
+
     context = {
         'state':        state,
         'last_row':     last_row,
         'metrics':      metrics,
         'metrics_json': json.dumps(metrics),
         'age_seconds':  age_seconds,
+        'artifacts':    artifacts,
     }
     return render(request, 'repository/yolo_progress.html', context)
+
+
+_YOLO_SNAPSHOT_DIR = '/var/www/html/cache/yolo_snapshots'
+_YOLO_DOWNLOAD_KEYS = {'best.pt', 'last.pt', 'results.csv'}
+
+
+@csrf_exempt
+def yolo_snapshot_upload_api(request):
+    """POST endpoint: receive best.pt / last.pt from the yolo host.
+
+    Required POST fields:
+      weight_name  — 'best' or 'last'
+      file         — the .pt file (multipart upload)
+
+    Auth: Bearer token (PSA5_API_TOKEN, shared with the other pipelines).
+    """
+    import os
+    from django.core.files.base import ContentFile
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=405)
+
+    token = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+    expected = getattr(dj_settings, 'PSA5_API_TOKEN', '')
+    if not expected or token != expected:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    weight_name = request.POST.get('weight_name', '').strip()
+    if weight_name not in ('best', 'last'):
+        return JsonResponse({'error': "weight_name must be 'best' or 'last'"}, status=400)
+
+    upload = request.FILES.get('file')
+    if not upload:
+        return JsonResponse({'error': 'Missing file'}, status=400)
+
+    os.makedirs(_YOLO_SNAPSHOT_DIR, exist_ok=True)
+    out_path = os.path.join(_YOLO_SNAPSHOT_DIR, f'{weight_name}.pt')
+    with open(out_path, 'wb') as f:
+        for chunk in upload.chunks():
+            f.write(chunk)
+
+    return JsonResponse({'ok': True, 'path': out_path, 'bytes': os.path.getsize(out_path)})
+
+
+@login_required
+@user_passes_test(_is_jambari)
+def yolo_download_view(request, key):
+    """Serve a YOLO artifact for download, jambari-only."""
+    import os
+    from django.http import FileResponse, HttpResponse, Http404
+
+    if key not in _YOLO_DOWNLOAD_KEYS:
+        raise Http404("unknown artifact")
+
+    if key == 'results.csv':
+        if not os.path.exists(_YOLO_STATE_FILE):
+            raise Http404("no state yet")
+        with open(_YOLO_STATE_FILE) as f:
+            state = json.load(f)
+        text = state.get('results_csv') or ''
+        resp = HttpResponse(text, content_type='text/csv')
+        resp['Content-Disposition'] = 'attachment; filename="results.csv"'
+        return resp
+
+    fpath = os.path.join(_YOLO_SNAPSHOT_DIR, key)
+    if not os.path.exists(fpath):
+        raise Http404(f"{key} not uploaded yet")
+    return FileResponse(open(fpath, 'rb'), as_attachment=True, filename=key)

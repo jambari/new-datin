@@ -1,6 +1,6 @@
 # repository/api_urls.py
 from django.urls import path
-from .views import DataAvailabilityReportView, station_search_api, AcceleroDataAvailabilityView, push_events_api, gempa_laporan_bulanan_api, gempa_dirasakan_api, psa5_upload_api, spectrum_json_api, waveform_upload_api, yolo_state_upload_api
+from .views import DataAvailabilityReportView, station_search_api, AcceleroDataAvailabilityView, push_events_api, gempa_laporan_bulanan_api, gempa_dirasakan_api, psa5_upload_api, spectrum_json_api, waveform_upload_api, yolo_state_upload_api, yolo_snapshot_upload_api
 from wrsng.views import WRSNGStatusUpdateAPI
 
 urlpatterns = [
@@ -20,4 +20,6 @@ urlpatterns = [
     path('shakemap/<str:event_id>/spectrum.json', spectrum_json_api, name='spectrum_json_api'),
     # YOLO training state push (private dashboard backend)
     path('yolo/state/', yolo_state_upload_api, name='yolo_state_upload_api'),
+    # YOLO weight snapshot push (best.pt / last.pt)
+    path('yolo/snapshot/', yolo_snapshot_upload_api, name='yolo_snapshot_upload_api'),
 ]

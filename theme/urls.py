@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from repository.views import yolo_progress_view
+from repository.views import yolo_progress_view, yolo_download_view
 
 urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
@@ -23,4 +23,5 @@ urlpatterns = [
     path('poster/', views.poster_datin, name='poster_datin'),
     # Private (jambari-only) YOLO training progress dashboard
     path('yolo-progress/', yolo_progress_view, name='yolo_progress'),
+    path('yolo-progress/download/<str:key>', yolo_download_view, name='yolo_download'),
 ]

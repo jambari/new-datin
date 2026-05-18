@@ -99,6 +99,29 @@
       <canvas id="mapChart"></canvas>
     </div>
 
+    <h3 style="font-size:.75rem;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin:1.5rem 0 .5rem;">Download Artefak</h3>
+    {% if artifacts %}
+      <div style="display:flex;flex-wrap:wrap;gap:.6rem;">
+        {% for a in artifacts %}
+          <a href="{% url 'yolo_download' key=a.key %}"
+             style="display:inline-flex;align-items:center;gap:.5rem;
+                    background:#0b1220;border:1px solid #334155;border-radius:8px;
+                    padding:.5rem .9rem;text-decoration:none;color:#e2e8f0;
+                    font-family:'JetBrains Mono',monospace;font-size:.74rem;">
+            <span style="color:#22d3ee;">⬇</span>
+            <span><strong>{{ a.name }}</strong></span>
+            <span style="color:#64748b;">·
+              {% if a.size > 1048576 %}{{ a.size|floatformat:0 }} B ≈ {{ a.size|filesizeformat }}
+              {% else %}{{ a.size|filesizeformat }}{% endif %}
+            </span>
+            {% if a.mtime %}<span style="color:#64748b;">· {{ a.mtime|slice:":19" }}Z</span>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color:#64748b;font-size:.78rem;font-style:italic;">Belum ada artefak tersedia. Weight snapshot di-push tiap 30 menit.</p>
+    {% endif %}
+
     <h3 style="font-size:.75rem;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin:1.5rem 0 .5rem;">Watchdog Log Tail</h3>
     <pre class="log">{{ state.watchdog_tail|default:"(empty)" }}</pre>
 
