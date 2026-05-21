@@ -8,13 +8,69 @@
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-gray-900">Hujan</h1>
-        <a href="{% url 'tambah_hujan' %}"
-           class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg shadow">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          Tambah Hujan
-        </a>
+        <div class="flex items-center gap-2">
+          <button type="button" id="advanced-filter-btn"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-lg shadow">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 018 17v-3.586L3.293 6.707A1 1 0 013 6V4z"/>
+            </svg>
+            Filter
+            {% if has_filters %}<span class="ml-1 inline-flex items-center justify-center w-2 h-2 bg-green-500 rounded-full"></span>{% endif %}
+          </button>
+          <a href="{% url 'tambah_hujan' %}"
+             class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg shadow">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Tambah Hujan
+          </a>
+        </div>
+      </div>
+
+      <!-- Advanced filter panel -->
+      <div id="advanced-filter-panel" class="bg-white shadow rounded-lg p-4 mb-4 {% if not has_filters %}hidden{% endif %}">
+        <form method="get" action="{% url 'daftar_hujan' %}">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Dari Tanggal</label>
+              <input type="date" name="start" value="{{ f_start }}" class="border rounded w-full p-2">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Sampai Tanggal</label>
+              <input type="date" name="end" value="{{ f_end }}" class="border rounded w-full p-2">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Kategori</label>
+              <select name="kategori" class="border rounded w-full p-2 bg-white">
+                <option value="">Semua Kategori</option>
+                {% for val, label in kategori_choices %}
+                  {% if val %}<option value="{{ val }}" {% if val == f_kategori %}selected{% endif %}>{{ label }}</option>{% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Petugas</label>
+              <select name="petugas" class="border rounded w-full p-2 bg-white">
+                <option value="">Semua Petugas</option>
+                {% for nama in petugas_list %}
+                  <option value="{{ nama }}" {% if nama == f_petugas %}selected{% endif %}>{{ nama }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Cari Keterangan</label>
+              <input type="text" name="q" value="{{ f_q }}" placeholder="kata kunci..." class="border rounded w-full p-2">
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4">
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow">
+              Terapkan Filter
+            </button>
+            <a href="{% url 'daftar_hujan' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-semibold rounded-lg">
+              Reset
+            </a>
+          </div>
+        </form>
       </div>
                 <div class="bg-white shadow overflow-hidden sm:rounded-lg">
                   <table class="min-w-full leading-normal">
@@ -85,6 +141,12 @@
                                   </a>
                               </td>
                           </tr>
+                          {% empty %}
+                          <tr>
+                              <td colspan="7" class="px-5 py-8 border-b border-gray-200 bg-white text-sm text-center text-gray-500">
+                                  Tidak ada data hujan{% if has_filters %} untuk filter ini{% endif %}.
+                              </td>
+                          </tr>
                           {% endfor %}
                       </tbody>
                   </table>
@@ -92,8 +154,8 @@
                 <div class="pagination mt-6 flex justify-center items-center">
                     <span class="step-links">
                         {% if hujan_records.has_previous %}
-                            <a href="?page=1" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">&laquo; first</a>
-                            <a href="?page={{ hujan_records.previous_page_number }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">previous</a>
+                            <a href="?page=1{% if querystring %}&{{ querystring }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">&laquo; first</a>
+                            <a href="?page={{ hujan_records.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">previous</a>
                         {% endif %}
 
                         <span class="current-page px-4 py-2 text-sm font-medium text-gray-700">
@@ -101,8 +163,8 @@
                         </span>
 
                         {% if hujan_records.has_next %}
-                            <a href="?page={{ hujan_records.next_page_number }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">next</a>
-                            <a href="?page={{ hujan_records.paginator.num_pages }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">last &raquo;</a>
+                            <a href="?page={{ hujan_records.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">next</a>
+                            <a href="?page={{ hujan_records.paginator.num_pages }}{% if querystring %}&{{ querystring }}{% endif %}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">last &raquo;</a>
                         {% endif %}
                     </span>
                 </div>

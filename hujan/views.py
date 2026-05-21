@@ -6,29 +6,59 @@ from .models import Hujan
 from django.db.models import Max, Count, Q, Sum
 from datetime import datetime
 import json
-from .forms import HujanForm
+from .forms import HujanForm, KATEGORI_CHOICES
+from jadwal.models import Pegawai
 
 
 def daftar_hujan(request):
-    all_hujan_records = Hujan.objects.all().order_by('-tanggal')
-    
-    # Set the number of records per page
-    paginator = Paginator(all_hujan_records, 10)
-    
-    # Get the current page number from the URL
+    qs = Hujan.objects.all().order_by('-tanggal')
+
+    # --- Filters (all optional, combined with AND) ---
+    f_start = request.GET.get('start', '').strip()
+    f_end = request.GET.get('end', '').strip()
+    f_kategori = request.GET.get('kategori', '').strip()
+    f_petugas = request.GET.get('petugas', '').strip()
+    f_q = request.GET.get('q', '').strip()
+
+    if f_start:
+        qs = qs.filter(tanggal__gte=f_start)
+    if f_end:
+        qs = qs.filter(tanggal__lte=f_end)
+    if f_kategori:
+        qs = qs.filter(kategori=f_kategori)
+    if f_petugas:
+        qs = qs.filter(petugas=f_petugas)
+    if f_q:
+        qs = qs.filter(keterangan__icontains=f_q)
+
+    paginator = Paginator(qs, 10)
     page = request.GET.get('page')
-    
     try:
         hujan_records = paginator.page(page)
     except PageNotAnInteger:
-        # If page is not an integer, deliver first page.
         hujan_records = paginator.page(1)
     except EmptyPage:
-        # If page is out of range (e.g., 9999), deliver last page of results.
         hujan_records = paginator.page(paginator.num_pages)
 
+    # Preserve active filters across pagination links (drop the page param).
+    params = request.GET.copy()
+    params.pop('page', None)
+    querystring = params.urlencode()
+
+    petugas_list = (Pegawai.objects.filter(tanggal_keluar__isnull=True)
+                    .order_by('nama').values_list('nama', flat=True))
+
     context = {
-        'hujan_records': hujan_records
+        'hujan_records': hujan_records,
+        'kategori_choices': KATEGORI_CHOICES,
+        'petugas_list': petugas_list,
+        'f_start': f_start,
+        'f_end': f_end,
+        'f_kategori': f_kategori,
+        'f_petugas': f_petugas,
+        'f_q': f_q,
+        'querystring': querystring,
+        'has_filters': any([f_start, f_end, f_kategori, f_petugas, f_q]),
     }
     return render(request, 'hujan/daftar_hujan.html', context)
 
