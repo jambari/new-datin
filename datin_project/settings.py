@@ -173,7 +173,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'theme/static']
+# 'theme' is an installed app, so AppDirectoriesFinder already collects
+# theme/static. Listing it here as well made every file resolve twice (the
+# "Found another file with the destination path ..." collectstatic warning).
+STATICFILES_DIRS = []
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
