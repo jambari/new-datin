@@ -2,34 +2,40 @@
 
 from django.shortcuts import render, redirect, get_object_or_404 # Add redirect and get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import HttpResponse
 from .models import Hujan
 from django.db.models import Max, Count, Q, Sum
+from django.utils import timezone
 from datetime import datetime
 import json
 from .forms import HujanForm, KATEGORI_CHOICES
 from jadwal.models import Pegawai
 
 
-def daftar_hujan(request):
+def _filter_hujan(request):
+    """Apply the daftar_hujan filters (start, end, kategori, petugas, q) from the
+    request query string. Returns (queryset, filters_dict) so the list view and the
+    Excel export stay in sync."""
     qs = Hujan.objects.all().order_by('-tanggal')
+    f = {k: request.GET.get(k, '').strip()
+         for k in ('start', 'end', 'kategori', 'petugas', 'q')}
+    if f['start']:
+        qs = qs.filter(tanggal__gte=f['start'])
+    if f['end']:
+        qs = qs.filter(tanggal__lte=f['end'])
+    if f['kategori']:
+        qs = qs.filter(kategori=f['kategori'])
+    if f['petugas']:
+        qs = qs.filter(petugas=f['petugas'])
+    if f['q']:
+        qs = qs.filter(keterangan__icontains=f['q'])
+    return qs, f
 
-    # --- Filters (all optional, combined with AND) ---
-    f_start = request.GET.get('start', '').strip()
-    f_end = request.GET.get('end', '').strip()
-    f_kategori = request.GET.get('kategori', '').strip()
-    f_petugas = request.GET.get('petugas', '').strip()
-    f_q = request.GET.get('q', '').strip()
 
-    if f_start:
-        qs = qs.filter(tanggal__gte=f_start)
-    if f_end:
-        qs = qs.filter(tanggal__lte=f_end)
-    if f_kategori:
-        qs = qs.filter(kategori=f_kategori)
-    if f_petugas:
-        qs = qs.filter(petugas=f_petugas)
-    if f_q:
-        qs = qs.filter(keterangan__icontains=f_q)
+def daftar_hujan(request):
+    qs, f = _filter_hujan(request)
+    f_start, f_end = f['start'], f['end']
+    f_kategori, f_petugas, f_q = f['kategori'], f['petugas'], f['q']
 
     paginator = Paginator(qs, 10)
     page = request.GET.get('page')
@@ -170,3 +176,42 @@ def edit_hujan(request, id):
         'submit_label': 'Simpan Perubahan',
     }
     return render(request, 'hujan/form_hujan.html', context)
+
+
+def export_hujan_excel(request):
+    """Export the (filtered) hujan list to .xlsx. Uses the same filters as
+    daftar_hujan, so the download matches what's shown in the table."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+
+    qs, _f = _filter_hujan(request)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Hujan"
+
+    headers = ['Tanggal', 'Obs (mm)', 'Hilman', 'Kategori', 'Keterangan', 'Petugas']
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    for h in qs:
+        ws.append([
+            h.tanggal.strftime('%Y-%m-%d') if h.tanggal else '',
+            h.obs,
+            h.hilman,
+            h.kategori,
+            h.keterangan or '',
+            h.petugas,
+        ])
+
+    for i, width in enumerate([14, 10, 10, 16, 40, 18], start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    filename = "hujan_%s.xlsx" % timezone.now().strftime('%Y%m%d_%H%M%S')
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="%s"' % filename
+    wb.save(response)
+    return response

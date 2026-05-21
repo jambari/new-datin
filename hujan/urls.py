@@ -7,5 +7,6 @@ urlpatterns = [
     path('data/hujan/', views.daftar_hujan, name='daftar_hujan'),
     path('data/hujan/tambah/', views.tambah_hujan, name='tambah_hujan'),
     path('data/hujan/query/', views.query_laporan_hujan, name='query_laporan_hujan'),
+    path('data/hujan/export/', views.export_hujan_excel, name='export_hujan_excel'),
     path('data/hujan/edit/<int:id>/', views.edit_hujan, name='edit_hujan'),
 ]
