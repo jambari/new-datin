@@ -1,0 +1,389 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block seo_title %}{{ bulletin.title }} · Buletin BMKG Jayapura{% endblock %}
+{% block meta_description %}{{ bulletin.title }} — Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .bl-dtl-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 2.5rem 0 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .bl-dtl-hero h1 { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; margin-bottom: 0.3rem; }
+  .bl-dtl-hero .breadcrumb { font-size: 0.72rem; color: #64748b; margin-bottom: 0.5rem; }
+  .bl-dtl-hero .breadcrumb a { color: #60a5fa; text-decoration: none; }
+  .bl-dtl-hero .breadcrumb a:hover { text-decoration: underline; }
+
+  .bl-dtl-container { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; display: flex; gap: 2rem; flex-wrap: wrap; }
+
+  .bl-dtl-main { flex: 1; min-width: 300px; }
+  .bl-dtl-main .meta { color: #94a3b8; font-size: 0.8rem; margin-bottom: 1rem; }
+
+  /* ── Flipbook ─────────────────────────────────────────── */
+  #flipbook-wrap {
+    background: rgba(15,23,42,0.85);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+    min-height: 420px;
+  }
+  #flipbook-container {
+    position: relative;
+    margin: 0 auto;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 6px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    background: #fff;
+  }
+  #flipbook-container canvas {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 auto;
+  }
+  .fb-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .fb-btn {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.4rem 0.9rem; border-radius: 6px;
+    background: rgba(255,255,255,0.08); color: #94a3b8;
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.75rem; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .fb-btn:hover { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .fb-btn:disabled { opacity: 0.35; cursor: default; }
+  .fb-btn:disabled:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
+  .fb-page-info {
+    font-size: 0.78rem; font-weight: 700; color: #e2e8f0;
+    min-width: 80px; text-align: center;
+  }
+  .fb-zoom {
+    display: flex; align-items: center; gap: 0.3rem;
+    margin-left: 0.5rem;
+  }
+  .fb-zoom input[type="range"] {
+    width: 80px; height: 4px;
+    -webkit-appearance: none; appearance: none;
+    background: rgba(255,255,255,0.15); border-radius: 2px; outline: none;
+  }
+  .fb-zoom input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #fbbf24; cursor: pointer;
+  }
+  .fb-loading {
+    text-align: center; padding: 3rem 0; color: #64748b;
+    font-size: 0.85rem;
+  }
+  .fb-spinner {
+    display: inline-block; width: 32px; height: 32px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: #fbbf24; border-radius: 50%;
+    animation: fb-spin 0.8s linear infinite;
+    margin-bottom: 0.5rem;
+  }
+  @keyframes fb-spin { to { transform: rotate(360deg); } }
+
+  /* Cover image in flipbook style */
+  .fb-cover-img {
+    width: 100%; border-radius: 6px; display: block;
+    margin-bottom: 1rem; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .fb-cover-img:hover { opacity: 0.9; }
+
+  .bl-dtl-side { width: 280px; flex-shrink: 0; }
+  .bl-dtl-side h4 { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #fbbf24; margin-bottom: 0.75rem; }
+  .bl-dtl-side .side-item {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .bl-dtl-side .side-item:last-child { border-bottom: none; }
+  .bl-dtl-side .side-item img { width: 70px; height: 55px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+  .bl-dtl-side .side-item .side-title { font-size: 0.72rem; font-weight: 600; color: #e2e8f0; line-height: 1.3; }
+  .bl-dtl-side .side-item .side-meta { font-size: 0.6rem; color: #64748b; }
+  .bl-dtl-side .side-item a { text-decoration: none; }
+  .bl-dtl-side .side-item a:hover .side-title { color: #fbbf24; }
+
+  .bl-download-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 1.5rem; border-radius: 8px;
+    background: #16a34a; color: #fff;
+    font-size: 0.85rem; font-weight: 700; text-decoration: none;
+    transition: background 0.15s;
+  }
+  .bl-download-btn:hover { background: #15803d; }
+
+  @media (max-width: 768px) {
+    .bl-dtl-container { flex-direction: column; }
+    .bl-dtl-side { width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="bl-dtl-hero">
+  <div class="bl-dtl-container" style="padding-bottom:0;">
+    <div class="breadcrumb">
+      <a href="{% url 'landing' %}">Beranda</a> &raquo;
+      <a href="{% url 'public_bulletin_list' %}">Buletin</a> &raquo;
+      {{ bulletin.title }}
+    </div>
+    <h1>{{ bulletin.title }}</h1>
+  </div>
+</div>
+
+<div class="bl-dtl-container">
+  <div class="bl-dtl-main">
+    <div class="meta">
+      {{ bulletin.bulan_display }} {{ bulletin.tahun }}
+    </div>
+
+    {% if bulletin.pdf_file %}
+    <!-- Flipbook PDF Viewer -->
+    <div id="flipbook-wrap">
+      <!-- Loading state -->
+      <div id="fb-loading" class="fb-loading">
+        <div class="fb-spinner"></div>
+        <div>Memuat halaman...</div>
+      </div>
+
+      <!-- Navigation controls (di atas) -->
+      <div id="fb-nav" class="fb-nav" style="display:none;">
+        <button class="fb-btn" id="fb-first" title="Halaman pertama">&laquo;</button>
+        <button class="fb-btn" id="fb-prev" title="Sebelumnya">&lsaquo;</button>
+        <span class="fb-page-info">
+          Halaman <span id="fb-page-num">1</span> / <span id="fb-page-count">—</span>
+        </span>
+        <button class="fb-btn" id="fb-next" title="Selanjutnya">&rsaquo;</button>
+        <button class="fb-btn" id="fb-last" title="Halaman terakhir">&raquo;</button>
+
+        <div class="fb-zoom">
+          <button class="fb-btn" id="fb-zoom-out" title="Perkecil">A−</button>
+          <input type="range" id="fb-zoom-range" min="0.5" max="2.0" step="0.1" value="1.0">
+          <button class="fb-btn" id="fb-zoom-in" title="Perbesar">A+</button>
+        </div>
+      </div>
+
+      <!-- Canvas container -->
+      <div id="flipbook-container" style="display:none;">
+        <canvas id="pdf-canvas"></canvas>
+      </div>
+
+      <!-- Cover image as clickable preview -->
+      {% if bulletin.cover %}
+      <img id="fb-cover-img" class="fb-cover-img" src="{{ bulletin.cover.url }}"
+           alt="{{ bulletin.title }}" onclick="startFlipbook()"
+           style="{% if bulletin.pdf_file %}cursor:pointer;{% endif %}">
+      {% endif %}
+
+      <!-- Download button -->
+      <div style="text-align:center; margin-top:1rem;">
+        <a href="{{ bulletin.pdf_file.url }}" class="bl-download-btn" download>
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Unduh PDF
+        </a>
+      </div>
+    </div>
+
+    {% else %}
+    <div style="padding:2rem; text-align:center; color:#64748b; background:rgba(255,255,255,0.04); border-radius:8px;">
+      File PDF tidak tersedia untuk buletin ini.
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="bl-dtl-side">
+    <h4>Buletin Lainnya</h4>
+    {% for l in latest %}
+    <div class="side-item">
+      <a href="{% url 'public_bulletin_detail' l.pk %}" style="display:flex; gap:0.6rem; align-items:flex-start;">
+        {% if l.cover %}
+          <img src="{{ l.cover.url }}" alt="{{ l.title }}">
+        {% else %}
+          <div style="width:70px; height:55px; background:rgba(255,255,255,0.04); border-radius:6px; display:flex; align-items:center; justify-content:center; color:#475569; flex-shrink:0;">📄</div>
+        {% endif %}
+        <div>
+          <div class="side-title">{{ l.title }}</div>
+          <div class="side-meta">{{ l.bulan_display }} {{ l.tahun }}</div>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+    <div style="margin-top:1rem;">
+      <a href="{% url 'public_bulletin_list' %}" style="color:#60a5fa; font-size:0.72rem; text-decoration:none;">&larr; Semua Buletin</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if bulletin.pdf_file %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ── Flipbook PDF Viewer ──────────────────────────────────────────── */
+(function () {
+  const URL     = '{{ bulletin.pdf_file.url|escapejs }}';
+  const COVER   = '{% if bulletin.cover %}{{ bulletin.cover.url|escapejs }}{% endif %}';
+
+  let pdfDoc    = null;
+  let pageNum   = 1;
+  let scale     = 1.0;
+  let pageCount = 0;
+  let rendering = false;
+  let renderTask = null;
+
+  const canvas     = document.getElementById('pdf-canvas');
+  const ctx        = canvas.getContext('2d');
+  const container  = document.getElementById('flipbook-container');
+  const loadingEl  = document.getElementById('fb-loading');
+  const navEl      = document.getElementById('fb-nav');
+  const coverImg   = document.getElementById('fb-cover-img');
+  const pageNumEl  = document.getElementById('fb-page-num');
+  const pageCountEl= document.getElementById('fb-page-count');
+  const zoomRange  = document.getElementById('fb-zoom-range');
+
+  /* ── Render current page ─────────────────────────────────── */
+  function renderPage(num) {
+    if (rendering) {
+      if (renderTask) renderTask.cancel();
+    }
+    rendering = true;
+
+    pdfDoc.getPage(num).then(function (page) {
+      const vp = page.getViewport({ scale: scale });
+
+      // Set canvas size to match viewport at current scale
+      const parentW = container.clientWidth || 800;
+      const ratio = parentW / vp.width;
+      canvas.width  = vp.width * ratio;
+      canvas.height = vp.height * ratio;
+
+      const renderCtx = {
+        canvasContext: ctx,
+        viewport: page.getViewport({ scale: scale * ratio }),
+      };
+
+      renderTask = page.render(renderCtx);
+      return renderTask.promise;
+    }).then(function () {
+      rendering = false;
+      pageNumEl.textContent = num;
+      updateButtons();
+    }).catch(function (err) {
+      if (err.name === 'RenderingCancelledException') return;
+      console.error('PDF render error:', err);
+      rendering = false;
+    });
+  }
+
+  /* ── Navigation ──────────────────────────────────────────── */
+  function goTo(num) {
+    if (num < 1 || num > pageCount) return;
+    pageNum = num;
+    renderPage(pageNum);
+  }
+
+  function updateButtons() {
+    document.getElementById('fb-first').disabled = (pageNum <= 1);
+    document.getElementById('fb-prev').disabled  = (pageNum <= 1);
+    document.getElementById('fb-next').disabled  = (pageNum >= pageCount);
+    document.getElementById('fb-last').disabled  = (pageNum >= pageCount);
+  }
+
+  /* ── Start flipbook (hide cover, show canvas) ───────────── */
+  window.startFlipbook = function () {
+    if (pdfDoc) {
+      // Already loaded, just toggle visibility
+      if (coverImg) coverImg.style.display = 'none';
+      container.style.display = 'block';
+      navEl.style.display = 'flex';
+      return;
+    }
+
+    loadingEl.style.display = 'block';
+    if (coverImg) coverImg.style.display = 'none';
+    container.style.display = 'none';
+    navEl.style.display = 'none';
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    pdfjsLib.getDocument(URL).promise.then(function (doc) {
+      pdfDoc    = doc;
+      pageCount = doc.numPages;
+      pageCountEl.textContent = pageCount;
+
+      loadingEl.style.display = 'none';
+      container.style.display = 'block';
+      navEl.style.display = 'flex';
+
+      renderPage(1);
+    }).catch(function (err) {
+      loadingEl.innerHTML = '<div style="color:#ef4444;">Gagal memuat PDF. <a href="'+URL+'" style="color:#60a5fa;">Unduh langsung</a></div>';
+      console.error('PDF load error:', err);
+    });
+  };
+
+  /* ── Event listeners ─────────────────────────────────────── */
+  document.getElementById('fb-first').addEventListener('click', function () { goTo(1); });
+  document.getElementById('fb-prev').addEventListener('click',  function () { goTo(pageNum - 1); });
+  document.getElementById('fb-next').addEventListener('click',  function () { goTo(pageNum + 1); });
+  document.getElementById('fb-last').addEventListener('click',  function () { goTo(pageCount); });
+
+  // Keyboard navigation
+  document.addEventListener('keydown', function (e) {
+    if (!pdfDoc || container.style.display === 'none') return;
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp')  { e.preventDefault(); goTo(pageNum - 1); }
+    if (e.key === 'ArrowRight'|| e.key === 'PageDown') { e.preventDefault(); goTo(pageNum + 1); }
+    if (e.key === 'Home') { e.preventDefault(); goTo(1); }
+    if (e.key === 'End')  { e.preventDefault(); goTo(pageCount); }
+  });
+
+  // Zoom
+  zoomRange.addEventListener('input', function () {
+    const newScale = parseFloat(this.value);
+    if (Math.abs(newScale - scale) < 0.05) return;
+    scale = newScale;
+    if (pdfDoc) renderPage(pageNum);
+  });
+
+  document.getElementById('fb-zoom-in').addEventListener('click', function () {
+    const v = Math.min(2.0, parseFloat(zoomRange.value) + 0.2);
+    zoomRange.value = v;
+    scale = v;
+    if (pdfDoc) renderPage(pageNum);
+  });
+
+  document.getElementById('fb-zoom-out').addEventListener('click', function () {
+    const v = Math.max(0.5, parseFloat(zoomRange.value) - 0.2);
+    zoomRange.value = v;
+    scale = v;
+    if (pdfDoc) renderPage(pageNum);
+  });
+
+  // Resize handler
+  let resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (pdfDoc) renderPage(pageNum);
+    }, 250);
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

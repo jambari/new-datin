@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block seo_title %}Buletin · Stasiun Geofisika Kelas I Jayapura{% endblock %}
+{% block meta_description %}Kumpulan buletin bulanan dan tahunan Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .bl-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 3rem 0 2rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .bl-hero h1 { font-size: 1.75rem; font-weight: 800; color: #f1f5f9; margin-bottom: 0.5rem; }
+  .bl-hero p  { color: #94a3b8; font-size: 0.85rem; max-width: 600px; margin: 0 auto; }
+
+  .bl-container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+
+  .bl-filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+  .bl-filters a {
+    padding: 0.35rem 1rem; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 600; text-decoration: none;
+    background: rgba(255,255,255,0.06); color: #94a3b8;
+    transition: background 0.2s, color 0.2s;
+  }
+  .bl-filters a:hover { background: rgba(251,191,36,0.12); color: #fbbf24; }
+  .bl-filters a.active { background: #fbbf24; color: #0f172a; }
+
+  .bl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+  .bl-card {
+    background: rgba(15,23,42,0.9);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .bl-card:hover { transform: translateY(-3px); border-color: rgba(251,191,36,0.3); }
+  .bl-card img {
+    width: 100%; height: 180px; object-fit: cover;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .bl-card .bl-body { padding: 0.75rem 1rem 1rem; }
+  .bl-card .bl-title {
+    font-size: 0.8rem; font-weight: 700; color: #f1f5f9;
+    margin-bottom: 0.3rem; line-height: 1.3;
+  }
+  .bl-card .bl-meta { font-size: 0.65rem; color: #64748b; margin-bottom: 0.6rem; }
+  .bl-card .bl-btn {
+    display: inline-block; width: 100%; text-align: center;
+    padding: 0.4rem 0; border-radius: 6px;
+    background: #1e40af; color: #fff;
+    font-size: 0.72rem; font-weight: 600; text-decoration: none;
+    transition: background 0.15s;
+  }
+  .bl-card .bl-btn:hover { background: #1d4ed8; }
+
+  .bl-pagination { margin: 1.5rem 0; display: flex; justify-content: center; gap: 0.3rem; }
+  .bl-pagination a, .bl-pagination span {
+    padding: 0.35rem 0.75rem; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 600; text-decoration: none;
+    background: rgba(255,255,255,0.06); color: #94a3b8;
+  }
+  .bl-pagination a:hover { background: rgba(251,191,36,0.12); color: #fbbf24; }
+  .bl-pagination .current { background: #fbbf24; color: #0f172a; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="bl-hero">
+  <div class="bl-container">
+    <h1>📄 Buletin</h1>
+    <p>Kumpulan buletin bulanan dan tahunan dari Stasiun Geofisika Kelas I Jayapura BMKG.</p>
+  </div>
+</div>
+
+<div class="bl-container">
+  <!-- Filter tahun -->
+  <div class="bl-filters">
+    <a href="{% url 'public_bulletin_list' %}" class="{% if not selected_tahun %}active{% endif %}">Semua</a>
+    {% for t in tahun_list %}
+      <a href="{% url 'public_bulletin_list' %}?tahun={{ t }}" class="{% if selected_tahun == t %}active{% endif %}">{{ t }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination (atas) -->
+  {% if bulletins.has_other_pages %}
+  <div class="bl-pagination">
+    {% if bulletins.has_previous %}
+      <a href="?page={{ bulletins.previous_page_number }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}">&laquo;</a>
+    {% endif %}
+    {% for i in bulletins.paginator.page_range %}
+      {% if bulletins.number == i %}
+        <span class="current">{{ i }}</span>
+      {% else %}
+        <a href="?page={{ i }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}">{{ i }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if bulletins.has_next %}
+      <a href="?page={{ bulletins.next_page_number }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}">&raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Grid -->
+  <div class="bl-grid">
+    {% for b in bulletins %}
+    <div class="bl-card">
+      {% if b.cover %}
+        <img src="{{ b.cover.url }}" alt="{{ b.title }}" loading="lazy">
+      {% else %}
+        <div style="height:180px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.04); color:#475569; font-size:2rem;">📄</div>
+      {% endif %}
+      <div class="bl-body">
+        <div class="bl-title">{{ b.title }}</div>
+        <div class="bl-meta">{{ b.bulan_display }} {{ b.tahun }}</div>
+        <a href="{% url 'public_bulletin_detail' b.pk %}" class="bl-btn">Lihat</a>
+      </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:1/-1; text-align:center; padding:3rem 0; color:#64748b;">
+      Belum ada buletin untuk periode ini.
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if bulletins.has_other_pages %}
+  <div class="bl-pagination">
+    {% if bulletins.has_previous %}
+      <a href="?page={{ bulletins.previous_page_number }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}">&laquo;</a>
+    {% endif %}
+    {% for i in bulletins.paginator.page_range %}
+      {% if bulletins.number == i %}
+        <span class="current">{{ i }}</span>
+      {% else %}
+        <a href="?page={{ i }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}">{{ i }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if bulletins.has_next %}
+      <a href="?page={{ bulletins.next_page_number }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}">&raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

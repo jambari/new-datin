@@ -44,4 +44,16 @@ urlpatterns = [
     path('gempa-merusak/<int:pk>/', views.gempa_merusak_detail, name='gempa_merusak_detail'),
     path('gempa-merusak/<int:pk>/edit/', views.gempa_merusak_update, name='gempa_merusak_update'),
     path('gempa-merusak/<int:pk>/hapus/', views.gempa_merusak_delete, name='gempa_merusak_delete'),
+
+    # ── Bulletin CRUD ─────────────────────────────────────────────────────────────
+    path('bulletin/', views.bulletin_list, name='bulletin_list'),
+    path('bulletin/tambah/', views.bulletin_create, name='bulletin_create'),
+    path('bulletin/<int:pk>/edit/', views.bulletin_update, name='bulletin_update'),
+    path('bulletin/<int:pk>/hapus/', views.bulletin_delete, name='bulletin_delete'),
+
+    # ── Siaran Press CRUD ─────────────────────────────────────────────────────────
+    path('siaran-pers/', views.siaranpress_list, name='siaranpress_list'),
+    path('siaran-pers/tambah/', views.siaranpress_create, name='siaranpress_create'),
+    path('siaran-pers/<int:pk>/edit/', views.siaranpress_update, name='siaranpress_update'),
+    path('siaran-pers/<int:pk>/hapus/', views.siaranpress_delete, name='siaranpress_delete'),
 ]

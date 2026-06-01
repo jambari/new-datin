@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block seo_title %}Siaran Pers · Stasiun Geofisika Kelas I Jayapura{% endblock %}
+{% block meta_description %}Siaran pers / press release gempa bumi terkini dari Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .sp-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 3rem 0 2rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .sp-hero h1 { font-size: 1.75rem; font-weight: 800; color: #f1f5f9; margin-bottom: 0.5rem; }
+  .sp-hero p  { color: #94a3b8; font-size: 0.85rem; max-width: 600px; margin: 0 auto; }
+
+  .sp-container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+
+  .sp-item {
+    display: flex; gap: 1rem; align-items: flex-start;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .sp-item:first-child { padding-top: 0; }
+  .sp-item img {
+    width: 180px; height: 130px; object-fit: cover; border-radius: 8px; flex-shrink: 0;
+    background: rgba(255,255,255,0.04);
+  }
+  .sp-item .sp-body { flex: 1; min-width: 0; }
+  .sp-item .sp-title {
+    font-size: 0.9rem; font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.4; margin-bottom: 0.3rem;
+  }
+  .sp-item .sp-title a { color: var(--text-primary); text-decoration: none; }
+  .sp-item .sp-title a:hover { color: #fbbf24; }
+  .sp-item .sp-meta { font-size: 0.65rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+  .sp-item .sp-excerpt {
+    font-size: 0.72rem; color: var(--text-secondary); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  @media (max-width: 600px) {
+    .sp-item { flex-direction: column; }
+    .sp-item img { width: 100%; height: auto; }
+  }
+
+  .sp-pagination { margin-top: 2rem; display: flex; justify-content: center; gap: 0.3rem; }
+  .sp-pagination a, .sp-pagination span {
+    padding: 0.35rem 0.75rem; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 600; text-decoration: none;
+    background: rgba(255,255,255,0.06); color: #94a3b8;
+  }
+  .sp-pagination a:hover { background: rgba(251,191,36,0.12); color: #fbbf24; }
+  .sp-pagination .current { background: #fbbf24; color: #0f172a; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="sp-hero">
+  <div class="sp-container">
+    <h1>📢 Siaran Pers</h1>
+    <p>Siaran pers / press release gempa bumi dan kegiatan Stasiun Geofisika Kelas I Jayapura BMKG.</p>
+  </div>
+</div>
+
+<div class="sp-container">
+  {% for s in siarans %}
+  <div class="sp-item">
+    {% if s.image %}
+    <a href="{% url 'public_siaranpress_detail' s.pk %}">
+      <img src="{{ s.image.url }}" alt="{{ s.title }}" loading="lazy">
+    </a>
+    {% else %}
+    <div style="width:180px; height:130px; background:rgba(255,255,255,0.04); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#475569; flex-shrink:0;">📄</div>
+    {% endif %}
+    <div class="sp-body">
+      <div class="sp-title">
+        <a href="{% url 'public_siaranpress_detail' s.pk %}">{{ s.title }}</a>
+      </div>
+      <div class="sp-meta">
+        {{ s.created_at|date:"d M Y, H:i" }} WIT &middot; {{ s.author }}
+      </div>
+      <div class="sp-excerpt">
+        {{ s.content|striptags|truncatewords:40 }}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div style="text-align:center; padding:3rem 0; color:#64748b;">
+    Belum ada siaran pers.
+  </div>
+  {% endfor %}
+
+  {% if siarans.has_other_pages %}
+  <div class="sp-pagination">
+    {% if siarans.has_previous %}
+      <a href="?page={{ siarans.previous_page_number }}">&laquo;</a>
+    {% endif %}
+    {% for i in siarans.paginator.page_range %}
+      {% if siarans.number == i %}
+        <span class="current">{{ i }}</span>
+      {% else %}
+        <a href="?page={{ i }}">{{ i }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if siarans.has_next %}
+      <a href="?page={{ siarans.next_page_number }}">&raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

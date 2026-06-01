@@ -32,7 +32,7 @@ from django.db.models import Prefetch
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from .models import JSONDataUpload, FeltEarthquake, GempaMemusak, GempaMemusakMedia
+from .models import JSONDataUpload, FeltEarthquake, GempaMemusak, GempaMemusakMedia, Bulletin, SiaranPress
 from .utils import calculate_remark
 import json
 from io import StringIO
@@ -2129,3 +2129,105 @@ def yolo_download_view(request, key):
     if not os.path.exists(fpath):
         raise Http404(f"{key} not uploaded yet")
     return FileResponse(open(fpath, 'rb'), as_attachment=True, filename=key)
+
+
+# ── Bulletin CRUD ─────────────────────────────────────────────────────
+
+@login_required
+def bulletin_list(request):
+    qs = Bulletin.objects.all()
+    tahun = request.GET.get('tahun', '')
+    if tahun:
+        qs = qs.filter(tahun=tahun)
+    paginator = Paginator(qs, 20)
+    page = request.GET.get('page')
+    bulletins = paginator.get_page(page)
+    tahun_list = Bulletin.objects.values_list('tahun', flat=True).distinct().order_by('-tahun')
+    return render(request, 'repository/bulletin_list.html', {
+        'bulletins': bulletins, 'tahun_list': tahun_list, 'selected_tahun': tahun,
+    })
+
+@login_required
+def bulletin_create(request):
+    if request.method == 'POST':
+        b = Bulletin(
+            title=request.POST.get('title'),
+            bulan=request.POST.get('bulan'),
+            tahun=request.POST.get('tahun'),
+            cover=request.FILES.get('cover'),
+            pdf_file=request.FILES.get('pdf_file'),
+        )
+        b.save()
+        return redirect('bulletin_list')
+    return render(request, 'repository/bulletin_form.html', {'title': 'Tambah Buletin'})
+
+@login_required
+def bulletin_update(request, pk):
+    b = get_object_or_404(Bulletin, pk=pk)
+    if request.method == 'POST':
+        b.title = request.POST.get('title', b.title)
+        b.bulan = request.POST.get('bulan', b.bulan)
+        b.tahun = request.POST.get('tahun', b.tahun)
+        if request.FILES.get('cover'):
+            b.cover = request.FILES['cover']
+        if request.FILES.get('pdf_file'):
+            b.pdf_file = request.FILES['pdf_file']
+        b.save()
+        return redirect('bulletin_list')
+    return render(request, 'repository/bulletin_form.html', {'object': b, 'title': 'Edit Buletin'})
+
+@login_required
+def bulletin_delete(request, pk):
+    b = get_object_or_404(Bulletin, pk=pk)
+    if request.method == 'POST':
+        b.delete()
+        return redirect('bulletin_list')
+    return render(request, 'repository/bulletin_confirm_delete.html', {'object': b})
+
+
+# ── SiaranPress CRUD ───────────────────────────────────────────────────
+
+@login_required
+def siaranpress_list(request):
+    qs = SiaranPress.objects.all()
+    q = request.GET.get('q', '')
+    if q:
+        qs = qs.filter(Q(title__icontains=q) | Q(author__icontains=q))
+    paginator = Paginator(qs, 20)
+    page = request.GET.get('page')
+    siarans = paginator.get_page(page)
+    return render(request, 'repository/siaranpress_list.html', {'siarans': siarans, 'q': q})
+
+@login_required
+def siaranpress_create(request):
+    if request.method == 'POST':
+        s = SiaranPress(
+            title=request.POST.get('title'),
+            author=request.POST.get('author', ''),
+            content=request.POST.get('content', ''),
+            image=request.FILES.get('image'),
+        )
+        s.save()
+        return redirect('siaranpress_list')
+    return render(request, 'repository/siaranpress_form.html', {'title': 'Tambah Siaran Pers'})
+
+@login_required
+def siaranpress_update(request, pk):
+    s = get_object_or_404(SiaranPress, pk=pk)
+    if request.method == 'POST':
+        s.title = request.POST.get('title', s.title)
+        s.author = request.POST.get('author', s.author)
+        s.content = request.POST.get('content', s.content)
+        if request.FILES.get('image'):
+            s.image = request.FILES['image']
+        s.save()
+        return redirect('siaranpress_list')
+    return render(request, 'repository/siaranpress_form.html', {'object': s, 'title': 'Edit Siaran Pers'})
+
+@login_required
+def siaranpress_delete(request, pk):
+    s = get_object_or_404(SiaranPress, pk=pk)
+    if request.method == 'POST':
+        s.delete()
+        return redirect('siaranpress_list')
+    return render(request, 'repository/siaranpress_confirm_delete.html', {'object': s})

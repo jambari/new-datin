@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block site_header %}{% endblock %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+      <div style="max-width:1200px;margin:0 auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <h1 style="font-size:1.5rem;font-weight:800;color:#111827;">Buletin</h1>
+          <a href="{% url 'bulletin_create' %}" style="padding:0.5rem 1rem;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none;font-size:0.85rem;font-weight:600;">+ Tambah</a>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+          <a href="{% url 'bulletin_list' %}" style="padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:600;text-decoration:none;background:{% if not selected_tahun %}#4f46e5;color:#fff{% else %}#e5e7eb;color:#374151{% endif %}">Semua</a>
+          {% for t in tahun_list %}<a href="?tahun={{ t }}" style="padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:600;text-decoration:none;background:{% if selected_tahun == t %}#4f46e5;color:#fff{% else %}#e5e7eb;color:#374151{% endif %}">{{ t }}</a>{% endfor %}
+        </div>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+            <thead>
+              <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;color:#6b7280;text-align:left;">
+                <th style="padding:0.75rem 1rem;">Judul</th><th style="padding:0.75rem 1rem;">Bulan</th><th style="padding:0.75rem 1rem;">Tahun</th><th style="padding:0.75rem 1rem;">Cover</th><th style="padding:0.75rem 1rem;">PDF</th><th style="padding:0.75rem 1rem;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in bulletins %}
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:0.75rem 1rem;font-weight:600;color:#111827;">{{ b.title }}</td>
+                <td style="padding:0.75rem 1rem;color:#374151;">{{ b.bulan_display }}</td>
+                <td style="padding:0.75rem 1rem;color:#374151;">{{ b.tahun }}</td>
+                <td style="padding:0.75rem 1rem;">{% if b.cover %}✅{% else %}❌{% endif %}</td>
+                <td style="padding:0.75rem 1rem;">{% if b.pdf_file %}✅{% else %}❌{% endif %}</td>
+                <td style="padding:0.75rem 1rem;">
+                  <a href="{% url 'bulletin_update' b.pk %}" style="color:#4f46e5;text-decoration:none;margin-right:0.5rem;font-weight:600;">Edit</a>
+                  <a href="{% url 'bulletin_delete' b.pk %}" style="color:#dc2626;text-decoration:none;font-weight:600;">Hapus</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" style="padding:2rem;text-align:center;color:#9ca3af;">Belum ada buletin.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if bulletins.has_other_pages %}
+        <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.3rem;">
+          {% if bulletins.has_previous %}<a href="?page={{ bulletins.previous_page_number }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}" style="padding:0.3rem 0.7rem;border-radius:6px;background:#e5e7eb;color:#374151;text-decoration:none;font-size:0.75rem;">&laquo;</a>{% endif %}
+          {% for i in bulletins.paginator.page_range %}{% if bulletins.number == i %}<span style="padding:0.3rem 0.7rem;border-radius:6px;background:#4f46e5;color:#fff;font-size:0.75rem;">{{ i }}</span>{% else %}<a href="?page={{ i }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}" style="padding:0.3rem 0.7rem;border-radius:6px;background:#e5e7eb;color:#374151;text-decoration:none;font-size:0.75rem;">{{ i }}</a>{% endif %}{% endfor %}
+          {% if bulletins.has_next %}<a href="?page={{ bulletins.next_page_number }}{% if selected_tahun %}&tahun={{ selected_tahun }}{% endif %}" style="padding:0.3rem 0.7rem;border-radius:6px;background:#e5e7eb;color:#374151;text-decoration:none;font-size:0.75rem;">&raquo;</a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

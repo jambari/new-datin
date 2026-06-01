@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block site_header %}{% endblock %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+      <div style="max-width:1200px;margin:0 auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <h1 style="font-size:1.5rem;font-weight:800;color:#111827;">Siaran Pers</h1>
+          <a href="{% url 'siaranpress_create' %}" style="padding:0.5rem 1rem;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none;font-size:0.85rem;font-weight:600;">+ Tambah</a>
+        </div>
+        <form method="get" style="margin-bottom:1rem;">
+          <input type="text" name="q" value="{{ q }}" placeholder="Cari judul atau penulis..." style="width:100%;padding:0.5rem 0.75rem;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#111827;font-size:0.85rem;">
+        </form>
+        <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+            <thead>
+              <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;color:#6b7280;text-align:left;">
+                <th style="padding:0.75rem 1rem;">Judul</th><th style="padding:0.75rem 1rem;">Penulis</th><th style="padding:0.75rem 1rem;">Tanggal</th><th style="padding:0.75rem 1rem;">Gambar</th><th style="padding:0.75rem 1rem;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in siarans %}
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:0.75rem 1rem;font-weight:600;color:#111827;">{{ s.title|truncatechars:60 }}</td>
+                <td style="padding:0.75rem 1rem;color:#374151;">{{ s.author|default:'-' }}</td>
+                <td style="padding:0.75rem 1rem;color:#374151;">{{ s.created_at|date:'d M Y' }}</td>
+                <td style="padding:0.75rem 1rem;">{% if s.image %}✅{% else %}❌{% endif %}</td>
+                <td style="padding:0.75rem 1rem;">
+                  <a href="{% url 'siaranpress_update' s.pk %}" style="color:#4f46e5;text-decoration:none;margin-right:0.5rem;font-weight:600;">Edit</a>
+                  <a href="{% url 'siaranpress_delete' s.pk %}" style="color:#dc2626;text-decoration:none;font-weight:600;">Hapus</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" style="padding:2rem;text-align:center;color:#9ca3af;">Belum ada siaran pers.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if siarans.has_other_pages %}
+        <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:0.3rem;">
+          {% if siarans.has_previous %}<a href="?page={{ siarans.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" style="padding:0.3rem 0.7rem;border-radius:6px;background:#e5e7eb;color:#374151;text-decoration:none;font-size:0.75rem;">&laquo;</a>{% endif %}
+          {% for i in siarans.paginator.page_range %}{% if siarans.number == i %}<span style="padding:0.3rem 0.7rem;border-radius:6px;background:#4f46e5;color:#fff;font-size:0.75rem;">{{ i }}</span>{% else %}<a href="?page={{ i }}{% if q %}&q={{ q }}{% endif %}" style="padding:0.3rem 0.7rem;border-radius:6px;background:#e5e7eb;color:#374151;text-decoration:none;font-size:0.75rem;">{{ i }}</a>{% endif %}{% endfor %}
+          {% if siarans.has_next %}<a href="?page={{ siarans.next_page_number }}{% if q %}&q={{ q }}{% endif %}" style="padding:0.3rem 0.7rem;border-radius:6px;background:#e5e7eb;color:#374151;text-decoration:none;font-size:0.75rem;">&raquo;</a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

@@ -330,3 +330,53 @@ class EventStationWaveform(models.Model):
 
     def __str__(self):
         return f"{self.event_id} {self.station_code}/{self.component} waveform"
+
+
+class Bulletin(models.Model):
+    """Buletin/Bulletin records migrated from Laravel datin app."""
+    title       = models.CharField(max_length=255)
+    bulan       = models.CharField(max_length=2, help_text="Bulan (1-12)")
+    tahun       = models.CharField(max_length=4)
+    cover       = models.ImageField(upload_to='bulletins/covers/', null=True, blank=True)
+    pdf_file    = models.FileField(upload_to='bulletins/pdfs/', null=True, blank=True,
+                                   verbose_name='File PDF')
+    created_at  = models.DateTimeField(default=timezone.now)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'bulletins'
+        ordering = ['-tahun', '-bulan']
+        verbose_name = 'Buletin'
+        verbose_name_plural = 'Buletin'
+
+    def __str__(self):
+        return self.title
+
+    def bulan_display(self):
+        months = [
+            '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ]
+        try:
+            return months[int(self.bulan)]
+        except (ValueError, IndexError):
+            return self.bulan
+
+
+class SiaranPress(models.Model):
+    """Siaran Press / Press Release migrated from Laravel datin app."""
+    title       = models.CharField(max_length=255)
+    author      = models.CharField(max_length=191, blank=True, default='')
+    content     = models.TextField(blank=True, help_text="HTML content")
+    image       = models.ImageField(upload_to='siaranpress/', null=True, blank=True)
+    created_at  = models.DateTimeField(default=timezone.now)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'siaran_press'
+        ordering = ['-created_at']
+        verbose_name = 'Siaran Press'
+        verbose_name_plural = 'Siaran Press'
+
+    def __str__(self):
+        return self.title

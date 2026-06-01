@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block seo_title %}{{ siaran.title }} · Siaran Pers BMKG Jayapura{% endblock %}
+{% block meta_description %}{{ siaran.title }} — Siaran pers Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .sp-dtl-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 2.5rem 0 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .sp-dtl-hero h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin-bottom: 0.3rem; line-height: 1.35; }
+  .sp-dtl-hero .breadcrumb { font-size: 0.72rem; color: #64748b; margin-bottom: 0.5rem; }
+  .sp-dtl-hero .breadcrumb a { color: #60a5fa; text-decoration: none; }
+  .sp-dtl-hero .breadcrumb a:hover { text-decoration: underline; }
+  .sp-dtl-hero .meta { font-size: 0.75rem; color: #64748b; }
+
+  .sp-dtl-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; display: flex; gap: 2rem; flex-wrap: wrap; }
+  .sp-dtl-main { flex: 1; min-width: 300px; }
+  .sp-dtl-main img {
+    max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0;
+    border: 1px solid var(--border-color);
+  }
+  /* ── Content card: works in both light & dark mode ── */
+  .sp-dtl-main .content-wrap {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+  }
+  .sp-dtl-main .content {
+    font-size: 0.88rem; line-height: 1.8;
+    color: var(--text-primary);
+  }
+  .sp-dtl-main .content p { margin-bottom: 1rem; }
+  .sp-dtl-main .content img { max-width: 100%; height: auto; border-radius: 6px; }
+  .sp-dtl-main .content a { color: #2563eb; }
+  [data-theme="dark"] .sp-dtl-main .content a { color: #60a5fa; }
+
+  .sp-dtl-side { width: 280px; flex-shrink: 0; }
+  .sp-dtl-side h4 { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #fbbf24; margin-bottom: 0.75rem; }
+  .sp-dtl-side .side-item {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);
+  }
+  .sp-dtl-side .side-item:last-child { border-bottom: none; }
+  .sp-dtl-side .side-item img { width: 70px; height: 55px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+  .sp-dtl-side .side-item .side-title { font-size: 0.72rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+  .sp-dtl-side .side-item .side-meta { font-size: 0.6rem; color: var(--text-secondary); }
+  .sp-dtl-side .side-item a { text-decoration: none; }
+  .sp-dtl-side .side-item a:hover .side-title { color: #fbbf24; }
+
+  @media (max-width: 768px) {
+    .sp-dtl-wrap { flex-direction: column; }
+    .sp-dtl-side { width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="sp-dtl-hero">
+  <div class="sp-dtl-wrap" style="padding-bottom:0;">
+    <div class="breadcrumb">
+      <a href="{% url 'landing' %}">Beranda</a> &raquo;
+      <a href="{% url 'public_siaranpress_list' %}">Siaran Pers</a> &raquo;
+      {{ siaran.title }}
+    </div>
+    <h1>{{ siaran.title }}</h1>
+    <div class="meta">
+      {{ siaran.created_at|date:"l, d F Y H:i" }} WIT &middot; {{ siaran.author }}
+    </div>
+  </div>
+</div>
+
+<div class="sp-dtl-wrap">
+  <div class="sp-dtl-main">
+    {% if siaran.image %}
+    <img src="{{ siaran.image.url }}" alt="{{ siaran.title }}" style="width:100%;">
+    {% endif %}
+    <div class="content-wrap">
+      <div class="content">
+        {{ siaran.content|safe }}
+      </div>
+    </div>
+  </div>
+
+  <div class="sp-dtl-side">
+    <h4>Siaran Pers Lainnya</h4>
+    {% for l in latest %}
+    <div class="side-item">
+      <a href="{% url 'public_siaranpress_detail' l.pk %}" style="display:flex; gap:0.6rem; align-items:flex-start;">
+        {% if l.image %}
+          <img src="{{ l.image.url }}" alt="{{ l.title }}">
+        {% else %}
+          <div style="width:70px; height:55px; background:rgba(255,255,255,0.04); border-radius:6px; display:flex; align-items:center; justify-content:center; color:#475569; flex-shrink:0;">📄</div>
+        {% endif %}
+        <div>
+          <div class="side-title">{{ l.title }}</div>
+          <div class="side-meta">{{ l.created_at|date:"d M Y" }}</div>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+    <div style="margin-top:1rem;">
+      <a href="{% url 'public_siaranpress_list' %}" style="color:var(--nav-hover-fg, #60a5fa); font-size:0.72rem; text-decoration:none;">&larr; Semua Siaran Pers</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

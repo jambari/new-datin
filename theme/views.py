@@ -661,3 +661,62 @@ def public_peringatan_dini_data(request):
         return JsonResponse({'items': items})
     except Exception as e:
         return JsonResponse({'items': [], 'error': str(e)})
+
+
+# ── Bulletin / Buletin ──────────────────────────────────────────────────
+
+
+from django.shortcuts import get_object_or_404
+from django.core.paginator import Paginator
+from repository.models import Bulletin, SiaranPress
+
+
+def public_bulletin_list(request):
+    """Daftar semua buletin."""
+    bulletins = Bulletin.objects.all()
+    tahun_list = bulletins.values_list('tahun', flat=True).distinct().order_by('-tahun')
+
+    tahun = request.GET.get('tahun', '')
+    if tahun:
+        bulletins = bulletins.filter(tahun=tahun)
+
+    paginator = Paginator(bulletins, 12)
+    page = request.GET.get('page', 1)
+    bulletins_page = paginator.get_page(page)
+
+    return render(request, 'bulletins/list.html', {
+        'bulletins': bulletins_page,
+        'tahun_list': tahun_list,
+        'selected_tahun': tahun,
+    })
+
+
+def public_bulletin_detail(request, pk):
+    """Detail buletin."""
+    bulletin = get_object_or_404(Bulletin, pk=pk)
+    latest = Bulletin.objects.exclude(pk=pk).order_by('-tahun', '-bulan')[:5]
+    return render(request, 'bulletins/detail.html', {
+        'bulletin': bulletin,
+        'latest': latest,
+    })
+
+
+def public_siaranpress_list(request):
+    """Daftar siaran press."""
+    siarans = SiaranPress.objects.all()
+    paginator = Paginator(siarans, 10)
+    page = request.GET.get('page', 1)
+    siarans_page = paginator.get_page(page)
+    return render(request, 'siaranpress/list.html', {
+        'siarans': siarans_page,
+    })
+
+
+def public_siaranpress_detail(request, pk):
+    """Detail siaran press."""
+    siaran = get_object_or_404(SiaranPress, pk=pk)
+    latest = SiaranPress.objects.exclude(pk=pk).order_by('-created_at')[:5]
+    return render(request, 'siaranpress/detail.html', {
+        'siaran': siaran,
+        'latest': latest,
+    })

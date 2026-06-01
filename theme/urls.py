@@ -24,4 +24,8 @@ urlpatterns = [
     # Private (jambari-only) YOLO training progress dashboard
     path('yolo-progress/', yolo_progress_view, name='yolo_progress'),
     path('yolo-progress/download/<str:key>', yolo_download_view, name='yolo_download'),
+    path('buletin/', views.public_bulletin_list, name='public_bulletin_list'),
+    path('buletin/<int:pk>/', views.public_bulletin_detail, name='public_bulletin_detail'),
+    path('siaran-pers/', views.public_siaranpress_list, name='public_siaranpress_list'),
+    path('siaran-pers/<int:pk>/', views.public_siaranpress_detail, name='public_siaranpress_detail'),
 ]
