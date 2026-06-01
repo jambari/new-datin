@@ -61,7 +61,7 @@ class Command(BaseCommand):
         self.stdout.write("Fetching BMKG felt earthquake data...")
 
         try:
-            response = requests.get(BMKG_API_URL, timeout=15)
+            response = requests.get(BMKG_API_URL, timeout=15, headers={"User-Agent": "Mozilla/5.0 (datin-fetcher)"})
             response.raise_for_status()
             events = response.json().get("Infogempa", {}).get("gempa", [])
         except Exception as e:
@@ -137,7 +137,16 @@ class Command(BaseCommand):
                     },
                 )
 
-                # --- 3. Download shakemap image if not yet saved ---
+                # --- 3. Attach shakemap image if not yet saved ---
+                # Priority:
+                #   a) BMKG static CDN (https://static.bmkg.go.id/<WIB>.mmi.jpg)
+                #   b) Local file previously rsync'd by the .50 PUSH workflow
+                #      (/var/www/html/media/shakemaps/<WIB>.mmi.jpg)
+                # (b) heals the push-before-fetch race: when an operator clicks
+                # PUSH on .50 before this hourly cron has created the row, the
+                # image file lands on disk but no DB row exists to link it. The
+                # next run of this command finds the row missing, creates it,
+                # then finds the orphan file here and points the field at it.
                 if not shk_obj.shakemap_image:
                     img_name, img_bytes = fetch_shakemap_image(wib_ts)
                     if img_bytes:
@@ -146,10 +155,20 @@ class Command(BaseCommand):
                             f"  SAVED  M{magnitude} {wilayah} [{event_dt:%Y-%m-%d %H:%M} UTC] + shakemap"
                         ))
                     else:
-                        shk_obj.save()
-                        self.stdout.write(self.style.WARNING(
-                            f"  SAVED  M{magnitude} {wilayah} [{event_dt:%Y-%m-%d %H:%M} UTC] (no shakemap image)"
-                        ))
+                        from django.conf import settings as _settings
+                        from pathlib import Path as _Path
+                        local_path = _Path(_settings.MEDIA_ROOT) / "shakemaps" / f"{wib_ts}.mmi.jpg"
+                        if local_path.exists():
+                            shk_obj.shakemap_image.name = str(local_path.relative_to(_settings.MEDIA_ROOT))
+                            shk_obj.save(update_fields=["shakemap_image"])
+                            self.stdout.write(self.style.SUCCESS(
+                                f"  SAVED  M{magnitude} {wilayah} [{event_dt:%Y-%m-%d %H:%M} UTC] + shakemap (linked from .50 PUSH)"
+                            ))
+                        else:
+                            shk_obj.save()
+                            self.stdout.write(self.style.WARNING(
+                                f"  SAVED  M{magnitude} {wilayah} [{event_dt:%Y-%m-%d %H:%M} UTC] (no shakemap image)"
+                            ))
                     saved += 1
                 else:
                     skipped += 1

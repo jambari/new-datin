@@ -1,0 +1,704 @@
+[
+{
+  "model": "repository.bulletin",
+  "pk": 1,
+  "fields": {
+    "title": "Buletin Bulanan Januari 2018",
+    "bulan": "1",
+    "tahun": "2018",
+    "cover": "bulletins/covers/cover_1.jpg",
+    "pdf_file": "",
+    "created_at": "2019-03-26T00:57:49Z",
+    "updated_at": "2026-05-28T00:58:29.613Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 2,
+  "fields": {
+    "title": "Buletin Bulanan Februari 2018",
+    "bulan": "2",
+    "tahun": "2018",
+    "cover": "bulletins/covers/COVERFEB2018.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-februari-2018.pdf",
+    "created_at": "2019-03-26T01:00:59Z",
+    "updated_at": "2026-05-28T00:58:29.663Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 3,
+  "fields": {
+    "title": "Buletin Bulanan Maret 2018",
+    "bulan": "3",
+    "tahun": "2018",
+    "cover": "bulletins/covers/cover_3.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-maret-2018.pdf",
+    "created_at": "2019-03-26T01:54:10Z",
+    "updated_at": "2026-05-28T00:58:29.689Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 4,
+  "fields": {
+    "title": "Buletin Bulanan April 2018",
+    "bulan": "4",
+    "tahun": "2018",
+    "cover": "bulletins/covers/cover_4.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-april-2018.pdf",
+    "created_at": "2019-03-26T01:54:33Z",
+    "updated_at": "2026-05-28T00:58:29.708Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 5,
+  "fields": {
+    "title": "Buletin Bulanan Mei 2018",
+    "bulan": "5",
+    "tahun": "2018",
+    "cover": "bulletins/covers/cover buletin mei18.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-mei-2018.pdf",
+    "created_at": "2019-03-26T01:55:01Z",
+    "updated_at": "2026-05-28T00:58:29.726Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 6,
+  "fields": {
+    "title": "Buletin Bulanan Juni 2018",
+    "bulan": "6",
+    "tahun": "2018",
+    "cover": "bulletins/covers/cover_6.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-juni-2018.pdf",
+    "created_at": "2019-03-26T01:56:58Z",
+    "updated_at": "2026-05-28T00:58:29.746Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 7,
+  "fields": {
+    "title": "Buletin Bulanan Juli 2018",
+    "bulan": "7",
+    "tahun": "2018",
+    "cover": "bulletins/covers/cover_7.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-juli-2018.pdf",
+    "created_at": "2019-03-26T01:58:13Z",
+    "updated_at": "2026-05-28T00:58:29.830Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 8,
+  "fields": {
+    "title": "Buletin Bulanan September 2018",
+    "bulan": "9",
+    "tahun": "2018",
+    "cover": "bulletins/covers/cover_8.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-september-2018.pdf",
+    "created_at": "2019-03-26T01:58:58Z",
+    "updated_at": "2026-05-28T00:58:29.869Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 9,
+  "fields": {
+    "title": "Buletin Bulanan Oktober 2018",
+    "bulan": "10",
+    "tahun": "2018",
+    "cover": "bulletins/covers/COVER BULETIN_Nopember.jpg",
+    "pdf_file": "bulletins/pdfs/buletin_ bulan_oktober-2018.pdf",
+    "created_at": "2019-03-26T06:40:35Z",
+    "updated_at": "2026-05-28T00:58:29.889Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 10,
+  "fields": {
+    "title": "Buletin Bulanan November 2018",
+    "bulan": "11",
+    "tahun": "2018",
+    "cover": "bulletins/covers/cover_10.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-november-2018.pdf",
+    "created_at": "2019-03-26T06:41:43Z",
+    "updated_at": "2026-05-28T00:58:29.906Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 11,
+  "fields": {
+    "title": "Buletin Bulanan Desember 2018",
+    "bulan": "12",
+    "tahun": "2018",
+    "cover": "bulletins/covers/COVER BULETINdes.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-januari-2018.pdf",
+    "created_at": "2019-03-26T06:42:40Z",
+    "updated_at": "2026-05-28T00:58:29.968Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 12,
+  "fields": {
+    "title": "Buletin Bulanan Januari 2019",
+    "bulan": "1",
+    "tahun": "2019",
+    "cover": "bulletins/covers/COVER BULETIN jan 2019.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-januari-2019.pdf",
+    "created_at": "2019-03-26T06:43:26Z",
+    "updated_at": "2026-05-28T00:58:30.034Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 13,
+  "fields": {
+    "title": "Buletin Bulanan Februari 2019",
+    "bulan": "1",
+    "tahun": "2019",
+    "cover": "bulletins/covers/COVER BULETIN Feb2019.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-februari-2019.pdf",
+    "created_at": "2019-03-26T06:43:53Z",
+    "updated_at": "2026-05-28T00:58:30.081Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 14,
+  "fields": {
+    "title": "Buletin Tahunan Gempabumi 2018",
+    "bulan": "1",
+    "tahun": "2019",
+    "cover": "bulletins/covers/cover.JPG",
+    "pdf_file": "bulletins/pdfs/buletin-tahunan-gempa-2018.pdf",
+    "created_at": "2019-04-04T22:14:31Z",
+    "updated_at": "2026-05-28T00:58:30.106Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 15,
+  "fields": {
+    "title": "Buletin Bulanan Maret 2019",
+    "bulan": "3",
+    "tahun": "2019",
+    "cover": "bulletins/covers/COVER BULETIN Maret 2019.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-bulan-maret-2019.pdf",
+    "created_at": "2019-04-22T20:42:26Z",
+    "updated_at": "2026-05-28T00:58:30.146Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 16,
+  "fields": {
+    "title": "Buletin Bulanan April 2019",
+    "bulan": "1",
+    "tahun": "2019",
+    "cover": "bulletins/covers/COVER BULETINAPRIL2019.jpg",
+    "pdf_file": "bulletins/pdfs/buletin-april-2019-complit.pdf",
+    "created_at": "2019-05-13T02:11:19Z",
+    "updated_at": "2026-05-28T00:58:30.198Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 17,
+  "fields": {
+    "title": "Buletin Bulanan Mei 2019",
+    "bulan": "5",
+    "tahun": "2019",
+    "cover": "bulletins/covers/cover_17.jpg",
+    "pdf_file": "",
+    "created_at": "2019-06-24T03:32:11Z",
+    "updated_at": "2026-05-28T00:58:30.217Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 18,
+  "fields": {
+    "title": "Buletin Bulanan Juni 2019",
+    "bulan": "1",
+    "tahun": "2019",
+    "cover": "bulletins/covers/cover_18.jpg",
+    "pdf_file": "",
+    "created_at": "2019-08-11T23:20:55Z",
+    "updated_at": "2026-05-28T00:58:30.262Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 19,
+  "fields": {
+    "title": "Buletin Bulanan Juli 2019",
+    "bulan": "7",
+    "tahun": "2019",
+    "cover": "bulletins/covers/cover_19.jpg",
+    "pdf_file": "",
+    "created_at": "2019-08-26T10:51:00Z",
+    "updated_at": "2026-05-28T00:58:30.298Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 20,
+  "fields": {
+    "title": "Buletin Tahunan Gempabumi 2016",
+    "bulan": "12",
+    "tahun": "2016",
+    "cover": "bulletins/covers/cover_20.jpg",
+    "pdf_file": "",
+    "created_at": "2019-10-14T06:10:35Z",
+    "updated_at": "2026-05-28T00:58:30.352Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 21,
+  "fields": {
+    "title": "Buletin Tahunan Gempabumi 2017",
+    "bulan": "12",
+    "tahun": "2017",
+    "cover": "bulletins/covers/cover_21.jpg",
+    "pdf_file": "",
+    "created_at": "2019-10-14T06:15:00Z",
+    "updated_at": "2026-05-28T00:58:30.399Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 22,
+  "fields": {
+    "title": "Buletin Bulanan Agustus 2019",
+    "bulan": "8",
+    "tahun": "2019",
+    "cover": "bulletins/covers/cover_22.jpg",
+    "pdf_file": "",
+    "created_at": "2019-11-11T16:24:52Z",
+    "updated_at": "2026-05-28T00:58:30.442Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 23,
+  "fields": {
+    "title": "Buletin Bulanan September 2019",
+    "bulan": "9",
+    "tahun": "2019",
+    "cover": "bulletins/covers/cover_23.jpg",
+    "pdf_file": "",
+    "created_at": "2019-11-11T16:25:29Z",
+    "updated_at": "2026-05-28T00:58:30.478Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 24,
+  "fields": {
+    "title": "Buletin Bulanan Oktober 2019",
+    "bulan": "10",
+    "tahun": "2019",
+    "cover": "bulletins/covers/cover_24.jpg",
+    "pdf_file": "",
+    "created_at": "2019-11-11T16:25:57Z",
+    "updated_at": "2026-05-28T00:58:30.524Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 25,
+  "fields": {
+    "title": "Buletin Bulanan Desember 2019",
+    "bulan": "1",
+    "tahun": "2019",
+    "cover": "bulletins/covers/cover_25.jpg",
+    "pdf_file": "",
+    "created_at": "2020-02-05T17:56:51Z",
+    "updated_at": "2026-05-28T00:58:30.543Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 26,
+  "fields": {
+    "title": "Buletin Bulanan Januari 2020",
+    "bulan": "1",
+    "tahun": "2020",
+    "cover": "bulletins/covers/cover_26.jpg",
+    "pdf_file": "",
+    "created_at": "2020-09-16T21:03:35Z",
+    "updated_at": "2026-05-28T00:58:30.562Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 27,
+  "fields": {
+    "title": "Buletin Bulanan Februari 2020",
+    "bulan": "2",
+    "tahun": "2020",
+    "cover": "bulletins/covers/cover_27.jpg",
+    "pdf_file": "",
+    "created_at": "2020-09-16T21:04:15Z",
+    "updated_at": "2026-05-28T00:58:30.580Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 28,
+  "fields": {
+    "title": "Buletin Bulanan Maret 2020",
+    "bulan": "3",
+    "tahun": "2020",
+    "cover": "bulletins/covers/cover_28.jpg",
+    "pdf_file": "",
+    "created_at": "2020-09-16T21:04:41Z",
+    "updated_at": "2026-05-28T00:58:30.600Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 29,
+  "fields": {
+    "title": "Buletin Bulanan April 2020",
+    "bulan": "4",
+    "tahun": "2020",
+    "cover": "bulletins/covers/cover_29.jpg",
+    "pdf_file": "",
+    "created_at": "2020-09-16T21:05:11Z",
+    "updated_at": "2026-05-28T00:58:30.618Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 30,
+  "fields": {
+    "title": "Buletin Bulanan Mei 2020",
+    "bulan": "5",
+    "tahun": "2020",
+    "cover": "bulletins/covers/cover_30.jpg",
+    "pdf_file": "",
+    "created_at": "2020-09-16T21:05:34Z",
+    "updated_at": "2026-05-28T00:58:30.637Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 31,
+  "fields": {
+    "title": "Buletin Bulanan Juni 2020",
+    "bulan": "6",
+    "tahun": "2020",
+    "cover": "bulletins/covers/cover_31.jpg",
+    "pdf_file": "",
+    "created_at": "2020-09-16T21:05:57Z",
+    "updated_at": "2026-05-28T00:58:30.655Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 32,
+  "fields": {
+    "title": "Buletin Bulanan Juli 2020",
+    "bulan": "7",
+    "tahun": "2020",
+    "cover": "bulletins/covers/cover_32.jpg",
+    "pdf_file": "",
+    "created_at": "2020-09-16T21:06:23Z",
+    "updated_at": "2026-05-28T00:58:30.675Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 33,
+  "fields": {
+    "title": "Buletin Bulanan Agustus 2020",
+    "bulan": "8",
+    "tahun": "2020",
+    "cover": "bulletins/covers/cover_33.jpg",
+    "pdf_file": "",
+    "created_at": "2020-09-16T21:06:50Z",
+    "updated_at": "2026-05-28T00:58:30.693Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 34,
+  "fields": {
+    "title": "Transparansi Kinerja",
+    "bulan": "9",
+    "tahun": "2021",
+    "cover": "bulletins/covers/cover_34.jpg",
+    "pdf_file": "",
+    "created_at": "2021-09-19T20:03:17Z",
+    "updated_at": "2026-05-28T00:58:30.712Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 35,
+  "fields": {
+    "title": "Buletin Bulanan Agustus 2023",
+    "bulan": "8",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_35.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-05T00:32:29Z",
+    "updated_at": "2026-05-28T00:58:30.738Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 36,
+  "fields": {
+    "title": "Buletin Bulanan Januari 2023",
+    "bulan": "1",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_36.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-09T06:06:22Z",
+    "updated_at": "2026-05-28T00:58:30.757Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 37,
+  "fields": {
+    "title": "Buletin Bulanan Juli 2023",
+    "bulan": "7",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_37.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-09T06:07:46Z",
+    "updated_at": "2026-05-28T00:58:30.775Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 38,
+  "fields": {
+    "title": "Buletin Terbit Terbenam Matahari Tahun 2024",
+    "bulan": "1",
+    "tahun": "2024",
+    "cover": "bulletins/covers/cover_38.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-11T00:30:24Z",
+    "updated_at": "2026-05-28T00:58:30.795Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 39,
+  "fields": {
+    "title": "Buletin Bulanan Mei 2023",
+    "bulan": "1",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_39.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-15T01:07:53Z",
+    "updated_at": "2026-05-28T00:58:30.814Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 40,
+  "fields": {
+    "title": "Buletin Bulanan Oktober 2023",
+    "bulan": "1",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_40.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-15T01:35:39Z",
+    "updated_at": "2026-05-28T00:58:30.832Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 41,
+  "fields": {
+    "title": "BULETIN GEMPABUMI TAHUN 2023",
+    "bulan": "1",
+    "tahun": "2024",
+    "cover": "bulletins/covers/cover_41.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-19T23:03:11Z",
+    "updated_at": "2026-05-28T00:58:30.903Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 42,
+  "fields": {
+    "title": "Buletin Bulanan November 2023",
+    "bulan": "1",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_42.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-23T06:00:48Z",
+    "updated_at": "2026-05-28T00:58:30.922Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 43,
+  "fields": {
+    "title": "Buletin Bulanan Desember 2023",
+    "bulan": "1",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_43.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-23T06:03:14Z",
+    "updated_at": "2026-05-28T00:58:30.941Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 44,
+  "fields": {
+    "title": "Buletin Petir Tahun  2023",
+    "bulan": "1",
+    "tahun": "2024",
+    "cover": "bulletins/covers/cover_44.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-24T04:36:15Z",
+    "updated_at": "2026-05-28T00:58:30.960Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 45,
+  "fields": {
+    "title": "BULETIN BULANAN APRIL 2023",
+    "bulan": "4",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_45.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-28T03:09:54Z",
+    "updated_at": "2026-05-28T00:58:30.978Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 46,
+  "fields": {
+    "title": "Buletin Maret 2023",
+    "bulan": "3",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_46.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-31T00:14:41Z",
+    "updated_at": "2026-05-28T00:58:30.997Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 47,
+  "fields": {
+    "title": "BULETIN SEPTEMBER 2023",
+    "bulan": "9",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_47.jpg",
+    "pdf_file": "",
+    "created_at": "2024-01-31T00:20:06Z",
+    "updated_at": "2026-05-28T00:58:31.015Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 48,
+  "fields": {
+    "title": "Buletin Magnet Tahunan",
+    "bulan": "1",
+    "tahun": "2023",
+    "cover": "bulletins/covers/cover_48.jpg",
+    "pdf_file": "",
+    "created_at": "2024-02-01T00:24:33Z",
+    "updated_at": "2026-05-28T00:58:31.035Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 49,
+  "fields": {
+    "title": "Buletin Bulanan Januari 2024",
+    "bulan": "1",
+    "tahun": "2024",
+    "cover": "bulletins/covers/cover_49.jpg",
+    "pdf_file": "",
+    "created_at": "2024-02-20T22:52:36Z",
+    "updated_at": "2026-05-28T00:58:31.053Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 50,
+  "fields": {
+    "title": "BULETIN JANUARI 2025",
+    "bulan": "1",
+    "tahun": "2025",
+    "cover": "bulletins/covers/WhatsApp Image 2025-02-24 at 14.38.39.jpeg",
+    "pdf_file": "bulletins/pdfs/01. Januari.pdf",
+    "created_at": "2025-02-24T23:36:46Z",
+    "updated_at": "2026-05-28T00:58:31.078Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 51,
+  "fields": {
+    "title": "BULETIN TAHUNAN GEMPABUMI 2024",
+    "bulan": "12",
+    "tahun": "2025",
+    "cover": "bulletins/covers/cover buletin gempa 2024.png",
+    "pdf_file": "bulletins/pdfs/BULETIN GEMPABUMI 2024.pdf",
+    "created_at": "2025-02-24T23:39:33Z",
+    "updated_at": "2026-05-28T00:58:31.105Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 52,
+  "fields": {
+    "title": "BULETIN FEBRUARI 2025",
+    "bulan": "2",
+    "tahun": "2025",
+    "cover": "bulletins/covers/_Cover Buletin Februari 2025.png",
+    "pdf_file": "bulletins/pdfs/BULETIN FEBRUARI 2025 UPLOAD.pdf",
+    "created_at": "2025-04-13T01:59:01Z",
+    "updated_at": "2026-05-28T00:58:31.133Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 53,
+  "fields": {
+    "title": "BULETIN MARET 2025",
+    "bulan": "3",
+    "tahun": "2025",
+    "cover": "bulletins/covers/Cover Buletin Maret 2025.png",
+    "pdf_file": "bulletins/pdfs/UPLOAD - BULETIN MARET 2025.pdf",
+    "created_at": "2025-04-20T06:30:21Z",
+    "updated_at": "2026-05-28T00:58:31.156Z"
+  }
+},
+{
+  "model": "repository.bulletin",
+  "pk": 54,
+  "fields": {
+    "title": "BULETIN PETIR TAHUN 2025",
+    "bulan": "1",
+    "tahun": "2026",
+    "cover": "bulletins/covers/Cover Buletin Petir 2025.png",
+    "pdf_file": "bulletins/pdfs/Buletin Tahunan Petir 2025_gabung.pdf",
+    "created_at": "2026-02-08T04:43:04Z",
+    "updated_at": "2026-05-28T00:58:31.230Z"
+  }
+}
+]

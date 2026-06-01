@@ -223,9 +223,9 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=15, hour=23),  # Runs every day at 23:15 PM
     },
 
-    'fetch-bmkg-felt-every-3h': {
+    'fetch-bmkg-felt-hourly': {
         'task': 'repository.tasks.fetch_bmkg_felt_task',
-        'schedule': crontab(minute=0, hour='*/3'),  # Every 3 hours: 00:00, 03:00, 06:00 ... UTC
+        'schedule': crontab(minute=0),  # Hourly: at minute 0 of every hour, UTC
     },
     
     'process-yesterday-nexstorm-db3': {

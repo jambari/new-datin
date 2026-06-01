@@ -8,8 +8,8 @@ from django.core.files.base import ContentFile
 from repository.models import ShakemapEvent
 
 # IMPORTANT: Create these directories on your server and update the paths if needed
-INCOMING_DIR = '/home/sysop/new-datin/incoming_shakemaps/'
-ARCHIVE_DIR = '/home/sysop/new-datin/archive_shakemaps/'
+INCOMING_DIR = '/var/www/html/incoming_shakemaps/'
+ARCHIVE_DIR = '/var/www/html/archive_shakemaps/'
 
 class Command(BaseCommand):
     help = 'Processes new shakemap XML files and images from the incoming directory.'
