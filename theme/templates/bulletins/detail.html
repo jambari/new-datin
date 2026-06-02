@@ -158,10 +158,10 @@
       <!-- Loading state -->
       <div id="fb-loading" class="fb-loading">
         <div class="fb-spinner"></div>
-        <div>Memuat halaman...</div>
+        <div>Memuat PDF...</div>
       </div>
 
-      <!-- Navigation controls (di atas) -->
+      <!-- Navigation controls -->
       <div id="fb-nav" class="fb-nav" style="display:none;">
         <button class="fb-btn" id="fb-first" title="Halaman pertama">&laquo;</button>
         <button class="fb-btn" id="fb-prev" title="Sebelumnya">&lsaquo;</button>
@@ -170,7 +170,6 @@
         </span>
         <button class="fb-btn" id="fb-next" title="Selanjutnya">&rsaquo;</button>
         <button class="fb-btn" id="fb-last" title="Halaman terakhir">&raquo;</button>
-
         <div class="fb-zoom">
           <button class="fb-btn" id="fb-zoom-out" title="Perkecil">A−</button>
           <input type="range" id="fb-zoom-range" min="0.5" max="2.0" step="0.1" value="1.0">
@@ -185,9 +184,14 @@
 
       <!-- Cover image as clickable preview -->
       {% if bulletin.cover %}
-      <img id="fb-cover-img" class="fb-cover-img" src="{{ bulletin.cover.url }}"
-           alt="{{ bulletin.title }}" onclick="startFlipbook()"
-           style="{% if bulletin.pdf_file %}cursor:pointer;{% endif %}">
+      <div id="fb-cover-wrap" style="position:relative; cursor:pointer;" onclick="startFlipbook()">
+        <img id="fb-cover-img" class="fb-cover-img" src="{{ bulletin.cover.url }}"
+             alt="{{ bulletin.title }}">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);border-radius:6px;opacity:0;transition:opacity 0.2s;"
+             onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+          <span style="background:#fbbf24;color:#0f172a;padding:8px 20px;border-radius:6px;font-weight:700;font-size:14px;">📖 Buka & Baca</span>
+        </div>
+      </div>
       {% endif %}
 
       <!-- Download button -->
@@ -251,7 +255,7 @@
   const container  = document.getElementById('flipbook-container');
   const loadingEl  = document.getElementById('fb-loading');
   const navEl      = document.getElementById('fb-nav');
-  const coverImg   = document.getElementById('fb-cover-img');
+  const coverWrap  = document.getElementById('fb-cover-wrap');
   const pageNumEl  = document.getElementById('fb-page-num');
   const pageCountEl= document.getElementById('fb-page-count');
   const zoomRange  = document.getElementById('fb-zoom-range');
@@ -306,16 +310,18 @@
 
   /* ── Start flipbook (hide cover, show canvas) ───────────── */
   window.startFlipbook = function () {
+    if (coverWrap) coverWrap.style.display = 'none';
     if (pdfDoc) {
-      // Already loaded, just toggle visibility
-      if (coverImg) coverImg.style.display = 'none';
       container.style.display = 'block';
       navEl.style.display = 'flex';
       return;
     }
+    doLoadPdf();
+  };
 
+  /* ── Load PDF ──────────────────────────────────────────── */
+  function doLoadPdf() {
     loadingEl.style.display = 'block';
-    if (coverImg) coverImg.style.display = 'none';
     container.style.display = 'none';
     navEl.style.display = 'none';
 
@@ -333,10 +339,19 @@
 
       renderPage(1);
     }).catch(function (err) {
-      loadingEl.innerHTML = '<div style="color:#ef4444;">Gagal memuat PDF. <a href="'+URL+'" style="color:#60a5fa;">Unduh langsung</a></div>';
+      loadingEl.innerHTML = '<div style="color:#ef4444;">⚠ Gagal memuat PDF.<br><a href="'+URL+'" style="color:#60a5fa;">Klik di sini untuk mengunduh langsung</a></div>';
       console.error('PDF load error:', err);
     });
-  };
+  }
+
+  /* ── Auto-start: load PDF immediately, show cover as overlay ── */
+  {% if not bulletin.cover %}
+  // No cover — auto-start immediately
+  doLoadPdf();
+  {% else %}
+  // Has cover — load PDF in background, user clicks to reveal
+  doLoadPdf();
+  {% endif %}
 
   /* ── Event listeners ─────────────────────────────────────── */
   document.getElementById('fb-first').addEventListener('click', function () { goTo(1); });
