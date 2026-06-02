@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <!-- Modal backdrop -->
+      <div id="access-denied-modal" style="display:flex;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:36px 40px;max-width:440px;width:92%;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.4);animation:modalPop .3s ease-out;">
+          <div style="font-size:52px;margin-bottom:12px;">🔒</div>
+          <h2 style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">Akses Ditolak</h2>
+          <div style="width:50px;height:3px;background:#dc2626;margin:0 auto 16px;border-radius:2px;"></div>
+          <p style="font-size:14px;color:#6b7280;margin-bottom:4px;line-height:1.5;">
+            Anda tidak memiliki hak akses untuk mengedit Lapbul ini.
+          </p>
+          <p style="font-size:13px;color:#9ca3af;margin-bottom:24px;">
+            Hanya <strong>superuser</strong> atau <strong>PIC</strong> yang ditugaskan yang dapat mengedit.
+          </p>
+          <a href="{% url 'lapbul_list' %}" style="display:inline-block;padding:10px 32px;background:#4f46e5;color:#fff;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;transition:background .15s;"
+            onmouseover="this.style.background='#4338ca'" onmouseout="this.style.background='#4f46e5'">
+            ← Kembali ke Daftar Lapbul
+          </a>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<style>
+@keyframes modalPop {
+  0%   { transform:scale(.8); opacity:0; }
+  100% { transform:scale(1); opacity:1; }
+}
+</style>
+{% endblock %}

@@ -539,8 +539,7 @@ def lapbul_update(request, pk):
     except Exception:
         pass
     if not request.user.is_superuser and not is_pic:
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden('Anda tidak memiliki akses untuk mengedit Lapbul ini.')
+        return render(request, 'jadwal/lapbul_access_denied.html', status=403)
     if request.method == 'POST':
         # Non-staff can only upload files
         if not request.user.is_superuser:
