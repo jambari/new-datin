@@ -12,6 +12,7 @@ urlpatterns = [
     # -- SHAKEMAP URLS MODIFIED BELOW --
     path('shakemap/', ShakemapListView.as_view(), name='shakemap-list'),
     path('shakemap/event/<int:pk>/', ShakemapDetailView.as_view(), name='shakemap-detail'),
+    path('shakemap/edit/<int:pk>/', views.shakemap_edit, name='shakemap-edit'),
     
     # This is the new delete URL you need to add
     path('shakemap/delete/<int:pk>/', ShakemapEventDeleteView.as_view(), name='shakemap-delete'),

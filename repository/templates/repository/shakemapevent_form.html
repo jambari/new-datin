@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load tz %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <div style="max-width:720px;margin:0 auto;">
+        <h1 style="font-size:22px;font-weight:700;color:#111827;margin-bottom:24px;">Edit Shakemap Event</h1>
+        <form method="post" enctype="multipart/form-data" style="background:#fff;padding:24px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">Event Datetime (UTC)</label>
+              <input name="event_datetime" type="datetime-local"
+                value="{{ event.event_datetime|date:'Y-m-d' }}T{{ event.event_datetime|time:'H:i' }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+
+            <div>
+              <label style="font-size:13px;font-weight:500;color:#374151;">Latitude</label>
+              <input name="latitude" type="number" step="any" value="{{ event.latitude }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:500;color:#374151;">Longitude</label>
+              <input name="longitude" type="number" step="any" value="{{ event.longitude }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+
+            <div>
+              <label style="font-size:13px;font-weight:500;color:#374151;">Magnitude</label>
+              <input name="magnitude" type="number" step="0.1" value="{{ event.magnitude }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:500;color:#374151;">Depth (km)</label>
+              <input name="depth_km" type="number" step="any" value="{{ event.depth_km }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">Wilayah</label>
+              <input name="wilayah" value="{{ event.wilayah }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">Dirasakan</label>
+              <textarea name="dirasakan" rows="3"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;resize:vertical;">{{ event.dirasakan }}</textarea>
+            </div>
+
+          </div>
+
+          <!-- ── Shakemap Images ───────────────────────────────────────── -->
+          <h2 style="font-size:15px;font-weight:700;color:#374151;margin-top:28px;margin-bottom:16px;padding-top:16px;border-top:1px solid #e5e7eb;">Shakemap / Intensity Images</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+            {% with event.img_stationlist as img %}
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;">
+              <label style="font-size:13px;font-weight:600;color:#374151;">Station List (intensity.jpg)</label>
+              {% if img %}<div style="margin:8px 0;"><img src="{{ img.url }}" style="max-width:100%;max-height:140px;border-radius:4px;border:1px solid #e5e7eb;"></div>{% endif %}
+              <input type="file" name="img_stationlist" accept="image/*" style="margin-top:6px;font-size:12px;">
+              {% if img %}<label style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;color:#dc2626;cursor:pointer;"><input type="checkbox" name="clear_img_stationlist" value="1"> Hapus gambar ini</label>{% endif %}
+            </div>
+            {% endwith %}
+
+            {% with event.img_impact_list as img %}
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;">
+              <label style="font-size:13px;font-weight:600;color:#374151;">Impact List</label>
+              {% if img %}<div style="margin:8px 0;"><img src="{{ img.url }}" style="max-width:100%;max-height:140px;border-radius:4px;border:1px solid #e5e7eb;"></div>{% endif %}
+              <input type="file" name="img_impact_list" accept="image/*" style="margin-top:6px;font-size:12px;">
+              {% if img %}<label style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;color:#dc2626;cursor:pointer;"><input type="checkbox" name="clear_img_impact_list" value="1"> Hapus gambar ini</label>{% endif %}
+            </div>
+            {% endwith %}
+
+            {% with event.img_loc_map as img %}
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;">
+              <label style="font-size:13px;font-weight:600;color:#374151;">Loc Map</label>
+              {% if img %}<div style="margin:8px 0;"><img src="{{ img.url }}" style="max-width:100%;max-height:140px;border-radius:4px;border:1px solid #e5e7eb;"></div>{% endif %}
+              <input type="file" name="img_loc_map" accept="image/*" style="margin-top:6px;font-size:12px;">
+              {% if img %}<label style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;color:#dc2626;cursor:pointer;"><input type="checkbox" name="clear_img_loc_map" value="1"> Hapus gambar ini</label>{% endif %}
+            </div>
+            {% endwith %}
+
+            {% with event.img_report_1 as img %}
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;">
+              <label style="font-size:13px;font-weight:600;color:#374151;">Report 1</label>
+              {% if img %}<div style="margin:8px 0;"><img src="{{ img.url }}" style="max-width:100%;max-height:140px;border-radius:4px;border:1px solid #e5e7eb;"></div>{% endif %}
+              <input type="file" name="img_report_1" accept="image/*" style="margin-top:6px;font-size:12px;">
+              {% if img %}<label style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;color:#dc2626;cursor:pointer;"><input type="checkbox" name="clear_img_report_1" value="1"> Hapus gambar ini</label>{% endif %}
+            </div>
+            {% endwith %}
+
+            {% with event.img_report_2 as img %}
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;">
+              <label style="font-size:13px;font-weight:600;color:#374151;">Report 2</label>
+              {% if img %}<div style="margin:8px 0;"><img src="{{ img.url }}" style="max-width:100%;max-height:140px;border-radius:4px;border:1px solid #e5e7eb;"></div>{% endif %}
+              <input type="file" name="img_report_2" accept="image/*" style="margin-top:6px;font-size:12px;">
+              {% if img %}<label style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;color:#dc2626;cursor:pointer;"><input type="checkbox" name="clear_img_report_2" value="1"> Hapus gambar ini</label>{% endif %}
+            </div>
+            {% endwith %}
+
+          </div>
+
+          <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end;">
+            <a href="{% url 'shakemap-list' %}" style="padding:8px 20px;background:#f3f4f6;border-radius:6px;font-size:14px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Batal</a>
+            <button type="submit" style="padding:8px 20px;background:#4f46e5;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function() {
+  var btn = document.getElementById('sidebar-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var el = document.getElementById('sidebar');
+    if (el) el.classList.toggle('hidden');
+  });
+})();
+</script>
+{% endblock %}

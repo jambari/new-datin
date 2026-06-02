@@ -35,10 +35,18 @@ def dashboard(request):
     now_wit_dt = timezone.now().astimezone(_WIT)
     today_wit_date = now_wit_dt.date()
     mmdd = today_wit_date.strftime('%m%d')
-    birthday_pegawai = list(
+    _birthday_raw = list(
         Pegawai.objects.filter(nip__regex=r'^\d{4}' + mmdd)
         .order_by('urutan', 'nama')
     )
+    birthday_pegawai = []
+    for p in _birthday_raw:
+        try:
+            birth_year = int(p.nip[:4])
+            age = today_wit_date.year - birth_year
+        except (ValueError, TypeError):
+            age = None
+        birthday_pegawai.append({'nama': p.nama, 'umur': age})
 
     # --- Lightning ---
     from lightning.models import DailyStrikeSummary

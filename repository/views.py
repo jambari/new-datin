@@ -507,7 +507,40 @@ class ShakemapEventDeleteView(DeleteView):
     template_name = 'repository/shakemapevent_confirm_delete.html'
     success_url = reverse_lazy('shakemap-list')
 
-# Add this new view to your views.py
+
+@login_required
+def shakemap_edit(request, pk):
+    event = get_object_or_404(FeltEarthquake, pk=pk)
+    if request.method == 'POST':
+        event.event_datetime = request.POST.get('event_datetime', event.event_datetime)
+        event.latitude       = request.POST.get('latitude', event.latitude)
+        event.longitude      = request.POST.get('longitude', event.longitude)
+        event.magnitude      = request.POST.get('magnitude', event.magnitude)
+        event.depth_km       = request.POST.get('depth_km', event.depth_km)
+        event.wilayah        = request.POST.get('wilayah', event.wilayah)
+        event.dirasakan      = request.POST.get('dirasakan', event.dirasakan) or ''
+
+        # Handle image uploads & clear flags
+        for field_name in ['img_stationlist', 'img_impact_list', 'img_loc_map', 'img_report_1', 'img_report_2']:
+            clear_flag = request.POST.get(f'clear_{field_name}') == '1'
+            uploaded = request.FILES.get(field_name)
+            if clear_flag:
+                old = getattr(event, field_name)
+                if old:
+                    old.delete(save=False)
+                setattr(event, field_name, None)
+            elif uploaded:
+                old = getattr(event, field_name)
+                if old:
+                    old.delete(save=False)
+                setattr(event, field_name, uploaded)
+
+        event.save()
+        return redirect('shakemap-list')
+    return render(request, 'repository/shakemapevent_form.html', {'event': event})
+
+
+
 
 def query_accelero_availability(request):
     """

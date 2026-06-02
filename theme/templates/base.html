@@ -163,23 +163,8 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- ── Shared Navbar ──────────────────────────────────── -->
-    {% block site_header %}<header id="site-header">
-      <div class="header-inner">
-        <a href="{% url 'landing' %}" class="brand">
-          <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
-          <div class="brand-text" style="line-height:1.15;">
-            <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
-            <div class="brand-sub">BMKG</div>
-          </div>
-        </a>
-        <div class="header-spacer"></div>
-        <a class="header-back" href="{% url 'landing' %}">&larr; Beranda</a>
-        <button class="thm-btn" id="baseThemeBtn" aria-label="Toggle theme">
-          <span id="baseThemeIcon">🌙</span>
-        </button>
-      </div>
-    </header>{% endblock %}
+    <!-- ── Shared Navbar (opt-in; public pages include _landing_header.html) ──── -->
+    {% block site_header %}{% endblock %}
 
     {% block content %}
     {% endblock %}
