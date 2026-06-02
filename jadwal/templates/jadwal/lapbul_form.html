@@ -18,6 +18,7 @@
           {% csrf_token %}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
 
+{% if is_staff %}
             <div>
               <label style="font-size:13px;font-weight:500;color:#374151;">Bulan</label>
               <select name="bulan" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;color:#111827;">
@@ -37,7 +38,14 @@
               <input name="data_bulan" value="{{ object.data_bulan|default:'' }}"
                 style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
             </div>
+{% else %}
+            <div style="grid-column:1/-1;padding:12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+              <p style="font-size:14px;font-weight:700;color:#111827;margin:0;">{{ object.get_bulan_display }} {{ object.tahun }}</p>
+              <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">Deadline: Tgl {{ object.deadline }}</p>
+            </div>
+{% endif %}
 
+{% if is_staff %}
             <div style="grid-column:1/-1;border-top:1px solid #e5e7eb;padding-top:16px;margin-top:8px;">
               <h2 style="font-size:15px;font-weight:700;color:#374151;margin-bottom:12px;">Laporan Observasi</h2>
             </div>
@@ -75,6 +83,12 @@
                 {% endfor %}
               </select>
             </div>
+{% else %}
+            <div style="grid-column:1/-1;padding:12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+              <p style="font-size:12px;color:#6b7280;margin:0;">Lap. Observasi: <strong style="color:#111827;">{{ object.lapbul_obs }}</strong> (PIC: {{ object.pic_lapbul_obs.nama|default:"—" }})</p>
+              <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">Lap. Data & Info: <strong style="color:#111827;">{{ object.lapbul_datin }}</strong> (PIC: {{ object.pic_lapbul_datin.nama|default:"—" }})</p>
+            </div>
+{% endif %}
 
             <div style="grid-column:1/-1;border-top:1px solid #e5e7eb;padding-top:16px;margin-top:8px;">
               <h2 style="font-size:15px;font-weight:700;color:#374151;margin-bottom:12px;">Upload Dokumen</h2>
@@ -104,11 +118,13 @@
                 style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;">
             </div>
 
+{% if is_staff %}
             <div>
               <label style="font-size:13px;font-weight:500;color:#374151;">Deadline (tanggal)</label>
               <input name="deadline" type="number" value="{{ object.deadline|default:'5' }}" min="1" max="31"
                 style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
             </div>
+{% endif %}
 
           </div>
 

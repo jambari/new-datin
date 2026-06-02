@@ -533,8 +533,11 @@ def lapbul_update(request, pk):
     obj = get_object_or_404(Lapbul, pk=pk)
     # Staff can edit; regular user only if PIC
     is_pic = False
-    if hasattr(request.user, 'pegawai'):
-        is_pic = request.user.pegawai in [obj.pic_lapbul_obs, obj.pic_lapbul_datin]
+    try:
+        peg = request.user.pegawai
+        is_pic = peg in [obj.pic_lapbul_obs, obj.pic_lapbul_datin]
+    except Exception:
+        pass
     if not request.user.is_staff and not is_pic:
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden('Anda tidak memiliki akses untuk mengedit Lapbul ini.')
@@ -546,7 +549,13 @@ def lapbul_update(request, pk):
             _save_lapbul(request, obj)
         return redirect('lapbul_list')
     pegawai_list = Pegawai.objects.filter(tanggal_keluar__isnull=True).order_by('urutan', 'nama')
-    return render(request, 'jadwal/lapbul_form.html', {'object': obj, 'title': 'Edit Lapbul', 'bulan_choices': Lapbul.BULAN_CHOICES, 'pegawai_list': pegawai_list})
+    context = {
+        'object': obj, 'title': 'Edit Lapbul',
+        'bulan_choices': Lapbul.BULAN_CHOICES,
+        'pegawai_list': pegawai_list,
+        'is_staff': request.user.is_staff,
+    }
+    return render(request, 'jadwal/lapbul_form.html', context)
 
 
 @login_required
