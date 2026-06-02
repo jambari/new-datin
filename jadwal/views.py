@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
-from .models import Pegawai, JadwalHarian, PolaDinas, RiwayatJadwal
+from .models import Pegawai, JadwalHarian, PolaDinas, RiwayatJadwal, Lapbul
 import random
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -498,5 +498,93 @@ def _save_pegawai(request, obj):
     obj.urutan         = int(p.get('urutan') or 0)
     tanggal_keluar     = p.get('tanggal_keluar', '').strip()
     obj.tanggal_keluar = tanggal_keluar if tanggal_keluar else None
+    obj.save()
+    return obj
+
+
+# ── Lapbul CRUD ────────────────────────────────────────────────────────────
+
+@login_required
+def lapbul_list(request):
+    qs = Lapbul.objects.all()
+    return render(request, 'jadwal/lapbul_list.html', {'lapbul_list': qs})
+
+
+@staff_member_required
+def lapbul_create(request):
+    if request.method == 'POST':
+        _save_lapbul(request, Lapbul())
+        return redirect('lapbul_list')
+    pegawai_list = Pegawai.objects.filter(tanggal_keluar__isnull=True).order_by('urutan', 'nama')
+    return render(request, 'jadwal/lapbul_form.html', {'title': 'Tambah Lapbul', 'bulan_choices': Lapbul.BULAN_CHOICES, 'pegawai_list': pegawai_list})
+
+
+@login_required
+def lapbul_update(request, pk):
+    obj = get_object_or_404(Lapbul, pk=pk)
+    # Staff can edit; regular user only if PIC
+    is_pic = False
+    if hasattr(request.user, 'pegawai'):
+        is_pic = request.user.pegawai in [obj.pic_lapbul_obs, obj.pic_lapbul_datin]
+    if not request.user.is_staff and not is_pic:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden('Anda tidak memiliki akses untuk mengedit Lapbul ini.')
+    if request.method == 'POST':
+        # Non-staff can only upload files
+        if not request.user.is_staff:
+            _save_lapbul_files(request, obj)
+        else:
+            _save_lapbul(request, obj)
+        return redirect('lapbul_list')
+    pegawai_list = Pegawai.objects.filter(tanggal_keluar__isnull=True).order_by('urutan', 'nama')
+    return render(request, 'jadwal/lapbul_form.html', {'object': obj, 'title': 'Edit Lapbul', 'bulan_choices': Lapbul.BULAN_CHOICES, 'pegawai_list': pegawai_list})
+
+
+@login_required
+def lapbul_delete(request, pk):
+    obj = get_object_or_404(Lapbul, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+        return redirect('lapbul_list')
+    return render(request, 'jadwal/lapbul_confirm_delete.html', {'object': obj})
+
+
+def _save_lapbul(request, obj):
+    p = request.POST
+    obj.lapbul_obs       = p.get('lapbul_obs', '').strip()
+    obj.lapbul_datin     = p.get('lapbul_datin', '').strip()
+    obj.bulan            = int(p.get('bulan', 1))
+    obj.data_bulan       = p.get('data_bulan', '').strip()
+    obj.tahun            = int(p.get('tahun', 2026))
+    obj.deadline         = int(p.get('deadline', 5))
+
+    pic_obs_id = p.get('pic_lapbul_obs', '').strip()
+    obj.pic_lapbul_obs = Pegawai.objects.filter(pk=pic_obs_id).first() if pic_obs_id else None
+
+    pic_datin_id = p.get('pic_lapbul_datin', '').strip()
+    obj.pic_lapbul_datin = Pegawai.objects.filter(pk=pic_datin_id).first() if pic_datin_id else None
+
+    # Handle file uploads
+    for field_name in ['file_lapbul_obs', 'file_lapbul_datin']:
+        uploaded = request.FILES.get(field_name)
+        if uploaded:
+            old_f = getattr(obj, field_name)
+            if old_f:
+                old_f.delete(save=False)
+            setattr(obj, field_name, uploaded)
+
+    obj.save()
+    return obj
+
+
+def _save_lapbul_files(request, obj):
+    """Hanya simpan file upload -- untuk non-staff PIC."""
+    for field_name in ['file_lapbul_obs', 'file_lapbul_datin']:
+        uploaded = request.FILES.get(field_name)
+        if uploaded:
+            old_f = getattr(obj, field_name)
+            if old_f:
+                old_f.delete(save=False)
+            setattr(obj, field_name, uploaded)
     obj.save()
     return obj

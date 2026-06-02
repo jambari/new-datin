@@ -166,6 +166,7 @@ def dashboard(request):
         'sun_set_wit':         sun_set_wit,
         'sun_date':            tomorrow_date,
         'birthday_pegawai':    birthday_pegawai,
+        'lapbul_bulan_ini':    lapbul_bulan_ini,
         'latest_qc_rows':      latest_qc_rows,
     }
     return render(request, 'dashboard.html', context)

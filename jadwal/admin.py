@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Pegawai, PolaDinas, JadwalHarian, JadwalHVSampler
+from .models import Pegawai, PolaDinas, JadwalHarian, JadwalHVSampler, Lapbul
 
 @admin.register(Pegawai)
 class PegawaiAdmin(admin.ModelAdmin):
@@ -15,12 +15,8 @@ class JadwalHarianAdmin(admin.ModelAdmin):
     list_display = ('tanggal', 'pegawai', 'pola', 'keterangan_lain')
     list_filter = ('tanggal', 'pegawai', 'pola')
     date_hierarchy = 'tanggal'
-    # Fitur ini memudahkan input massal
     save_as = True
 
-
-# Tambahkan di admin.py
-from .models import Pegawai, PolaDinas, JadwalHarian, JadwalHVSampler # Pastikan import diupdate
 
 @admin.register(JadwalHVSampler)
 class JadwalHVSamplerAdmin(admin.ModelAdmin):
@@ -28,6 +24,11 @@ class JadwalHVSamplerAdmin(admin.ModelAdmin):
     list_filter = ('tipe', 'tanggal')
     date_hierarchy = 'tanggal'
     search_fields = ('catatan_khusus',)
-    
-    # Memudahkan input massal jika diperlukan
     save_as = True
+
+
+@admin.register(Lapbul)
+class LapbulAdmin(admin.ModelAdmin):
+    list_display = ('lapbul_obs', 'pic_lapbul_obs', 'lapbul_datin', 'pic_lapbul_datin', 'bulan', 'tahun', 'deadline')
+    list_filter = ('tahun', 'bulan')
+    search_fields = ('lapbul_obs', 'lapbul_datin', 'pic_lapbul_obs', 'pic_lapbul_datin')

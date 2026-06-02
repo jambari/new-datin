@@ -91,3 +91,34 @@ class JadwalHVSampler(models.Model):
 
     def __str__(self):
         return f"{self.tanggal} - {self.get_tipe_display()}"
+
+
+class Lapbul(models.Model):
+    """Penjadwalan PIC Laporan Bulanan (Observasi & Data-Informasi)."""
+
+    BULAN_CHOICES = [
+        (1, 'Januari'), (2, 'Februari'), (3, 'Maret'),
+        (4, 'April'),   (5, 'Mei'),      (6, 'Juni'),
+        (7, 'Juli'),    (8, 'Agustus'),  (9, 'September'),
+        (10, 'Oktober'), (11, 'November'), (12, 'Desember'),
+    ]
+
+    lapbul_obs       = models.CharField(max_length=200, verbose_name="Laporan Observasi")
+    pic_lapbul_obs   = models.ForeignKey(Pegawai, on_delete=models.SET_NULL, null=True, blank=True, related_name='pic_obs_lapbul', verbose_name="PIC Observasi")
+    lapbul_datin     = models.CharField(max_length=200, verbose_name="Laporan Data & Informasi")
+    pic_lapbul_datin = models.ForeignKey(Pegawai, on_delete=models.SET_NULL, null=True, blank=True, related_name='pic_datin_lapbul', verbose_name="PIC Data & Informasi")
+    bulan           = models.IntegerField(choices=BULAN_CHOICES, verbose_name="Bulan")
+    data_bulan      = models.CharField(max_length=50, verbose_name="Label Bulan", help_text="Contoh: Januari 2026")
+    tahun           = models.IntegerField(verbose_name="Tahun")
+    deadline         = models.IntegerField(default=5, verbose_name="Deadline (tanggal)", help_text="Tanggal deadline setiap bulan (default: 5)")
+    file_lapbul_obs  = models.FileField(upload_to='lapbul/obs/', null=True, blank=True, verbose_name="Dokumen Observasi")
+    file_lapbul_datin = models.FileField(upload_to='lapbul/datin/', null=True, blank=True, verbose_name="Dokumen Data & Informasi")
+
+    class Meta:
+        verbose_name = "Lapbul"
+        verbose_name_plural = "Lapbul"
+        ordering = ['-tahun', '-bulan']
+
+    def __str__(self):
+        bulan_label = dict(self.BULAN_CHOICES).get(self.bulan, str(self.bulan))
+        return f"Lapbul {bulan_label} {self.tahun}"

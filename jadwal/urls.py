@@ -13,4 +13,10 @@ urlpatterns = [
     path('pegawai/tambah/', views.pegawai_create, name='pegawai_create'),
     path('pegawai/<int:pk>/edit/', views.pegawai_update, name='pegawai_update'),
     path('pegawai/<int:pk>/hapus/', views.pegawai_delete, name='pegawai_delete'),
+
+    # Lapbul CRUD
+    path('lapbul/', views.lapbul_list, name='lapbul_list'),
+    path('lapbul/tambah/', views.lapbul_create, name='lapbul_create'),
+    path('lapbul/<int:pk>/edit/', views.lapbul_update, name='lapbul_update'),
+    path('lapbul/<int:pk>/hapus/', views.lapbul_delete, name='lapbul_delete'),
 ]

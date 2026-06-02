@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  /* Force light-mode form controls */
+  main input, main select, main textarea {
+    background: #fff !important;
+    color: #111827 !important;
+  }
+</style>
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <div style="max-width:640px;margin:0 auto;">
+        <h1 style="font-size:22px;font-weight:700;color:#111827;margin-bottom:24px;">{{ title }}</h1>
+        <form method="post" enctype="multipart/form-data" style="background:#fff;padding:24px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+            <div>
+              <label style="font-size:13px;font-weight:500;color:#374151;">Bulan</label>
+              <select name="bulan" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;color:#111827;">
+                {% for val, label in bulan_choices %}
+                <option value="{{ val }}" {% if object.bulan == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:500;color:#374151;">Tahun</label>
+              <input name="tahun" type="number" value="{{ object.tahun|default:'2026' }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">Label Bulan (contoh: Januari 2026)</label>
+              <input name="data_bulan" value="{{ object.data_bulan|default:'' }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+
+            <div style="grid-column:1/-1;border-top:1px solid #e5e7eb;padding-top:16px;margin-top:8px;">
+              <h2 style="font-size:15px;font-weight:700;color:#374151;margin-bottom:12px;">Laporan Observasi</h2>
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">Nama Laporan</label>
+              <input name="lapbul_obs" value="{{ object.lapbul_obs|default:'' }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">PIC Observasi</label>
+              <select name="pic_lapbul_obs" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;color:#111827;">
+                <option value="">-- Pilih PIC --</option>
+                {% for p in pegawai_list %}
+                <option value="{{ p.pk }}" {% if object.pic_lapbul_obs_id == p.pk %}selected{% endif %}>{{ p.nama }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div style="grid-column:1/-1;border-top:1px solid #e5e7eb;padding-top:16px;margin-top:8px;">
+              <h2 style="font-size:15px;font-weight:700;color:#374151;margin-bottom:12px;">Laporan Data & Informasi</h2>
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">Nama Laporan</label>
+              <input name="lapbul_datin" value="{{ object.lapbul_datin|default:'' }}"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">PIC Data & Informasi</label>
+              <select name="pic_lapbul_datin" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;color:#111827;">
+                <option value="">-- Pilih PIC --</option>
+                {% for p in pegawai_list %}
+                <option value="{{ p.pk }}" {% if object.pic_lapbul_datin_id == p.pk %}selected{% endif %}>{{ p.nama }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div style="grid-column:1/-1;border-top:1px solid #e5e7eb;padding-top:16px;margin-top:8px;">
+              <h2 style="font-size:15px;font-weight:700;color:#374151;margin-bottom:12px;">Upload Dokumen</h2>
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">Dokumen Observasi (.doc/.docx/.pdf)</label>
+              {% if object.file_lapbul_obs %}
+                <div style="margin:6px 0;padding:8px 12px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">
+                  <span style="font-size:12px;color:#059669;">✅ Terupload:</span>
+                  <a href="{{ object.file_lapbul_obs.url }}" style="font-size:12px;color:#2563eb;margin-left:6px;">{{ object.file_lapbul_obs.name|slice:"12:" }}</a>
+                </div>
+              {% endif %}
+              <input type="file" name="file_lapbul_obs" accept=".doc,.docx,.pdf"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;">
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label style="font-size:13px;font-weight:500;color:#374151;">Dokumen Data & Informasi (.doc/.docx/.pdf)</label>
+              {% if object.file_lapbul_datin %}
+                <div style="margin:6px 0;padding:8px 12px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">
+                  <span style="font-size:12px;color:#059669;">✅ Terupload:</span>
+                  <a href="{{ object.file_lapbul_datin.url }}" style="font-size:12px;color:#2563eb;margin-left:6px;">{{ object.file_lapbul_datin.name|slice:"15:" }}</a>
+                </div>
+              {% endif %}
+              <input type="file" name="file_lapbul_datin" accept=".doc,.docx,.pdf"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;background:#fff;">
+            </div>
+
+            <div>
+              <label style="font-size:13px;font-weight:500;color:#374151;">Deadline (tanggal)</label>
+              <input name="deadline" type="number" value="{{ object.deadline|default:'5' }}" min="1" max="31"
+                style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;">
+            </div>
+
+          </div>
+
+          <div style="margin-top:24px;display:flex;gap:12px;justify-content:flex-end;">
+            <a href="{% url 'lapbul_list' %}" style="padding:8px 20px;background:#f3f4f6;border-radius:6px;font-size:14px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Batal</a>
+            <button type="submit" style="padding:8px 20px;background:#4f46e5;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function() {
+  var btn = document.getElementById('sidebar-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var el = document.getElementById('sidebar');
+    if (el) el.classList.toggle('hidden');
+  });
+})();
+</script>
+{% endblock %}

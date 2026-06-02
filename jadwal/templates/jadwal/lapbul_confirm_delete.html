@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-8">
+      <div style="max-width:480px;margin:0 auto;">
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:32px;text-align:center;">
+          <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+          <h2 style="font-size:18px;font-weight:700;color:#111827;margin-bottom:8px;">Hapus Lapbul?</h2>
+          <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+            {{ object.get_bulan_display }} {{ object.tahun }}<br>
+            <strong>{{ object.lapbul_obs }}</strong> &amp; <strong>{{ object.lapbul_datin }}</strong>
+          </p>
+          <form method="post" style="display:flex;gap:12px;justify-content:center;">
+            {% csrf_token %}
+            <a href="{% url 'lapbul_list' %}" style="padding:8px 20px;background:#f3f4f6;border-radius:6px;font-size:14px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Batal</a>
+            <button type="submit" style="padding:8px 20px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Hapus</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

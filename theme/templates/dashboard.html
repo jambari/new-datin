@@ -61,32 +61,47 @@
         </div>
         </a>
 
+{% if lapbul_bulan_ini %}
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #f59e0b;">
-          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Sambaran Petir Kemarin</p>
-          <p style="font-size:32px;font-weight:700;color:#111827;line-height:1;">{{ lightning_today }}</p>
-          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Total CG dalam area</p>
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Deadline Lapbul</p>
+          <p style="font-size:18px;font-weight:700;color:#111827;line-height:1.2;">{{ lapbul_bulan_ini.get_bulan_display }} {{ lapbul_bulan_ini.tahun }}</p>
+          <p style="font-size:13px;color:#dc2626;font-weight:700;margin-top:4px;">Tgl {{ lapbul_bulan_ini.deadline }}</p>
         </div>
+        {% else %}
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #d1d5db;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Deadline Lapbul</p>
+          <p style="font-size:18px;font-weight:700;color:#9ca3af;line-height:1.2;">Belum ada</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Lapbul bulan ini</p>
+        </div>
+        {% endif %}
 
+        {% if lapbul_bulan_ini %}
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #059669;">
-          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">WRSNG Online</p>
-          <p style="font-size:32px;font-weight:700;color:#111827;line-height:1;">{{ wrsng_online }}<span style="font-size:18px;color:#9ca3af;">/{{ wrsng_total }}</span></p>
-          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Status terakhir per stasiun</p>
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Lap. Observasi</p>
+          <p style="font-size:15px;font-weight:700;color:#111827;line-height:1.3;">{{ lapbul_bulan_ini.lapbul_obs }}</p>
+          <p style="font-size:12px;color:#059669;margin-top:4px;">PIC: {{ lapbul_bulan_ini.pic_lapbul_obs.nama|default:"—" }}</p>
         </div>
+        {% else %}
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #d1d5db;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Lap. Observasi</p>
+          <p style="font-size:15px;font-weight:700;color:#9ca3af;">—</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Belum ada data</p>
+        </div>
+        {% endif %}
 
+        {% if lapbul_bulan_ini %}
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #f97316;">
-          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Matahari — Jayapura</p>
-          <p style="font-size:11px;color:#f97316;margin-bottom:8px;">Besok, {{ sun_date|date:"d M Y" }}</p>
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-            <span style="font-size:16px;">🌅</span>
-            <span style="font-size:13px;color:#6b7280;">Terbit</span>
-            <span style="font-size:16px;font-weight:700;color:#111827;margin-left:auto;">{% if sun_rise_wit %}{{ sun_rise_wit }} WIT{% else %}—{% endif %}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span style="font-size:16px;">🌇</span>
-            <span style="font-size:13px;color:#6b7280;">Terbenam</span>
-            <span style="font-size:16px;font-weight:700;color:#111827;margin-left:auto;">{% if sun_set_wit %}{{ sun_set_wit }} WIT{% else %}—{% endif %}</span>
-          </div>
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Lap. Data & Info</p>
+          <p style="font-size:15px;font-weight:700;color:#111827;line-height:1.3;">{{ lapbul_bulan_ini.lapbul_datin }}</p>
+          <p style="font-size:12px;color:#f97316;margin-top:4px;">PIC: {{ lapbul_bulan_ini.pic_lapbul_datin.nama|default:"—" }}</p>
         </div>
+        {% else %}
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #d1d5db;">
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Lap. Data & Info</p>
+          <p style="font-size:15px;font-weight:700;color:#9ca3af;">—</p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Belum ada data</p>
+        </div>
+        {% endif %}
       </div>
 
       <!-- ── Row 2: Instrument Monitor + Logbook ──────────────────────── -->
