@@ -519,8 +519,10 @@ def lapbul_list(request):
     return render(request, 'jadwal/lapbul_list.html', {'lapbul_list': lapbul_page, 'page_obj': lapbul_page})
 
 
-@staff_member_required
+@login_required
 def lapbul_create(request):
+    if not request.user.is_superuser:
+        return render(request, 'jadwal/lapbul_access_denied.html', status=403)
     if request.method == 'POST':
         _save_lapbul(request, Lapbul())
         return redirect('lapbul_list')
