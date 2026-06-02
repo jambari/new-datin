@@ -61,19 +61,11 @@
         </div>
         </a>
 
-{% if lapbul_bulan_ini %}
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #f59e0b;">
-          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Deadline Lapbul</p>
-          <p style="font-size:18px;font-weight:700;color:#111827;line-height:1.2;">{{ lapbul_bulan_ini.get_bulan_display }} {{ lapbul_bulan_ini.tahun }}</p>
-          <p style="font-size:13px;color:#dc2626;font-weight:700;margin-top:4px;">Tgl {{ lapbul_bulan_ini.deadline }}</p>
+          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Buletin</p>
+          <p style="font-size:18px;font-weight:700;color:#111827;line-height:1.2;">Buletin {{ buletin_deadline.bulan_label }} {{ buletin_deadline.tahun }}</p>
+          <p style="font-size:13px;color:#dc2626;font-weight:700;margin-top:4px;">Deadline: {{ buletin_deadline.deadline_label }}</p>
         </div>
-        {% else %}
-        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #d1d5db;">
-          <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Deadline Lapbul</p>
-          <p style="font-size:18px;font-weight:700;color:#9ca3af;line-height:1.2;">Belum ada</p>
-          <p style="font-size:12px;color:#9ca3af;margin-top:4px;">Lapbul bulan ini</p>
-        </div>
-        {% endif %}
 
         {% if lapbul_bulan_ini %}
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #059669;position:relative;">

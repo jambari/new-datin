@@ -54,6 +54,16 @@ def dashboard(request):
     now_year  = today_wit_date.year
     lapbul_bulan_ini = Lapbul.objects.filter(bulan=now_month, tahun=now_year).order_by('-tahun', '-bulan').first()
 
+    # --- Buletin deadline (bulan sebelumnya, deadline tgl 15 bulan ini) ---
+    BULAN_NAMA = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
+    prev_month = now_month - 1 if now_month > 1 else 12
+    prev_year  = now_year if now_month > 1 else now_year - 1
+    buletin_deadline = {
+        'bulan_label': BULAN_NAMA[prev_month],
+        'tahun': prev_year,
+        'deadline_label': '15 ' + BULAN_NAMA[now_month] + ' ' + str(now_year),
+    }
+
     # --- Lightning ---
     from lightning.models import DailyStrikeSummary
     lightning_7d = DailyStrikeSummary.objects.filter(summary_date__gte=week_ago).order_by('summary_date')
@@ -173,6 +183,7 @@ def dashboard(request):
         'sun_date':            tomorrow_date,
         'birthday_pegawai':    birthday_pegawai,
         'lapbul_bulan_ini':    lapbul_bulan_ini,
+        'buletin_deadline':    buletin_deadline,
         'latest_qc_rows':      latest_qc_rows,
     }
     return render(request, 'dashboard.html', context)
