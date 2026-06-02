@@ -48,6 +48,12 @@ def dashboard(request):
             age = None
         birthday_pegawai.append({'nama': p.nama, 'umur': age})
 
+    # --- Lapbul bulan ini ---
+    from jadwal.models import Lapbul
+    now_month = today_wit_date.month
+    now_year  = today_wit_date.year
+    lapbul_bulan_ini = Lapbul.objects.filter(bulan=now_month, tahun=now_year).order_by('-tahun', '-bulan').first()
+
     # --- Lightning ---
     from lightning.models import DailyStrikeSummary
     lightning_7d = DailyStrikeSummary.objects.filter(summary_date__gte=week_ago).order_by('summary_date')
