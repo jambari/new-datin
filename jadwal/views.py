@@ -2,6 +2,7 @@ from django.db.models import Q
 import calendar
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -507,7 +508,15 @@ def _save_pegawai(request, obj):
 @login_required
 def lapbul_list(request):
     qs = Lapbul.objects.all()
-    return render(request, 'jadwal/lapbul_list.html', {'lapbul_list': qs})
+    paginator = Paginator(qs, 12)
+    page = request.GET.get('page')
+    try:
+        lapbul_page = paginator.page(page)
+    except PageNotAnInteger:
+        lapbul_page = paginator.page(1)
+    except EmptyPage:
+        lapbul_page = paginator.page(paginator.num_pages)
+    return render(request, 'jadwal/lapbul_list.html', {'lapbul_list': lapbul_page, 'page_obj': lapbul_page})
 
 
 @staff_member_required
