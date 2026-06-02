@@ -538,12 +538,12 @@ def lapbul_update(request, pk):
         is_pic = peg in [obj.pic_lapbul_obs, obj.pic_lapbul_datin]
     except Exception:
         pass
-    if not request.user.is_staff and not is_pic:
+    if not request.user.is_superuser and not is_pic:
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden('Anda tidak memiliki akses untuk mengedit Lapbul ini.')
     if request.method == 'POST':
         # Non-staff can only upload files
-        if not request.user.is_staff:
+        if not request.user.is_superuser:
             _save_lapbul_files(request, obj)
         else:
             _save_lapbul(request, obj)
@@ -553,7 +553,7 @@ def lapbul_update(request, pk):
         'object': obj, 'title': 'Edit Lapbul',
         'bulan_choices': Lapbul.BULAN_CHOICES,
         'pegawai_list': pegawai_list,
-        'is_staff': request.user.is_staff,
+        'is_staff': request.user.is_superuser,
     }
     return render(request, 'jadwal/lapbul_form.html', context)
 
