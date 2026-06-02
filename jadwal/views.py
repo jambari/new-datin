@@ -527,7 +527,7 @@ def lapbul_create(request):
         _save_lapbul(request, Lapbul())
         return redirect('lapbul_list')
     pegawai_list = Pegawai.objects.filter(tanggal_keluar__isnull=True).order_by('urutan', 'nama')
-    return render(request, 'jadwal/lapbul_form.html', {'title': 'Tambah Lapbul', 'bulan_choices': Lapbul.BULAN_CHOICES, 'pegawai_list': pegawai_list})
+    return render(request, 'jadwal/lapbul_form.html', {'title': 'Tambah Lapbul', 'bulan_choices': Lapbul.BULAN_CHOICES, 'pegawai_list': pegawai_list, 'is_staff': True})
 
 
 @login_required
