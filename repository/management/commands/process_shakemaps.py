@@ -44,18 +44,30 @@ class Command(BaseCommand):
         root = tree.getroot()
 
         eq_elem = root.find('earthquake')
+        tz_map = {'WIB': 7, 'WITA': 8, 'WIT': 9}
+        xml_tz = (eq_elem.get('timezone') or 'UTC').upper()
+        offset_h = tz_map.get(xml_tz, 0)
         event_time_utc = datetime(
             int(eq_elem.get('year')), int(eq_elem.get('month')), int(eq_elem.get('day')),
             int(eq_elem.get('hour')), int(eq_elem.get('minute')), int(eq_elem.get('second')),
             tzinfo=timezone.utc
         )
+        if offset_h:
+            event_time_utc = event_time_utc - __import__('datetime').timedelta(hours=offset_h)
 
+        # Use consistent 14-digit WIB timestamp as event_id (same as fetch_bmkg_felt & ingest_pushed_event)
+        xml_id = eq_elem.get('id', '')
+        wib_ts = xml_id[:14] if len(xml_id) >= 14 and xml_id[:14].isdigit() else xml_id
         event, created = ShakemapEvent.objects.update_or_create(
-            event_id=eq_elem.get('id'),
+            event_id=wib_ts,
             defaults={ 'latitude': float(eq_elem.get('lat')), 'longitude': float(eq_elem.get('lon')),
                        'magnitude': float(eq_elem.get('mag')), 'depth': float(eq_elem.get('depth')),
                        'location_string': eq_elem.get('locstring'), 'event_time': event_time_utc, }
         )
+        if not created:
+            self.stdout.write(f"  Updated existing ShakemapEvent event_id={wib_ts} (was duplicate XML)")
+        else:
+            self.stdout.write(f"  Created ShakemapEvent event_id={wib_ts}")
 
         with open(image_path, 'rb') as f:
             event.shakemap_image.save(os.path.basename(image_path), ContentFile(f.read()), save=True)

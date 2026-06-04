@@ -7,6 +7,10 @@ from .views import (
     lightning_availability_query,
     update_lightning_availability,
     DeleteAllStrikesView,
+    lightning_daily_grid_api,
+    lightning_monthly_grid_api,
+    lightning_grid_dates,
+    lightning_grid_months,
     UploadNexStormView,
 )
 
@@ -30,4 +34,8 @@ urlpatterns = [
     # --- MAINTENANCE ---
     path('strikes/delete-all/', DeleteAllStrikesView.as_view(), name='strike_delete_all'),
     #path('infographic/', LightningInfographicView.as_view(), name='lightning_infographic'),
+    path('api/grid/daily/', lightning_daily_grid_api, name='lightning-daily-grid-api'),
+    path('api/grid/monthly/', lightning_monthly_grid_api, name='lightning-monthly-grid-api'),
+    path('api/grid/dates/', lightning_grid_dates, name='lightning-grid-dates'),
+    path('api/grid/months/', lightning_grid_months, name='lightning-grid-months'),
 ]

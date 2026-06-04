@@ -4,7 +4,7 @@ from .models import Strike, DailyStrikeSummary
 from django.utils import timezone as django_timezone
 import os
 import datetime
-from datetime import timezone as dt_timezone
+from datetime import timezone as dt_timezone, timedelta
 import re
 import sqlite3
 import traceback
@@ -30,7 +30,7 @@ def process_yesterday_nexstorm_file():
         yesterday_date_str_yyyymmdd = yesterday_local_date.strftime('%Y%m%d')
         yesterday_date_str_iso = yesterday_local_date.strftime('%Y-%m-%d') # Untuk log
         
-        filename = f"NGXDS_{yesterday_date_str_yyyymmdd}.db3"
+        filename = f"{yesterday_date_str_yyyymmdd}.db3"
         summary_date_obj = yesterday_local_date # Tanggal untuk disimpan di DailyStrikeSummary
         
         logger.info(f"Task started: processing file for 'yesterday' ({yesterday_date_str_iso}) -> {filename}")
@@ -94,8 +94,8 @@ def process_yesterday_nexstorm_file():
                         
                     try:
                         epoch_sec = float(epoch_ms) / 1000
-                        dt_naive_utc = datetime.datetime.utcfromtimestamp(epoch_sec)
-                        strike_dt_aware = dt_naive_utc.replace(tzinfo=dt_timezone.utc)
+                        dt_utc = datetime.datetime.fromtimestamp(epoch_sec, tz=dt_timezone.utc)
+                        strike_dt_aware = dt_utc.astimezone(datetime.timezone(datetime.timedelta(hours=9)))
                         lat_float = float(lat); lon_float = float(lon); type_int = int(st_type) if st_type is not None else None
 
                         # Tambahkan ke buffer insert
@@ -166,3 +166,47 @@ def process_yesterday_nexstorm_file():
         logger.error(f"An unexpected error occurred: {e}")
         traceback.print_exc()
         raise # Re-raise agar Celery menandai task sebagai FAILED
+
+@shared_task(name="lightning.tasks.compute_yesterday_daily_grid")
+def compute_yesterday_daily_grid():
+    """Compute daily grid for yesterday (WIT). Runs daily at 00:10."""
+    import subprocess, os
+    yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    try:
+        result = subprocess.run(
+            ["/var/www/html/venv/bin/python", "/tmp/compute_grid_pipeline.py",
+             "daily_date", yesterday],
+            capture_output=True, text=True, timeout=600,
+            cwd="/var/www/html"
+        )
+        logger.info(f"[daily_grid] {yesterday}: {result.stdout.strip()[-100:]}")
+        if result.stderr:
+            logger.error(f"[daily_grid] stderr: {result.stderr.strip()[-200:]}")
+    except subprocess.TimeoutExpired:
+        logger.error(f"[daily_grid] Timeout for {yesterday}")
+    except Exception as e:
+        logger.error(f"[daily_grid] Error: {e}")
+
+
+@shared_task(name="lightning.tasks.compute_previous_monthly_grid")
+def compute_previous_monthly_grid():
+    """Compute monthly grid for the previous month + IDW. Runs on 1st of month at 00:15."""
+    import subprocess
+    today = datetime.date.today()
+    first_this = datetime.date(today.year, today.month, 1)
+    prev = first_this - datetime.timedelta(days=1)
+    year, month = prev.year, prev.month
+    try:
+        result = subprocess.run(
+            ["/var/www/html/venv/bin/python", "/tmp/compute_grid_pipeline.py",
+             "monthly_one", str(year), str(month)],
+            capture_output=True, text=True, timeout=600,
+            cwd="/var/www/html"
+        )
+        logger.info(f"[monthly_grid] {year}-{month:02d}: {result.stdout.strip()[-100:]}")
+        if result.stderr:
+            logger.error(f"[monthly_grid] stderr: {result.stderr.strip()[-200:]}")
+    except subprocess.TimeoutExpired:
+        logger.error(f"[monthly_grid] Timeout for {year}-{month:02d}")
+    except Exception as e:
+        logger.error(f"[monthly_grid] Error: {e}")

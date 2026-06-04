@@ -449,3 +449,56 @@ class LightningInfographicView(View):
         }
 
         return render(request, self.template_name, context)
+
+# ===============================================
+# API: Lightning Grid Data
+# ===============================================
+
+from lightning.models import LightningDailyGrid, LightningMonthlyGrid
+
+@login_required
+def lightning_daily_grid_api(request):
+    """Return daily grid as JSON for a given date."""
+    from django.http import JsonResponse
+    date_str = request.GET.get('date')
+    if not date_str:
+        return JsonResponse({'error': 'date parameter required'}, status=400)
+    qs = LightningDailyGrid.objects.filter(grid_date=date_str)
+    data = [{
+        'lat': r.latitude, 'lon': r.longitude,
+        'cg_plus': r.cg_plus, 'cg_minus': r.cg_minus, 'total': r.total
+    } for r in qs]
+    return JsonResponse({'date': date_str, 'cells': data})
+
+
+@login_required
+def lightning_monthly_grid_api(request):
+    """Return monthly grid + IDW as JSON for a given year/month."""
+    from django.http import JsonResponse
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+    if not year or not month:
+        return JsonResponse({'error': 'year and month parameters required'}, status=400)
+    qs = LightningMonthlyGrid.objects.filter(year=year, month=month)
+    data = [{
+        'lat': r.latitude, 'lon': r.longitude,
+        'cg_plus': r.cg_plus, 'cg_minus': r.cg_minus, 'total': r.total,
+        'idw_smooth': r.idw_smooth
+    } for r in qs]
+    return JsonResponse({'year': year, 'month': month, 'cells': data})
+
+
+@login_required
+def lightning_grid_dates(request):
+    """Return list of dates available in daily grid."""
+    from django.http import JsonResponse
+    dates = LightningDailyGrid.objects.dates('grid_date', 'day', order='DESC')
+    return JsonResponse({'dates': [str(d) for d in dates]})
+
+
+@login_required
+def lightning_grid_months(request):
+    """Return list of months available in monthly grid."""
+    from django.http import JsonResponse
+    months = LightningMonthlyGrid.objects.values('year', 'month').distinct().order_by('-year', '-month')
+    return JsonResponse({'months': list(months)})

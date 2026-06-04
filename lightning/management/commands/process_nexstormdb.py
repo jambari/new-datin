@@ -22,7 +22,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             'filename', type=str,
-            help='Filename of the .db3 file (e.g., NGXDS_20251001.db3) in lightning/db3/.'
+            help='Filename of the .db3 file (e.g., NGXDS_20251001.db3 or 20251001.db3).'
         )
         # Optional date filters remain, they filter which strikes are READ from the file
         parser.add_argument(
@@ -39,7 +39,7 @@ class Command(BaseCommand):
         start_date_arg = options['start_date']
         end_date_arg = options['end_date']
 
-        db3_directory = os.path.join(settings.BASE_DIR, 'lightning', 'db3')
+        db3_directory = settings.LIGHTNING_DB3_DIR
         file_path = os.path.join(db3_directory, filename)
 
         if not os.path.exists(file_path):
@@ -57,7 +57,7 @@ class Command(BaseCommand):
 
         # --- Derive the primary summary date from filename ---
         summary_date_obj = None
-        match = re.search(r'NGXDS_(\d{8})\.db3', filename)
+        match = re.search(r'(?:NGXDS_)?(\d{8})\.db3', filename)
         if match:
             date_part_yyyymmdd = match.group(1)
             try:
@@ -66,7 +66,7 @@ class Command(BaseCommand):
             except ValueError:
                 raise CommandError(f'Error: Could not parse date from filename "{filename}".')
         else:
-             raise CommandError(f'Filename "{filename}" does not match pattern NGXDS_YYYYMMDD.db3.')
+             raise CommandError(f'Filename "{filename}" does not match pattern [NGXDS_]YYYYMMDD.db3.')
         # --- End date derivation ---
 
         # --- Date Validation & Range Calculation for *filtering within file* ---
@@ -147,8 +147,8 @@ class Command(BaseCommand):
 
                         try:
                             epoch_sec = float(epoch_ms) / 1000
-                            dt_naive_utc = datetime.datetime.utcfromtimestamp(epoch_sec)
-                            strike_dt_aware = dt_naive_utc.replace(tzinfo=dt_timezone.utc)
+                            dt_utc = datetime.datetime.fromtimestamp(epoch_sec, tz=dt_timezone.utc)
+                            strike_dt_aware = dt_utc.astimezone(dt_timezone(datetime.timedelta(hours=9)))
                             lat_float = float(lat); lon_float = float(lon); type_int = int(st_type) if st_type is not None else None
 
                             # Create Strike object regardless of coordinates for insertion

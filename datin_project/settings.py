@@ -247,6 +247,16 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'jadwal.tasks.send_birthday_wishes_task',
         'schedule': crontab(minute=0, hour=22),  # 22:00 UTC = 07:00 WIT next day
     },
+
+    'compute-yesterday-daily-grid': {
+        'task': 'lightning.tasks.compute_yesterday_daily_grid',
+        'schedule': crontab(minute=10, hour=0),  # 00:10 UTC = 09:10 WIT
+    },
+
+    'compute-previous-monthly-grid': {
+        'task': 'lightning.tasks.compute_previous_monthly_grid',
+        'schedule': crontab(minute=15, hour=0, day_of_month=1),
+    },
 }
 
 # settings.py
