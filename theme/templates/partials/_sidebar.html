@@ -181,6 +181,11 @@
           </li>
           <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Petir</li>
           <li>
+            <a href="{% url 'lightning:nexstorm_query_page' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Query Sambaran
+            </a>
+          </li>
+          <li>
             <a href="{% url 'lightning:lightning_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
               Ketersediaan Data
             </a>
@@ -188,6 +193,11 @@
           <li>
             <a href="{% url 'lightning:upload_nexstorm' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
               Hitung Sambaran
+            </a>
+          </li>
+          <li>
+            <a href="/lightning/api/grid/dates/" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Grid Petir API
             </a>
           </li>
           <li>
@@ -256,11 +266,6 @@
             </a>
           </li>
           <li>
-            <a href="{% url 'lightning:nexstorm_query_page' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
-              Petir
-            </a>
-          </li>
-          <li>
             <a href="{% url 'query_laporan_hujan' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
               Hujan
             </a>
@@ -274,16 +279,6 @@
           <li>
             <a href="{% url 'accelero_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
               Akselerograf
-            </a>
-          </li>
-          <li>
-            <a href="{% url 'magnet_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
-              Magnetik
-            </a>
-          </li>
-          <li>
-            <a href="{% url 'lightning:lightning_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
-              Ketersediaan Data Petir
             </a>
           </li>
           <li>
