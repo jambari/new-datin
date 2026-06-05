@@ -535,7 +535,6 @@ def lightning_grid_view(request):
     if max_idw == 0:
         max_idw = 1
     
-    from thunderbolt.colors import idw_color
     # Actually let me use simple inline color function
     def _color(val, mx):
         if mx == 0:
