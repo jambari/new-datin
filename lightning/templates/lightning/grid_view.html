@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.grid-table td {
+    text-align: center;
+    padding: 8px 6px;
+    font-size: 0.75rem;
+    border: 1px solid #e5e7eb;
+    min-width: 60px;
+}
+.grid-table th {
+    font-size: 0.7rem;
+    padding: 6px 4px;
+    text-align: center;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+}
+.cell-box {
+    display: inline-block;
+    width: 100%;
+    padding: 4px 0;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.idw-tooltip {
+    position: relative;
+    cursor: help;
+}
+.idw-tooltip .tooltip-text {
+    visibility: hidden;
+    background: #1f2937;
+    color: #fff;
+    text-align: center;
+    padding: 5px 8px;
+    border-radius: 6px;
+    position: absolute;
+    z-index: 10;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 0.7rem;
+}
+.idw-tooltip:hover .tooltip-text {
+    visibility: visible;
+}
+</style>
+
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+      <div class="max-w-6xl mx-auto">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">🌩️ Grid Petir — IDW Smoothing Bulanan</h1>
+
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+          <form id="gridForm" class="flex items-center gap-4 flex-wrap">
+            <label class="font-semibold text-gray-700">Bulan:</label>
+            <select id="monthSelect" class="border rounded px-3 py-1.5 text-sm">
+              {% for m in months %}
+              <option value="{{ m.year }}-{{ m.month }}" {% if m.year == selected_year and m.month == selected_month %}selected{% endif %}>
+                {{ m.month_name }} {{ m.year }}
+              </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">
+              Tampilkan
+            </button>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+          <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+            <h2 class="font-semibold text-gray-700">
+              Grid CG+ / CG- — {{ selected_month_name }} {{ selected_year }}
+              <span class="text-gray-400 text-sm font-normal ml-2">(interval 0.5°, IDW power=3)</span>
+            </h2>
+            <span class="text-xs text-gray-400">{{ cells|length }} sel</span>
+          </div>
+
+          {% if cells %}
+          <div class="p-4 overflow-x-auto">
+            <table class="grid-table w-full">
+              <thead>
+                <tr>
+                  <th>Lat / Lon</th>
+                  {% for lon in longitudes %}
+                  <th>{{ lon|floatformat:2 }}°</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for lat, row in grid_rows %}
+                <tr>
+                  <th>{{ lat|floatformat:2 }}°</th>
+                  {% for cell in row %}
+                  <td class="idw-tooltip">
+                    {% if cell %}
+                    <div class="cell-box" style="background: {{ cell.color }};">
+                      {{ cell.total }}
+                    </div>
+                    <span class="tooltip-text">
+                      CG+: {{ cell.cg_plus }} | CG-: {{ cell.cg_minus }}<br>
+                      IDW: {{ cell.idw_smooth|floatformat:0 }}
+                    </span>
+                    {% else %}
+                    <span class="text-gray-300">—</span>
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="p-8 text-center text-gray-400">
+            Belum ada data grid untuk bulan ini.
+          </div>
+          {% endif %}
+        </div>
+
+        {% if api_data_url %}
+        <div class="mt-4 text-right">
+          <a href="{{ api_data_url }}" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 underline">
+            Raw JSON API
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+document.getElementById('gridForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const val = document.getElementById('monthSelect').value;
+  const [y, m] = val.split('-');
+  window.location.href = '?year=' + y + '&month=' + m;
+});
+</script>
+{% endblock %}

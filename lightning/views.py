@@ -502,3 +502,83 @@ def lightning_grid_months(request):
     from django.http import JsonResponse
     months = LightningMonthlyGrid.objects.values('year', 'month').distinct().order_by('-year', '-month')
     return JsonResponse({'months': list(months)})
+
+
+
+@login_required
+def lightning_grid_view(request):
+    """HTML page to view monthly grid with IDW color gradient."""
+    from lightning.models import LightningMonthlyGrid
+    from datetime import date
+    from django.shortcuts import render
+    
+    today = date.today()
+    year = int(request.GET.get('year', today.year))
+    month = int(request.GET.get('month', today.month))
+    
+    months_qs = LightningMonthlyGrid.objects.values('year', 'month').distinct().order_by('-year', '-month')
+    months = []
+    for m in months_qs:
+        nama = ['', 'Januari','Februari','Maret','April','Mei','Juni',
+                'Juli','Agustus','September','Oktober','November','Desember'][m['month']]
+        months.append({'year': m['year'], 'month': m['month'], 'month_name': nama})
+    
+    cells = LightningMonthlyGrid.objects.filter(year=year, month=month).order_by('latitude', 'longitude')
+    
+    # Build grid rows (lat x lon matrix)
+    lats = sorted(set(c.latitude for c in cells))
+    lons = sorted(set(c.longitude for c in cells))
+    cell_map = {(c.latitude, c.longitude): c for c in cells}
+    
+    # Color scale: find max IDW for scaling
+    max_idw = max((c.idw_smooth or 0) for c in cells) if cells else 1
+    if max_idw == 0:
+        max_idw = 1
+    
+    from thunderbolt.colors import idw_color
+    # Actually let me use simple inline color function
+    def _color(val, mx):
+        if mx == 0:
+            return '#f0fdf4'
+        ratio = val / mx
+        if ratio < 0.2:
+            return '#f0fdf4'
+        elif ratio < 0.4:
+            return '#bbf7d0'
+        elif ratio < 0.6:
+            return '#fde047'
+        elif ratio < 0.8:
+            return '#fb923c'
+        else:
+            return '#ef4444'
+    
+    grid_rows = []
+    for lat in lats:
+        row = []
+        for lon in lons:
+            c = cell_map.get((lat, lon))
+            if c and c.total > 0:
+                row.append({
+                    'total': c.total,
+                    'cg_plus': c.cg_plus,
+                    'cg_minus': c.cg_minus,
+                    'idw_smooth': c.idw_smooth or 0,
+                    'color': _color(c.idw_smooth or 0, max_idw),
+                })
+            else:
+                row.append(None)
+        grid_rows.append((lat, row))
+    
+    selected_month_name = ['', 'Januari','Februari','Maret','April','Mei','Juni',
+                           'Juli','Agustus','September','Oktober','November','Desember'][month]
+    
+    return render(request, 'lightning/grid_view.html', {
+        'selected_year': year,
+        'selected_month': month,
+        'selected_month_name': selected_month_name,
+        'months': months,
+        'cells': cells,
+        'longitudes': lons,
+        'grid_rows': grid_rows,
+        'api_data_url': f'/lightning/api/grid/monthly/?year={year}&month={month}',
+    })

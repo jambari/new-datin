@@ -1,6 +1,7 @@
 # lightning/urls.py
 from django.urls import path
 from .views import (
+    lightning_grid_view,
     NexStormQueryView,
     NexStormQueryAPIView,
     StrikeMapDataAPIView,
@@ -34,6 +35,7 @@ urlpatterns = [
     # --- MAINTENANCE ---
     path('strikes/delete-all/', DeleteAllStrikesView.as_view(), name='strike_delete_all'),
     #path('infographic/', LightningInfographicView.as_view(), name='lightning_infographic'),
+    path('grid/', lightning_grid_view, name='lightning-grid-view'),
     path('api/grid/daily/', lightning_daily_grid_api, name='lightning-daily-grid-api'),
     path('api/grid/monthly/', lightning_monthly_grid_api, name='lightning-monthly-grid-api'),
     path('api/grid/dates/', lightning_grid_dates, name='lightning-grid-dates'),
