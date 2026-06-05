@@ -1,131 +1,198 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-.grid-table td {
-    text-align: center;
-    padding: 8px 6px;
-    font-size: 0.75rem;
-    border: 1px solid #e5e7eb;
-    min-width: 60px;
+/* ── Layout ── */
+body { margin:0; font-family:system-ui,sans-serif; }
+.flex-row { display:flex; flex-direction:row; }
+.flex-1 { flex:1; }
+.h-screen { height:100vh; }
+.overflow-hidden { overflow:hidden; }
+.overflow-y-auto { overflow-y:auto; }
+.bg-gray-100 { background:#f3f4f6; }
+.p-6 { padding:24px; }
+.max-w-7xl { max-width:1280px; margin:0 auto; }
+.mb-4 { margin-bottom:16px; }
+.mb-6 { margin-bottom:24px; }
+.text-2xl { font-size:24px; }
+.font-bold { font-weight:700; }
+.text-gray-800 { color:#1f2937; }
+.text-gray-500 { color:#6b7280; }
+.text-gray-600 { color:#4b5563; }
+.text-gray-400 { color:#9ca3af; }
+.text-center { text-align:center; }
+.p-8 { padding:32px; }
+.mt-4 { margin-top:16px; }
+.mr-2 { margin-right:8px; }
+.inline-block { display:inline-block; }
+
+/* ── Card / Panel ── */
+.card { background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.1); margin-bottom:24px; }
+.card-header { padding:16px 20px; border-bottom:1px solid #e5e7eb; background:#f9fafb; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+.card-body { padding:16px 20px; }
+
+/* ── Buttons ── */
+.btn {
+  display:inline-block; padding:8px 20px; font-size:14px; font-weight:600;
+  border:none; border-radius:6px; cursor:pointer; text-decoration:none;
+  transition:background .2s;
 }
+.btn-blue { background:#2563eb; color:#fff; }
+.btn-blue:hover { background:#1d4ed8; }
+.btn-gray { background:#6b7280; color:#fff; }
+.btn-gray:hover { background:#4b5563; }
+.btn-sm { padding:5px 14px; font-size:13px; }
+
+/* ── Form ── */
+.form-select {
+  padding:7px 14px; font-size:14px; border:1px solid #d1d5db; border-radius:6px;
+  background:#fff; cursor:pointer;
+}
+.form-group { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+
+/* ── Tabs ── */
+.tabs { display:flex; border-bottom:2px solid #e5e7eb; margin-bottom:0; }
+.tab-btn {
+  padding:10px 24px; font-size:14px; font-weight:600; cursor:pointer;
+  border:none; background:transparent; color:#6b7280;
+  border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .2s;
+}
+.tab-btn:hover { color:#374151; }
+.tab-btn.active { color:#2563eb; border-bottom-color:#2563eb; }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* ── Grid Table ── */
+.grid-wrap { overflow-x:auto; }
+.grid-table { border-collapse:collapse; font-size:11px; width:100%; }
 .grid-table th {
-    font-size: 0.7rem;
-    padding: 6px 4px;
-    text-align: center;
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
+  padding:4px 3px; text-align:center; font-weight:600; font-size:10px;
+  background:#f3f4f6; border:1px solid #d1d5db; position:sticky; top:0; z-index:1;
 }
-.cell-box {
-    display: inline-block;
-    width: 100%;
-    padding: 4px 0;
-    border-radius: 4px;
-    font-weight: 600;
+.grid-table td { padding:3px 2px; text-align:center; border:1px solid #e5e7eb; min-width:32px; position:relative; }
+.cell-box { display:block; padding:3px 0; border-radius:3px; font-weight:600; font-size:10px; cursor:help; }
+.tip {
+  visibility:hidden; background:#1f2937; color:#fff; text-align:center;
+  padding:4px 8px; border-radius:4px; position:absolute; z-index:10;
+  bottom:100%; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:10px;
+  pointer-events:none;
 }
-.idw-tooltip {
-    position: relative;
-    cursor: help;
+.grid-table td:hover .tip { visibility:visible; }
+
+/* ── Map ── */
+#gridMap { width:100%; height:550px; border-radius:6px; }
+.legend {
+  background:#fff; padding:10px 14px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2);
+  font-size:12px; line-height:1.8;
 }
-.idw-tooltip .tooltip-text {
-    visibility: hidden;
-    background: #1f2937;
-    color: #fff;
-    text-align: center;
-    padding: 5px 8px;
-    border-radius: 6px;
-    position: absolute;
-    z-index: 10;
-    bottom: 120%;
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
-    font-size: 0.7rem;
-}
-.idw-tooltip:hover .tooltip-text {
-    visibility: visible;
-}
+.legend i { display:inline-block; width:16px; height:16px; border-radius:2px; margin-right:6px; vertical-align:middle; }
+.legend-title { font-weight:600; margin-bottom:4px; font-size:13px; }
+
+/* ── Sidebar Toggle ── */
+#sidebar { transition:margin-left .3s ease-in-out; }
+#sidebar.collapsed { margin-left:-256px; }
+#main-content { transition:margin-left .3s ease-in-out; }
+#sidebar.collapsed + #main-content { margin-left:0; }
+
+/* CSV & toolbar */
+.toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
 </style>
 
-<div class="flex h-screen bg-gray-100">
+<div class="flex-row h-screen">
   {% include 'partials/_sidebar.html' %}
-  <div class="flex-1 flex flex-col overflow-hidden">
+  <div id="main-content" class="flex-1 flex flex-col overflow-hidden">
     {% include 'partials/_topbar.html' %}
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
-      <div class="max-w-6xl mx-auto">
-        <h1 class="text-2xl font-bold text-gray-800 mb-4">🌩️ Grid Petir — IDW Smoothing Bulanan</h1>
+    <main class="flex-1 overflow-y-auto bg-gray-100 p-6">
+      <div class="max-w-7xl">
 
-        <div class="bg-white rounded-lg shadow p-4 mb-6">
-          <form id="gridForm" class="flex items-center gap-4 flex-wrap">
-            <label class="font-semibold text-gray-700">Bulan:</label>
-            <select id="monthSelect" class="border rounded px-3 py-1.5 text-sm">
-              {% for m in months %}
-              <option value="{{ m.year }}-{{ m.month }}" {% if m.year == selected_year and m.month == selected_month %}selected{% endif %}>
-                {{ m.month_name }} {{ m.year }}
-              </option>
-              {% endfor %}
-            </select>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">
-              Tampilkan
-            </button>
-          </form>
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">⚡ Peta Kerapatan Sambaran Petir</h1>
+
+        {# ── Form ── #}
+        <div class="card">
+          <div class="card-body">
+            <form id="gridForm" class="form-group">
+              <label class="font-bold text-gray-600">Pilih Bulan:</label>
+              <select id="monthSelect" class="form-select">
+                {% for m in months %}
+                <option value="{{ m.year }}-{{ m.month }}" {% if m.year == selected_year and m.month == selected_month %}selected{% endif %}>
+                  {{ m.month_name }} {{ m.year }}
+                </option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-blue">Tampilkan</button>
+            </form>
+          </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-          <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-            <h2 class="font-semibold text-gray-700">
-              Grid CG+ / CG- — {{ selected_month_name }} {{ selected_year }}
-              <span class="text-gray-400 text-sm font-normal ml-2">(interval 0.5°, IDW power=3)</span>
-            </h2>
-            <span class="text-xs text-gray-400">{{ cells|length }} sel</span>
+        {# ── Tabs ── #}
+        <div class="card">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('matrix')">📊 Matriks Total Kerapatan</button>
+            <button class="tab-btn" onclick="switchTab('map-tab')">🗺️ Peta Kerapatan Sambaran Petir {{ selected_month_name }} {{ selected_year }}</button>
           </div>
 
-          {% if cells %}
-          <div class="p-4 overflow-x-auto">
-            <table class="grid-table w-full">
-              <thead>
-                <tr>
-                  <th>Lat / Lon</th>
-                  {% for lon in longitudes %}
-                  <th>{{ lon|floatformat:2 }}°</th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for lat, row in grid_rows %}
-                <tr>
-                  <th>{{ lat|floatformat:2 }}°</th>
-                  {% for cell in row %}
-                  <td class="idw-tooltip">
-                    {% if cell %}
-                    <div class="cell-box" style="background: {{ cell.color }};">
-                      {{ cell.total }}
-                    </div>
-                    <span class="tooltip-text">
-                      CG+: {{ cell.cg_plus }} | CG-: {{ cell.cg_minus }}<br>
-                      IDW: {{ cell.idw_smooth|floatformat:0 }}
-                    </span>
-                    {% else %}
-                    <span class="text-gray-300">—</span>
-                    {% endif %}
-                  </td>
-                  {% endfor %}
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          {# ── TAB 1: MATRIX ── #}
+          <div id="tab-matrix" class="tab-content active">
+            <div class="card-header">
+              <span class="font-bold text-gray-700">Grid CG+ / CG- — {{ selected_month_name }} {{ selected_year }}</span>
+              <div class="toolbar">
+                <span class="text-gray-400 text-sm">{{ cells|length }} sel</span>
+                <button onclick="downloadCSV()" class="btn btn-gray btn-sm">⬇ CSV</button>
+              </div>
+            </div>
+            <div class="card-body">
+              {% if cells %}
+              <div class="grid-wrap">
+                <table class="grid-table">
+                  <thead>
+                    <tr><th>Lat \ Lon</th>
+                    {% for lon in longitudes %}<th>{{ lon|floatformat:2 }}</th>{% endfor %}</tr>
+                  </thead>
+                  <tbody>
+                    {% for lat, row in grid_rows %}
+                    <tr>
+                      <th>{{ lat|floatformat:2 }}</th>
+                      {% for cell in row %}
+                      <td>
+                        {% if cell %}
+                        <div class="cell-box" style="background:{{ cell.color }};">
+                          {{ cell.total }}
+                          <span class="tip">CG+:{{ cell.cg_plus }} CG-:{{ cell.cg_minus }}<br>IDW:{{ cell.idw_smooth|floatformat:0 }}</span>
+                        </div>
+                        {% else %}<span style="color:#d1d5db;">—</span>{% endif %}
+                      </td>
+                      {% endfor %}
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% else %}
+              <div class="p-8 text-center text-gray-400">Belum ada data grid untuk bulan ini.</div>
+              {% endif %}
+            </div>
           </div>
-          {% else %}
-          <div class="p-8 text-center text-gray-400">
-            Belum ada data grid untuk bulan ini.
+
+          {# ── TAB 2: MAP ── #}
+          <div id="tab-map-tab" class="tab-content">
+            <div class="card-header">
+              <span class="font-bold text-gray-700">🗺️ Peta Kerapatan Sambaran Petir {{ selected_month_name }} {{ selected_year }}</span>
+              <div class="toolbar">
+                <span class="text-gray-400 text-sm">{{ cells|length }} sel</span>
+              </div>
+            </div>
+            <div class="card-body">
+              {% if cells %}
+              <div id="gridMap"></div>
+              {% else %}
+              <div class="p-8 text-center text-gray-400">Belum ada data.</div>
+              {% endif %}
+            </div>
           </div>
-          {% endif %}
         </div>
 
         {% if api_data_url %}
         <div class="mt-4 text-right">
-          <a href="{{ api_data_url }}" target="_blank" class="text-xs text-gray-400 hover:text-gray-600 underline">
-            Raw JSON API
-          </a>
+          <a href="{{ api_data_url }}" target="_blank" class="text-gray-400 hover:text-gray-600 underline" style="font-size:12px;">JSON API</a>
         </div>
         {% endif %}
       </div>
@@ -133,12 +200,115 @@
   </div>
 </div>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
+// ── Tab switching ──
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'map-tab') setTimeout(initMap, 100);
+}
+
+// ── Sidebar toggle ──
+(function() {
+  var btn = document.getElementById('sidebar-toggle');
+  var sidebar = document.getElementById('sidebar');
+  if (btn && sidebar) {
+    btn.addEventListener('click', function() {
+      sidebar.classList.toggle('collapsed');
+    });
+  }
+})();
+
+// ── Form submit ──
 document.getElementById('gridForm').addEventListener('submit', function(e) {
   e.preventDefault();
-  const val = document.getElementById('monthSelect').value;
-  const [y, m] = val.split('-');
-  window.location.href = '?year=' + y + '&month=' + m;
+  var val = document.getElementById('monthSelect').value;
+  var parts = val.split('-');
+  window.location.href = '?year=' + parts[0] + '&month=' + parts[1];
 });
+
+// ── Download CSV ──
+function downloadCSV() {
+  var data = {{ grid_json|safe }};
+  var rows = ['Latitude,Longitude,CG_PLUS,CG_MINUS,TOTAL,IDW_SMOOTH'];
+  data.forEach(function(c) {
+    rows.push(c.lat + ',' + c.lon + ',' + c.cg_plus + ',' + c.cg_minus + ',' + c.total + ',' + (c.idw_smooth || 0));
+  });
+  var blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'kerapatan_petir_{{ selected_year }}_{{ selected_month }}.csv';
+  a.click();
+}
+
+// ── Map ──
+var map = null;
+function initMap() {
+  if (map) { map.invalidateSize(); return; }
+
+  var data = {{ grid_json|safe }};
+  if (!data.length) return;
+
+  // Compute center
+  var lats = data.map(function(c){return c.lat;});
+  var lons = data.map(function(c){return c.lon;});
+  var cLat = (Math.min.apply(null,lats) + Math.max.apply(null,lats)) / 2;
+  var cLon = (Math.min.apply(null,lons) + Math.max.apply(null,lons)) / 2;
+
+  map = L.map('gridMap', { center: [cLat, cLon], zoom: 10, zoomControl: true });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18, attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  // Find max for normalization
+  var maxVal = 0;
+  data.forEach(function(c) { if (c.idw_smooth > maxVal) maxVal = c.idw_smooth; });
+  if (maxVal === 0) maxVal = 1;
+
+  // 3 classes
+  var colors = ['#22c55e', '#f59e0b', '#ef4444'];  // green, amber, red
+  var labels = ['Rendah', 'Sedang', 'Tinggi'];
+  var bounds = [];
+
+  data.forEach(function(c) {
+    var ratio = (c.idw_smooth || 0) / maxVal;
+    var color, cls;
+    if (ratio < 0.33)      { color = colors[0]; cls = labels[0]; }
+    else if (ratio < 0.66) { color = colors[1]; cls = labels[1]; }
+    else                   { color = colors[2]; cls = labels[2]; }
+
+    var size = Math.max(4, Math.min(20, ratio * 24));
+    var circle = L.circleMarker([c.lat, c.lon], {
+      radius: size, fillColor: color, color: '#333', weight: 0.5,
+      opacity: 0.8, fillOpacity: 0.7
+    }).addTo(map);
+    circle.bindTooltip(
+      '<b>' + c.lat.toFixed(2) + ', ' + c.lon.toFixed(2) + '</b><br>' +
+      'Total: ' + c.total + ' | IDW: ' + (c.idw_smooth || 0).toFixed(1) + '<br>' +
+      'Kelas: ' + cls, { sticky: true }
+    );
+    bounds.push([c.lat, c.lon]);
+  });
+
+  if (bounds.length) map.fitBounds(bounds, {padding:[20,20]});
+
+  // Legend
+  var legend = L.control({position:'bottomright'});
+  legend.onAdd = function() {
+    var div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = '<div class="legend-title">Kelas Kerapatan</div>' +
+      '<i style="background:' + colors[0] + '"></i> ' + labels[0] + '<br>' +
+      '<i style="background:' + colors[1] + '"></i> ' + labels[1] + '<br>' +
+      '<i style="background:' + colors[2] + '"></i> ' + labels[2];
+    return div;
+  };
+  legend.addTo(map);
+}
 </script>
 {% endblock %}

@@ -573,6 +573,13 @@ def lightning_grid_view(request):
     selected_month_name = ['', 'Januari','Februari','Maret','April','Mei','Juni',
                            'Juli','Agustus','September','Oktober','November','Desember'][month]
     
+    import json
+    grid_json = json.dumps([{
+        'lat': round(c.latitude, 2), 'lon': round(c.longitude, 2),
+        'cg_plus': c.cg_plus, 'cg_minus': c.cg_minus,
+        'total': c.total, 'idw_smooth': c.idw_smooth or 0
+    } for c in cells])
+
     return render(request, 'lightning/grid_view.html', {
         'selected_year': year,
         'selected_month': month,
@@ -581,5 +588,6 @@ def lightning_grid_view(request):
         'cells': cells,
         'longitudes': lons,
         'grid_rows': grid_rows,
+        'grid_json': grid_json,
         'api_data_url': f'/lightning/api/grid/monthly/?year={year}&month={month}',
     })
