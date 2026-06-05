@@ -512,9 +512,11 @@ def lightning_grid_view(request):
     from datetime import date
     from django.shortcuts import render
     
-    today = date.today()
-    year = int(request.GET.get('year', today.year))
-    month = int(request.GET.get('month', today.month))
+    latest = LightningMonthlyGrid.objects.values('year', 'month').distinct().order_by('-year', '-month').first()
+    default_year = latest['year'] if latest else date.today().year
+    default_month = latest['month'] if latest else date.today().month
+    year = int(request.GET.get('year', default_year))
+    month = int(request.GET.get('month', default_month))
     
     months_qs = LightningMonthlyGrid.objects.values('year', 'month').distinct().order_by('-year', '-month')
     months = []
