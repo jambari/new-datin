@@ -79,7 +79,7 @@ body { margin:0; font-family:system-ui,sans-serif; }
 .grid-table td:hover .tip { visibility:visible; }
 
 /* ── Map ── */
-#gridMap { width:100%; height:550px; border-radius:6px; }
+#heatMap { width:100%; height:550px; border-radius:6px; }
 .legend {
   background:#fff; padding:10px 14px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2);
   font-size:12px; line-height:1.8;
@@ -182,7 +182,7 @@ body { margin:0; font-family:system-ui,sans-serif; }
             </div>
             <div class="card-body">
               {% if cells %}
-              <div id="gridMap"></div>
+              <div id="heatMap"></div>
               {% else %}
               <div class="p-8 text-center text-gray-400">Belum ada data.</div>
               {% endif %}
@@ -247,72 +247,92 @@ function downloadCSV() {
 }
 
 // ── Map ──
-var map = null;
+var map = null, overlay = null;
+var GRID = 0.01, lat0 = -3.01, lon0 = 140.21, ROWS = 100, COLS = 100;
+
 function initMap() {
   if (map) { map.invalidateSize(); return; }
-
   var data = {{ grid_json|safe }};
   if (!data.length) return;
 
-  // Compute center
   var lats = data.map(function(c){return c.lat;});
   var lons = data.map(function(c){return c.lon;});
-  var cLat = (Math.min.apply(null,lats) + Math.max.apply(null,lats)) / 2;
-  var cLon = (Math.min.apply(null,lons) + Math.max.apply(null,lons)) / 2;
+  var cLat = (Math.min.apply(null,lats)+Math.max.apply(null,lats))/2;
+  var cLon = (Math.min.apply(null,lons)+Math.max.apply(null,lons))/2;
+  var bnds = [[-3.015,140.205],[-2.015,141.205]];
 
-  map = L.map('gridMap', { center: [cLat, cLon], zoom: 10, zoomControl: true });
+  map = L.map('heatMap', {center:[cLat,cLon], zoom:10, zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(map);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18, attribution: '© OpenStreetMap'
-  }).addTo(map);
-
-  // Find max for normalization
   var maxVal = 0;
-  data.forEach(function(c) { if (c.idw_smooth > maxVal) maxVal = c.idw_smooth; });
+  data.forEach(function(c){ if(c.idw_smooth > maxVal) maxVal = c.idw_smooth; });
   if (maxVal === 0) maxVal = 1;
 
-  // 3 classes
-  var colors = ['#22c55e', '#f59e0b', '#ef4444'];
-  var labels = ['Rendah', 'Sedang', 'Tinggi'];
-  var half = 0.005;  // 0.01 deg / 2
-  var bounds = [];
-  var gridGroup = L.layerGroup().addTo(map);
-
-  data.forEach(function(c) {
-    var ratio = (c.idw_smooth || 0) / maxVal;
-    var color, cls;
-    if (ratio < 0.33)      { color = colors[0]; cls = labels[0]; }
-    else if (ratio < 0.66) { color = colors[1]; cls = labels[1]; }
-    else                   { color = colors[2]; cls = labels[2]; }
-
-    var sw = [c.lat - half, c.lon - half];
-    var ne = [c.lat + half, c.lon + half];
-    var rect = L.rectangle([sw, ne], {
-      color: '#555', weight: 0.3, fillColor: color, fillOpacity: 0.75
-    }).addTo(gridGroup);
-    rect.bindTooltip(
-      '<b>' + c.lat.toFixed(2) + ', ' + c.lon.toFixed(2) + '</b><br>' +
-      'Total: ' + c.total + ' | CG+: ' + c.cg_plus + ' | CG-: ' + c.cg_minus + '<br>' +
-      'IDW: ' + (c.idw_smooth || 0).toFixed(1) + ' | ' + cls,
-      { sticky: true }
-    );
-    bounds.push(sw);
-    bounds.push(ne);
+  // Build 100x100 grid lookup
+  var vg = {};
+  data.forEach(function(c){
+    var ri = Math.round((c.lat - lat0) / GRID);
+    var ci = Math.round((c.lon - lon0) / GRID);
+    if (ri >= 0 && ri < ROWS && ci >= 0 && ci < COLS) vg[ri+','+ci] = c.idw_smooth || 0;
   });
 
-  if (bounds.length) map.fitBounds(bounds, {padding:[20,20]});
+  // Color function: green -> yellow -> red gradient
+  function getColor(ratio){
+    var r,g,b;
+    if (ratio < 0.33) {
+      var t = ratio/0.33;
+      r=Math.round(34+(234-34)*t); g=Math.round(197+(158-197)*t); b=Math.round(94+(11-94)*t);
+    } else if (ratio < 0.66) {
+      var t = (ratio-0.33)/0.33;
+      r=Math.round(234+(239-234)*t); g=Math.round(158+(68-158)*t); b=Math.round(11+(11-11)*t);
+    } else {
+      var t = (ratio-0.66)/0.34;
+      r=Math.round(239+(239-239)*t); g=Math.round(68+(34-68)*t); b=Math.round(11+(11-11)*t);
+    }
+    return [r,g,b];
+  }
+
+  // Off-screen canvas 100x100 (1 pixel per cell)
+  var cv = document.createElement('canvas');
+  cv.width = COLS; cv.height = ROWS;
+  var ctx = cv.getContext('2d');
+  var img = ctx.createImageData(COLS, ROWS);
+  var px = img.data;
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var key = r+','+c;
+      var v = vg.hasOwnProperty(key) ? vg[key] / maxVal : 0;
+      var rgb = getColor(v);
+      var i = (r*COLS + c)*4;
+      px[i]=rgb[0]; px[i+1]=rgb[1]; px[i+2]=rgb[2];
+      px[i+3] = v > 0 ? 210 : 0;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  // Scale up 8x with smooth interpolation
+  var s = 8;
+  var big = document.createElement('canvas');
+  big.width = COLS*s; big.height = ROWS*s;
+  var bctx = big.getContext('2d');
+  bctx.imageSmoothingEnabled = true;
+  bctx.imageSmoothingQuality = 'high';
+  bctx.drawImage(cv, 0, 0, big.width, big.height);
+
+  L.imageOverlay(big.toDataURL(), bnds, {opacity:0.8}).addTo(map);
+  map.fitBounds(bnds, {padding:[20,20]});
 
   // Legend
-  var legend = L.control({position:'bottomright'});
-  legend.onAdd = function() {
-    var div = L.DomUtil.create('div', 'legend');
-    div.innerHTML = '<div class="legend-title">Kelas Kerapatan</div>' +
-      '<i style="background:' + colors[0] + '"></i> ' + labels[0] + '<br>' +
-      '<i style="background:' + colors[1] + '"></i> ' + labels[1] + '<br>' +
-      '<i style="background:' + colors[2] + '"></i> ' + labels[2];
-    return div;
+  var leg = L.control({position:'bottomright'});
+  leg.onAdd = function(){
+    var d = L.DomUtil.create('div', 'legend');
+    d.innerHTML = '<div class="legend-title">Kerapatan Sambaran</div>' +
+      '<i style="background:#22c55e"></i> Rendah<br>' +
+      '<i style="background:#f59e0b"></i> Sedang<br>' +
+      '<i style="background:#ef4444"></i> Tinggi';
+    return d;
   };
-  legend.addTo(map);
+  leg.addTo(map);
 }
 </script>
 {% endblock %}
