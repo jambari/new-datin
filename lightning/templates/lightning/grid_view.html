@@ -272,9 +272,11 @@ function initMap() {
   if (maxVal === 0) maxVal = 1;
 
   // 3 classes
-  var colors = ['#22c55e', '#f59e0b', '#ef4444'];  // green, amber, red
+  var colors = ['#22c55e', '#f59e0b', '#ef4444'];
   var labels = ['Rendah', 'Sedang', 'Tinggi'];
+  var half = 0.005;  // 0.01 deg / 2
   var bounds = [];
+  var gridGroup = L.layerGroup().addTo(map);
 
   data.forEach(function(c) {
     var ratio = (c.idw_smooth || 0) / maxVal;
@@ -283,17 +285,19 @@ function initMap() {
     else if (ratio < 0.66) { color = colors[1]; cls = labels[1]; }
     else                   { color = colors[2]; cls = labels[2]; }
 
-    var size = Math.max(4, Math.min(20, ratio * 24));
-    var circle = L.circleMarker([c.lat, c.lon], {
-      radius: size, fillColor: color, color: '#333', weight: 0.5,
-      opacity: 0.8, fillOpacity: 0.7
-    }).addTo(map);
-    circle.bindTooltip(
+    var sw = [c.lat - half, c.lon - half];
+    var ne = [c.lat + half, c.lon + half];
+    var rect = L.rectangle([sw, ne], {
+      color: '#555', weight: 0.3, fillColor: color, fillOpacity: 0.75
+    }).addTo(gridGroup);
+    rect.bindTooltip(
       '<b>' + c.lat.toFixed(2) + ', ' + c.lon.toFixed(2) + '</b><br>' +
-      'Total: ' + c.total + ' | IDW: ' + (c.idw_smooth || 0).toFixed(1) + '<br>' +
-      'Kelas: ' + cls, { sticky: true }
+      'Total: ' + c.total + ' | CG+: ' + c.cg_plus + ' | CG-: ' + c.cg_minus + '<br>' +
+      'IDW: ' + (c.idw_smooth || 0).toFixed(1) + ' | ' + cls,
+      { sticky: true }
     );
-    bounds.push([c.lat, c.lon]);
+    bounds.push(sw);
+    bounds.push(ne);
   });
 
   if (bounds.length) map.fitBounds(bounds, {padding:[20,20]});
