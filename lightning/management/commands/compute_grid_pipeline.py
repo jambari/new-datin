@@ -1,6 +1,7 @@
 """
 Lightning Grid Pipeline: DailyGrid -> MonthlyGrid -> IDW Smoothing.
-Grid: 0.5-degree. CG+ and CG- only (no IC).
+MATLAB-compatible: grid 0.01 deg, boundary Jayapura, UTC timestamps.
+CG+ and CG- only (no IC).
 """
 import django, os, sys
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "datin_project.settings")
@@ -12,40 +13,36 @@ from datetime import datetime, timedelta, timezone
 from lightning.models import Strike, LightningDailyGrid, LightningMonthlyGrid
 from django.db.models import Sum
 
-WIT = timezone(timedelta(hours=9))
-GRID = 0.5
-LAT_MIN, LAT_MAX = -18.0, 12.0
-LON_MIN, LON_MAX = 127.0, 154.0
+# === MATLAB-COMPATIBLE GRID (0.01 degree) ===
+LATS = [round(-3.01 + i * 0.01, 2) for i in range(100)]
+LONS = [round(140.21 + j * 0.01, 2) for j in range(100)]
+GRID = 0.01
+HALF = GRID / 2
 
-def build_grid():
-    cells = []
-    lat = LAT_MIN + GRID/2
-    while lat < LAT_MAX:
-        lon = LON_MIN + GRID/2
-        while lon < LON_MAX:
-            cells.append((round(lat, 2), round(lon, 2)))
-            lon += GRID
-        lat += GRID
-    return cells
+def build_cells():
+    return [(lat, lon) for lat in LATS for lon in LONS]
 
 def compute_daily_grid(grid_date, cells):
-    wit_start = datetime(grid_date.year, grid_date.month, grid_date.day, tzinfo=WIT)
-    wit_end = wit_start + timedelta(days=1)
-    utc_s = wit_start.astimezone(timezone.utc)
-    utc_e = wit_end.astimezone(timezone.utc)
+    """Count CG+/CG- strikes per 0.01 deg cell for one UTC day."""
+    utc_s = datetime(grid_date.year, grid_date.month, grid_date.day, tzinfo=timezone.utc)
+    utc_e = utc_s + timedelta(days=1)
 
-    vals = list(Strike.objects.filter(timestamp__gte=utc_s, timestamp__lt=utc_e)
-                .values_list("latitude", "longitude", "strike_type"))
+    vals = list(Strike.objects.filter(
+        timestamp__gte=utc_s, timestamp__lt=utc_e
+    ).values_list("latitude", "longitude", "strike_type"))
     if not vals:
         return []
+
     lats = np.array([v[0] for v in vals])
     lons = np.array([v[1] for v in vals])
     types = np.array([v[2] for v in vals], dtype=np.int32)
 
     rows = []
     for lat_c, lon_c in cells:
-        mask = ((lats >= lat_c - GRID/2) & (lats < lat_c + GRID/2) &
-                (lons >= lon_c - GRID/2) & (lons < lon_c + GRID/2))
+        mask = (
+            (lats >= lat_c - HALF) & (lats < lat_c + HALF) &
+            (lons >= lon_c - HALF) & (lons < lon_c + HALF)
+        )
         t = types[mask]
         if len(t) == 0:
             continue
@@ -76,7 +73,7 @@ def compute_monthly_grid(year, month, cells):
     _idw_smooth(year, month, cells, cell_map)
     return len(mrows)
 
-def _idw_smooth(year, month, cells, cell_map, power=3.0, radius=3.0):
+def _idw_smooth(year, month, cells, cell_map, power=3.0, radius=0.5):
     pts = [(lat, lon, o.total) for (lat, lon), o in cell_map.items() if o.total > 0]
     if len(pts) < 3:
         return
@@ -100,19 +97,26 @@ def _idw_smooth(year, month, cells, cell_map, power=3.0, radius=3.0):
 if __name__ == "__main__":
     import sys
     action = sys.argv[1] if len(sys.argv) > 1 else "daily_all"
-    cells = build_grid()
-    print(f"Grid: {len(cells)} cells of {GRID} deg")
+    cells = build_cells()
+    print(f"Grid: {len(cells)} cells of {GRID} deg ({len(LATS)} lat x {len(LONS)} lon)")
 
     if action == "daily_all":
         dates = Strike.objects.dates("timestamp", "day", order="ASC")
         print(f"Processing {len(dates)} days...")
         for i, d in enumerate(dates):
-            wd = d.astimezone(WIT).date() if hasattr(d, "astimezone") else d
-            rows = compute_daily_grid(wd, cells)
+            utc_date = d if hasattr(d, 'tzinfo') else d
+            rows = compute_daily_grid(utc_date, cells)
             if rows:
                 LightningDailyGrid.objects.bulk_create(rows, ignore_conflicts=True, batch_size=500)
             if i % 100 == 0:
-                print(f"  [{i}] {wd}: {len(rows)} cells")
+                print(f"  [{i}/{len(dates)}] {utc_date}: {len(rows)} cells")
+
+    elif action == "daily_date":
+        date_str = sys.argv[2]
+        utc_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        rows = compute_daily_grid(utc_date, cells)
+        LightningDailyGrid.objects.bulk_create(rows, ignore_conflicts=True, batch_size=500)
+        print(f"  {utc_date}: {len(rows)} cells")
 
     elif action == "monthly_all":
         months = LightningDailyGrid.objects.dates("grid_date", "month", order="ASC")
