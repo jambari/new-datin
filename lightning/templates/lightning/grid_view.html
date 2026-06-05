@@ -316,7 +316,7 @@ function initMap() {
       var rgb = getColor(v);
       var i = (r*COLS + c)*4;
       px[i]=rgb[0]; px[i+1]=rgb[1]; px[i+2]=rgb[2];
-      px[i+3] = v > 0 ? 210 : 0;
+      px[i+3] = v > 0 ? 255 : 0;
     }
   }
   ctx.putImageData(img, 0, 0);
