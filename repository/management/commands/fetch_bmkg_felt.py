@@ -93,18 +93,34 @@ class Command(BaseCommand):
                 # Build WIB timestamp for shakemap URL and event_id
                 wib_ts = wib_timestamp(event_dt)
 
-                # --- 1. Save / update FeltEarthquake ---
-                felt_obj, felt_created = FeltEarthquake.objects.get_or_create(
-                    event_datetime=event_dt,
-                    defaults={
-                        "latitude":  lat,
-                        "longitude": lon,
-                        "magnitude": magnitude,
-                        "depth_km":  depth,
-                        "wilayah":   wilayah,
-                        "dirasakan": dirasakan,
-                    },
-                )
+                # --- 1. Save / update FeltEarthquake (dedup by time ±5s + location) ---
+                from django.db.models import Q
+                from datetime import timedelta as _td
+                felt_obj = FeltEarthquake.objects.filter(
+                    event_datetime__gte=event_dt - _td(seconds=5),
+                    event_datetime__lte=event_dt + _td(seconds=5),
+                    latitude__gte=lat - 0.5, latitude__lte=lat + 0.5,
+                    longitude__gte=lon - 0.5, longitude__lte=lon + 0.5,
+                ).first()
+                if felt_obj:
+                    felt_created = False
+                    # Update fields (magnitude may have changed)
+                    felt_obj.magnitude = magnitude
+                    felt_obj.depth_km = depth
+                    felt_obj.wilayah = wilayah
+                    felt_obj.dirasakan = dirasakan
+                    felt_obj.save(update_fields=['magnitude','depth_km','wilayah','dirasakan'])
+                else:
+                    felt_created = True
+                    felt_obj = FeltEarthquake.objects.create(
+                        event_datetime=event_dt,
+                        latitude=lat,
+                        longitude=lon,
+                        magnitude=magnitude,
+                        depth_km=depth,
+                        wilayah=wilayah,
+                        dirasakan=dirasakan,
+                    )
 
                 # Download GCS images into FeltEarthquake if not yet saved
                 gcs_fields = [
