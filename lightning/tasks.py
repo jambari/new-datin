@@ -39,8 +39,11 @@ def process_yesterday_nexstorm_file():
         file_path = os.path.join(db3_directory, filename)
 
         if not os.path.exists(file_path):
-            logger.error(f'Error: File not found for yesterday: "{file_path}". Task stopping.')
-            return f"File not found: {file_path}"
+            # Try with NGXDS_ prefix
+            file_path = os.path.join(db3_directory, f"NGXDS_{filename}")
+            if not os.path.exists(file_path):
+                logger.error(f'Error: File not found for yesterday (tried both formats): "{file_path}". Task stopping.')
+                return f"File not found: {file_path}"
             
     except Exception as e:
         logger.error(f"Error determining yesterday's date or file path: {e}")
