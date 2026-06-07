@@ -23,12 +23,13 @@ def build_cells():
     return [(lat, lon) for lat in LATS for lon in LONS]
 
 def compute_daily_grid(grid_date, cells):
-    """Count CG+/CG- strikes per 0.01 deg cell for one UTC day."""
-    utc_s = datetime(grid_date.year, grid_date.month, grid_date.day, tzinfo=timezone.utc)
-    utc_e = utc_s + timedelta(days=1)
+    """Count CG+/CG- strikes per 0.01 deg cell for one WIT day."""
+    WIT = timezone(timedelta(hours=9))
+    wit_s = datetime(grid_date.year, grid_date.month, grid_date.day, tzinfo=WIT)
+    wit_e = wit_s + timedelta(days=1)
 
     vals = list(Strike.objects.filter(
-        timestamp__gte=utc_s, timestamp__lt=utc_e
+        timestamp__gte=wit_s, timestamp__lt=wit_e
     ).values_list("latitude", "longitude", "strike_type"))
     if not vals:
         return []
