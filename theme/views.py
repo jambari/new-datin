@@ -249,7 +249,10 @@ def landing(request):
     ])
     felt_count = FeltEarthquake.objects.filter(event_datetime__gte=cutoff).count()
     latest_felt = FeltEarthquake.objects.order_by('-event_datetime').first()
-    latest_shakemap = ShakemapEvent.objects.order_by('-event_time').first()
+    latest_shakemap = ShakemapEvent.objects.filter(
+        magnitude__gt=0,
+        shakemap_image__isnull=False,
+    ).order_by('-event_time').first()
 
     return render(request, 'landing.html', {
         'albums': albums,
