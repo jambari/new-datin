@@ -187,5 +187,36 @@ class Command(BaseCommand):
             if not quiet:
                 self.stdout.write("  no waveform PNG dir at %s — skipping" % wf_png_dir)
 
+        # ---- 4) Link .mseed files into EventStationWaveform.mseed ----
+        # rsync'd to: /var/www/html/media/waveforms/<WIB>/<sta>_<comp>.mseed
+        wf_mseed_dir = media / "waveforms" / wib
+        if wf_mseed_dir.is_dir():
+            # Filename format from pipeline: <WIB>_IA_<STA>_<COMP>_BP4_0.1_40.mseed
+            # or simpler: <STA>_<COMP>.mseed from manual uploads
+            _MSEED_RE = re.compile(r"^(?:\d{14}_[A-Z0-9]+_)?(?P<sta>[A-Z0-9]+)_(?P<comp>[A-Z0-9]+(?:_[A-Z0-9]+)?)(?:_BP[\d.]+_[\d.]+_[\d.]+)?\.mseed$")
+            for f in sorted(wf_mseed_dir.iterdir()):
+                if not f.name.endswith(".mseed"):
+                    continue
+                m = _MSEED_RE.match(f.name)
+                if not m:
+                    if not quiet:
+                        self.stdout.write(f"  skip mseed (no match): {f.name}")
+                    continue
+                obj, _ = EventStationWaveform.objects.update_or_create(
+                    event_id=wib,
+                    station_code=m.group("sta"),
+                    component=m.group("comp"),
+                    defaults={},
+                )
+                # Copy mseed file into Django storage
+                from django.core.files import File
+                with open(f, "rb") as fh:
+                    obj.mseed.save(f"{m.group('sta')}_{m.group('comp')}.mseed", File(fh), save=True)
+                if not quiet:
+                    self.stdout.write(f"  mseed: {m.group('sta')}/{m.group('comp')}")
+        else:
+            if not quiet:
+                self.stdout.write(f"  no mseed dir at {wf_mseed_dir} — skipping")
+
         # ---- Final summary (parsed by the .50 push endpoint) ----
         self.stdout.write("INGEST_SUMMARY " + json.dumps(summary))

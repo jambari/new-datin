@@ -309,17 +309,22 @@ def _waveform_image_path(instance, filename):
     return f"event_waveforms/{instance.event_id}/{instance.station_code}_{instance.component}.png"
 
 
-class EventStationWaveform(models.Model):
-    """Pre-rendered PNG of one .mseed trace for an event/station/component.
+def _waveform_mseed_path(instance, filename):
+    return f"event_waveforms/{instance.event_id}/{instance.station_code}_{instance.component}.mseed"
 
-    Rendered server-side by `waveform_upload_api` from the raw .mseed bytes
-    uploaded from the shakemap host. One image per event/station/component,
-    same key shape as EventResponseSpectrum.
+
+class EventStationWaveform(models.Model):
+    """Pre-rendered PNG + raw .mseed of one trace for an event/station/component.
+
+    The PNG is rendered server-side by `waveform_upload_api` from the raw .mseed
+    bytes uploaded from the shakemap host. The original .mseed is also stored
+    so users can download the raw signal.
     """
     event_id     = models.CharField(max_length=100, db_index=True)
     station_code = models.CharField(max_length=10)
     component    = models.CharField(max_length=10)
     image        = models.ImageField(upload_to=_waveform_image_path)
+    mseed        = models.FileField(upload_to=_waveform_mseed_path, null=True, blank=True)
     uploaded_at  = models.DateTimeField(auto_now_add=True)
 
     class Meta:

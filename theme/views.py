@@ -325,14 +325,36 @@ def public_spectra_list(request):
 
 
 def _resolve_shakemap_context(pk):
-    from repository.models import FeltEarthquake, ShakemapEvent
+    from repository.models import FeltEarthquake, ShakemapEvent, EventStationWaveform
     from django.shortcuts import get_object_or_404
     from datetime import timezone as dt_timezone, timedelta
     obj = get_object_or_404(FeltEarthquake, pk=pk)
     _WIB = dt_timezone(timedelta(hours=7))
     wib_ts = obj.event_datetime.astimezone(_WIB).strftime("%Y%m%d%H%M%S")
     shk_event = ShakemapEvent.objects.filter(event_id=wib_ts).first()
-    return {'object': obj, 'shk_event': shk_event, 'wib_ts': wib_ts}
+    # Check if this event has downloadable .mseed files (try both WIB and UTC formats)
+    utc_ts  = obj.event_datetime.strftime("%Y%m%d%H%M%S")
+    mseed_count = EventStationWaveform.objects.filter(
+        event_id__in=[wib_ts, utc_ts]
+    ).exclude(
+        mseed__isnull=True
+    ).exclude(
+        mseed=''
+    ).count()
+    # Determine which event_id format has the mseed data
+    mseed_event_id = None
+    for eid in [wib_ts, utc_ts]:
+        if EventStationWaveform.objects.filter(event_id=eid).exclude(mseed__isnull=True).exclude(mseed='').exists():
+            mseed_event_id = eid
+            break
+    return {
+        'object': obj,
+        'shk_event': shk_event,
+        'wib_ts': wib_ts,
+        'has_mseed': mseed_count > 0,
+        'mseed_count': mseed_count,
+        'mseed_zip_url': f'/api/shakemap/{mseed_event_id}/mseed-zip/' if mseed_count > 0 else None,
+    }
 
 
 def public_shakemap_detail(request, pk):

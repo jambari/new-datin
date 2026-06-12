@@ -1886,8 +1886,10 @@ def waveform_upload_api(request):
     if not mseed_file:
         return JsonResponse({'error': 'Missing mseed file'}, status=400)
 
+    raw_bytes = mseed_file.read()
+
     try:
-        png_bytes = _render_mseed_png(mseed_file.read(), station_code, component)
+        png_bytes = _render_mseed_png(raw_bytes, station_code, component)
     except Exception as exc:
         return JsonResponse({'error': f'Render error: {exc}'}, status=400)
 
@@ -1906,6 +1908,14 @@ def waveform_upload_api(request):
         ContentFile(png_bytes),
         save=True,
     )
+    # Save the raw .mseed for download
+    if obj.mseed:
+        obj.mseed.delete(save=False)
+    obj.mseed.save(
+        f'{station_code}_{component}.mseed',
+        ContentFile(raw_bytes),
+        save=True,
+    )
 
     return JsonResponse({
         'event_id':     event_id,
@@ -1913,6 +1923,7 @@ def waveform_upload_api(request):
         'component':    component,
         'bytes':        len(png_bytes),
         'url':          obj.image.url,
+        'mseed_url':    obj.mseed.url if obj.mseed else None,
         'created':      created,
     })
 
@@ -1954,6 +1965,12 @@ def spectrum_json_api(request, event_id):
         if w.image
     }
 
+    mseed_map = {
+        (w.station_code, w.component): w.mseed.url
+        for w in EventStationWaveform.objects.filter(event_id=event_id)
+        if w.mseed
+    }
+
     stations_out = []
     for sp in qs:
         ds = design_map.get(sp.station_code)
@@ -1962,6 +1979,7 @@ def spectrum_json_api(request, event_id):
             'component':    sp.component,
             'eq_spectrum':  _downsample(sp.spectrum or []),
             'waveform_url': waveform_map.get((sp.station_code, sp.component)),
+            'mseed_url':    mseed_map.get((sp.station_code, sp.component)),
             'design_spectrum': {
                 'c': _downsample(ds.spectrum_c),
                 'd': _downsample(ds.spectrum_d),
@@ -1969,7 +1987,84 @@ def spectrum_json_api(request, event_id):
             } if ds else None,
         })
 
-    return JsonResponse({'event_id': event_id, 'stations': stations_out})
+    mseed_count = sum(1 for v in mseed_map.values() if v)
+    return JsonResponse({
+        'event_id': event_id,
+        'stations': stations_out,
+        'zip_url':  f'/api/shakemap/{event_id}/mseed-zip/' if mseed_count > 0 else None,
+        'mseed_count': mseed_count,
+    })
+
+
+# ── Event Mseed ZIP download ──────────────────────────────────────────────────
+import zipfile
+import io
+
+
+def event_mseed_zip_api(request, event_id):
+    """GET endpoint: return a ZIP containing event metadata JSON + all .mseed files for an event.
+
+    Response: application/zip with:
+      - event.json     — event metadata (id, station, components, counts)
+      - <sta>_<comp>.mseed  — one file per station/component
+    """
+    from .models import EventStationWaveform, EventResponseSpectrum
+    from django.http import HttpResponse
+
+    waveforms = list(
+        EventStationWaveform.objects.filter(event_id=event_id)
+        .exclude(mseed__isnull=True)
+        .exclude(mseed='')
+        .select_related()
+    )
+
+    if not waveforms:
+        return JsonResponse({'error': 'No mseed files for this event'}, status=404)
+
+    spectra = list(
+        EventResponseSpectrum.objects.filter(event_id=event_id)
+    )
+
+    # Build metadata
+    stations = {}
+    for w in waveforms:
+        code = w.station_code
+        if code not in stations:
+            stations[code] = {'code': code, 'components': []}
+        stations[code]['components'].append({
+            'component': w.component,
+            'mseed_filename': f'{w.station_code}_{w.component}.mseed',
+        })
+
+    metadata = {
+        'event_id': event_id,
+        'station_count': len(stations),
+        'mseed_count': len(waveforms),
+        'spectra_count': len(spectra),
+        'stations': list(stations.values()),
+    }
+
+    # Build ZIP in memory
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Add metadata JSON
+        zf.writestr('event.json', json.dumps(metadata, indent=2))
+
+        # Add each .mseed file
+        for w in waveforms:
+            if w.mseed and w.mseed.name:
+                try:
+                    mseed_path = w.mseed.path
+                    arcname = f'{w.station_code}_{w.component}.mseed'
+                    zf.write(mseed_path, arcname)
+                except Exception:
+                    pass
+
+    buf.seek(0)
+
+    resp = HttpResponse(buf.getvalue(), content_type='application/zip')
+    resp['Content-Disposition'] = f'attachment; filename="{event_id}_mseed.zip"'
+    return resp
 
 
 # ── YOLO training progress (private dashboard) ───────────────────────────────

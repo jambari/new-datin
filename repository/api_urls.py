@@ -1,6 +1,6 @@
 # repository/api_urls.py
 from django.urls import path
-from .views import DataAvailabilityReportView, station_search_api, AcceleroDataAvailabilityView, push_events_api, gempa_laporan_bulanan_api, gempa_dirasakan_api, psa5_upload_api, spectrum_json_api, waveform_upload_api, yolo_state_upload_api, yolo_snapshot_upload_api
+from .views import DataAvailabilityReportView, station_search_api, AcceleroDataAvailabilityView, push_events_api, gempa_laporan_bulanan_api, gempa_dirasakan_api, psa5_upload_api, spectrum_json_api, waveform_upload_api, yolo_state_upload_api, yolo_snapshot_upload_api, event_mseed_zip_api
 from wrsng.views import WRSNGStatusUpdateAPI
 
 urlpatterns = [
@@ -18,6 +18,8 @@ urlpatterns = [
     path('shakemap/waveform/', waveform_upload_api, name='waveform_upload_api'),
     # Spectrum JSON: GET design + earthquake PSA for a given event
     path('shakemap/<str:event_id>/spectrum.json', spectrum_json_api, name='spectrum_json_api'),
+    # Mseed ZIP: GET all .mseed files + event metadata as a ZIP
+    path('shakemap/<str:event_id>/mseed-zip/', event_mseed_zip_api, name='event_mseed_zip_api'),
     # YOLO training state push (private dashboard backend)
     path('yolo/state/', yolo_state_upload_api, name='yolo_state_upload_api'),
     # YOLO weight snapshot push (best.pt / last.pt)

@@ -38,6 +38,37 @@
     font-size: 0.72rem;
     color: #94a3b8;
   }
+
+  /* ── Download section ──────────────────────────── */
+  .dl-section {
+    margin-top: .75rem;
+  }
+  .dl-section-header {
+    font-size: .68rem; font-weight: 600; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: .07em;
+    margin-bottom: .35rem;
+  }
+  .dl-btn-zip {
+    display: inline-flex; align-items: center; gap: .4rem;
+    font-size: .78rem; padding: 6px 16px; border-radius: 20px;
+    border: 1px solid #166534;
+    cursor: pointer; background: #166534; color: #fff;
+    text-decoration: none; font-weight: 600;
+  }
+  .dl-btn-zip:hover { background: #15803d; }
+  .dl-btn-mseed {
+    font-size: .72rem; padding: 4px 10px; border-radius: 20px;
+    cursor: pointer; background: #fff; color: #374151;
+    text-decoration: none; margin-left: 2px;
+  }
+  .dl-btn-mseed:hover { background: #f0fdf4; border-color: #166534; color: #166534; }
+
+  /* ── Signal buttons ────────────────────────────── */
+  .sig-btn {
+    font-size: .72rem; padding: 4px 12px; border-radius: 20px;
+    cursor: pointer; background: #fff; color: #374151;
+  }
+  .sig-btn:hover { background: #eff6ff; }
 </style>
 {% endblock %}
 
@@ -78,6 +109,17 @@
     <div id="spectrum-empty" style="display:none;color:#9ca3af;font-size:.82rem;text-align:center;padding:2.5rem 0;">
       Data respon spektra belum tersedia untuk kejadian ini.
     </div>
+
+    {% if has_mseed %}
+    <div class="dl-section">
+      <div class="dl-section-header">Download Data ({{ mseed_count }} file .mseed)</div>
+      <div>
+        <a href="{{ mseed_zip_url }}" target="_blank" class="dl-btn-zip">
+          ⬇ Download All .mseed (ZIP)
+        </a>
+      </div>
+    </div>
+    {% endif %}
 
     <div id="spectrum-chart-wrap" style="display:none;">
       <div style="position:relative;height:300px;">
@@ -283,11 +325,20 @@
       const color = COMP_COLORS[c.component] || PSA_FALLBACK_COLOR;
       const btn = document.createElement('button');
       btn.textContent = `📈 ${c.component}`;
-      btn.style.cssText =
-        `font-size:.72rem;padding:4px 12px;border-radius:20px;border:1px solid ${color};` +
-        'cursor:pointer;background:#fff;color:#374151;';
+      btn.className = 'sig-btn';
+      btn.style.border = `1px solid ${color}`;
       btn.addEventListener('click', () => openSignalModal(group.code, c.component, c.waveform_url));
       btns.appendChild(btn);
+      // Download .mseed button
+      if (c.mseed_url) {
+        const dl = document.createElement('a');
+        dl.textContent = '⬇ .mseed';
+        dl.href = c.mseed_url;
+        dl.download = '';
+        dl.className = 'dl-btn-mseed';
+        dl.style.border = `1px solid ${color}`;
+        btns.appendChild(dl);
+      }
     });
   }
 
@@ -359,8 +410,19 @@
     .then(r => r.json())
     .then(data => {
       document.getElementById('spectrum-loading').style.display = 'none';
+
+      // ZIP download button — tampilkan DULU, sebelum cek stations
+      if (data.zip_url) {
+        try {
+          document.getElementById('download-all-wrap').style.display = 'block';
+          document.getElementById('dl-mseed-zip').href = data.zip_url;
+        } catch(e) { console.warn('ZIP err:', e); }
+      }
+
       if (!data.stations || !data.stations.length) {
-        document.getElementById('spectrum-empty').style.display = 'block';
+        if (!data.zip_url) {
+          document.getElementById('spectrum-empty').style.display = 'block';
+        }
         return;
       }
       const byCode = new Map();
@@ -376,13 +438,33 @@
           component:    s.component,
           eq_spectrum:  s.eq_spectrum,
           waveform_url: s.waveform_url || null,
+          mseed_url:    s.mseed_url || null,
         });
       });
+      // ZIP download button — TAMPILKAN DULU sebelum chart
+      if (data.zip_url) {
+        try {
+          const dlWrap = document.getElementById('download-all-wrap');
+          const dlLink = document.getElementById('dl-mseed-zip');
+          dlLink.href = data.zip_url;
+          dlWrap.style.display = 'block';
+        } catch(e) { console.warn('ZIP btn err:', e); }
+      }
+
       stationGroups = Array.from(byCode.values());
       stationGroups.forEach(g => g.components.sort((a, b) => a.component.localeCompare(b.component)));
 
       document.getElementById('spectrum-chart-wrap').style.display = 'block';
-      initChart(stationGroups[0]);
+
+      try {
+        initChart(stationGroups[0]);
+      } catch(e) {
+        console.warn('Chart init err:', e);
+        document.getElementById('spectrum-loading').style.display = 'none';
+        document.getElementById('spectrum-empty').style.display = 'block';
+        document.getElementById('spectrum-empty').textContent = 'Chart gagal dimuat, tapi data .mseed tersedia.';
+        return;
+      }
       buildLegend();
       buildStationPicker();
       buildSignalPicker(stationGroups[0]);
