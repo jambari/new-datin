@@ -131,6 +131,10 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST'),
         'PORT': config('DB_PORT'),
+        'CONN_MAX_AGE': 60,  # keep DB connections alive for 60s
+        'OPTIONS': {
+            'connect_timeout': 5,
+        },
     }
 }
 
