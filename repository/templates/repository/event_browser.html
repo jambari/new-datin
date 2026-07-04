@@ -985,7 +985,7 @@
   }
 
   // --- LOGIKA KALKULASI SEISCOMP ---
-  var dayStatus = {{ day_status|safe }};
+  var dayStatus = {{ day_status|default:"{}"|safe }};
   var startDate = '{{ start }}';
   function initSeiscompStatus() {
     document.querySelectorAll('#seiscompTable tbody tr').forEach(function(row) {
@@ -1221,7 +1221,7 @@
   }
 
   // --- LISTENERS ---
-  var dayStatus = {{ day_status|safe }};
+  var dayStatus = {{ day_status|default:"{}"|safe }};
   var startDate = '{{ start }}';
   function initSeiscompStatus() {
     document.querySelectorAll('#seiscompTable tbody tr').forEach(function(row) {
