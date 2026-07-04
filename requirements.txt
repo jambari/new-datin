@@ -42,3 +42,4 @@ typing_extensions==4.14.1
 urllib3==2.5.0
 wheel==0.42.0
 reportlab
+django-redis
