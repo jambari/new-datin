@@ -11,6 +11,13 @@ SHAKEMAP_URL    = "https://www.bmkg.go.id/cdn-cgi/image/w=360,h=510/https://stat
 SHAKEMAP_FALLBACK_URL = "https://static.bmkg.go.id/{wib_ts}.mmi.jpg"
 GCS_BASE_URL    = "https://bmkg-content-inatews.storage.googleapis.com/{wib_ts}_rev/{filename}"
 
+# Browser headers - required by BMKG CDN (Cloudflare) to avoid 403
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://www.bmkg.go.id/",
+    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+}
+
 WIB = timezone(timedelta(hours=7))
 
 # Bounding box for all Papua provinces (Papua, Papua Barat, Papua Tengah, etc.)
@@ -40,7 +47,7 @@ def fetch_shakemap_image(wib_ts):
     ]
     for url in urls:
         try:
-            resp = requests.get(url, timeout=15)
+            resp = requests.get(url, timeout=15, headers=_HEADERS)
             if resp.status_code == 200 and resp.headers.get("Content-Type", "").startswith("image/"):
                 return f"{wib_ts}.mmi.jpg", resp.content
         except Exception:
