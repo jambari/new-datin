@@ -41,9 +41,11 @@ def fetch_shakemap_image(wib_ts):
     """Try to download the MMI shakemap / intensity image.
     Tries the new CDN URL first, then falls back to the old direct URL.
     Returns (filename, bytes) or (None, None)."""
+    # Priority: 1) new BMKG CDN, 2) old static URL, 3) GCS bucket
     urls = [
         SHAKEMAP_URL.format(wib_ts=wib_ts),
         SHAKEMAP_FALLBACK_URL.format(wib_ts=wib_ts),
+        f"https://bmkg-content-inatews.storage.googleapis.com/{wib_ts}_rev/intensity_logo.jpg",
     ]
     for url in urls:
         try:
