@@ -76,13 +76,6 @@ def dashboard(request):
     # Cek apakah buletin bulan sebelumnya (yg jadi deadline) sudah ada
     bulletin_ada = Bulletin.objects.filter(bulan=str(prev_month), tahun=str(prev_year)).exists()
 
-    # --- Lightning ---
-    from lightning.models import DailyStrikeSummary
-    lightning_7d = DailyStrikeSummary.objects.filter(summary_date__gte=week_ago).order_by('summary_date')
-    yesterday = today - datetime.timedelta(days=1)
-    lightning_yesterday = DailyStrikeSummary.objects.filter(summary_date=yesterday).first()
-    lightning_today_count = lightning_yesterday.total_count if lightning_yesterday else 0
-
     # --- WRSNG: latest status per station ---
     from wrsng.models import WRSNGStatus
     from wrsng.constants import CODE_TO_STATION
@@ -158,15 +151,6 @@ def dashboard(request):
             ]
             break
 
-    # --- Lightning chart data (7 days) ---
-    chart_labels = []
-    chart_data   = []
-    for i in range(6, -1, -1):
-        d = today - datetime.timedelta(days=i)
-        chart_labels.append(d.strftime('%d/%m'))
-        summary = next((s for s in lightning_7d if s.summary_date == d), None)
-        chart_data.append(summary.total_count if summary else 0)
-
     # --- Latest QC events ---
     from qc_review.models import Event as QCEvent
     _qc_qs = QCEvent.objects.prefetch_related("runs__station_results").order_by("-origin_time")[:5]
@@ -179,7 +163,6 @@ def dashboard(request):
         'latest_gempa':        latest_gempa,
         'felt_30d':            felt_30d,
         'recent_felt':         recent_felt,
-        'lightning_today':     lightning_today_count,
         'wrsng_statuses':      wrsng_statuses,
         'wrsng_online':        wrsng_online,
         'wrsng_total':         len(wrsng_statuses),
@@ -187,8 +170,6 @@ def dashboard(request):
         'next_shift_date':     next_shift_date,
         'next_shift_by_pola':  next_shift_by_pola,
         'reminders':           reminders,
-        'chart_labels':        chart_labels,
-        'chart_data':          chart_data,
         'gempa_merusak_total': GempaMemusak.objects.count(),
         'sun_rise_wit':        sun_rise_wit,
         'sun_set_wit':         sun_set_wit,

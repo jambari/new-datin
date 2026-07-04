@@ -61,10 +61,11 @@
         </div>
         </a>
 
-        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #f59e0b;">
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;border-left:4px solid #f59e0b;position:relative;">
           <p style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Buletin</p>
           <p style="font-size:18px;font-weight:700;color:#111827;line-height:1.2;">Buletin {{ buletin_deadline.bulan_label }} {{ buletin_deadline.tahun }}</p>
           <p style="font-size:13px;color:#dc2626;font-weight:700;margin-top:4px;">Deadline: {{ buletin_deadline.deadline_label }}</p>
+          <span style="position:absolute;top:12px;right:14px;font-size:20px;">{% if bulletin_ada %}✅{% else %}❌{% endif %}</span>
         </div>
 
         {% if lapbul_bulan_ini %}
@@ -267,47 +268,8 @@
         </div>
       </div>
 
-      <!-- ── Row 3: Lightning Chart + WRSNG Status ──────────────────────── -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
-
-        <!-- Lightning 7-day bar chart -->
-        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
-          <h2 style="font-size:14px;font-weight:700;color:#374151;margin-bottom:16px;">Sambaran Petir — 7 Hari Terakhir</h2>
-          <div id="lightning-chart" style="display:flex;align-items:flex-end;gap:8px;height:120px;padding-bottom:20px;position:relative;">
-            {% for i in "0123456"|make_list %}{% endfor %}
-          </div>
-          <canvas id="lightningCanvas" width="0" height="160" style="width:100%;"></canvas>
-          <script>
-            (function(){
-              const labels = {{ chart_labels|safe }};
-              const data   = {{ chart_data|safe }};
-              const max    = Math.max(...data, 1);
-              const canvas = document.getElementById('lightningCanvas');
-              const parent = canvas.parentElement;
-              canvas.width = parent.offsetWidth - 40;
-              const ctx = canvas.getContext('2d');
-              const W = canvas.width, H = 160;
-              const TOP_PAD = 20, BOT_PAD = 24;
-              const barArea = H - TOP_PAD - BOT_PAD;
-              const barW = Math.floor((W - (data.length-1)*8) / data.length);
-              ctx.clearRect(0,0,W,H);
-              data.forEach((val, i) => {
-                const barH = Math.max(4, Math.round((val/max) * barArea));
-                const x = i*(barW+8), y = TOP_PAD + barArea - barH;
-                ctx.fillStyle = '#f59e0b';
-                ctx.beginPath();
-                ctx.roundRect(x, y, barW, barH, 3);
-                ctx.fill();
-                ctx.fillStyle = '#374151';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(val > 0 ? val.toLocaleString() : '0', x+barW/2, y - 4);
-                ctx.fillStyle = '#9ca3af';
-                ctx.fillText(labels[i], x+barW/2, H - 8);
-              });
-            })();
-          </script>
-        </div>
+      <!-- ── Row 3: WRSNG Status ─────────────────────────────────────────── -->
+      <div style="margin-bottom:24px;">
 
         <!-- WRSNG Status Grid -->
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
@@ -339,7 +301,7 @@
           <a href="{% url 'shakemap-list' %}"         style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Shakemap</a>
           <a href="{% url 'wrsng:status_list' %}"    style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">WRSNG Status</a>
           <a href="{% url 'logbook:logbook_list' %}" style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Logbook</a>
-          <a href="{% url 'lightning:upload_nexstorm' %}" style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Hitung Sambaran</a>
+
           <a href="{% url 'sunmoon_report' %}"       style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Almanak</a>
           <a href="{% url 'daftar_hujan' %}"         style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Data Hujan</a>
           <a href="{% url 'json_upload_create' %}"   style="padding:8px 16px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;text-decoration:none;font-weight:500;border:1px solid #e5e7eb;">Upload Laporan Gempa</a>
