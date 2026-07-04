@@ -371,20 +371,14 @@
                             </div>
                             <div class="felt-img-pair">
                                 <div>
-                                    {% with mmi_img=event.shk_event.shakemap_image %}
-                                    {% if mmi_img %}
-                                        <img src="{{ mmi_img.url }}" alt="Intensitas"
-                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Peta Intensitas (MMI)"
-                                             class="felt-gallery-img">
-                                    {% elif event.img_report_1 %}
-                                        <img src="{{ event.img_report_1.url }}" alt="Report 1"
-                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Report 1"
+                                    {% if event.img_stationlist %}
+                                        <img src="{{ event.img_stationlist.url }}" alt="Station List"
+                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Station List"
                                              class="felt-gallery-img">
                                     {% else %}
-                                        <div class="felt-no-img">No Intensity</div>
+                                        <div class="felt-no-img">No Station List</div>
                                     {% endif %}
-                                    {% endwith %}
-                                    <div class="felt-img-label">Intensitas (MMI)</div>
+                                    <div class="felt-img-label">Station List</div>
                                 </div>
                                 <div>
                                     {% with mmi_img=event.shk_event.shakemap_image %}
