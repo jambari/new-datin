@@ -972,9 +972,9 @@ def observation_bartington_form_view(request):
         _cr = _latest.deklinasi_readings.get('_cr_awal')
         _cl = _latest.deklinasi_readings.get('_cl_awal')
         if _cr:
-            _cr_def = {'deg': _cr.get('deg', 0), 'min': _cr.get('min', 0), 'sec': _cr.get('sec', 0)}
+            _cr_def = {'deg': int(_cr.get('deg', 0)), 'min': int(_cr.get('min', 0)), 'sec': int(_cr.get('sec', 0))}
         if _cl:
-            _cl_def = {'deg': _cl.get('deg', 0), 'min': _cl.get('min', 0), 'sec': _cl.get('sec', 0)}
+            _cl_def = {'deg': int(_cl.get('deg', 0)), 'min': int(_cl.get('min', 0)), 'sec': int(_cl.get('sec', 0))}
 
     context = {
         'observer_names': observer_names,
