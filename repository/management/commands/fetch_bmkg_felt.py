@@ -5,7 +5,10 @@ from django.core.files.base import ContentFile
 from repository.models import FeltEarthquake, ShakemapEvent
 
 BMKG_API_URL    = "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"
-SHAKEMAP_URL    = "https://static.bmkg.go.id/{wib_ts}.mmi.jpg"
+# New BMKG CDN (Cloudflare) path for shakemap intensity image
+SHAKEMAP_URL    = "https://www.bmkg.go.id/cdn-cgi/image/w=360,h=510/https://static.bmkg.go.id/{wib_ts}_rev/intensity_logo.jpg"
+# Fallback: old direct URL (some events may not have the _rev/intensity_logo format yet)
+SHAKEMAP_FALLBACK_URL = "https://static.bmkg.go.id/{wib_ts}.mmi.jpg"
 GCS_BASE_URL    = "https://bmkg-content-inatews.storage.googleapis.com/{wib_ts}_rev/{filename}"
 
 WIB = timezone(timedelta(hours=7))
@@ -28,14 +31,20 @@ def wib_timestamp(dt_utc):
 
 
 def fetch_shakemap_image(wib_ts):
-    """Try to download the MMI shakemap image. Returns (filename, bytes) or (None, None)."""
-    url = SHAKEMAP_URL.format(wib_ts=wib_ts)
-    try:
-        resp = requests.get(url, timeout=15)
-        if resp.status_code == 200 and resp.headers.get("Content-Type", "").startswith("image/"):
-            return f"{wib_ts}.mmi.jpg", resp.content
-    except Exception:
-        pass
+    """Try to download the MMI shakemap / intensity image.
+    Tries the new CDN URL first, then falls back to the old direct URL.
+    Returns (filename, bytes) or (None, None)."""
+    urls = [
+        SHAKEMAP_URL.format(wib_ts=wib_ts),
+        SHAKEMAP_FALLBACK_URL.format(wib_ts=wib_ts),
+    ]
+    for url in urls:
+        try:
+            resp = requests.get(url, timeout=15)
+            if resp.status_code == 200 and resp.headers.get("Content-Type", "").startswith("image/"):
+                return f"{wib_ts}.mmi.jpg", resp.content
+        except Exception:
+            pass
     return None, None
 
 
@@ -141,7 +150,7 @@ class Command(BaseCommand):
                     felt_obj.save()
 
                 # --- 2. Save / update ShakemapEvent (used by existing shakemap views) ---
-                shk_obj, shk_created = ShakemapEvent.objects.get_or_create(
+                shk_obj, shk_created = ShakemapEvent.objects.update_or_create(
                     event_id=wib_ts,
                     defaults={
                         "latitude":        lat,
