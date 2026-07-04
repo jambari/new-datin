@@ -115,8 +115,8 @@ class Command(BaseCommand):
                 from django.db.models import Q
                 from datetime import timedelta as _td
                 felt_obj = FeltEarthquake.objects.filter(
-                    event_datetime__gte=event_dt - _td(seconds=5),
-                    event_datetime__lte=event_dt + _td(seconds=5),
+                    event_datetime__gte=event_dt - _td(seconds=120),
+                    event_datetime__lte=event_dt + _td(seconds=120),
                     latitude__gte=lat - 0.5, latitude__lte=lat + 0.5,
                     longitude__gte=lon - 0.5, longitude__lte=lon + 0.5,
                 ).first()
