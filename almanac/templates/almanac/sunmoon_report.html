@@ -106,19 +106,11 @@
 
             <!-- Form Filter -->
             <form method="get" class="filter-box">
-                <label>Bulan:</label>
-                <select name="month">
-                    {% for m in months_range %}
-                    <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
-                    {% endfor %}
-                </select>
+                <label>Dari:</label>
+                <input type="date" name="date_from" value="{{ date_from }}" style="padding:6px 12px;font-size:14px;border:1px solid #ccc;border-radius:4px;">
 
-                <label>Tahun:</label>
-                <select name="year">
-                    {% for y in years_range %}
-                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
-                    {% endfor %}
-                </select>
+                <label>Sampai:</label>
+                <input type="date" name="date_to" value="{{ date_to }}" style="padding:6px 12px;font-size:14px;border:1px solid #ccc;border-radius:4px;">
 
                 <label>Kota:</label>
                 <select name="city">

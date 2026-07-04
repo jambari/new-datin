@@ -121,24 +121,12 @@
 
   <form method="get" class="filter-bar">
     <div>
-      <label>Bulan</label>
-      <select name="month">
-        {% for m in months_range %}
-        <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>
-          {% with bulan=m %}
-            {% if bulan == 1 %}Januari{% elif bulan == 2 %}Februari{% elif bulan == 3 %}Maret{% elif bulan == 4 %}April{% elif bulan == 5 %}Mei{% elif bulan == 6 %}Juni{% elif bulan == 7 %}Juli{% elif bulan == 8 %}Agustus{% elif bulan == 9 %}September{% elif bulan == 10 %}Oktober{% elif bulan == 11 %}November{% else %}Desember{% endif %}
-          {% endwith %}
-        </option>
-        {% endfor %}
-      </select>
+      <label>Dari</label>
+      <input type="date" name="date_from" value="{{ date_from }}" style="padding:6px 12px;font-size:14px;border:1px solid #d1d5db;border-radius:6px;">
     </div>
     <div>
-      <label>Tahun</label>
-      <select name="year">
-        {% for y in years_range %}
-        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
-        {% endfor %}
-      </select>
+      <label>Sampai</label>
+      <input type="date" name="date_to" value="{{ date_to }}" style="padding:6px 12px;font-size:14px;border:1px solid #d1d5db;border-radius:6px;">
     </div>
     <div>
       <label>Kota</label>
@@ -192,7 +180,7 @@
   {% else %}
     <div class="empty-state">
       <p style="font-size:2rem;">📅</p>
-      <p>Tidak ada data almanak untuk periode <strong>{{ month_name }} {{ selected_year }}</strong>.</p>
+      <p>Tidak ada data almanak untuk periode <strong>{{ date_from }} s.d {{ date_to }}</strong>.</p>
     </div>
   {% endif %}
 </div>
