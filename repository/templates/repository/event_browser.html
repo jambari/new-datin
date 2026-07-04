@@ -26,19 +26,19 @@
     body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: #000; }
     .navbar { background-color: var(--bmkg-blue) !important; padding: 0.7rem; }
     .formal-frame { background: white; border: 2.5px solid #000; padding: 20px; width: 100%; }
-    .header-grid { display: grid; grid-template-columns: 120px 1fr 120px; align-items: center; border-bottom: 2.5px solid #000; padding-bottom: 15px; margin-bottom: 15px; gap: 20px; }
+    .header-grid { display: grid; grid-template-columns: 260px 1fr 100px; align-items: center; border-bottom: 2.5px solid #000; padding-bottom: 15px; margin-bottom: 15px; gap: 20px; }
     .title-box { text-align: center; }
     .t-main { font-weight: 900; font-size: 1.3rem; text-transform: uppercase; line-height: 1.1; display: block; }
     .t-sub { font-weight: 400; font-style: italic; font-size: 0.95rem; margin-top: 5px; display: block; color: #333; }
-    #map { height: 600px; border: 2px solid #000; width: 100%; z-index: 1; margin-bottom: 0; }
+    #map { height: 480px; border: 2px solid #000; width: 100%; z-index: 1; margin-bottom: 0; }
     #mapFelt { height: 540px; border: 2px solid #000; width: 100%; z-index: 1; margin-bottom: 0; }
     .legend-grid { display: grid; grid-template-columns: 1.2fr 1.2fr 1fr 1fr; border: 2px solid #000; border-top: none; background: white; }
-    .legend-box { border-right: 1px solid #000; padding: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .legend-box { border-right: 1px solid #000; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
     .legend-box:last-child { border-right: none; }
-    .legend-box img { max-width: 100%; height: auto; display: block; max-height: 100px; }
+    .legend-box img { max-width: 100%; height: auto; display: block; max-height: 170px; }
     .legend-t { font-weight: bold; font-size: 0.65rem; border-bottom: 1px solid #000; width: 100%; margin-bottom: 8px; text-transform: uppercase; padding-bottom: 2px; display: block; }
     .report-card { background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .chart-box { height: 160px; width: 100%; position: relative; }
+    .chart-box { height: 240px; width: 100%; position: relative; }
     
     /* CSS Tabel Compact */
     .table-compact { font-size: 0.75rem; border-collapse: collapse; }
@@ -99,7 +99,7 @@
             <span class="text-muted no-print">|</span>
             <div class="d-flex align-items-center gap-3 no-print">
               <div class="form-check form-check-inline m-0">
-                <input class="form-check-input" type="checkbox" id="swSrcExisting" checked onchange="refreshMarkers()">
+                <input class="form-check-input" type="checkbox" id="swSrcExisting" onchange="refreshMarkers()">
                 <label class="form-check-label small" for="swSrcExisting">
                   <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:2px;"></span>Integrasi
                 </label>
@@ -130,22 +130,14 @@
               <i class="bi bi-bar-chart me-2"></i>Statistik & Rekap
             </button>
           </li>
+          <li class="nav-item">
+            <button class="nav-link" id="tab-monitor-btn" data-bs-toggle="pill" data-bs-target="#pane-monitor">
+              <i class="bi bi-cpu me-2"></i>Monitoring Seiscomp
+            </button>
+          </li>
         </ul>
 
-        <!-- SHP overlay controls -->
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-4 p-2 bg-white border rounded no-print" id="dateFilterBar">
-          <input class="form-check-input m-0" type="checkbox" id="swKabupaten" onchange="toggleShpLayer('Kabupaten')">
-          <label class="small mb-0 fw-bold text-muted" for="swKabupaten">Kab/Kota</label>
-          <input type="color" id="fillKabupaten" value="#3182ce" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
-          <input type="color" id="outlineKabupaten" value="#1e40af" title="Warna garis" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
-          <label class="small mb-0 text-muted ms-1">Opacity</label>
-          <input type="range" id="opacityKabupaten" min="0" max="100" value="20" style="width:70px;" oninput="updateShpStyle(); document.getElementById('opacityKabupatenVal').textContent=this.value+'%'">
-          <span class="small text-muted" id="opacityKabupatenVal">20%</span>
-          <div class="d-flex align-items-center gap-1 ms-1">
-            <input class="form-check-input m-0" type="checkbox" id="swShpLabel" onchange="toggleShpLabels()">
-            <label class="small mb-0 text-muted" for="swShpLabel">Label</label>
-          </div>
-        </div>
+
 
         <div class="tab-content">
           
@@ -153,58 +145,118 @@
             <div class="row">
               <div class="col-lg-3 mb-4 no-print">
                 <div class="report-card">
-                  <h6 class="fw-bold border-bottom pb-2 mb-3">Parameter Peta</h6>
-                  <div class="mb-3"><label class="form-label small fw-bold">Judul Peta</label><input type="text" id="inT" class="form-control form-control-sm" value="PETA SEISMISITAS" onchange="updateMapDisplay()" oninput="updateMapDisplay()"></div>
-                  <input type="hidden" id="inP" value="{{ start }} s/d {{ end }}">
+                  <label class="form-label small fw-bold">Judul Peta</label>
+                  <input type="text" id="inTitle" class="form-control form-control-sm mb-2" value="PETA SEISMISITAS" oninput="updateMapDisplay()">
                   <input type="hidden" id="filterStart" value="{{ start }}">
                   <input type="hidden" id="filterEnd" value="{{ end }}">
-                  <button class="btn btn-primary btn-sm w-100 mb-2" onclick="updateMapDisplay()"><i class="bi bi-arrow-clockwise me-1"></i>Update</button>
-                  <button onclick="window.print()" class="btn btn-success btn-sm w-100 mb-3"><i class="bi bi-printer me-1"></i>Cetak PDF</button>
-                  <hr>
-                  <div class="small">
-                    <div class="mb-3"><label class="form-label fw-bold">Basemap</label><select id="selB" class="form-select form-select-sm" onchange="changeBasemap()"><option value="ocean">🌊 Ocean (Default)</option><option value="imagery">🛰️ Imagery</option><option value="street">🗺️ Street</option><option value="topo">🏔️ Topography</option><option value="darkgray">🌑 Dark Gray</option></select></div>
-                    <div class="mb-3">
-                      <label class="form-label fw-bold">North Arrow</label>
-                      <select id="selNorthArrow" class="form-select form-select-sm" onchange="changeNorthArrow()">
-                        <option value="{% static 'repository/images/gpt_north_arrow.svg' %}">GPT Arrow (Default)</option>
-                        <option value="{% static 'repository/images/claude_north_arrow.svg' %}">Claude Arrow</option>
-                        <option value="{% static 'repository/images/north-arrow-2.jpg' %}">Classic Arrow</option>
-                      </select>
-                    </div>
-                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleSlab()"><label class="form-check-label small">Tampilkan Slab (Peta 1)</label></div>
-                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="swSlabFelt" checked onchange="toggleSlabFelt()"><label class="form-check-label small">Tampilkan Slab (Peta 2)</label></div>
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                      <input class="form-check-input m-0" type="checkbox" id="swFaults" checked onchange="toggleFaults()">
-                      <label class="form-check-label small flex-grow-1" for="swFaults">Tampilkan Patahan</label>
-                      <input type="color" id="colorFaults" value="#000000" title="Warna patahan" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateFaultsColor()">
-                    </div>
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                      <input class="form-check-input m-0" type="checkbox" id="swSubduksi" checked onchange="toggleSubduksi()">
-                      <label class="form-check-label small flex-grow-1" for="swSubduksi">Tampilkan Subduksi</label>
-                      <input type="color" id="colorSubduksi" value="#8b5cf6" title="Warna subduksi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateSubduksiColor()">
-                    </div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="swFeltOverlay" onchange="toggleFeltOverlay()"><label class="form-check-label small">Overlay Gempa Dirasakan</label></div>
+                  <h6 class="fw-bold border-bottom pb-2 mb-3">Overlay</h6>
+                  <div class="d-flex align-items-center mb-1">
+                    <input class="form-check-input m-0" type="checkbox" id="swFaults" checked onchange="toggleFaults()">
+                    <label class="form-check-label small ms-1 flex-grow-1" for="swFaults">Patahan / Sesar</label>
+                    <input type="color" id="colorFaults" value="#000000" title="Warna patahan" class="p-0 border-0 rounded ms-1" style="width:20px;height:18px;cursor:pointer;vertical-align:middle;" oninput="updateFaultsColor()">
                   </div>
+                  <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" id="swSlabMap" checked onchange="toggleSlab()">
+                    <label class="form-check-label" for="swSlabMap">Slab (Subduksi Depth)</label>
+                  </div>
+                  <div class="d-flex align-items-center gap-1 mb-1">
+                    <select id="selFilter" class="form-select form-select-sm" style="width:auto;min-width:140px;font-size:11px;" onchange="changeFilter()">
+                      <option value="all">Semua Events</option>
+                      <option value="notfelt">Tidak Dirasakan</option>
+                      <option value="felt">Hanya Dirasakan</option>
+                    </select>
+                    <input type="color" id="feltColor" value="#FF0000" title="Warna icon" class="p-0 border-0 rounded ms-1" style="width:20px;height:18px;cursor:pointer;vertical-align:middle;" onchange="updateFeltOverlayColor()">
+                  </div>
+
+                  <h6 class="fw-bold border-bottom pb-2 mb-2">Kab/Kota</h6>
+                  <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <input class="form-check-input m-0" type="checkbox" id="swKabupaten" onchange="toggleShpLayer('Kabupaten')">
+                    <label class="small mb-0" for="swKabupaten">Tampilkan</label>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <label class="small mb-0 text-muted">Isi</label>
+                    <input type="color" id="fillKabupaten" value="#3182ce" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
+                    <label class="small mb-0 text-muted">Garis</label>
+                    <input type="color" id="outlineKabupaten" value="#1e40af" title="Warna garis" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <label class="small mb-0 text-muted">Opacity</label>
+                    <input type="range" id="opacityKabupaten" min="0" max="100" value="20" style="width:70px;" oninput="updateShpStyle(); document.getElementById('opacityKabupatenVal').textContent=this.value+'%'">
+                    <span class="small text-muted" id="opacityKabupatenVal">20%</span>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="swShpLabel" onchange="toggleShpLabels()">
+                    <label class="form-check-label small" for="swShpLabel">Label nama</label>
+                  </div>
+
+                  <h6 class="fw-bold border-bottom pb-2 mb-2">Papua Nugini</h6>
+                  <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <label class="small mb-0 text-muted">Isi</label>
+                    <input type="color" id="fillPng" value="#f8fafc" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updatePngStyle()">
+                    <label class="small mb-0 text-muted">Garis</label>
+                    <input type="color" id="outlinePng" value="#94a3b8" title="Warna garis" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updatePngStyle()">
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <label class="small mb-0 text-muted">Opacity</label>
+                    <input type="range" id="opacityPng" min="0" max="100" value="50" style="width:70px;" oninput="updatePngStyle(); document.getElementById('opacityPngVal').textContent=this.value+'%'">
+                    <span class="small text-muted" id="opacityPngVal">50%</span>
+                  </div>
+
+                  <h6 class="fw-bold border-bottom pb-2 mb-2">Basemap</h6>
+                  <select id="selB" class="form-select form-select-sm mb-2" onchange="changeBasemap()">
+                    <option value="ocean">🌊 Ocean (Default)</option>
+                    <option value="topo">🏔️ Topography</option>
+                    <option value="street">🗺️ Street</option>
+                    <option value="imagery">📰️ Imagery</option>
+                    <option value="osm">🌍 OpenStreetMap</option>
+                    <option value="opentopo">⛰️ OpenTopoMap</option>
+                    <option value="cartolight">🗺️ Carto Light</option>
+                    <option value="cartodark">🌙 Carto Dark</option>
+                    <option value="hot">🔥 HOT</option>
+                  </select>
+
                 </div>
               </div>
 
               <div class="col-lg-9">
                 <div class="formal-frame shadow-sm">
                   <div class="header-grid">
-                    <div class="text-start"><img src="{% static 'repository/images/logo-bmkg.png' %}" style="height: 75px;"></div>
+                    <div class="text-start">
+                      <img src="{% static 'repository/images/logo-bmkg.png' %}" style="height:65px;display:block;margin:0 auto;">
+                      <div style="font-size:0.5rem;line-height:1.15;font-weight:700;color:#333;margin-top:4px;text-align:center;">BADAN METEOROLOGI KLIMATOLOGI DAN GEOFISIKA</div>
+                    </div>
                     <div class="title-box">
                       <span id="outT" class="t-main">PETA SEISMISITAS PROVINSI PAPUA DAN SEKITARNYA</span>
                       <span id="outP" class="t-sub">PERIODE {{ start }} s/d {{ end }}</span>
-                      <div id="scaleCont" class="mt-2 d-flex justify-content-center"></div>
+                      <div style="font-size:0.6rem;font-weight:700;color:#555;margin-bottom:2px;">Skala</div>
+                      <div id="scaleCont" class="d-flex justify-content-center" style="font-size:11px;"></div>
                     </div>
-                    <div class="text-end"><img id="outA" src="{% static 'repository/images/gpt_north_arrow.svg' %}" style="width:70px;" alt="North Arrow"></div>
+                    <div class="text-end"><img id="outA" src="{% static 'repository/images/north-arrow-2.jpg' %}" style="height:70px;width:auto;" alt="North Arrow"></div>
                   </div>
                   <div id="map"></div>
                   <div class="legend-grid">
-                    <div class="legend-box"><img src="{% static 'repository/images/legenda.png' %}"></div>
-                    <div class="legend-box"><img src="{% static 'repository/images/keterangan-slab.png' %}"></div>
-                    <div class="legend-box"><div class="fw-bold mt-2" style="font-size: 0.85rem;"><span id="outW">Stasiun Geofisika Kelas I Jayapura</span></div><div><span class="">{{ start }} s/d {{ end }}</span></div></div>
-                    <div class="legend-box"><span class="legend-t">STATISTIK</span><div class="small mt-1" style="font-size: 0.8rem;">Total Gempa: <strong id="legendTotal">{{ stats.total }}</strong><br>M ≥ 5: <strong id="legendHighMag">{{ mag_count_high|default:0 }}</strong></div></div>
+                    <div class="legend-box">
+                      <img src="{% static 'repository/images/legenda.png' %}" style="max-height:170px;width:auto;">
+                    </div>
+                    <div class="legend-box">
+                      <img src="{% static 'repository/images/keterangan-slab.png' %}" style="max-height:170px;width:auto;">
+                    </div>
+                    <div class="legend-box">
+                      <span class="legend-t">Sumber Data</span>
+                      <div style="font-size:0.5rem;line-height:1.15;text-align:left;">
+                        <strong>Data Analisis Seiscomp</strong> <span id="uptSumber" style="font-weight:600;">Stasiun Geofisika Jayapura</span><br>
+                        <strong>Batas Lempeng Tektonik</strong> Peter Bird, 2003, An updated digital model of plate boundaries, G3<br>
+                        <strong>Data Patahan</strong> Pusat Survey Geologi (PSG) Bandung<br>
+                        <strong>Slab</strong> Hayes, G., 2018, Slab2<br>
+                        <strong>Garis Pantai Indonesia 2021</strong> Badan Informasi Geospasial (BIG)<br>
+                        <strong>Batas Negara 2017, Wilayah Administrasi Provinsi 2021</strong> Badan Informasi Geospasial (BIG)<br>
+                        <strong>Peta Dasar</strong> Esri, GEBCO, NOAA, National Geographic, DeLorme, HERE, Geonames.org<br>
+                        <span id="tahunDibuat" style="font-weight:700;display:block;text-align:center;font-size:0.5rem;"></span>
+                      </div>
+                    </div>
+                    <div class="legend-box" style="padding:4px;">
+                      <div id="insetMap" style="width:100%;height:120px;border-radius:3px;"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -319,24 +371,32 @@
                             </div>
                             <div class="felt-img-pair">
                                 <div>
-                                    {% if event.img_report_1 %}
+                                    {% with mmi_img=event.shk_event.shakemap_image %}
+                                    {% if mmi_img %}
+                                        <img src="{{ mmi_img.url }}" alt="Intensitas"
+                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Peta Intensitas (MMI)"
+                                             class="felt-gallery-img">
+                                    {% elif event.img_report_1 %}
                                         <img src="{{ event.img_report_1.url }}" alt="Report 1"
                                              data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Report 1"
                                              class="felt-gallery-img">
                                     {% else %}
-                                        <div class="felt-no-img">No Report</div>
+                                        <div class="felt-no-img">No Intensity</div>
                                     {% endif %}
-                                    <div class="felt-img-label">Report 1</div>
+                                    {% endwith %}
+                                    <div class="felt-img-label">Intensitas (MMI)</div>
                                 </div>
                                 <div>
-                                    {% if event.img_stationlist %}
-                                        <img src="{{ event.img_stationlist.url }}" alt="Station List"
-                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Daftar Stasiun MMI"
+                                    {% with mmi_img=event.shk_event.shakemap_image %}
+                                    {% if mmi_img %}
+                                        <img src="{{ mmi_img.url }}" alt="Intensitas"
+                                             data-caption="M{{ event.magnitude }} {{ event.wilayah }} — Peta Intensitas (MMI)"
                                              class="felt-gallery-img">
                                     {% else %}
-                                        <div class="felt-no-img">No Station List</div>
+                                        <div class="felt-no-img">No Intensity</div>
                                     {% endif %}
-                                    <div class="felt-img-label">Daftar Stasiun</div>
+                                    {% endwith %}
+                                    <div class="felt-img-label">Intensitas (MMI)</div>
                                 </div>
                             </div>
                         </div>
@@ -425,6 +485,36 @@
                     </div>
                   </div>
                 </div>
+                <!-- Color Scheme Selector -->
+                <div class="row mb-4 g-3">
+                  <div class="col-12">
+                    <div class="d-flex justify-content-center align-items-center gap-3" style="margin-top:4px;">
+                      <label for="colorSchemeSelect" class="small fw-bold text-muted mb-0" style="font-size:12px;letter-spacing:.04em;text-transform:uppercase;">Color Scheme</label>
+                      <select id="colorSchemeSelect" class="form-select form-select-sm" style="width:auto;min-width:200px;" onchange="applyColorScheme(this.value)">
+                        <option value="semaphore">Semaphore (Hijau-Kuning-Merah)</option>
+                        <option value="viridis">Viridis</option>
+                        <option value="plasma">Plasma</option>
+                        <option value="cool">Cool (Biru-Ungu)</option>
+                        <option value="warm">Warm (Merah-Jingga)</option>
+                        <option value="rainbow">Rainbow</option>
+                        <option value="magma">Magma</option>
+                        <option value="inferno">Inferno</option>
+                        <option value="cividis">Cividis (Colorblind-friendly)</option>
+                        <option value="ocean">Ocean (Biru)</option>
+                        <option value="sunset">Sunset (Jingga-Ungu)</option>
+                        <option value="forest">Forest (Hijau)</option>
+                        <option value="pastel">Pastel (Soft)</option>
+                        <option value="neon">Neon (Terang)</option>
+                        <option value="monoBlue">Mono Blue</option>
+                        <option value="burgundy">Burgundy (Merah Tua)</option>
+                        <option value="teal">Teal (Hijau Kebiruan)</option>
+                        <option value="amber">Amber (Kuning Tua)</option>
+                        <option value="lavender">Lavender (Ungu Muda)</option>
+                        <option value="mint">Mint (Hijau Segar)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="row g-3">
                   <div class="col-lg-6">
@@ -436,6 +526,7 @@
                         <table class="table table-bordered mb-0 table-compact" style="background: white; width: 100%;">
                           <thead class="table-light">
                             <tr>
+                              <th rowspan="2" style="background: #e2e8f0; width: 30px;">No</th>
                               <th rowspan="2" style="background: #e2e8f0; width: 62px;">Tanggal</th>
                               <th rowspan="2" style="background: #e2e8f0; width: 36px;">Tot</th>
                               <th colspan="3" style="background: #dbeafe;">Magnitudo</th>
@@ -461,6 +552,13 @@
                       <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                         <h6 class="fw-bold mb-0">Daftar Semua Kejadian Gempabumi</h6>
                         <div class="d-flex align-items-center gap-2">
+                          <select id="eventsPageSize" class="form-select form-select-sm" style="width:auto;min-width:65px;" onchange="changeEventsPageSize(this.value)">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20" selected>20</option>
+                            <option value="25">25</option>
+                          </select>
                           <span class="badge bg-secondary" id="eventsCount"></span>
                           <button class="btn btn-sm btn-success no-print" onclick="exportEventsExcel()" title="Export ke Excel"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
                           <button class="btn btn-sm btn-danger no-print" onclick="exportEventsPDF()" title="Export ke PDF"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
@@ -498,7 +596,65 @@
             </div>
           </div>
 
-        </div>
+          <div class="tab-pane fade" id="pane-monitor" role="tabpanel">
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="report-card">
+                  <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold mb-0">Rekapitulasi Prosentase Hasil Monitoring Sistem Prosesing Gempabumi</h6>
+                  </div>
+                  <h6 class="fw-bold mb-2">SEISCOMP6</h6>
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-compact align-middle text-center" id="seiscompTable" style="font-size: 0.65rem;">
+                      <thead class="table-secondary border-dark">
+                        <tr>
+                          <th rowspan="2" style="width: 30px;">NO</th>
+                          <th rowspan="2" class="text-start" style="width: 220px;">MONITORING</th>
+                          <th colspan="{{ num_days }}">TANGGAL</th>
+                          <th colspan="2">PROSENTASE</th>
+                        </tr>
+                        <tr>
+                          {% for day in days_range %}<th>{{ day }}</th>{% endfor %}
+                          <th style="width: 60px;">HIDUP</th>
+                          <th style="width: 60px;">MATI</th>
+                        </tr>
+                      </thead>
+                      <tbody class="border-dark">
+                        {% for comp in seiscomp_components %}
+                        <tr class="calc-row">
+                          <td>{{ forloop.counter }}</td>
+                          <td class="text-start fw-bold px-2">{{ comp }}</td>
+                          {% for day in days_range %}
+                          <td class="p-0">
+                            <select class="form-select form-select-sm border-0 shadow-none text-center status-select" style="font-size: 0.65rem; background: transparent; cursor: pointer; padding-left: 0; padding-right: 0;">
+                              <option value="H" selected class="text-dark fw-bold">H</option>
+                              <option value="M" class="text-dark fw-bold">M</option>
+                            </select>
+                          </td>
+                          {% endfor %}
+                          <td class="fw-bold pct-hidup">100.00%</td>
+                          <td class="fw-bold pct-mati">0.00%</td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                      <tfoot class="table-secondary border-dark fw-bold">
+                        <tr>
+                          <td colspan="{{ num_days|add:2 }}" class="text-center">RATA-RATA DALAM SATU BULAN</td>
+                          <td id="avg-hidup">100.00%</td>
+                          <td id="avg-mati">0.00%</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                  <div class="mt-3 small fw-bold">
+                    Keterangan: &nbsp;&nbsp;&nbsp; H = Hidup &nbsp;&nbsp;&nbsp; M = Mati
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>  <!-- /tab-content -->
 
       </div>
     </main>
@@ -533,13 +689,62 @@
   let feltMarkers = {}; // Menyimpan marker peta dirasakan agar bisa disinkronisasi
 
   // Ikon Bintang MERAH SVG Global
-  const starIcon = L.divIcon({
-      html: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#FF0000" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`,
+  var feltStarColor = '#FF0000';
+  function _makeFeltIcon(c) {
+    return L.divIcon({
+      html: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="' + c + '" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
       className: 'star-marker', iconSize: [24, 24], iconAnchor: [12, 12]
-  });
+    });
+  }
+  var starIcon = _makeFeltIcon(feltStarColor);
+  function changeFilter() {
+    refreshMarkers();
+    var val = document.getElementById('selFilter').value;
+    if (val === 'felt' || val === 'all') {
+      if (!feltOverlayLayer) { feltOverlayLayer = L.layerGroup().addTo(mapInstance); }
+      else { mapInstance.addLayer(feltOverlayLayer); }
+      plotFeltOverlay();
+      if (!feltOverlayLegendCtrl) initFeltLegend();
+      feltOverlayLegendCtrl.addTo(mapInstance);
+    } else {
+      if (feltOverlayLayer) mapInstance.removeLayer(feltOverlayLayer);
+      if (feltOverlayLegendCtrl) mapInstance.removeControl(feltOverlayLegendCtrl);
+    }
+  }
+  function initFeltLegend() {
+    feltOverlayLegendCtrl = L.control({ position: 'bottomright' });
+    feltOverlayLegendCtrl.onAdd = function() {
+      const div = L.DomUtil.create('div');
+      div.id = 'feltLegendCtrl';
+      div.style.cssText = 'background:white;border:1.5px solid #000;padding:4px 8px;font-size:11px;font-weight:bold;display:flex;align-items:center;gap:5px;border-radius:2px;pointer-events:none;';
+      div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="' + feltStarColor + '" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Gempa Dirasakan';
+      return div;
+    };
+  }
+
+  function updateFeltOverlayColor() {
+    feltStarColor = document.getElementById("feltColor").value || "#FF0000";
+    starIcon = _makeFeltIcon(feltStarColor);
+    var val = document.getElementById('selFilter').value;
+    if (val === 'all' || val === 'felt') {
+      if (feltOverlayLayer) {
+        feltOverlayLayer.clearLayers();
+        plotFeltOverlay();
+      }
+    }
+    var legendDiv = document.getElementById('feltLegendCtrl');
+    if (legendDiv) {
+      legendDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="' + feltStarColor + '" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Gempa Dirasakan';
+    }
+    var legendDiv = document.getElementById("feltLegendCtrl");
+    if (legendDiv) {
+      legendDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="' + feltStarColor + '" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Gempa Dirasakan';
+    }
+  }
 
   function getColorByMagnitude(mag) { return mag >= 5 ? '#f87171' : (mag >= 3 ? '#fbbf24' : '#6ee7b7'); }
-  function getColorByDepth(depth) { return depth < 60 ? '#f87171' : (depth < 300 ? '#fbbf24' : '#6ee7b7'); }
+  function getColorByDepth(depth) { return depth <= 60 ? '#ff0000' : (depth <= 300 ? '#ffff00' : '#00cc00'); }
+  function getRadiusByMag(mag) { return mag <= 5 ? 5 : mag <= 7 ? 9 : 14; }
 
   // --- INISIALISASI PETA UTAMA ---
   function initMap() {
@@ -560,18 +765,14 @@
     baseLayer = esriOcean;
     esriOcean.addTo(mapInstance);
     
-    if (typeof newPng !== 'undefined') L.geoJSON(newPng, { pane: 'pBg', style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5 } }).addTo(mapInstance);
+    if (typeof newPng !== 'undefined') { window.pngLayer = L.geoJSON(newPng, { pane: 'pBg', style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5 } }).addTo(mapInstance); }
     if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { pane: 'pBg', style: { color: "#00FFFF", weight: 1 } }).addTo(mapInstance);
     if (typeof batas_laut_indonesia !== 'undefined') L.geoJSON(batas_laut_indonesia, { pane: 'pBg', style: { color: "#3b82f6", weight: 1, dashArray: '5, 5' } }).addTo(mapInstance);
 
     faultsLayer = L.layerGroup().addTo(mapInstance);
-    if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { pane: 'pFaults', style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
-    else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { pane: 'pFaults', style: { color: "#000", weight: 0.8 } }).addTo(faultsLayer);
-
-    if (typeof subDuksi !== 'undefined') {
-      subLayer = L.layerGroup().addTo(mapInstance);
-      subDuksi.forEach(fc => L.geoJSON(fc, { pane: 'pSubduksi', style: { color: '#8b5cf6', weight: 1.5 } }).addTo(subLayer));
-    }
+    var faultsInitColor = document.getElementById('colorFaults')?.value || '#000';
+    if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { pane: 'pFaults', style: { color: faultsInitColor, weight: 0.8 } }).addTo(faultsLayer);
+    else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { pane: 'pFaults', style: { color: faultsInitColor, weight: 0.8 } }).addTo(faultsLayer);
 
     slabLayer = L.layerGroup().addTo(mapInstance);
     const slabColors = [[0,20,'rgb(245,0,0)'],[20,40,'rgb(250,75,0)'],[40,60,'rgb(252,118,0)'],[60,80,'rgb(253,160,0)'],[80,100,'rgb(250,160,0)'],[100,120,'rgb(245,245,0)'],[120,200,'rgb(210,247,0)'],[200,300,'rgb(169,247,0)'],[300,400,'rgb(128,247,0)'],[400,500,'rgb(86,247,0)'],[500,660,'rgb(0,245,0)']];
@@ -589,8 +790,55 @@
     markersLayer = L.layerGroup().addTo(mapInstance);
     plotSeismicityMarkers(mapData);
 
+    // Initialize felt overlay if 'all' or 'felt' mode is selected
+    changeFilter();
+
     let scaleControl = L.control.scale({ imperial: false }).addTo(mapInstance);
     document.getElementById('scaleCont').appendChild(scaleControl.getContainer());
+
+    // Map stats overlay (top-right)
+    var statsDiv = L.control({ position: 'topright' });
+    statsDiv.onAdd = function() {
+      var div = L.DomUtil.create('div');
+      div.style.cssText = "background:rgba(255,255,255,.88);border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:10px;line-height:1.5;box-shadow:0 1px 4px rgba(0,0,0,.15);margin-bottom:4px;";
+      function updateStats() {
+        var showExisting = document.getElementById('swSrcExisting')?.checked ?? true;
+        var showQC = document.getElementById('swSrcQC')?.checked ?? true;
+        var active = [];
+        if (showExisting) active = active.concat(mapData);
+        if (showQC) active = active.concat(qcMapData);
+        var total = active.length;
+        var magLt3 = active.filter(function(e){ return e.magnitude < 3; }).length;
+        var mag35 = active.filter(function(e){ return e.magnitude >= 3 && e.magnitude < 5; }).length;
+        var magGe5 = active.filter(function(e){ return e.magnitude >= 5; }).length;
+        var felt = 0;
+        div.innerHTML = "<strong>Total Gempa:</strong> " + total + " | <strong>M&lt;3:</strong> " + magLt3 + " <strong>3-5:</strong> " + mag35 + " <strong>M\u22655:</strong> " + magGe5;
+      }
+      updateStats();
+      return div;
+    };
+    statsDiv.addTo(mapInstance);
+
+    // Also update stats when sources change
+    document.getElementById('swSrcExisting')?.addEventListener('change', function() { statsDiv.remove(); statsDiv.addTo(mapInstance); });
+    document.getElementById('swSrcQC')?.addEventListener('change', function() { statsDiv.remove(); statsDiv.addTo(mapInstance); });
+
+    document.getElementById('tahunDibuat').textContent = "Dibuat tahun " + new Date().getFullYear();
+
+    // Inset map
+    var insetMap = L.map('insetMap', {
+      zoomControl: false, attributionControl: false, dragging: false,
+      scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false
+    });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', attribution: '' }).addTo(insetMap);
+    var insetRect = null;
+    function updateInsetMap() {
+      if (insetRect) insetMap.removeLayer(insetRect);
+      insetRect = L.rectangle(mapInstance.getBounds(), { color: '#e74c3c', weight: 2, fill: false }).addTo(insetMap);
+      insetMap.fitBounds(insetRect.getBounds(), { padding: [50, 50], maxZoom: 10 });
+    }
+    setTimeout(updateInsetMap, 200);
+    mapInstance.on('moveend', updateInsetMap);
   }
 
   function refreshMarkers() {
@@ -598,23 +846,24 @@
     markersLayer.clearLayers();
     const showExisting = document.getElementById('swSrcExisting')?.checked ?? true;
     const showQC       = document.getElementById('swSrcQC')?.checked ?? true;
-    if (showExisting) {
+    var filterVal = document.getElementById('selFilter')?.value || 'all';
+    if (showExisting && filterVal !== 'felt') {
       mapData.forEach(event => {
         L.circleMarker([event.latitude, event.longitude], {
           pane: 'pEvents',
-          radius: Math.max(4, event.magnitude * 2.5),
+          radius: getRadiusByMag(event.magnitude),
           fillColor: getColorByDepth(event.depth),
-          color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
+          color: '#333', weight: 1, opacity: 1, fillOpacity: 0.85
         }).addTo(markersLayer).bindPopup(`<strong>M${event.magnitude.toFixed(1)}</strong><br>D: ${event.depth.toFixed(1)} km<br>${event.time}`);
       });
     }
-    if (showQC) {
+    if (showQC && filterVal !== 'felt') {
       qcMapData.forEach(ev => {
         L.circleMarker([ev.latitude, ev.longitude], {
           pane: 'pEvents',
-          radius: Math.max(4, ev.magnitude * 2.5),
+          radius: getRadiusByMag(ev.magnitude),
           fillColor: getColorByDepth(ev.depth),
-          color: '#000', weight: 0.8, opacity: 0.8, fillOpacity: 0.8
+          color: '#333', weight: 1, opacity: 1, fillOpacity: 0.85
         }).addTo(markersLayer).bindPopup(
           `<span style="font-weight:700;">[QC] Run #${ev.run_number}</span><br>` +
           `<strong>M${ev.magnitude.toFixed(1)}</strong> · D: ${ev.depth.toFixed(1)} km<br>` +
@@ -723,9 +972,12 @@
 
     const tbody = document.getElementById('freqTableBody');
     tbody.innerHTML = '';
+    let rowNum = 0;
     Object.keys(dailyData).sort().forEach(date => {
       const d = dailyData[date];
+      rowNum++;
       tbody.innerHTML += `<tr>
+        <td style="border: 1px solid #cbd5e1; color:#6b7280; font-size:11px;">${rowNum}</td>
         <td style="border: 1px solid #cbd5e1;">${date}</td>
         <td style="border: 1px solid #cbd5e1; background: #f1f5f9; font-weight:bold;">${d.total}</td>
         <td style="border: 1px solid #cbd5e1; color: #16a34a; font-weight:bold;">${d.m_lt3}</td>
@@ -739,6 +991,21 @@
   }
 
   // --- LOGIKA KALKULASI SEISCOMP ---
+  var dayStatus = {{ day_status|safe }};
+  var startDate = '{{ start }}';
+  function initSeiscompStatus() {
+    document.querySelectorAll('#seiscompTable tbody tr').forEach(function(row) {
+      var selects = row.querySelectorAll('.status-select');
+      selects.forEach(function(sel, idx) {
+        var d = new Date(startDate);
+        d.setDate(d.getDate() + idx);
+        var key = d.toISOString().substring(0, 10);
+        if (dayStatus[key] === 'M') sel.value = 'M';
+      });
+    });
+    calculateSeiscomp();
+  }
+
   function calculateSeiscomp() {
       let totalHidupOverall = 0, totalMatiOverall = 0, rowCount = 0;
       document.querySelectorAll('#seiscompTable tbody tr.calc-row').forEach(row => {
@@ -759,9 +1026,25 @@
       }
   }
 
+  var MONTH_NAMES = ['', 'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
+  function formatPeriod(str) {
+    try {
+      var parts = str.split(' s/d ');
+      if (parts.length !== 2) return str;
+      var d1 = new Date(parts[0]);
+      var d2 = new Date(parts[1]);
+      if (isNaN(d1) || isNaN(d2)) return str;
+      if (d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear()) {
+        return MONTH_NAMES[d1.getMonth() + 1] + ' ' + d1.getFullYear();
+      } else {
+        return MONTH_NAMES[d1.getMonth() + 1] + '-' + MONTH_NAMES[d2.getMonth() + 1] + ' ' + d2.getFullYear();
+      }
+    } catch(e) { return str; }
+  }
+
   function updateMapDisplay() {
-    document.getElementById('outT').textContent = document.getElementById('inT').value || 'PETA SEISMISITAS';
-    document.getElementById('outP').textContent = 'PERIODE ' + (document.getElementById('inP').value || '');
+    document.getElementById('outT').textContent = document.getElementById('inTitle').value || 'PETA SEISMISITAS';
+    document.getElementById('outP').textContent = 'PERIODE ' + formatPeriod('{{ start }} s/d {{ end }}');
   }
   function updateFaultsColor() {
     const c = document.getElementById('colorFaults').value;
@@ -775,40 +1058,34 @@
     if (!mapInstance || !subLayer) return;
     document.getElementById('swSubduksi').checked ? mapInstance.addLayer(subLayer) : mapInstance.removeLayer(subLayer);
   }
+  function _pngStyle() {
+    var fill = document.getElementById('fillPng').value;
+    var outline = document.getElementById('outlinePng').value;
+    var opacity = parseInt(document.getElementById('opacityPng').value) / 100;
+    return { color: outline, weight: 1, fillColor: fill, fillOpacity: opacity };
+  }
+  function updatePngStyle() {
+    if (window.pngLayer) window.pngLayer.setStyle(_pngStyle());
+  }
+
   function changeBasemap() { 
     if(!mapInstance) return;
     mapInstance.removeLayer(baseLayer);
     const value = document.getElementById('selB').value;
-    let newLayer;
-    
-    switch(value) {
-      case 'imagery':
-        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS'
-        });
-        break;
-      case 'street':
-        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS'
-        });
-        break;
-      case 'topo':
-        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom'
-        });
-        break;
-      case 'darkgray':
-        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ', maxZoom: 16
-        });
-        break;
-      default:
-        newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri &mdash; GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ', maxZoom: 13
-        });
-    }
-    
-    baseLayer = newLayer.addTo(mapInstance);
+    const tileUrls = {
+      ocean:      ['https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {}],
+      topo:       ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {}],
+      street:     ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {}],
+      imagery:    ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {}],
+      darkgray:   ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxZoom:16}],
+      osm:        ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}],
+      opentopo:   ['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {maxZoom:17}],
+      cartolight: ['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {}],
+      cartodark:  ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {}],
+      hot:        ['https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {maxZoom:19}],
+    };
+    const conf = tileUrls[value] || tileUrls.ocean;
+    baseLayer = L.tileLayer(conf[0], conf[1]).addTo(mapInstance);
   }
   function changeNorthArrow() {
     const url = document.getElementById('selNorthArrow').value;
@@ -870,7 +1147,7 @@
       entry.layer = _buildShpLayer('Kabupaten').addTo(mapInstance);
     }
   }
-  function toggleSlab() { if(mapInstance && slabLayer) { if(document.getElementById('swSlab').checked) mapInstance.addLayer(slabLayer); else mapInstance.removeLayer(slabLayer); } }
+  function toggleSlab() { if(mapInstance && slabLayer) { if(document.getElementById('swSlabMap').checked) mapInstance.addLayer(slabLayer); else mapInstance.removeLayer(slabLayer); } }
   function toggleFaults() { if(mapInstance && faultsLayer) { if(document.getElementById('swFaults').checked) mapInstance.addLayer(faultsLayer); else mapInstance.removeLayer(faultsLayer); } }
   function toggleSlabFelt() { if(mapFeltInstance && slabLayer) { if(document.getElementById('swSlabFelt').checked) mapFeltInstance.addLayer(slabLayer); else mapFeltInstance.removeLayer(slabLayer); } }
 
@@ -893,6 +1170,36 @@
     initEventsTable();
   }
 
+  // --- COLOR SCHEMES ---
+  const COLOR_SCHEMES = {
+    semaphore: { mag: ['#22c55e', '#eab308', '#ef4444'], depth: ['#ef4444', '#eab308', '#22c55e'] },
+    viridis:   { mag: ['#440154', '#21918c', '#fde725'], depth: ['#fde725', '#21918c', '#440154'] },
+    plasma:    { mag: ['#0d0887', '#f48849', '#f0f921'], depth: ['#f0f921', '#f48849', '#0d0887'] },
+    cool:      { mag: ['#3b82f6', '#8b5cf6', '#ec4899'], depth: ['#ec4899', '#8b5cf6', '#3b82f6'] },
+    warm:      { mag: ['#f97316', '#eab308', '#ef4444'], depth: ['#ef4444', '#eab308', '#f97316'] },
+    rainbow:   { mag: ['#06b6d4', '#22c55e', '#ef4444'], depth: ['#ef4444', '#f59e0b', '#06b6d4'] },
+    magma:     { mag: ['#1a0b2e', '#b63679', '#fef0b4'], depth: ['#fef0b4', '#b63679', '#1a0b2e'] },
+    inferno:   { mag: ['#0c0a3e', '#bb3754', '#fcffa4'], depth: ['#fcffa4', '#bb3754', '#0c0a3e'] },
+    cividis:   { mag: ['#00204d', '#7a7c78', '#fefebf'], depth: ['#fefebf', '#7a7c78', '#00204d'] },
+    ocean:     { mag: ['#08306b', '#4292c6', '#deebf7'], depth: ['#deebf7', '#4292c6', '#08306b'] },
+    sunset:    { mag: ['#ffedd5', '#f97316', '#7c2d12'], depth: ['#7c2d12', '#f97316', '#ffedd5'] },
+    forest:    { mag: ['#ecfdf5', '#22c55e', '#14532d'], depth: ['#14532d', '#22c55e', '#ecfdf5'] },
+    pastel:    { mag: ['#a7f3d0', '#fde68a', '#fca5a5'], depth: ['#fca5a5', '#fde68a', '#a7f3d0'] },
+    neon:      { mag: ['#22d3ee', '#a855f7', '#f43f5e'], depth: ['#f43f5e', '#a855f7', '#22d3ee'] },
+    monoBlue:  { mag: ['#dbeafe', '#3b82f6', '#1e3a5f'], depth: ['#1e3a5f', '#3b82f6', '#dbeafe'] },
+    burgundy:  { mag: ['#fce4ec', '#e91e63', '#4a0024'], depth: ['#4a0024', '#e91e63', '#fce4ec'] },
+    teal:      { mag: ['#ccfbf1', '#14b8a6', '#134e4a'], depth: ['#134e4a', '#14b8a6', '#ccfbf1'] },
+    amber:     { mag: ['#fef3c7', '#f59e0b', '#78350f'], depth: ['#78350f', '#f59e0b', '#fef3c7'] },
+    lavender:  { mag: ['#ede9fe', '#8b5cf6', '#3b0764'], depth: ['#3b0764', '#8b5cf6', '#ede9fe'] },
+    mint:      { mag: ['#d1fae5', '#10b981', '#064e3b'], depth: ['#064e3b', '#10b981', '#d1fae5'] },
+  };
+
+  function getCurrentColors() {
+    const sel = document.getElementById('colorSchemeSelect');
+    const key = sel ? sel.value : 'semaphore';
+    return COLOR_SCHEMES[key] || COLOR_SCHEMES.semaphore;
+  }
+
   // --- CHARTS ---
   Chart.register(ChartDataLabels);
   function renderCharts() {
@@ -906,22 +1213,77 @@
     const curDepth = [depths.filter(d => d < 60).length, depths.filter(d => d >= 60 && d < 300).length, depths.filter(d => d >= 300).length];
 
     const baseOpt = { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { datalabels: { anchor: 'end', align: 'top', font: { size: 9, weight: 'bold' } }, legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } } };
-    const barOpt = { ...baseOpt, plugins: { ...baseOpt.plugins, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } };
+    const barOpt = { ...baseOpt, layout: { padding: { top: 18 } }, plugins: { ...baseOpt.plugins, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } };
 
-    const magColors   = ['#6ee7b7', '#fbbf24', '#f87171'];
-    const depthColors = ['#f87171', '#fbbf24', '#6ee7b7'];
-    cmbInst = new Chart("cMB", { type: 'bar',      data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: curMag,   backgroundColor: magColors   }] }, options: barOpt  });
-    cmpInst = new Chart("cMP", { type: 'doughnut', data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: curMag,   backgroundColor: magColors   }] }, options: baseOpt });
-    cdbInst = new Chart("cDB", { type: 'bar',      data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: curDepth, backgroundColor: depthColors }] }, options: barOpt  });
-    cdpInst = new Chart("cDP", { type: 'doughnut', data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: curDepth, backgroundColor: depthColors }] }, options: baseOpt });
+    const colors = getCurrentColors();
+    cmbInst = new Chart("cMB", { type: 'bar',      data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: curMag,   backgroundColor: colors.mag   }] }, options: barOpt  });
+    cmpInst = new Chart("cMP", { type: 'doughnut', data: { labels: ['M<3', '3-5', '≥5'],       datasets: [{ data: curMag,   backgroundColor: colors.mag   }] }, options: baseOpt });
+    cdbInst = new Chart("cDB", { type: 'bar',      data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: curDepth, backgroundColor: colors.depth }] }, options: barOpt  });
+    cdpInst = new Chart("cDP", { type: 'doughnut', data: { labels: ['<60', '60-300', '>300'],   datasets: [{ data: curDepth, backgroundColor: colors.depth }] }, options: baseOpt });
+  }
+
+  function applyColorScheme() {
+    renderCharts();
   }
 
   // --- LISTENERS ---
+  var dayStatus = {{ day_status|safe }};
+  var startDate = '{{ start }}';
+  function initSeiscompStatus() {
+    document.querySelectorAll('#seiscompTable tbody tr').forEach(function(row) {
+      var selects = row.querySelectorAll('.status-select');
+      selects.forEach(function(sel, idx) {
+        var d = new Date(startDate);
+        d.setDate(d.getDate() + idx);
+        var key = d.toISOString().substring(0, 10);
+        if (dayStatus[key] === 'M') sel.value = 'M';
+      });
+    });
+    calculateSeiscomp();
+  }
+
+  function calculateSeiscomp() {
+    document.querySelectorAll('#seiscompTable tbody tr.calc-row').forEach(function(row) {
+      var total = 0, hidup = 0;
+      row.querySelectorAll('.status-select').forEach(function(sel) {
+        total++;
+        if (sel.value === 'H') hidup++;
+      });
+      var pctHidup = total > 0 ? (hidup / total * 100).toFixed(2) : '0.00';
+      var pctMati  = total > 0 ? ((total - hidup) / total * 100).toFixed(2) : '0.00';
+      row.querySelector('.pct-hidup').textContent = pctHidup + '%';
+      row.querySelector('.pct-mati').textContent = pctMati + '%';
+    });
+    // Calculate averages
+    var totalHidup = 0, totalMati = 0, count = 0;
+    document.querySelectorAll('#seiscompTable tbody tr.calc-row').forEach(function(row) {
+      var h = parseFloat(row.querySelector('.pct-hidup').textContent) || 0;
+      var m = parseFloat(row.querySelector('.pct-mati').textContent) || 0;
+      totalHidup += h;
+      totalMati += m;
+      count++;
+    });
+    var avgH = count > 0 ? (totalHidup / count).toFixed(2) : '0.00';
+    var avgM = count > 0 ? (totalMati / count).toFixed(2) : '0.00';
+    document.getElementById('avg-hidup').textContent = avgH + '%';
+    document.getElementById('avg-mati').textContent = avgM + '%';
+  }
+
+  document.querySelectorAll('.status-select').forEach(function(sel) {
+    sel.addEventListener('change', calculateSeiscomp);
+  });
+
   document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => initMap());
   document.getElementById('tab-felt-btn').addEventListener('shown.bs.tab', () => initMapFelt());
   document.getElementById('tab-stats-btn').addEventListener('shown.bs.tab', () => { renderCharts(); generateDailyFrequencyTable(); initEventsTable(); });
 
   document.addEventListener('DOMContentLoaded', () => {
+      var outP = document.getElementById('outP');
+      if (outP) {
+        outP.textContent = 'PERIODE ' + formatPeriod('{{ start }} s/d {{ end }}');
+      }
+      var sel = document.getElementById('selFilter');
+      if (sel) sel.value = 'all';
       // Initialise date filter inputs to cover the full range of uploaded data
       if (allMapData.length > 0) {
         const dates = allMapData.map(ev => ev.time.substring(0, 10)).sort();
@@ -933,10 +1295,14 @@
       if (document.getElementById('tab-map-btn').classList.contains('active')) initMap();
       const sidebarToggle = document.getElementById('sidebar-toggle');
       if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', () => {
-          document.getElementById('sidebar')?.classList.toggle('hidden');
-          if (mapInstance) setTimeout(() => mapInstance.invalidateSize(), 300);
-          if (mapFeltInstance) setTimeout(() => mapFeltInstance.invalidateSize(), 300);
+        sidebarToggle.addEventListener('click', function() {
+          var sb = document.getElementById('sidebar');
+          if (sb) {
+            if (sb.style.display === 'none') { sb.style.display = ''; }
+            else { sb.style.display = 'none'; }
+          }
+          if (mapInstance) setTimeout(function(){ mapInstance.invalidateSize(); }, 300);
+          if (mapFeltInstance) setTimeout(function(){ mapFeltInstance.invalidateSize(); }, 300);
         });
       }
       
@@ -976,7 +1342,7 @@
       calculateSeiscomp();
   });
 
-  const EVENTS_PER_PAGE = 25;
+  const EVENTS_PER_PAGE = 20; // default, overridden by getEventsPerPage()
   let eventsCurrentPage = 1;
   let eventsTableInit = false;
 
@@ -986,14 +1352,28 @@
     renderEventsPage(1);
   }
 
+  function getEventsPerPage() {
+    const sel = document.getElementById('eventsPageSize');
+    return sel ? parseInt(sel.value, 10) : EVENTS_PER_PAGE;
+  }
+
+  function changeEventsPageSize() {
+    eventsCurrentPage = 1;
+    eventsTableInit = false;
+    initEventsTable();
+  }
+
   function renderEventsPage(page) {
     eventsCurrentPage = page;
-    const active = getActiveData();
+    const perPage = getEventsPerPage();
+    const active = getActiveData().slice().sort(function(a, b) {
+      return a.time.localeCompare(b.time);
+    });
     const total = active.length;
-    const totalPages = Math.max(1, Math.ceil(total / EVENTS_PER_PAGE));
+    const totalPages = Math.max(1, Math.ceil(total / perPage));
     eventsCurrentPage = Math.min(Math.max(1, page), totalPages);
-    const start = (eventsCurrentPage - 1) * EVENTS_PER_PAGE;
-    const slice = active.slice(start, start + EVENTS_PER_PAGE);
+    const start = (eventsCurrentPage - 1) * perPage;
+    const slice = active.slice(start, start + perPage);
 
     const tbody = document.getElementById('eventsTableBody');
     tbody.innerHTML = '';
@@ -1003,7 +1383,7 @@
       tr.setAttribute('data-idx', globalIdx);
       tr.innerHTML = `
         <td class="ev-no">${globalIdx + 1}</td>
-        <td contenteditable="true" spellcheck="false">${ev.time}</td>
+        <td contenteditable="true" spellcheck="false">${ev.time.replace(' UTC', '')}</td>
         <td contenteditable="true" spellcheck="false">${ev.latitude.toFixed(4)}</td>
         <td contenteditable="true" spellcheck="false">${ev.longitude.toFixed(4)}</td>
         <td contenteditable="true" spellcheck="false">${ev.magnitude.toFixed(1)}</td>
@@ -1018,7 +1398,7 @@
     const pageNum = document.getElementById('eventsPageNum');
     const prevBtn = document.getElementById('eventsPrevBtn');
     const nextBtn = document.getElementById('eventsNextBtn');
-    if (pageInfo) pageInfo.textContent = `${start + 1}–${Math.min(start + EVENTS_PER_PAGE, total)} dari ${total}`;
+    if (pageInfo) pageInfo.textContent = `${start + 1}–${Math.min(start + perPage, total)} dari ${total}`;
     if (pageNum) pageNum.textContent = `${eventsCurrentPage} / ${totalPages}`;
     if (prevBtn) prevBtn.disabled = eventsCurrentPage <= 1;
     if (nextBtn) nextBtn.disabled = eventsCurrentPage >= totalPages;
@@ -1113,7 +1493,7 @@
   function _refreshAllViews() {
     if (mapInstance && markersLayer) refreshMarkers();
     if (mapFeltInstance) plotFeltMarkers(feltData);
-    if (feltOverlayLayer && document.getElementById('swFeltOverlay')?.checked) plotFeltOverlay();
+    if (feltOverlayLayer && document.getElementById('selFilter')?.value === 'felt' || document.getElementById('selFilter')?.value === 'all') plotFeltOverlay();
     // Only re-render charts/table if they've been opened at least once
     if (cmbInst) {
       renderCharts();
@@ -1150,8 +1530,9 @@
         feltOverlayLegendCtrl = L.control({ position: 'bottomright' });
         feltOverlayLegendCtrl.onAdd = function() {
           const div = L.DomUtil.create('div');
+          div.id = 'feltLegendCtrl';
           div.style.cssText = 'background:white;border:1.5px solid #000;padding:4px 8px;font-size:11px;font-weight:bold;display:flex;align-items:center;gap:5px;border-radius:2px;pointer-events:none;';
-          div.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#FF0000" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Gempa Dirasakan`;
+          div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="' + feltStarColor + '" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Gempa Dirasakan';
           return div;
         };
       }
