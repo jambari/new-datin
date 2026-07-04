@@ -3,14 +3,23 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Sum, Max, Count
+from django.views.decorators.cache import never_cache
+from django.core.cache import cache
 import datetime
 
 
+@never_cache
 @login_required
 def dashboard(request):
     today = timezone.now().date()
     week_ago  = today - datetime.timedelta(days=7)
     month_ago = today - datetime.timedelta(days=30)
+
+    # Per-user cache (30s) — avoids redundant queries on rapid redirects after login
+    _cache_key = f"dash_ctx_{request.user.id}_{today.isoformat()}"
+    _cached = cache.get(_cache_key)
+    if _cached is not None:
+        return render(request, 'dashboard.html', _cached)
 
     # --- Gempa stats (from EventBrowser — QuakeLink-sourced) ---
     from repository.models import EventBrowser, FeltEarthquake, GempaMemusak
@@ -55,6 +64,7 @@ def dashboard(request):
     lapbul_bulan_ini = Lapbul.objects.filter(bulan=now_month, tahun=now_year).order_by('-tahun', '-bulan').first()
 
     # --- Buletin deadline (bulan sebelumnya, deadline tgl 15 bulan ini) ---
+    from repository.models import Bulletin
     BULAN_NAMA = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
     prev_month = now_month - 1 if now_month > 1 else 12
     prev_year  = now_year if now_month > 1 else now_year - 1
@@ -63,6 +73,8 @@ def dashboard(request):
         'tahun': prev_year,
         'deadline_label': '15 ' + BULAN_NAMA[now_month] + ' ' + str(now_year),
     }
+    # Cek apakah buletin bulan sebelumnya (yg jadi deadline) sudah ada
+    bulletin_ada = Bulletin.objects.filter(bulan=str(prev_month), tahun=str(prev_year)).exists()
 
     # --- Lightning ---
     from lightning.models import DailyStrikeSummary
@@ -184,8 +196,10 @@ def dashboard(request):
         'birthday_pegawai':    birthday_pegawai,
         'lapbul_bulan_ini':    lapbul_bulan_ini,
         'buletin_deadline':    buletin_deadline,
+        'bulletin_ada':        bulletin_ada,
         'latest_qc_rows':      latest_qc_rows,
     }
+    cache.set(_cache_key, context, 30)  # cache for 30 seconds
     return render(request, 'dashboard.html', context)
 
 
@@ -414,9 +428,9 @@ def public_gempa_detail(request, public_id):
 def public_gempa_merusak(request):
     import json
     from repository.models import GempaMemusak
-    from django.db.models import Q
+    from django.db.models import F, Q
     from django.core.paginator import Paginator
-    qs = GempaMemusak.objects.all().order_by('-tanggal', '-no')
+    qs = GempaMemusak.objects.all().order_by(F('tanggal').desc(nulls_last=True), '-no')
     q        = request.GET.get('q', '').strip()
     provinsi = request.GET.get('provinsi', '').strip()
     tsunami  = request.GET.get('tsunami', '').strip()
@@ -650,7 +664,7 @@ def public_about(request):
     # Seismic station count is a fixed infrastructure fact (27 BMKG-managed sites).
     # DataAvailability also stores stations from external networks and pseudo-channels
     # (REPORT, SLINKTOOL), so a raw DB count overstates the real number.
-    seismo_count = 27
+    seismo_count = 26
     accelero_count = AcceleroDataAvailability.objects.values('station').distinct().count()
     return render(request, 'public_about.html', {
         'seismo_count': seismo_count,
