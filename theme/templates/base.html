@@ -172,18 +172,29 @@
     {% block extra_scripts %}{% endblock %}
 
     <script>
+    function toggleTheme() {
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      var next = dark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('landingTheme', next);
+      // Update all theme icons on the page
+      document.querySelectorAll('.thm-icon').forEach(function(el) {
+        el.textContent = next === 'dark' ? '☀️' : '🌙';
+      });
+    }
+    // Init existing button (landing header)
     (function() {
       var icon = document.getElementById('baseThemeIcon');
       var btn  = document.getElementById('baseThemeBtn');
-      if (!btn) return;
-      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      icon.textContent = isDark ? '☀️' : '🌙';
-      btn.addEventListener('click', function() {
-        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        var next = dark ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        icon.textContent = next === 'dark' ? '☀️' : '🌙';
-        localStorage.setItem('landingTheme', next);
+      if (btn) {
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+        btn.addEventListener('click', toggleTheme);
+      }
+      // Init any .thm-btn added after DOM load (e.g. topbar)
+      document.querySelectorAll('.thm-btn:not([data-listener])').forEach(function(b) {
+        b.setAttribute('data-listener', '1');
+        b.addEventListener('click', toggleTheme);
       });
     })();
     </script>
