@@ -964,14 +964,25 @@ def observation_bartington_form_view(request):
         }
         return redirect('conversion_result')
 
-    # Default context for GET request
+    # Default context for GET request — auto-fill CR/CL dari latest record
+    _cr_def = {'deg': 98, 'min': 45, 'sec': 31}
+    _cl_def = {'deg': 278, 'min': 45, 'sec': 31}
+    _latest = MagneticObservation.objects.filter(deklinasi_readings__isnull=False).order_by('-observation_date', '-id').first()
+    if _latest and _latest.deklinasi_readings:
+        _cr = _latest.deklinasi_readings.get('_cr_awal')
+        _cl = _latest.deklinasi_readings.get('_cl_awal')
+        if _cr:
+            _cr_def = {'deg': _cr.get('deg', 0), 'min': _cr.get('min', 0), 'sec': _cr.get('sec', 0)}
+        if _cl:
+            _cl_def = {'deg': _cl.get('deg', 0), 'min': _cl.get('min', 0), 'sec': _cl.get('sec', 0)}
+
     context = {
         'observer_names': observer_names,
         'sessions': sessions,
         'is_bartington': True,
         'unit_label': 'deg',
-        'cr_awal_default': {'deg': 98, 'min': 45, 'sec': 31},
-        'cl_awal_default': {'deg': 278, 'min': 45, 'sec': 31},
+        'cr_awal_default': _cr_def,
+        'cl_awal_default': _cl_def,
         'deklinasi_data': [
             {'name': 'WU', 'deg': 272, 'min': "", 'sec': ""},
             {'name': 'ED', 'deg': 273, 'min': "", 'sec': ""},
