@@ -1,0 +1,108 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buku Tamu — Stasiun Geofisika Jayapura</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{brand:'#C30F42'}}}}</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>*{font-family:'Inter',system-ui,sans-serif}</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- Header -->
+<header class="bg-white border-b border-gray-100 sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+    <a href="{% url 'guests_index' %}" class="flex items-center gap-3 font-bold text-xl text-gray-900">
+      <span class="w-9 h-9 bg-brand rounded-xl flex items-center justify-center text-white text-sm">BT</span>
+      Buku Tamu
+    </a>
+    <a href="{% url 'guests_create' %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition shadow-sm">
+      + Tambah Tamu
+    </a>
+  </div>
+</header>
+
+<!-- Search -->
+<section class="max-w-7xl mx-auto px-4 py-6">
+  <form action="{% url 'guests_search' %}" method="GET" class="relative max-w-md">
+    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Cari tamu berdasarkan nama atau instansi..."
+      class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition">
+  </form>
+</section>
+
+<!-- Messages -->
+{% if messages %}
+<div class="max-w-7xl mx-auto px-4 mb-2 space-y-2">
+  {% for msg in messages %}
+  <div class="px-4 py-2.5 rounded-xl text-sm font-medium border {% if msg.tags == 'success' %}bg-emerald-50 text-emerald-700 border-emerald-200{% elif msg.tags == 'warning' %}bg-amber-50 text-amber-700 border-amber-200{% elif msg.tags == 'info' %}bg-blue-50 text-blue-700 border-blue-200{% else %}bg-red-50 text-red-700 border-red-200{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Guest Grid -->
+<section class="max-w-7xl mx-auto px-4 pb-12">
+  {% if search_query %}
+  <p class="text-sm text-gray-500 mb-4">Hasil pencarian untuk "<strong>{{ search_query }}</strong>"</p>
+  {% endif %}
+
+  {% if guests %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% for guest in guests %}
+    <div class="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+      <div class="aspect-[4/3] bg-gray-100 relative overflow-hidden">
+        {% if guest.foto %}
+        <img src="data:image/png;base64,{{ guest.foto }}" alt="{{ guest.nama }}" class="w-full h-full object-cover">
+        {% else %}
+        <div class="w-full h-full flex items-center justify-center text-6xl">👤</div>
+        {% endif %}
+        <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/50 to-transparent"></div>
+        <p class="absolute bottom-3 left-4 text-white text-xs font-medium">{{ guest.created_at|date:"d M Y" }}</p>
+      </div>
+      <div class="p-4">
+        <h3 class="font-bold text-gray-900 text-lg">{{ guest.nama }}</h3>
+        <p class="text-sm text-gray-500 flex items-center gap-1.5 mt-0.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          {{ guest.dari }}
+        </p>
+        <p class="text-sm text-gray-600 mt-1.5 line-clamp-2">{{ guest.keperluan }}</p>
+        {% if guest.keterangan %}
+        <p class="text-xs text-gray-400 mt-2 italic line-clamp-1">{{ guest.keterangan }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if guests.has_other_pages %}
+  <div class="flex justify-center mt-10 gap-1.5">
+    {% if guests.has_previous %}
+    <a href="?page={{ guests.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3.5 py-2 text-sm font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition">←</a>
+    {% endif %}
+    {% for num in guests.paginator.page_range %}
+    <a href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3.5 py-2 text-sm font-medium rounded-lg transition {% if num == guests.number %}bg-brand text-white shadow-sm{% else %}bg-white border border-gray-200 hover:bg-gray-50{% endif %}">{{ num }}</a>
+    {% endfor %}
+    {% if guests.has_next %}
+    <a href="?page={{ guests.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="px-3.5 py-2 text-sm font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition">→</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-20">
+    <div class="text-6xl mb-4">📖</div>
+    <h3 class="text-lg font-semibold text-gray-700 mb-1">Belum ada tamu</h3>
+    <p class="text-sm text-gray-400 mb-6">Jadilah yang pertama mengisi buku tamu!</p>
+    <a href="{% url 'guests_create' %}" class="inline-flex px-5 py-2.5 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition shadow-sm">+ Tambah Tamu</a>
+  </div>
+  {% endif %}
+</section>
+
+</body>
+</html>

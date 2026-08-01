@@ -1,0 +1,40 @@
+{% extends 'layanan/base.html' %}
+{% load static %}
+
+{% block title %}Pelayanan Jasa — BukaData{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 py-12">
+  <nav class="flex items-center gap-2 text-sm text-gray-500 mb-8">
+    <a href="{% url 'layanan_landing' %}" class="hover:text-brand">Home</a><span>/</span>
+    <span class="text-gray-900 font-medium">Jasa</span>
+  </nav>
+  <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-8">Jasa Penyewaan Peralatan</h1>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
+      <img src="{% static 'images/layanan/page06.jpg' %}" class="w-full h-48 object-cover">
+      <div class="p-5">
+        <h3 class="font-bold text-gray-900 mb-2">Teropong Rukyat (low grade)</h3>
+        <p class="text-sm text-gray-500 mb-4">Untuk pengamatan gerhana malam hari. Tarif per hari per unit.</p>
+        <div class="flex items-center justify-between"><span class="text-brand font-bold">Rp230.000</span><a href="{% url 'layanan_formulir' id=5 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
+      <img src="{% static 'images/layanan/page07.jpg' %}" class="w-full h-48 object-cover">
+      <div class="p-5">
+        <h3 class="font-bold text-gray-900 mb-2">Digital Portable Seismograph</h3>
+        <p class="text-sm text-gray-500 mb-4">Untuk pengamatan mikrotremor. Tarif belum termasuk operator.</p>
+        <div class="flex items-center justify-between"><span class="text-brand font-bold">Rp640.000</span><a href="{% url 'layanan_formulir' id=6 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
+      <img src="{% static 'images/layanan/page08.jpg' %}" class="w-full h-48 object-cover">
+      <div class="p-5">
+        <h3 class="font-bold text-gray-900 mb-2">Deklinasi & Inklinasi Magnetometer</h3>
+        <p class="text-sm text-gray-500 mb-4">Untuk pengamatan mikrotremor. Tarif belum termasuk operator.</p>
+        <div class="flex items-center justify-between"><span class="text-brand font-bold">Rp400.000</span><a href="{% url 'layanan_formulir' id=7 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

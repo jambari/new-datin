@@ -1,0 +1,46 @@
+{% extends 'layanan/base.html' %}
+
+{% block title %}Tarif Layanan — BukaData{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-12">
+  <nav class="flex items-center gap-2 text-sm text-gray-500 mb-8">
+    <a href="{% url 'layanan_landing' %}" class="hover:text-brand">Home</a>
+    <span>/</span>
+    <span class="text-gray-900 font-medium">Tarif</span>
+  </nav>
+  <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-8">Daftar Tarif Pelayanan</h1>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-50 text-left">
+          <th class="px-6 py-4 font-semibold text-gray-600 w-12">#</th>
+          <th class="px-6 py-4 font-semibold text-gray-600">Layanan Data / Jasa</th>
+          <th class="px-6 py-4 font-semibold text-gray-600 w-40">Harga</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <tr class="hover:bg-gray-50"><td class="px-6 py-4 text-gray-400">1</td><td class="px-6 py-4 font-medium">Peta Kegempaan</td><td class="px-6 py-4 text-brand font-semibold">Rp250.000</td></tr>
+        <tr class="hover:bg-gray-50"><td class="px-6 py-4 text-gray-400">2</td><td class="px-6 py-4 font-medium">Peta Tingkat Kerawanan Petir</td><td class="px-6 py-4 text-brand font-semibold">Rp200.000</td></tr>
+        <tr class="hover:bg-gray-50"><td class="px-6 py-4 text-gray-400">3</td><td class="px-6 py-4 font-medium">Waktu Terbit/Terbenam Matahari atau Bulan</td><td class="px-6 py-4 text-brand font-semibold">Rp50.000</td></tr>
+        <tr class="hover:bg-gray-50"><td class="px-6 py-4 text-gray-400">4</td><td class="px-6 py-4 font-medium">Peta Kejadian Petir Per Hari</td><td class="px-6 py-4 text-brand font-semibold">Rp75.000</td></tr>
+        <tr class="hover:bg-gray-50"><td class="px-6 py-4 text-gray-400">5</td><td class="px-6 py-4 font-medium">Teropong Rukyat (low grade)</td><td class="px-6 py-4 text-brand font-semibold">Rp230.000</td></tr>
+        <tr class="hover:bg-gray-50"><td class="px-6 py-4 text-gray-400">6</td><td class="px-6 py-4 font-medium">Digital Portable Short Period Seismograph</td><td class="px-6 py-4 text-brand font-semibold">Rp640.000</td></tr>
+        <tr class="hover:bg-gray-50"><td class="px-6 py-4 text-gray-400">7</td><td class="px-6 py-4 font-medium">Deklinasi & Inklinasi Magnetometer</td><td class="px-6 py-4 text-brand font-semibold">Rp400.000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 md:p-8">
+    <h3 class="text-lg font-bold text-amber-900 mb-3">Pengajuan Mahasiswa (Tarif Nol Rupiah)</h3>
+    <p class="text-amber-800 text-sm mb-3">Untuk penyelesaian tugas akhir/skripsi, pemohon wajib melengkapi:</p>
+    <ol class="list-decimal list-inside text-sm text-amber-700 space-y-1">
+      <li>Proposal yang sudah dijilid dan disetujui dosen pembimbing</li>
+      <li>Fotokopi identitas mahasiswa / kartu mahasiswa</li>
+      <li>Surat permohonan data</li>
+    </ol>
+    <p class="text-amber-700 text-sm mt-3">Berkas dikompres/zip dan diunggah pada kolom unggah berkas.</p>
+  </div>
+</section>
+{% endblock %}

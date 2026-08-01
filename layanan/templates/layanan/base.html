@@ -1,0 +1,114 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BukaData — Pelayanan Stasiun Geofisika Jayapura{% endblock %}</title>
+  <meta name="description" content="Platform Pelayanan Data dan Jasa di Stasiun Geofisika Kelas I Jayapura">
+  <link rel="icon" href="https://bmkg.go.id/asset/img/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#C30F42', light: '#e53e6b', dark: '#9a0c34' }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    .gradient-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+    .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Navbar -->
+  <nav class="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <a href="{% url 'layanan_landing' %}" class="flex items-center gap-2">
+          <span class="bg-brand text-white font-extrabold text-lg px-3 py-1 rounded-lg">BukaData</span>
+        </a>
+        <div class="hidden md:flex items-center gap-1">
+          <a href="{% url 'layanan_tentang' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Tentang</a>
+          <a href="{% url 'layanan_tarif' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Tarif</a>
+          <a href="{% url 'layanan_alur' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Alur</a>
+          <a href="{% url 'layanan_data' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Data</a>
+          <a href="{% url 'layanan_jasa' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Jasa</a>
+          <a href="{% url 'layanan_magang' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Magang</a>
+          <a href="{% url 'layanan_gts' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">GTS</a>
+          <a href="{% url 'layanan_daftar' %}" class="ml-2 px-4 py-2 text-sm font-semibold text-white bg-brand rounded-lg hover:bg-brand-dark transition shadow-sm">Daftar</a>
+        </div>
+        <!-- Mobile menu button -->
+        <button id="menu-toggle" class="md:hidden p-2 text-gray-600 hover:text-brand">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-gray-100 bg-white">
+      <div class="px-4 py-3 space-y-1">
+        <a href="{% url 'layanan_tentang' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Tentang</a>
+        <a href="{% url 'layanan_tarif' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Tarif</a>
+        <a href="{% url 'layanan_alur' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Alur</a>
+        <a href="{% url 'layanan_data' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Data</a>
+        <a href="{% url 'layanan_jasa' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Jasa</a>
+        <a href="{% url 'layanan_magang' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Magang</a>
+        <a href="{% url 'layanan_gts' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Goes to School</a>
+        <a href="{% url 'layanan_daftar' %}" class="block px-3 py-2 text-sm font-semibold text-brand rounded-lg hover:bg-red-50">Daftar Permohonan</a>
+      </div>
+    </div>
+  </nav>
+
+  {% block content %}{% endblock %}
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-300 mt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <span class="text-white font-extrabold text-lg bg-brand px-3 py-1 rounded-lg inline-block mb-3">BukaData</span>
+          <p class="text-sm text-gray-400 mt-3 leading-relaxed">Platform pelayanan jasa dan data di Stasiun Geofisika Kelas I Jayapura untuk memudahkan pengguna tanpa harus datang langsung ke kantor kami.</p>
+        </div>
+        <div>
+          <h5 class="text-white font-semibold mb-3">Jenis Layanan</h5>
+          <ul class="space-y-2 text-sm">
+            <li><a href="{% url 'layanan_tarif' %}" class="text-gray-400 hover:text-white transition">Tarif</a></li>
+            <li><a href="{% url 'layanan_data' %}" class="text-gray-400 hover:text-white transition">Data</a></li>
+            <li><a href="{% url 'layanan_jasa' %}" class="text-gray-400 hover:text-white transition">Jasa</a></li>
+            <li><a href="{% url 'layanan_magang' %}" class="text-gray-400 hover:text-white transition">Magang</a></li>
+            <li><a href="{% url 'layanan_gts' %}" class="text-gray-400 hover:text-white transition">Goes To School</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5 class="text-white font-semibold mb-3">Kontak</h5>
+          <ul class="space-y-2 text-sm text-gray-400">
+            <li>Jayapura, 99613, ID</li>
+            <li>stageof.jayapura@bmkg.go.id</li>
+            <li>(0967) 533533</li>
+            <li>+628114891151</li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-500">
+        &copy; {% now "Y" %} Stasiun Geofisika Kelas I Jayapura
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('menu-toggle').addEventListener('click', function() {
+      document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+  </script>
+  {% block extra_script %}{% endblock %}
+</body>
+</html>

@@ -74,6 +74,8 @@ INSTALLED_APPS = [
     'arsip',
     'qc_review',
     'stations',
+    'layanan',
+    'guests',
 ]
 
 SEEDLINK_HOST = '202.90.199.206'   # Accelerometer SeedLink

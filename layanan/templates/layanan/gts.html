@@ -1,0 +1,28 @@
+{% extends 'layanan/base.html' %}
+{% load static %}
+
+{% block title %}Goes To School — BukaData{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <nav class="flex items-center gap-2 text-sm text-gray-500 mb-8">
+    <a href="{% url 'layanan_landing' %}" class="hover:text-brand">Home</a><span>/</span>
+    <span class="text-gray-900 font-medium">Goes To School</span>
+  </nav>
+  <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-8">Goes To School</h1>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+    <img src="{% static 'images/layanan/gts/1.JPG' %}" class="w-full h-36 object-cover rounded-xl shadow-sm">
+    <img src="{% static 'images/layanan/gts/2.JPG' %}" class="w-full h-36 object-cover rounded-xl shadow-sm">
+    <img src="{% static 'images/layanan/gts/3.JPG' %}" class="w-full h-36 object-cover rounded-xl shadow-sm">
+    <img src="{% static 'images/layanan/gts/4.JPG' %}" class="w-full h-36 object-cover rounded-xl shadow-sm">
+    <img src="{% static 'images/layanan/gts/5.JPG' %}" class="w-full h-36 object-cover rounded-xl shadow-sm">
+    <img src="{% static 'images/layanan/gts/6.JPG' %}" class="w-full h-36 object-cover rounded-xl shadow-sm">
+    <img src="{% static 'images/layanan/gts/8.JPG' %}" class="w-full h-36 object-cover rounded-xl shadow-sm">
+    <img src="{% static 'images/layanan/gts/13.jpg' %}" class="w-full h-36 object-cover rounded-xl shadow-sm">
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Formulir Goes To School / Fieldtrip</h2>
+    {% include 'layanan/_form.html' with jenis_default="Goes To School" %}
+  </div>
+</section>
+{% endblock %}
