@@ -78,9 +78,10 @@ class Command(BaseCommand):
             lines.append(f"{emoji} <b>{name}</b>: {label}{pc}{time_str}")
 
         if all_ok:
-            lines.append('\n✅ Semua instrumen berjalan normal.')
-        else:
-            lines.append('\n⚠️ Ada instrumen yang memerlukan perhatian!')
+            self.stdout.write(f'All instruments OK — skipping report at {now_wit.strftime("%Y-%m-%d %H:%M:%S")} WIT')
+            return
+
+        lines.append('\n⚠️ Ada instrumen yang memerlukan perhatian!')
 
         msg = '\n'.join(lines)
 

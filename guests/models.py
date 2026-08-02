@@ -7,8 +7,8 @@ class Guest(models.Model):
     keperluan = models.CharField(max_length=255)
     keterangan = models.TextField(blank=True, null=True)
     foto = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     class Meta:
         db_table = 'guests'
