@@ -1,18 +1,28 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block seo_title %}Hapus Tamu{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto px-4 py-20 text-center">
-  <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+
+      <div class="max-w-md mx-auto py-20 text-center">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <h1 class="text-xl font-extrabold text-gray-900 mb-2">Hapus Tamu?</h1>
+        <p class="text-gray-500 mb-2"><strong>{{ guest.nama }}</strong> dari <strong>{{ guest.dari }}</strong></p>
+        <p class="text-sm text-gray-400 mb-6">Tindakan ini tidak dapat dibatalkan.</p>
+        <form method="POST" class="flex gap-3 justify-center">
+          {% csrf_token %}
+          <a href="{% url 'guests_dashboard_list' %}" class="px-5 py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-200">Batal</a>
+          <button type="submit" class="px-5 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700">Hapus</button>
+        </form>
+      </div>
+
+    </main>
   </div>
-  <h1 class="text-xl font-extrabold text-gray-900 mb-2">Hapus Tamu?</h1>
-  <p class="text-gray-500 mb-2"><strong>{{ guest.nama }}</strong> dari <strong>{{ guest.dari }}</strong></p>
-  <p class="text-sm text-gray-400 mb-6">Tindakan ini tidak dapat dibatalkan.</p>
-  <form method="POST" class="flex gap-3 justify-center">
-    {% csrf_token %}
-    <a href="{% url 'guests_dashboard_list' %}" class="px-5 py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-200">Batal</a>
-    <button type="submit" class="px-5 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700">Hapus</button>
-  </form>
 </div>
 {% endblock %}

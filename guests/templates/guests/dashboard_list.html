@@ -1,45 +1,53 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block seo_title %}Buku Tamu — Dashboard{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8">
-  <h1 class="text-2xl font-extrabold text-gray-900 mb-6">Daftar Buku Tamu</h1>
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
 
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="bg-gray-50 text-left">
-          <th class="px-5 py-3 font-semibold text-gray-600">Nama</th>
-          <th class="px-5 py-3 font-semibold text-gray-600">Dari</th>
-          <th class="px-5 py-3 font-semibold text-gray-600">Keperluan</th>
-          <th class="px-5 py-3 font-semibold text-gray-600">Tanggal</th>
-          <th class="px-5 py-3 font-semibold text-gray-600"></th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100">
-        {% for g in guest_list %}
-        <tr class="hover:bg-gray-50">
-          <td class="px-5 py-3 font-medium text-gray-900">{{ g.nama }}</td>
-          <td class="px-5 py-3 text-gray-600">{{ g.dari }}</td>
-          <td class="px-5 py-3 text-gray-600">{{ g.keperluan|truncatechars:40 }}</td>
-          <td class="px-5 py-3 text-gray-500">{{ g.created_at|date:"d M Y H:i" }}</td>
-          <td class="px-5 py-3">
-            <a href="{% url 'guests_dashboard_delete' g.pk %}" class="text-red-500 hover:text-red-700 text-xs font-medium">Hapus</a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" class="px-5 py-12 text-center text-gray-400">Belum ada tamu.</td></tr>
+      <h1 class="text-2xl font-extrabold text-gray-900 mb-6">Daftar Buku Tamu</h1>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50 text-left">
+              <th class="px-5 py-3 font-semibold text-gray-600">Nama</th>
+              <th class="px-5 py-3 font-semibold text-gray-600">Dari</th>
+              <th class="px-5 py-3 font-semibold text-gray-600">Keperluan</th>
+              <th class="px-5 py-3 font-semibold text-gray-600">Tanggal</th>
+              <th class="px-5 py-3 font-semibold text-gray-600"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for g in guest_list %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-5 py-3 font-medium text-gray-900">{{ g.nama }}</td>
+              <td class="px-5 py-3 text-gray-600">{{ g.dari }}</td>
+              <td class="px-5 py-3 text-gray-600">{{ g.keperluan|truncatechars:40 }}</td>
+              <td class="px-5 py-3 text-gray-500">{{ g.created_at|date:"d M Y H:i" }}</td>
+              <td class="px-5 py-3">
+                <a href="{% url 'guests_dashboard_delete' g.pk %}" class="text-red-500 hover:text-red-700 text-xs font-medium">Hapus</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="px-5 py-12 text-center text-gray-400">Belum ada tamu.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if guest_list.has_other_pages %}
+      <div class="flex justify-center mt-6 gap-1">
+        {% for num in guest_list.paginator.page_range %}
+        <a href="?page={{ num }}" class="px-3 py-1.5 text-sm rounded-lg {% if num == guest_list.number %}bg-brand text-white{% else %}bg-white border hover:bg-gray-50{% endif %}">{{ num }}</a>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      </div>
+      {% endif %}
 
-  {% if guest_list.has_other_pages %}
-  <div class="flex justify-center mt-6 gap-1">
-    {% for num in guest_list.paginator.page_range %}
-    <a href="?page={{ num }}" class="px-3 py-1.5 text-sm rounded-lg {% if num == guest_list.number %}bg-brand text-white{% else %}bg-white border hover:bg-gray-50{% endif %}">{{ num }}</a>
-    {% endfor %}
+    </main>
   </div>
-  {% endif %}
 </div>
 {% endblock %}

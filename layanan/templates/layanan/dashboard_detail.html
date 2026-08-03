@@ -1,43 +1,51 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block seo_title %}Detail Pelayanan — {{ layanan.nama }}{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto px-4 py-8">
-  <a href="{% url 'layanan_dashboard_list' %}" class="text-brand hover:underline text-sm mb-4 inline-block">&larr; Kembali</a>
-  <h1 class="text-2xl font-extrabold text-gray-900 mb-6">Detail Permohonan</h1>
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
 
-  {% if messages %}
-  {% for msg in messages %}
-  <div class="px-4 py-3 rounded-xl text-sm font-medium mb-4 bg-emerald-50 text-emerald-700 border border-emerald-200">{{ msg }}</div>
-  {% endfor %}
-  {% endif %}
+      <a href="{% url 'layanan_dashboard_list' %}" class="text-brand hover:underline text-sm mb-4 inline-block">&larr; Kembali</a>
+      <h1 class="text-2xl font-extrabold text-gray-900 mb-6">Detail Permohonan</h1>
 
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
-    <div class="grid grid-cols-2 gap-4 text-sm">
-      <div><span class="text-gray-500">Nama</span><p class="font-semibold text-gray-900">{{ layanan.nama }}</p></div>
-      <div><span class="text-gray-500">Instansi</span><p class="font-semibold text-gray-900">{{ layanan.instansi }}</p></div>
-      <div><span class="text-gray-500">Email</span><p class="text-gray-900">{{ layanan.email|default:"—" }}</p></div>
-      <div><span class="text-gray-500">No HP</span><p class="text-gray-900">{{ layanan.handphone|default:"—" }}</p></div>
-      <div class="col-span-2"><span class="text-gray-500">Alamat</span><p class="text-gray-900">{{ layanan.alamat|default:"—" }}</p></div>
-      <div><span class="text-gray-500">Jenis Data</span><p class="font-semibold text-gray-900">{{ layanan.jenis_data }}</p></div>
-      <div><span class="text-gray-500">Surat</span><p class="text-gray-900">{{ layanan.surat|default:"—" }}</p></div>
-    </div>
+      {% if messages %}
+      {% for msg in messages %}
+      <div class="px-4 py-3 rounded-xl text-sm font-medium mb-4 bg-emerald-50 text-emerald-700 border border-emerald-200">{{ msg }}</div>
+      {% endfor %}
+      {% endif %}
 
-    <hr class="border-gray-100">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div><span class="text-gray-500">Nama</span><p class="font-semibold text-gray-900">{{ layanan.nama }}</p></div>
+          <div><span class="text-gray-500">Instansi</span><p class="font-semibold text-gray-900">{{ layanan.instansi }}</p></div>
+          <div><span class="text-gray-500">Email</span><p class="text-gray-900">{{ layanan.email|default:"—" }}</p></div>
+          <div><span class="text-gray-500">No HP</span><p class="text-gray-900">{{ layanan.handphone|default:"—" }}</p></div>
+          <div class="col-span-2"><span class="text-gray-500">Alamat</span><p class="text-gray-900">{{ layanan.alamat|default:"—" }}</p></div>
+          <div><span class="text-gray-500">Jenis Data</span><p class="font-semibold text-gray-900">{{ layanan.jenis_data }}</p></div>
+          <div><span class="text-gray-500">Surat</span><p class="text-gray-900">{{ layanan.surat|default:"—" }}</p></div>
+        </div>
 
-    <form method="POST" class="flex items-center gap-3">
-      {% csrf_token %}
-      <span class="text-sm text-gray-500">Status:</span>
-      <select name="status" class="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-        <option value="1" {% if layanan.status == '1' or not layanan.status %}selected{% endif %}>Sedang Diproses</option>
-        <option value="3" {% if layanan.status == '3' %}selected{% endif %}>Tagihan Belum Ditransfer</option>
-        <option value="2" {% if layanan.status == '2' %}selected{% endif %}>Selesai Diproses</option>
-        <option value="4" {% if layanan.status == '4' %}selected{% endif %}>Telah Diterima Pemohon</option>
-      </select>
-      <button type="submit" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition">Update</button>
-    </form>
+        <hr class="border-gray-100">
 
-    <p class="text-xs text-gray-400">Dibuat: {{ layanan.created_at|date:"d M Y H:i" }}</p>
+        <form method="POST" class="flex items-center gap-3">
+          {% csrf_token %}
+          <span class="text-sm text-gray-500">Status:</span>
+          <select name="status" class="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+            <option value="1" {% if layanan.status == '1' or not layanan.status %}selected{% endif %}>Sedang Diproses</option>
+            <option value="3" {% if layanan.status == '3' %}selected{% endif %}>Tagihan Belum Ditransfer</option>
+            <option value="2" {% if layanan.status == '2' %}selected{% endif %}>Selesai Diproses</option>
+            <option value="4" {% if layanan.status == '4' %}selected{% endif %}>Telah Diterima Pemohon</option>
+          </select>
+          <button type="submit" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition">Update</button>
+        </form>
+
+        <p class="text-xs text-gray-400">Dibuat: {{ layanan.created_at|date:"d M Y H:i" }}</p>
+      </div>
+
+    </main>
   </div>
 </div>
 {% endblock %}

@@ -1,55 +1,63 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block seo_title %}Pelayanan — Dashboard{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8">
-  <h1 class="text-2xl font-extrabold text-gray-900 mb-6">Daftar Permohonan Pelayanan</h1>
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
 
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="bg-gray-50 text-left">
-          <th class="px-5 py-3 font-semibold text-gray-600">Nama</th>
-          <th class="px-5 py-3 font-semibold text-gray-600">Instansi</th>
-          <th class="px-5 py-3 font-semibold text-gray-600">Jenis Data</th>
-          <th class="px-5 py-3 font-semibold text-gray-600">Status</th>
-          <th class="px-5 py-3 font-semibold text-gray-600">Tanggal</th>
-          <th class="px-5 py-3 font-semibold text-gray-600"></th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100">
-        {% for l in layanan_list %}
-        <tr class="hover:bg-gray-50">
-          <td class="px-5 py-3 font-medium text-gray-900">{{ l.nama }}</td>
-          <td class="px-5 py-3 text-gray-600">{{ l.instansi }}</td>
-          <td class="px-5 py-3 text-gray-600">{{ l.jenis_data }}</td>
-          <td class="px-5 py-3">
-            {% if l.status == '1' or not l.status %}
-            <span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">Diproses</span>
-            {% elif l.status == '2' %}
-            <span class="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">Selesai</span>
-            {% elif l.status == '3' %}
-            <span class="px-2 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full">Tagihan</span>
-            {% elif l.status == '4' %}
-            <span class="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">Diterima</span>
-            {% endif %}
-          </td>
-          <td class="px-5 py-3 text-gray-500">{{ l.created_at|date:"d M Y" }}</td>
-          <td class="px-5 py-3"><a href="{% url 'layanan_dashboard_detail' l.pk %}" class="text-brand hover:underline text-xs font-medium">Detail</a></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6" class="px-5 py-12 text-center text-gray-400">Belum ada permohonan.</td></tr>
+      <h1 class="text-2xl font-extrabold text-gray-900 mb-6">Daftar Permohonan Pelayanan</h1>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50 text-left">
+              <th class="px-5 py-3 font-semibold text-gray-600">Nama</th>
+              <th class="px-5 py-3 font-semibold text-gray-600">Instansi</th>
+              <th class="px-5 py-3 font-semibold text-gray-600">Jenis Data</th>
+              <th class="px-5 py-3 font-semibold text-gray-600">Status</th>
+              <th class="px-5 py-3 font-semibold text-gray-600">Tanggal</th>
+              <th class="px-5 py-3 font-semibold text-gray-600"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for l in layanan_list %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-5 py-3 font-medium text-gray-900">{{ l.nama }}</td>
+              <td class="px-5 py-3 text-gray-600">{{ l.instansi }}</td>
+              <td class="px-5 py-3 text-gray-600">{{ l.jenis_data }}</td>
+              <td class="px-5 py-3">
+                {% if l.status == '1' or not l.status %}
+                <span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">Diproses</span>
+                {% elif l.status == '2' %}
+                <span class="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">Selesai</span>
+                {% elif l.status == '3' %}
+                <span class="px-2 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full">Tagihan</span>
+                {% elif l.status == '4' %}
+                <span class="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full">Diterima</span>
+                {% endif %}
+              </td>
+              <td class="px-5 py-3 text-gray-500">{{ l.created_at|date:"d M Y" }}</td>
+              <td class="px-5 py-3"><a href="{% url 'layanan_dashboard_detail' l.pk %}" class="text-brand hover:underline text-xs font-medium">Detail</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="px-5 py-12 text-center text-gray-400">Belum ada permohonan.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if layanan_list.has_other_pages %}
+      <div class="flex justify-center mt-6 gap-1">
+        {% for num in layanan_list.paginator.page_range %}
+        <a href="?page={{ num }}" class="px-3 py-1.5 text-sm rounded-lg {% if num == layanan_list.number %}bg-brand text-white{% else %}bg-white border hover:bg-gray-50{% endif %}">{{ num }}</a>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      </div>
+      {% endif %}
 
-  {% if layanan_list.has_other_pages %}
-  <div class="flex justify-center mt-6 gap-1">
-    {% for num in layanan_list.paginator.page_range %}
-    <a href="?page={{ num }}" class="px-3 py-1.5 text-sm rounded-lg {% if num == layanan_list.number %}bg-brand text-white{% else %}bg-white border hover:bg-gray-50{% endif %}">{{ num }}</a>
-    {% endfor %}
+    </main>
   </div>
-  {% endif %}
 </div>
 {% endblock %}
