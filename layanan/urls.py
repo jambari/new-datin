@@ -12,4 +12,8 @@ urlpatterns = [
     path('layanan/gts/', views.gts, name='layanan_gts'),
     path('layanan/formulir/<int:id>/', views.formulir, name='layanan_formulir'),
     path('layanan/daftar/', views.daftar, name='layanan_daftar'),
+
+    # Dashboard CRUD
+    path('layanan/dashboard/', views.dashboard_list, name='layanan_dashboard_list'),
+    path('layanan/dashboard/<int:pk>/', views.dashboard_detail, name='layanan_dashboard_detail'),
 ]

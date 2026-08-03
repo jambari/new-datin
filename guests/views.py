@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib import messages
 from .models import Guest
@@ -43,3 +43,23 @@ def search(request):
         'guests': paginator.get_page(page),
         'search_query': q,
     })
+
+
+# ── Dashboard CRUD ────────────────────────────────────────────
+
+def dashboard_list(request):
+    qs = Guest.objects.all()
+    paginator = Paginator(qs, 15)
+    page = request.GET.get('page', 1)
+    return render(request, 'guests/dashboard_list.html', {
+        'guest_list': paginator.get_page(page),
+    })
+
+
+def dashboard_delete(request, pk):
+    guest = get_object_or_404(Guest, pk=pk)
+    if request.method == 'POST':
+        guest.delete()
+        messages.success(request, 'Data tamu berhasil dihapus.')
+        return redirect('guests_dashboard_list')
+    return render(request, 'guests/dashboard_confirm_delete.html', {'guest': guest})
