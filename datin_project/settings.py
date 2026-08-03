@@ -74,8 +74,8 @@ INSTALLED_APPS = [
     'arsip',
     'qc_review',
     'stations',
-    'layanan',
-    'guests',
+    'layanan.apps.LayananConfig',
+    'guests.apps.GuestsConfig',
     'pengaduan.apps.PengaduanConfig',
 ]
 
