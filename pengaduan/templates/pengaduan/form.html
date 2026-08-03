@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulir Pengaduan — Stasiun Geofisika Jayapura</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{brand:'#C30F42'}}}}</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>*{font-family:'Inter',system-ui,sans-serif}</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<header class="bg-white border-b border-gray-100">
+  <div class="max-w-3xl mx-auto px-4 h-16 flex items-center">
+    <a href="/" class="flex items-center gap-2">
+      <span class="w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">SG</span>
+      <span class="font-bold text-gray-900">Stasiun Geofisika Jayapura</span>
+    </a>
+  </div>
+</header>
+
+<div class="max-w-3xl mx-auto px-4 py-10">
+  {% if messages %}
+  <div class="mb-6 space-y-2">
+    {% for msg in messages %}
+    <div class="px-4 py-3 rounded-xl text-sm font-medium {% if msg.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-red-50 text-red-700 border border-red-200{% endif %}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <h1 class="text-2xl font-extrabold text-gray-900 mb-2">Formulir Pengaduan</h1>
+    <p class="text-sm text-gray-500 mb-8">Sampaikan pengaduan Anda. Identitas pelapor dijamin kerahasiaannya.</p>
+
+    <form method="POST" class="space-y-6">
+      {% csrf_token %}
+
+      <!-- Data Pelapor -->
+      <fieldset class="border border-gray-200 rounded-xl p-5">
+        <legend class="text-sm font-bold text-gray-700 px-2">Data Pelapor</legend>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal <span class="text-brand">*</span></label>
+            <input type="date" name="tanggal" required value="{% now 'Y-m-d' %}"
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Nama Pelapor <span class="text-brand">*</span></label>
+            <input type="text" name="nama_pelapor" required placeholder="Nama lengkap Anda"
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-gray-600 mb-1">Alamat <span class="text-brand">*</span></label>
+            <textarea name="alamat" required rows="2" placeholder="Alamat lengkap"
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition resize-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">No. HP <span class="text-brand">*</span></label>
+            <input type="text" name="no_hp" required placeholder="08xxxxxxxxxx"
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Email</label>
+            <input type="email" name="email" placeholder="email@example.com"
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Data Terlapor -->
+      <fieldset class="border border-gray-200 rounded-xl p-5">
+        <legend class="text-sm font-bold text-gray-700 px-2">Data yang Dilaporkan</legend>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Nama yang Dilaporkan <span class="text-brand">*</span></label>
+            <input type="text" name="nama_terlapor" required placeholder="Nama terlapor"
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Jabatan <span class="text-brand">*</span></label>
+            <input type="text" name="jabatan" required placeholder="Jabatan terlapor"
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Isi Pengaduan -->
+      <fieldset class="border border-gray-200 rounded-xl p-5">
+        <legend class="text-sm font-bold text-gray-700 px-2">Isi Pengaduan</legend>
+        <div class="space-y-4 mt-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Materi Pengaduan <span class="text-brand">*</span></label>
+            <input type="text" name="materi_pengaduan" required placeholder="Pokok permasalahan"
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Isi Pengaduan <span class="text-brand">*</span></label>
+            <textarea name="isi_pengaduan" required rows="5" placeholder="Uraikan pengaduan Anda secara jelas dan lengkap..."
+              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition resize-none"></textarea>
+          </div>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="w-full py-3.5 bg-brand hover:bg-red-700 text-white font-semibold rounded-xl transition shadow-md text-base">
+        Kirim Pengaduan
+      </button>
+    </form>
+  </div>
+</div>
+
+<footer class="text-center py-6 text-sm text-gray-400 border-t border-gray-100 mt-8">
+  &copy; {% now "Y" %} Stasiun Geofisika Kelas I Jayapura
+</footer>
+
+</body>
+</html>

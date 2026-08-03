@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'stations',
     'layanan',
     'guests',
+    'pengaduan.apps.PengaduanConfig',
 ]
 
 SEEDLINK_HOST = '202.90.199.206'   # Accelerometer SeedLink
