@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
+from django.core.paginator import Paginator
 from .models import Pengaduan
 
 
@@ -24,3 +25,12 @@ def form(request):
 
 def success(request):
     return render(request, 'pengaduan/success.html')
+
+
+def pengaduan_list(request):
+    qs = Pengaduan.objects.all()
+    paginator = Paginator(qs, 15)
+    page = request.GET.get('page', 1)
+    return render(request, 'pengaduan/list.html', {
+        'pengaduan_list': paginator.get_page(page),
+    })
