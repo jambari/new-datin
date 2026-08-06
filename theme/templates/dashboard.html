@@ -529,8 +529,9 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(() => {});
   }
 
-  checkInstruments();
-  setInterval(checkInstruments, POLL_MS);
+  // DISABLED — instrument monitor hidden until CSIRT pentest passes
+  // checkInstruments();
+  // setInterval(checkInstruments, POLL_MS);
 });
 </script>
 {% endblock %}
