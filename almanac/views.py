@@ -2,6 +2,7 @@
 from django.shortcuts import render
 from django.core.paginator import Paginator
 from django.utils.dateparse import parse_date
+from django.contrib.auth.decorators import login_required
 from almanac.models import SunMoonEvent
 from django.conf import settings
 from datetime import datetime, date
@@ -39,6 +40,7 @@ def eventmoon_list(request):
     }
     return render(request, "almanac/eventmoon_list.html", context)
 
+@login_required
 def sunmoon_monthly_report(request):
     """
     Laporan Bulanan Terbit/Terbenam Matahari & Bulan.

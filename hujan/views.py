@@ -1,8 +1,9 @@
 # hujan/views.py
 
-from django.shortcuts import render, redirect, get_object_or_404 # Add redirect and get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 from .models import Hujan
 from django.db.models import Max, Count, Q, Sum
 from django.utils import timezone
@@ -32,6 +33,7 @@ def _filter_hujan(request):
     return qs, f
 
 
+@login_required
 def daftar_hujan(request):
     qs, f = _filter_hujan(request)
     f_start, f_end = f['start'], f['end']
@@ -68,6 +70,7 @@ def daftar_hujan(request):
     }
     return render(request, 'hujan/daftar_hujan.html', context)
 
+@login_required
 def query_laporan_hujan(request):
     start_date = request.GET.get('start')
     end_date = request.GET.get('end')
@@ -141,6 +144,7 @@ def query_laporan_hujan(request):
 
     return render(request, 'hujan/laporan_query.html', context)
 
+@login_required
 def tambah_hujan(request):
     if request.method == 'POST':
         form = HujanForm(request.POST)
@@ -157,6 +161,7 @@ def tambah_hujan(request):
     }
     return render(request, 'hujan/form_hujan.html', context)
 
+@login_required
 def edit_hujan(request, id):
     # Get the specific record or return 404 if not found
     hujan_instance = get_object_or_404(Hujan, id=id)
@@ -178,6 +183,7 @@ def edit_hujan(request, id):
     return render(request, 'hujan/form_hujan.html', context)
 
 
+@login_required
 def export_hujan_excel(request):
     """Export the (filtered) hujan list to .xlsx. Uses the same filters as
     daftar_hujan, so the download matches what's shown in the table."""
