@@ -177,7 +177,7 @@ def compute_yesterday_daily_grid():
     yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
     try:
         result = subprocess.run(
-            ["/var/www/html/venv/bin/python", "manage.py", "compute_grid_pipeline",
+            ["/var/www/html/venv/bin/python", "/var/www/html/lightning/management/commands/compute_grid_pipeline.py",
              "daily_date", yesterday],
             capture_output=True, text=True, timeout=600,
             cwd="/var/www/html"
@@ -201,7 +201,7 @@ def compute_previous_monthly_grid():
     year, month = prev.year, prev.month
     try:
         result = subprocess.run(
-            ["/var/www/html/venv/bin/python", "manage.py", "compute_grid_pipeline",
+            ["/var/www/html/venv/bin/python", "/var/www/html/lightning/management/commands/compute_grid_pipeline.py",
              "monthly_one", str(year), str(month)],
             capture_output=True, text=True, timeout=600,
             cwd="/var/www/html"
