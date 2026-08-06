@@ -16,6 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django_otp.admin import OTPAdminSite
+
+# Enforce OTP on admin for users with OTP devices configured
+admin.site.__class__ = OTPAdminSite
 from django.contrib.sitemaps.views import sitemap
 from django.views.generic import TemplateView
 from repository.views import station_map_view
