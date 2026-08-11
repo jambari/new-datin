@@ -17,12 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django_otp.admin import OTPAdminSite
-from django_otp.views import LoginView as OTPLoginView
 
 # Enforce OTP on admin for users with OTP devices configured
 admin.site.__class__ = OTPAdminSite
-
-login_view = OTPLoginView.as_view()
 from django.contrib.sitemaps.views import sitemap
 from django.views.generic import TemplateView
 from repository.views import station_map_view
@@ -41,7 +38,6 @@ urlpatterns = [
     )),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('admin/', admin.site.urls),
-    path('accounts/login/', login_view, name='login'),
     path('accounts/', include('django.contrib.auth.urls')),
     path("__reload__/", include("django_browser_reload.urls")), 
     path('', include('monitor.urls')),

@@ -4,6 +4,8 @@ from repository.views import yolo_progress_view, yolo_download_view
 
 urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('accounts/login/', views.custom_login, name='login'),
+    path('accounts/otp-verify/', views.otp_verify, name='otp_verify'),
     path('', views.landing, name='landing'),
     path('gempa/', views.gempa_public, name='gempa_public'),
     path('gempa/<str:public_id>/', views.public_gempa_detail, name='public_gempa_detail'),

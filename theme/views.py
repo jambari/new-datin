@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django_otp.decorators import otp_required
+from django_otp import devices_for_user, match_token
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Sum, Max, Count
@@ -841,3 +841,54 @@ def account_profile(request):
         'otp_enabled': otp_enabled,
         'qr_svg': qr_svg,
     })
+
+
+# ── Custom Login with OTP ───────────────────────────────────
+
+def custom_login(request):
+    from django.contrib.auth.forms import AuthenticationForm
+    from django.contrib.auth import login as auth_login
+
+    if request.user.is_authenticated:
+        if devices_for_user(request.user) and not request.user.is_verified():
+            return redirect('otp_verify')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            auth_login(request, user)
+            next_url = request.POST.get('next') or request.GET.get('next', '')
+            if next_url:
+                return redirect(next_url)
+            if devices_for_user(user):
+                return redirect('otp_verify')
+            return redirect('dashboard')
+    else:
+        form = AuthenticationForm(request)
+
+    return render(request, 'registration/login.html', {
+        'form': form,
+        'next': request.GET.get('next', ''),
+    })
+
+
+def otp_verify(request):
+    from django.contrib.auth import login as auth_login
+
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    msg = None
+    if request.method == 'POST':
+        token = request.POST.get('otp_token', '')
+        device = match_token(request.user, token)
+        if device:
+            request.user.otp_device = device
+            auth_login(request, request.user)
+            return redirect('dashboard')
+        else:
+            msg = 'Kode OTP tidak valid. Coba lagi.'
+
+    return render(request, 'otp_verify.html', {'msg': msg})
