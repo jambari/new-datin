@@ -840,8 +840,9 @@ def custom_login(request):
             next_url = request.POST.get('next') or request.GET.get('next', '')
             if next_url:
                 return redirect(next_url)
-            if devices_for_user(user):
-                return redirect('otp_verify')
+            # OTP redirect disabled — uncomment after CSIRT pentest
+            # if devices_for_user(user):
+            #     return redirect('otp_verify')
             return redirect('dashboard')
     else:
         form = AuthenticationForm(request)
