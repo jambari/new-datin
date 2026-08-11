@@ -28,4 +28,7 @@ urlpatterns = [
     path('buletin/<int:pk>/', views.public_bulletin_detail, name='public_bulletin_detail'),
     path('siaran-pers/', views.public_siaranpress_list, name='public_siaranpress_list'),
     path('siaran-pers/<int:pk>/', views.public_siaranpress_detail, name='public_siaranpress_detail'),
+
+    # Account
+    path('account/', views.account_profile, name='account_profile'),
 ]

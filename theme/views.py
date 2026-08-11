@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django_otp.decorators import otp_required
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Sum, Max, Count
@@ -10,6 +11,7 @@ import datetime
 
 @never_cache
 @login_required
+@otp_required
 def dashboard(request):
     today = timezone.now().date()
     week_ago  = today - datetime.timedelta(days=7)
@@ -765,4 +767,78 @@ def public_siaranpress_detail(request, pk):
     return render(request, 'siaranpress/detail.html', {
         'siaran': siaran,
         'latest': latest,
+    })
+
+
+# ── Account Profile ─────────────────────────────────────────
+
+@login_required
+def account_profile(request):
+    from django.contrib.auth.forms import PasswordChangeForm
+    from django_otp.plugins.otp_totp.models import TOTPDevice
+    import qrcode, io, base64
+
+    pw_form = PasswordChangeForm(user=request.user)
+    pw_msg = None
+    otp_msg = None
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'change_password':
+            pw_form = PasswordChangeForm(user=request.user, data=request.POST)
+            if pw_form.is_valid():
+                pw_form.save()
+                pw_msg = 'Password berhasil diubah.'
+            else:
+                pw_msg = 'Gagal mengubah password — periksa input.'
+
+        elif action == 'setup_otp':
+            device, created = TOTPDevice.objects.get_or_create(
+                user=request.user, name='default',
+                defaults={'confirmed': False},
+            )
+            device.save()
+            otp_msg = 'OTP device siap. Scan QR code dengan Google Authenticator.'
+
+        elif action == 'confirm_otp':
+            token = request.POST.get('otp_token', '')
+            device = TOTPDevice.objects.filter(user=request.user, name='default').first()
+            if device and device.verify_token(token):
+                device.confirmed = True
+                device.save()
+                otp_msg = 'OTP berhasil diaktifkan!'
+            else:
+                otp_msg = 'Kode OTP tidak valid.'
+
+        elif action == 'disable_otp':
+            TOTPDevice.objects.filter(user=request.user, name='default').delete()
+            otp_msg = 'OTP dinonaktifkan.'
+
+    # Get current OTP device
+    otp_device = TOTPDevice.objects.filter(user=request.user, name='default', confirmed=True).first()
+    otp_enabled = otp_device is not None
+
+    # Generate QR code for setup
+    qr_svg = None
+    if not otp_enabled:
+        unconfirmed = TOTPDevice.objects.filter(user=request.user, name='default', confirmed=False).first()
+        if not unconfirmed:
+            unconfirmed, _ = TOTPDevice.objects.get_or_create(
+                user=request.user, name='default',
+                defaults={'confirmed': False},
+            )
+        if unconfirmed:
+            otp_url = unconfirmed.config_url
+            qr_img = qrcode.make(otp_url)
+            buf = io.BytesIO()
+            qr_img.save(buf, format='PNG')
+            qr_svg = base64.b64encode(buf.getvalue()).decode()
+
+    return render(request, 'account.html', {
+        'pw_form': pw_form,
+        'pw_msg': pw_msg,
+        'otp_msg': otp_msg,
+        'otp_enabled': otp_enabled,
+        'qr_svg': qr_svg,
     })
