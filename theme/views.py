@@ -77,21 +77,28 @@ def dashboard(request):
     # Cek apakah buletin bulan sebelumnya (yg jadi deadline) sudah ada
     bulletin_ada = Bulletin.objects.filter(bulan=str(prev_month), tahun=str(prev_year)).exists()
 
-    # --- WRSNG: latest status per station ---
+    # --- WRSNG: latest status per station (optimized: single-pass) ---
     from wrsng.models import WRSNGStatus
     from wrsng.constants import CODE_TO_STATION
-    from django.db.models import Subquery, OuterRef
-    latest_per_station = (
+    from django.db.models import Max
+    latest_dates = (
         WRSNGStatus.objects
-        .filter(wrs_code=OuterRef('wrs_code'))
-        .order_by('-status_datetime')
-        .values('id')[:1]
+        .values('wrs_code')
+        .annotate(latest=Max('status_datetime'))
     )
-    wrsng_statuses_qs = (
-        WRSNGStatus.objects
-        .filter(id__in=Subquery(latest_per_station))
-        .order_by('wrs_code')
-    )
+    codes = {}
+    latest_pairs = []
+    for d in latest_dates:
+        codes[d['wrs_code']] = d['latest']
+        latest_pairs.append((d['wrs_code'], d['latest']))
+    if latest_pairs:
+        from django.db.models import Q
+        q_filter = Q()
+        for code, dt in latest_pairs:
+            q_filter |= Q(wrs_code=code, status_datetime=dt)
+        wrsng_statuses_qs = WRSNGStatus.objects.filter(q_filter).order_by('wrs_code')
+    else:
+        wrsng_statuses_qs = WRSNGStatus.objects.none()
     wrsng_statuses = [
         {'name': CODE_TO_STATION.get(s.wrs_code, s.wrs_code), 'display_status': s.display_status}
         for s in wrsng_statuses_qs
