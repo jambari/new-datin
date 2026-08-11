@@ -884,6 +884,15 @@ def otp_verify(request):
         device = match_token(request.user, token)
         if device:
             request.user.otp_device = device
+            # Warm dashboard cache so it loads instantly
+            from django.test import RequestFactory
+            fake_req = RequestFactory().get('/')
+            fake_req.user = request.user
+            fake_req.session = request.session
+            try:
+                dashboard(fake_req)
+            except Exception:
+                pass
             return redirect('dashboard')
         else:
             msg = 'Kode OTP tidak valid. Coba lagi.'
