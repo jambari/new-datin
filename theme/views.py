@@ -11,6 +11,7 @@ import datetime
 
 @never_cache
 @login_required
+@otp_required(if_configured=True)
 def dashboard(request):
     today = timezone.now().date()
     week_ago  = today - datetime.timedelta(days=7)
