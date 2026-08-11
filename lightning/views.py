@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect
 from django.views import View
 from django.http import JsonResponse
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils.decorators import method_decorator
 from django.utils.dateparse import parse_date
 from django.urls import reverse
@@ -183,6 +183,10 @@ def update_lightning_availability(request):
 # MAINTENANCE (Delete Data)
 # ===============================================
 
+staff_required = user_passes_test(lambda u: u.is_staff)
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(staff_required, name='dispatch')
 class DeleteAllStrikesView(View):
     def post(self, request):
         Strike.objects.all().delete()
