@@ -832,11 +832,6 @@ def custom_login(request):
     from django.contrib.auth.forms import AuthenticationForm
     from django.contrib.auth import login as auth_login
 
-    if request.user.is_authenticated:
-        if devices_for_user(request.user) and not request.user.is_verified():
-            return redirect('otp_verify')
-        return redirect('dashboard')
-
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
