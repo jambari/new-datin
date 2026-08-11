@@ -875,8 +875,6 @@ def custom_login(request):
 
 
 def otp_verify(request):
-    from django.contrib.auth import login as auth_login
-
     if not request.user.is_authenticated:
         return redirect('login')
 
@@ -886,7 +884,6 @@ def otp_verify(request):
         device = match_token(request.user, token)
         if device:
             request.user.otp_device = device
-            auth_login(request, request.user)
             return redirect('dashboard')
         else:
             msg = 'Kode OTP tidak valid. Coba lagi.'
