@@ -231,6 +231,7 @@ def landing(request):
     latest_shakemap = ShakemapEvent.objects.filter(
         magnitude__gt=0,
         shakemap_image__isnull=False,
+        event_time__lte=timezone.now(),
     ).order_by('-event_time').first()
 
     return render(request, 'landing.html', {
