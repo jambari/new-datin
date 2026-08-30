@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-xl">
+        <div class="overflow-hidden rounded-xl bg-white shadow">
+          <div class="border-b border-red-200 bg-red-50 px-6 py-4">
+            <h1 class="text-xl font-bold text-red-700">Konfirmasi Hapus</h1>
+          </div>
+
+          <div class="space-y-4 px-6 py-6">
+            <p class="text-gray-700">
+              Apakah Anda yakin ingin menghapus data {{ type_name }} berikut?
+            </p>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-semibold text-gray-800">
+              {{ object }}
+            </div>
+            <p class="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan.</p>
+
+            <form method="post" class="flex justify-end gap-3 pt-2">
+              {% csrf_token %}
+              <a href="{% url back_url %}" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Batal</a>
+              <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

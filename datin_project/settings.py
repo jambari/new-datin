@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'layanan.apps.LayananConfig',
     'guests.apps.GuestsConfig',
     'pengaduan.apps.PengaduanConfig',
+    'monitoring_pm'
 ]
 
 SEEDLINK_HOST = '202.90.199.206'   # Accelerometer SeedLink
@@ -211,15 +212,23 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': config('REDIS_CACHE_URL', default='redis://localhost:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+if DEBUG:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'default',
         }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': config('REDIS_CACHE_URL', default='redis://localhost:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
+        }
+    }
 
 
 HUJAN_API_URL = 'http://36.91.166.188/api/hujans/today'

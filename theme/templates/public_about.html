@@ -366,8 +366,8 @@
 (function () {
   var map = L.map('station-map', { zoomControl: true, scrollWheelZoom: false })
               .setView([-2.5145, 140.704], 15);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
   }).addTo(map);
   var icon = L.divIcon({
     className: '',

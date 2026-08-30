@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-gray-800">Monitoring Inventaris</h1>
+          <p class="mt-2 text-sm text-gray-600">Pilih submenu utama untuk mengelola Peralatan Teknis dan Suku Cadang.</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <a href="{% url 'monitoring_pm:peralatan_list' %}" class="rounded-xl border border-indigo-200 bg-indigo-50 p-5 text-indigo-900 transition hover:bg-indigo-100">
+            <h2 class="text-lg font-semibold">Peralatan</h2>
+            <p class="mt-1 text-sm">Kelola daftar alat (tambah, edit, hapus).</p>
+          </a>
+          <a href="{% url 'monitoring_pm:peminjaman_list' %}" class="rounded-xl border border-gray-200 bg-white p-5 text-gray-800 transition hover:bg-gray-50">
+            <h2 class="text-lg font-semibold">Peminjaman</h2>
+            <p class="mt-1 text-sm">Submenu sudah tersedia, halaman masih kosong.</p>
+          </a>
+          <a href="{% url 'monitoring_pm:laporan_list' %}" class="rounded-xl border border-gray-200 bg-white p-5 text-gray-800 transition hover:bg-gray-50">
+            <h2 class="text-lg font-semibold">Laporan</h2>
+            <p class="mt-1 text-sm">Submenu sudah tersedia, halaman masih kosong.</p>
+          </a>
+        </div>
+
+        <div class="mt-8 rounded-xl border border-dashed border-gray-300 bg-white p-5 text-sm text-gray-600">
+          Fokus saat ini ada di submenu <span class="font-semibold text-gray-800">Peralatan</span>. Submenu lain disiapkan sebagai placeholder.
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

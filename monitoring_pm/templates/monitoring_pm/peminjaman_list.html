@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-800">Peminjaman</h1>
+          </div>
+          <a href="{% url 'monitoring_pm:peminjaman_create' %}" class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700">
+            Tambah Peminjaman
+          </a>
+        </div>
+
+        <div class="mb-6 rounded-xl bg-white p-5 shadow">
+          <form method="get" class="flex flex-col gap-4 md:flex-row md:items-end">
+            <input type="hidden" name="per_page" value="{{ per_page }}">
+            <div class="w-full md:max-w-xs">
+              <label for="status" class="mb-2 block text-sm font-medium text-gray-700">Filter Status</label>
+              <select name="status" id="status" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                <option value="">Semua Status</option>
+                {% for code, label in status_choices %}
+                  <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="w-full md:max-w-xs">
+              <label for="tanggal_peminjaman" class="mb-2 block text-sm font-medium text-gray-700">Filter Tanggal Peminjaman</label>
+              <input
+                type="date"
+                name="tanggal_peminjaman"
+                id="tanggal_peminjaman"
+                value="{{ selected_tanggal_peminjaman }}"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              >
+            </div>
+            <div class="flex gap-3">
+              <button type="submit" class="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900">Terapkan</button>
+              <a href="{% url 'monitoring_pm:peminjaman_list' %}" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Reset</a>
+            </div>
+          </form>
+        </div>
+
+        <div class="overflow-hidden rounded-xl bg-white shadow">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Tgl Pinjam</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">No. ST</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Nama Alat</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Keterangan</th>
+                  <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                {% for item in peminjaman_list %}
+                  <tr>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ item.tanggal_peminjaman|date:"d-m-Y" }}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ item.surat_tugas }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ item.get_peralatan_names_display }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ item.get_status_display }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ item.keterangan|default:"-" }}</td>
+                    <td class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
+                      <a href="{% url 'monitoring_pm:peminjaman_update' item.id %}" class="mr-4 text-indigo-600 hover:underline">Edit</a>
+                      <a href="{% url 'monitoring_pm:peminjaman_delete' item.id %}" class="text-red-600 hover:underline">Hapus</a>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">Belum ada data peminjaman.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% include 'monitoring_pm/partials/_pagination.html' with page_obj=peminjaman_list %}
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

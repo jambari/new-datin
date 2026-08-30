@@ -248,8 +248,8 @@
         </div>
         <select id="basemap-sel" class="basemap-select" onchange="changeBasemap(this.value)">
           <option value="osm">OpenStreetMap</option>
-          <option value="dark">Dark Matter</option>
-          <option value="light">Light</option>
+          <option value="dark">Dark Gray (Esri)</option>
+          <option value="light">Street (Esri)</option>
           <option value="satellite">Satellite</option>
           <option value="topo">Topografi</option>
         </select>
@@ -358,8 +358,8 @@ var quakeMap = null, activeTile = null, quakeLyr = null, feltLyr = null;
 
 var BASEMAPS = {
   osm:       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap', maxZoom:19 }),
-  dark:      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO', subdomains:'abcd', maxZoom:19 }),
-  light:     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO', subdomains:'abcd', maxZoom:19 }),
+  dark:      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri', maxZoom:16 }),
+  light:     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri', maxZoom:19 }),
   satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri', maxZoom:18 }),
   topo:      L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenTopoMap', subdomains:'abc', maxZoom:17 }),
 };

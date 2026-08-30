@@ -77,6 +77,63 @@
               Lapbul
             </a>
           </li>
+          <li>
+            <button type="button" onclick="document.getElementById('dropdown-monitoring-inventaris').classList.toggle('hidden')"
+              class="flex items-center justify-between w-full px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Monitoring Inventaris
+              <span class="text-gray-400 text-xs">&#9660;</span>
+            </button>
+            <ul id="dropdown-monitoring-inventaris" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
+              <li>
+                <button type="button" onclick="document.getElementById('dropdown-monitoring-peralatan-teknis').classList.toggle('hidden')"
+                  class="flex items-center justify-between w-full px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                  Peralatan Teknis
+                  <span class="text-gray-400 text-xs">&#9660;</span>
+                </button>
+                <ul id="dropdown-monitoring-peralatan-teknis" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
+                  <li>
+                    <a href="{% url 'monitoring_pm:peralatan_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                      Peralatan
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'monitoring_pm:peminjaman_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                      Peminjaman
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'monitoring_pm:peminjaman_unduh_data' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                      Unduh Data
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <button type="button" onclick="document.getElementById('dropdown-monitoring-sukucadang').classList.toggle('hidden')"
+                  class="flex items-center justify-between w-full px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                  Suku Cadang
+                  <span class="text-gray-400 text-xs">&#9660;</span>
+                </button>
+                <ul id="dropdown-monitoring-sukucadang" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
+                  <li>
+                    <a href="{% url 'monitoring_pm:suku_cadang_peralatan_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                      Peralatan
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'monitoring_pm:suku_cadang_manajemen_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                      Manajemen
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'monitoring_pm:suku_cadang_unduh_data' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                      Unduh Data
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
           <li class="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-500 uppercase">Publikasi</li>
           <li>
             <a href="{% url 'bulletin_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">

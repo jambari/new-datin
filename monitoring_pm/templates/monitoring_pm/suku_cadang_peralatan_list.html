@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-800">Peralatan Suku Cadang</h1>
+          </div>
+          <a href="{% url 'monitoring_pm:suku_cadang_peralatan_create' %}" class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700">
+            Tambah Peralatan
+          </a>
+        </div>
+
+        <div class="overflow-hidden rounded-xl bg-white shadow">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Jenis Alat</th>
+                <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+              {% for item in peralatan_list %}
+                <tr>
+                  <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ item.jenis_alat }}</td>
+                  <td class="px-6 py-4 text-right text-sm font-medium">
+                    <a href="{% url 'monitoring_pm:suku_cadang_peralatan_update' item.id %}" class="mr-4 text-indigo-600 hover:underline">Edit</a>
+                    <a href="{% url 'monitoring_pm:suku_cadang_peralatan_delete' item.id %}" class="text-red-600 hover:underline">Hapus</a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="2" class="px-6 py-8 text-center text-sm text-gray-500">Belum ada data peralatan suku cadang.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if peralatan_list.paginator.num_pages > 1 %}
+          <div class="mt-6 flex items-center justify-center gap-2 text-sm">
+            {% if peralatan_list.has_previous %}
+              <a href="?page=1" class="rounded border border-gray-300 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50">&laquo; Awal</a>
+              <a href="?page={{ peralatan_list.previous_page_number }}" class="rounded border border-gray-300 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50">Sebelumnya</a>
+            {% endif %}
+            <span class="px-3 py-2 font-semibold text-gray-700">Halaman {{ peralatan_list.number }} dari {{ peralatan_list.paginator.num_pages }}</span>
+            {% if peralatan_list.has_next %}
+              <a href="?page={{ peralatan_list.next_page_number }}" class="rounded border border-gray-300 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50">Selanjutnya</a>
+              <a href="?page={{ peralatan_list.paginator.num_pages }}" class="rounded border border-gray-300 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50">Akhir &raquo;</a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

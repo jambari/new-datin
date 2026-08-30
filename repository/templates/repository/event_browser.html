@@ -210,8 +210,8 @@
                     <option value="imagery">📰️ Imagery</option>
                     <option value="osm">🌍 OpenStreetMap</option>
                     <option value="opentopo">⛰️ OpenTopoMap</option>
-                    <option value="cartolight">🗺️ Carto Light</option>
-                    <option value="cartodark">🌙 Carto Dark</option>
+                    <option value="cartolight">🗺️ Street Light</option>
+                    <option value="cartodark">🌙 Dark Gray</option>
                     <option value="hot">🔥 HOT</option>
                   </select>
 
@@ -824,7 +824,7 @@
       zoomControl: false, attributionControl: false, dragging: false,
       scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false
     });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', attribution: '' }).addTo(insetMap);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(insetMap);
     var insetRect = null;
     function updateInsetMap() {
       if (insetRect) insetMap.removeLayer(insetRect);
@@ -1074,8 +1074,8 @@
       darkgray:   ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxZoom:16}],
       osm:        ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}],
       opentopo:   ['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {maxZoom:17}],
-      cartolight: ['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {}],
-      cartodark:  ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {}],
+      cartolight: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {}],
+      cartodark:  ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxZoom:16}],
       hot:        ['https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {maxZoom:19}],
     };
     const conf = tileUrls[value] || tileUrls.ocean;

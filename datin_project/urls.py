@@ -60,6 +60,7 @@ urlpatterns = [
     path('', include('layanan.urls')),
     path('', include('guests.urls')),
     path('', include('pengaduan.urls')),
+    path('', include('monitoring_pm.urls')),
 ]
 
 # This tells Django to serve media files during development

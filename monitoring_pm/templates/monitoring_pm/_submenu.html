@@ -1,0 +1,13 @@
+<div class="mb-6 rounded-xl bg-white p-3 shadow">
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'monitoring_pm:peralatan_list' %}" class="rounded-lg px-4 py-2 text-sm font-semibold {% if active_menu == 'peralatan' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+      Peralatan
+    </a>
+    <a href="{% url 'monitoring_pm:peminjaman_list' %}" class="rounded-lg px-4 py-2 text-sm font-semibold {% if active_menu == 'peminjaman' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+      Peminjaman
+    </a>
+    <a href="{% url 'monitoring_pm:laporan_list' %}" class="rounded-lg px-4 py-2 text-sm font-semibold {% if active_menu == 'laporan' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+      Laporan
+    </a>
+  </div>
+</div>

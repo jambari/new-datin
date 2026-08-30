@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-6">
+          <h1 class="text-3xl font-bold text-gray-800">Manajemen</h1>
+        </div>
+
+        {% if messages %}
+          <div class="mb-6 space-y-3">
+            {% for message in messages %}
+              <div class="rounded-lg border px-4 py-3 text-sm {% if message.tags == 'success' %}border-green-200 bg-green-50 text-green-700{% else %}border-red-200 bg-red-50 text-red-700{% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="rounded-xl bg-white p-6 shadow">
+          <h2 class="mb-4 text-xl font-semibold text-gray-800">Upload Dokumen Suku Cadang</h2>
+          <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {% csrf_token %}
+
+            <div>
+              <label for="{{ form.tahun.id_for_label }}" class="mb-2 block text-sm font-semibold text-gray-700">Tahun</label>
+              {{ form.tahun }}
+              {% for error in form.tahun.errors %}
+                <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+
+            <div>
+              <label for="{{ form.kota_tujuan.id_for_label }}" class="mb-2 block text-sm font-semibold text-gray-700">Kota Tujuan</label>
+              {{ form.kota_tujuan }}
+              {% for error in form.kota_tujuan.errors %}
+                <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+
+            <div>
+              <label for="{{ form.dokumen.id_for_label }}" class="mb-2 block text-sm font-semibold text-gray-700">Dokumen</label>
+              {{ form.dokumen }}
+              {% for error in form.dokumen.errors %}
+                <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+
+            <div class="md:col-span-3">
+              <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                Upload Dokumen
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

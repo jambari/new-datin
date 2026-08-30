@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-3xl">
+        <div class="mb-6">
+          <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+          <p class="mt-2 text-sm text-gray-600">{{ description }}</p>
+        </div>
+
+        <div class="rounded-xl bg-white p-6 shadow">
+          <form method="post" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="md:col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div>
+              <label for="{{ form.tanggal_mulai.id_for_label }}" class="mb-2 block text-sm font-semibold text-gray-700">Tanggal Awal</label>
+              {{ form.tanggal_mulai }}
+              {% for error in form.tanggal_mulai.errors %}
+                <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+
+            <div>
+              <label for="{{ form.tanggal_selesai.id_for_label }}" class="mb-2 block text-sm font-semibold text-gray-700">Tanggal Akhir</label>
+              {{ form.tanggal_selesai }}
+              {% for error in form.tanggal_selesai.errors %}
+                <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+
+            <div class="md:col-span-2">
+              <label for="{{ form.format.id_for_label }}" class="mb-2 block text-sm font-semibold text-gray-700">Format</label>
+              {{ form.format }}
+              {% for error in form.format.errors %}
+                <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+              {% endfor %}
+            </div>
+
+            <div class="md:col-span-2">
+              <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                Unduh Data
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}
