@@ -44,6 +44,7 @@ PEMINJAMAN_EXPORT_HEADERS = [
     "No. ST",
     "Nama Alat",
     "Status",
+    "Tanggal Pengembalian",
     "Keterangan",
 ]
 
@@ -114,6 +115,7 @@ def iter_peminjaman_export_rows(queryset):
             item.surat_tugas,
             item.get_peralatan_names_display(),
             item.get_status_display(),
+            item.tanggal_pengembalian.strftime("%d-%m-%Y") if item.tanggal_pengembalian else "-",
             item.keterangan or "-",
         ]
 
@@ -181,7 +183,7 @@ def export_manajemen_suku_cadang(queryset, export_format):
             "manajemen_suku_cadang",
         )
     return export_table_pdf(
-        "Data Manajemen Suku Cadang",
+        "Daftar Manajemen Suku Cadang",
         MANAJEMEN_EXPORT_HEADERS,
         iter_manajemen_export_rows(queryset),
         "manajemen_suku_cadang",
@@ -197,7 +199,7 @@ def export_peminjaman(queryset, export_format):
             "peminjaman",
         )
     return export_table_pdf(
-        "Data Peminjaman Peralatan Teknis",
+        "Daftar Peminjaman Peralatan Teknis",
         PEMINJAMAN_EXPORT_HEADERS,
         iter_peminjaman_export_rows(queryset),
         "peminjaman",
