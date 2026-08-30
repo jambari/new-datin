@@ -41,6 +41,7 @@ class Peminjaman(models.Model):
         choices=STATUS_CHOICES,
         default="BELUM_DIKEMBALIKAN",
     )
+    tanggal_pengembalian = models.DateField(null=True, blank=True)
     keterangan = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

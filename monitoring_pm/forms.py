@@ -51,15 +51,17 @@ class PeminjamanForm(BaseStyledFormMixin, forms.ModelForm):
 
     class Meta:
         model = Peminjaman
-        fields = ["tanggal_peminjaman", "surat_tugas", "peralatan_choices", "status", "keterangan"]
+        fields = ["tanggal_peminjaman", "surat_tugas", "peralatan_choices", "status", "tanggal_pengembalian", "keterangan"]
         widgets = {
             "tanggal_peminjaman": forms.DateInput(attrs={"type": "date"}),
+            "tanggal_pengembalian": forms.DateInput(attrs={"type": "date"}),
             "keterangan": forms.Textarea(attrs={"rows": 4}),
         }
         labels = {
             "tanggal_peminjaman": "Tanggal Peminjaman",
             "surat_tugas": "No. ST",
             "status": "Status",
+            "tanggal_pengembalian": "Tanggal Pengembalian",
             "keterangan": "Keterangan",
         }
 
