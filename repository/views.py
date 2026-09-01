@@ -1707,9 +1707,18 @@ def gempa_dirasakan_api(request):
         event_datetime__month=month,
     )
 
+    _WIB = dt_timezone(timedelta(hours=7))
+
     events = []
     for obj in qs:
         try:
+            # ShakemapEvent.event_id is the WIB timestamp (UTC+7).
+            wib_ts = obj.event_datetime.astimezone(_WIB).strftime('%Y%m%d%H%M%S')
+            shk = ShakemapEvent.objects.filter(event_id=wib_ts).first()
+            shakemap_url = ''
+            if shk and shk.shakemap_image:
+                shakemap_url = request.build_absolute_uri(shk.shakemap_image.url)
+
             events.append({
                 'lat':       float(obj.latitude),
                 'lon':       float(obj.longitude),
@@ -1719,6 +1728,7 @@ def gempa_dirasakan_api(request):
                 'origin':    obj.event_datetime.strftime('%H:%M:%S'),
                 'wilayah':   obj.wilayah or '',
                 'dirasakan': obj.dirasakan or '',
+                'shakemap':  shakemap_url,
             })
         except Exception:
             continue
