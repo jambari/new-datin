@@ -84,14 +84,17 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         stype = options['station_type']
 
+        from stations.constants import ACCELEROGRAPH_STATIONS, SEISMIC_STATIONS
         if stype == 'seismic':
             host = getattr(settings, 'SEISMIC_SEEDLINK_HOST', '202.90.198.101')
             port = getattr(settings, 'SEISMIC_SEEDLINK_PORT', 18000)
             priority_channels = SEISMIC_CHANNELS
+            roster = SEISMIC_STATIONS
         else:
             host = getattr(settings, 'SEEDLINK_HOST', '202.90.199.206')
             port = getattr(settings, 'SEEDLINK_PORT', 18123)
             priority_channels = ACCELERO_CHANNELS
+            roster = ACCELEROGRAPH_STATIONS
 
         server = f'{host}:{port}'
         self.stdout.write(f'[{stype}] Connecting to {server} ...')
@@ -116,7 +119,7 @@ class Command(BaseCommand):
         parsed = _parse_q(output, priority_channels)
         self.stdout.write(f'Parsed {len(parsed)} unique stations from ring buffer')
 
-        stations_qs = Station.objects.filter(is_active=True, station_type=stype)
+        stations_qs = Station.objects.filter(is_active=True, code__in=roster)
 
         updated = skipped = 0
         for (net, sta_code), info in parsed.items():
