@@ -12,10 +12,12 @@
 # event_id as the matching .psa5.
 
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
-DATIN_API_URL="http://36.91.166.189/api/shakemap/waveform/"
+DATIN_API_URL="https://36.91.166.189/api/shakemap/waveform/"
 DATIN_API_TOKEN="bfca5407ee75ff0a62ac121fb6ff1b1a1c3b348222996125958a5ccb1d0e46c1"
 SENT_LOG="/home/sysop/scripts/.mseed_sent.log"
 CURL_TIMEOUT=60          # mseed POSTs are larger than psa5, allow more time
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CA_BUNDLE="${DATIN_CA_BUNDLE:-$SCRIPT_DIR/prod-ca.pem}"
 # ──────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -62,6 +64,7 @@ send_one() {
     resp_body=$(mktemp)
     http_code=$(curl -s -o "$resp_body" -w "%{http_code}" \
         --max-time "$CURL_TIMEOUT" \
+        --cacert "$CA_BUNDLE" \
         -X POST "$DATIN_API_URL" \
         -H "Authorization: Bearer $DATIN_API_TOKEN" \
         -F "event_id=${EVENT_TS}" \

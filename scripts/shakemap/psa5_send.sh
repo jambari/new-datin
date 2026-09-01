@@ -12,10 +12,12 @@
 # Already-sent files are skipped via a local sent-log.
 
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
-DATIN_API_URL="http://36.91.166.189/api/shakemap/psa5/"
+DATIN_API_URL="https://36.91.166.189/api/shakemap/psa5/"
 DATIN_API_TOKEN="bfca5407ee75ff0a62ac121fb6ff1b1a1c3b348222996125958a5ccb1d0e46c1"
 SENT_LOG="/home/sysop/scripts/.psa5_sent.log"
 CURL_TIMEOUT=30
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CA_BUNDLE="${DATIN_CA_BUNDLE:-$SCRIPT_DIR/prod-ca.pem}"
 # ──────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -64,6 +66,7 @@ send_one() {
     local http_code
     http_code=$(curl -s -o "$resp_body" -w "%{http_code}" \
         --max-time "$CURL_TIMEOUT" \
+        --cacert "$CA_BUNDLE" \
         -X POST "$DATIN_API_URL" \
         -H "Authorization: Bearer $DATIN_API_TOKEN" \
         -F "event_id=${EVENT_TS}" \

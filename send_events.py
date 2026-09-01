@@ -1,11 +1,24 @@
 import subprocess
 import json
+import os
 import requests
+import urllib3
 from datetime import datetime, date, timedelta, timezone
 
 # --- KONFIGURASI ---
 STATION_CODE = "DETAILJYP"
-API_ENDPOINT = "http://36.91.166.189/api/gempa/create/"
+API_ENDPOINT = "https://36.91.166.189/api/gempa/create/"
+
+# Prod memakai sertifikat self-signed. Jika CA bundle tersedia (Linux),
+# verifikasi terhadap bundle tsb; jika tidak (mis. Windows), fallback tanpa
+# verifikasi dengan peringatan dimatikan.
+CA_BUNDLE = os.environ.get("DATIN_CA_BUNDLE", "/etc/seiscomp-qc/cacert-with-prod.pem")
+if os.path.exists(CA_BUNDLE):
+    VERIFY_SSL = CA_BUNDLE
+else:
+    VERIFY_SSL = False
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 # Ganti dengan path ke perintah yang menghasilkan DataGempa.txt
 SEISCOMP_CMD_PATH = "/home/sysop/bin/datagempa" 
 # Ganti nama file sementara agar cocok
@@ -91,7 +104,7 @@ def send_to_api(events_data):
 
     print(f"Sending {len(events_data)} events to API at {API_ENDPOINT}")
     try:
-        response = requests.post(API_ENDPOINT, json=events_data, timeout=60)
+        response = requests.post(API_ENDPOINT, json=events_data, timeout=60, verify=VERIFY_SSL)
         response.raise_for_status()
         print("API Response:", response.json())
     except requests.exceptions.RequestException as e:

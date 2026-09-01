@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import time
+import urllib3
 
 # --- Configuration ---
 # Set the path to your ngxarchive.json file on the NexStorm PC
@@ -11,12 +12,22 @@ JSON_FILE_PATH = r"C:\xampp\htdocs\Jayapura\data\ngxarchive.json"
 LAST_TIMESTAMP_FILE = r"C:\nexstorm_data\last_timestamp.txt"
 
 # Set the URL for your Django API endpoint
-API_URL = "http://36.91.166.189/api/nexstorm-data/"
+API_URL = "https://36.91.166.189/api/nexstorm-data/"
+
+# Prod memakai sertifikat self-signed. Jika CA bundle tersedia (Linux),
+# verifikasi terhadap bundle tsb; jika tidak (mis. Windows), fallback tanpa
+# verifikasi dengan peringatan dimatikan.
+CA_BUNDLE = os.environ.get("DATIN_CA_BUNDLE", "/etc/seiscomp-qc/cacert-with-prod.pem")
+if os.path.exists(CA_BUNDLE):
+    VERIFY_SSL = CA_BUNDLE
+else:
+    VERIFY_SSL = False
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def send_data_to_api(data):
     """Sends the JSON payload to the Django API."""
     try:
-        response = requests.post(API_URL, json=data, timeout=10)
+        response = requests.post(API_URL, json=data, timeout=10, verify=VERIFY_SSL)
         response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
         print(f"Data successfully sent. Status: {response.status_code}")
         return True
