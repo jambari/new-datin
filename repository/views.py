@@ -1512,6 +1512,18 @@ def event_browser(request):
     # QC Reviewer data untuk rentang tanggal yang sama
     qc_map_data = _qc_map_entries_by_date(start, end)
 
+    # Monitoring Seiscomp — tabel rekap bulanan (sama seperti di json_analysis)
+    num_days = (end - start).days + 1
+    days_range = [(start + timedelta(days=i)).day for i in range(num_days)]
+    seiscomp_components = [
+        "KOMPUTER MASTER PRO",
+        "MAP VIEW SEISCOMP4",
+        "TRACE VIEW SINYAL",
+        "ORIGIN LOCATION VIEW",
+        "EVENT SUMMARY VIEW",
+        "KOMPUTER DATA EXCHANGE",
+    ]
+
     context = {
         'map_data':        json.dumps(map_data, cls=DjangoJSONEncoder),
         'felt_map_data':   json.dumps(felt_map_data),
@@ -1532,6 +1544,9 @@ def event_browser(request):
             'total':   len(qc_map_data),
             'max_mag': round(max((e['magnitude'] for e in qc_map_data), default=0), 1),
         },
+        'num_days':           num_days,
+        'days_range':         days_range,
+        'seiscomp_components': seiscomp_components,
     }
     return render(request, 'repository/event_browser.html', context)
 
