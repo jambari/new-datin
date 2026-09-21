@@ -273,7 +273,7 @@ function initMap() {
   var bnds = [[-3.015,140.205],[-2.015,141.205]];
 
   map = L.map('heatMap', {center:[cLat,cLon], zoom:10, zoomControl:true});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18,attribution:'&copy; OpenStreetMap', referrerPolicy: 'strict-origin-when-cross-origin'}).addTo(map);
 
   var maxVal = 0;
   data.forEach(function(c){ if(c.idw_smooth > maxVal) maxVal = c.idw_smooth; });

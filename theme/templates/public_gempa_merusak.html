@@ -451,6 +451,7 @@ function initMap() {
   window._tileLayer = L.tileLayer(dark ? DARK_TILE : LIGHT_TILE, {
     attribution: '&copy; OpenStreetMap contributors &copy; Esri',
     maxZoom: 19,
+    referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(window._map);
 
   MAP_DATA.forEach(function(e) {

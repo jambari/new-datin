@@ -45,6 +45,16 @@
 
     /* City section — TTM-style header */
     .city-section { margin-bottom: 1.5rem; page-break-inside: avoid; }
+    /* Dua tabel kota per baris (web) */
+    .city-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        align-items: start;
+    }
+    @media (max-width: 900px) {
+        .city-grid { grid-template-columns: 1fr; }
+    }
     .city-header {
         background: #1e3a5f; color: #fff;
         padding: 0.4rem 0.9rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.07em;
@@ -52,32 +62,35 @@
         -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
 
-    /* Table — TTM-style */
+    /* Table — TTM-style, fixed & compact agar 31 hari muat 1 halaman A4 */
     .ttm-table {
-        width: 100%; border-collapse: collapse; font-size: 0.78rem;
+        width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.66rem;
         background: #fff; border: 1px solid #e5e7eb; border-top: none;
         border-radius: 0 0 6px 6px; overflow: hidden;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        max-width: 720px;
+        max-width: 100%;
     }
     .ttm-table th, .ttm-table td {
-        border: 1px solid #e5e7eb; padding: 0.3rem 0.6rem;
+        border: 1px solid #e5e7eb; padding: 0.18rem 0.3rem;
         text-align: center; white-space: nowrap;
     }
+    .ttm-table .col-date { width: 22%; }
+    .ttm-table thead tr:last-child th { width: 14%; }
+    .ttm-table .col-phase { width: 22%; }
     .ttm-table thead th {
         background: #f1f5f9; font-weight: 700; color: #374151;
         font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
         -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
     .ttm-table tbody tr:hover { background: #fef9f0; }
-    .col-date { text-align: left; font-weight: 600; color: #374151; background: #f8fafc; min-width: 100px; }
+    .col-date { text-align: left; font-weight: 600; color: #374151; background: #f8fafc; }
     .col-sun  { color: #b45309; font-weight: 500; }
     .col-moon { color: #3b82f6; font-weight: 500; }
     .col-phase { font-size: 0.68rem; color: #6b7280; }
 
-    /* Print Styles */
+    /* Print Styles — compact agar 31 baris muat di 1 halaman A4 */
     @media print {
-        @page { margin: 1.5cm; size: A4 landscape; }
+        @page { margin: 1cm; size: A4 landscape; }
         body * { visibility: hidden; }
         .report-container, .report-container * { visibility: visible; }
         .report-container {
@@ -88,6 +101,13 @@
             padding: 0;
         }
         .filter-box, nav, aside, header { display: none !important; }
+        .city-grid { display: block; }
+        h2 { font-size: 14pt; margin-bottom: 6px !important; }
+        .city-header { font-size: 8pt; padding: 2px 8px !important; }
+        .city-section { page-break-inside: avoid; margin-bottom: 0.4rem; }
+        .ttm-table { table-layout: fixed; font-size: 7.5pt; max-width: 100%; }
+        .ttm-table th, .ttm-table td { padding: 1px 3px !important; line-height: 1.1; }
+        .ttm-table thead th { font-size: 7pt; }
     }
 </style>
 
@@ -125,6 +145,7 @@
             </form>
 
             {% if report_data %}
+                <div class="city-grid">
                 {% for item in report_data %}
                 <div class="city-section">
                     <div class="city-header">{{ item.city|upper }}</div>
@@ -158,6 +179,7 @@
                     </table>
                 </div>
                 {% endfor %}
+                </div>
             {% else %}
                 <div style="text-align: center; padding: 40px; color: #666; font-style: italic;">
                     <p>Tidak ada data almanak untuk periode ini.</p>

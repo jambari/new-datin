@@ -367,7 +367,8 @@
   var map = L.map('station-map', { zoomControl: true, scrollWheelZoom: false })
               .setView([-2.5145, 140.704], 15);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
+    referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(map);
   var icon = L.divIcon({
     className: '',

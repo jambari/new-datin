@@ -357,7 +357,7 @@ function switchTab(name, btn) {
 var quakeMap = null, activeTile = null, quakeLyr = null, feltLyr = null;
 
 var BASEMAPS = {
-  osm:       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap', maxZoom:19 }),
+  osm:       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap', maxZoom:19, referrerPolicy: 'strict-origin-when-cross-origin' }),
   dark:      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri', maxZoom:16 }),
   light:     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri', maxZoom:19 }),
   satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri', maxZoom:18 }),

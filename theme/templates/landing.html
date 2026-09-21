@@ -878,6 +878,7 @@
   _landingTile = L.tileLayer(_isDarkNow ? DARK_TILE : LIGHT_TILE, {
     attribution: TILE_ATTR,
     maxZoom: 19,
+    referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(map);
 
   // ── Helpers ───────────────────────────────────────────────

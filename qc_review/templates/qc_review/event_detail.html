@@ -1601,6 +1601,7 @@ document.querySelectorAll('#cmp-table thead th[data-col]').forEach(th => {
   const map = L.map('map', { zoomControl:true });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'&copy; OpenStreetMap contributors', maxZoom:18,
+    referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(map);
 
   fetch("{% url 'qc_review:event_map_json' public_id=event.public_id %}?run={{ run.run_number }}")

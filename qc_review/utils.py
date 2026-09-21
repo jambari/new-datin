@@ -22,9 +22,35 @@ Algorithm:
 from __future__ import annotations
 
 import zoneinfo
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 WIT = zoneinfo.ZoneInfo("Asia/Jayapura")
+
+# Event dengan origin_time sebelum 1 Juni 2026 WIT dianggap ON TIME
+# (data backfill lama yang selisih insert-nya tidak relevan).
+DELTA_ON_TIME_CUTOFF = datetime(2026, 6, 1, tzinfo=WIT)
+
+
+def delta_on_time_info(origin_time, insert_time):
+    """Kembalikan (delta_minutes, label).
+
+    Aturan:
+      - origin_time < 1 Juni 2026 WIT  -> (None, "ON TIME")
+      - selisih insert <= 5 menit      -> (menit, "ON TIME")
+      - selisih insert >  5 menit      -> (menit, "LATE")
+    """
+    if origin_time is None or insert_time is None:
+        return None, "–"
+    ot = origin_time
+    it = insert_time
+    if ot.tzinfo is None:
+        ot = ot.replace(tzinfo=timezone.utc)
+    if it.tzinfo is None:
+        it = it.replace(tzinfo=timezone.utc)
+    if ot < DELTA_ON_TIME_CUTOFF:
+        return None, "ON TIME"
+    minutes = (it - ot).total_seconds() / 60.0
+    return round(minutes, 1), ("ON TIME" if minutes <= 5 else "LATE")
 
 
 def get_on_duty_staff(origin_time_utc) -> list[dict]:

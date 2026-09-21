@@ -1402,10 +1402,14 @@ def event_browser_delete(request, pk):
 # ── Event Browser ─────────────────────────────────────────────────────────────
 def _qc_entry(e):
     """Build a map-data dict from a QCEvent using its latest run snapshot."""
+    from qc_review.utils import get_on_duty_staff, delta_on_time_info
     run = e.latest_run
     if not run:
         return None
     ot = run.snap_origin_time or e.origin_time
+    duties = get_on_duty_staff(e.origin_time)
+    petugas = ", ".join(d["pegawai"].nama for d in duties) or "–"
+    delta_min, delta_label = delta_on_time_info(e.origin_time, e.created_at)
     return {
         'latitude':   float(run.snap_latitude  if run.snap_latitude  is not None else (e.latitude  or 0)),
         'longitude':  float(run.snap_longitude if run.snap_longitude is not None else (e.longitude or 0)),
@@ -1417,6 +1421,9 @@ def _qc_entry(e):
         'source':     'qc',
         'run_number': run.run_number,
         'eval_status': run.evaluation_status or '',
+        'petugas':     petugas,
+        'delta_min':   round(delta_min, 1) if delta_min is not None else None,
+        'delta_label': delta_label,
     }
 
 
@@ -1441,6 +1448,8 @@ def _qc_map_entries_by_month(year, month):
 @login_required
 def event_browser(request):
     from .models import EventBrowser
+    from jadwal.models import Pegawai
+    from qc_review.utils import get_on_duty_staff, delta_on_time_info
     today = date.today()
     default_start = today - timedelta(days=6)
 
@@ -1457,10 +1466,31 @@ def event_browser(request):
         origin_time__date__lte=end,
     ).order_by('-origin_time')
 
+    # Filter Petugas Dinas — cocokkan origin_time event dengan jadwal shift
+    pegawai_list = Pegawai.objects.filter(
+        Q(tanggal_keluar__isnull=True) | Q(tanggal_keluar__gt=today)
+    ).order_by("urutan", "nama")
+    pegawai_id = request.GET.get("pegawai", "").strip()
+    selected_pegawai = None
+    if pegawai_id:
+        try:
+            selected_pegawai = Pegawai.objects.get(pk=int(pegawai_id))
+            keep = []
+            for ev in qs:
+                duties = get_on_duty_staff(ev.origin_time)
+                if any(d["pegawai"].pk == selected_pegawai.pk for d in duties):
+                    keep.append(ev.pk)
+            qs = qs.filter(pk__in=keep)
+        except (ValueError, Pegawai.DoesNotExist):
+            selected_pegawai = None
+
     map_data = []
     lats, lons = [], []
-    for ev in qs.values('event_id', 'latitude', 'longitude', 'magnitude', 'depth_km', 'origin_time', 'location', 'nearest_city', 'distance_km'):
+    for ev in qs.values('event_id', 'latitude', 'longitude', 'magnitude', 'depth_km', 'origin_time', 'location', 'nearest_city', 'distance_km', 'fetched_at'):
         dist = ev['distance_km']
+        duties = get_on_duty_staff(ev['origin_time'])
+        petugas = ", ".join(d["pegawai"].nama for d in duties) or "–"
+        delta_min, delta_label = delta_on_time_info(ev['origin_time'], ev['fetched_at'])
         map_data.append({
             'event_id':     ev['event_id'],
             'latitude':     ev['latitude'],
@@ -1471,6 +1501,9 @@ def event_browser(request):
             'location':     ev['location'],
             'nearest_city': ev['nearest_city'],
             'distance_km':  round(dist, 1) if dist is not None and dist != float('inf') else None,
+            'petugas':      petugas,
+            'delta_min':    delta_min,
+            'delta_label':  delta_label,
         })
         lats.append(ev['latitude'])
         lons.append(ev['longitude'])
@@ -1534,6 +1567,8 @@ def event_browser(request):
         'formatted_bulan': formatted_period,
         'start':           start.isoformat(),
         'end':             end.isoformat(),
+        'pegawai_list':     pegawai_list,
+        'selected_pegawai': selected_pegawai,
         'count':           len(map_data),
         'total_db':        EventBrowser.objects.count(),
         'stats': {

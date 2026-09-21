@@ -264,7 +264,7 @@ def _filter_events(request):
     """Return (qs, pegawai_list, selected_pegawai, date_from_str, date_to_str)."""
     from jadwal.models import JadwalHarian, Pegawai
     from datetime import date, datetime, timedelta, timezone as _tz
-    from django.db.models import Q
+    from django.db.models import Q, F
 
     qs = Event.objects.all().prefetch_related("runs").order_by("-origin_time")
 
@@ -329,6 +329,22 @@ def _filter_events(request):
         except ValueError:
             date_to_str = ""
 
+    # Filter delta waktu insert: ON TIME (<= 5 menit) / LATE (> 5 menit).
+    # Event sebelum 1 Juni 2026 WIT selalu dianggap ON TIME.
+    delta_filter = request.GET.get("delta", "").strip()
+    if delta_filter in ("ontime", "late"):
+        from .utils import DELTA_ON_TIME_CUTOFF
+        if delta_filter == "ontime":
+            qs = qs.filter(
+                Q(origin_time__lt=DELTA_ON_TIME_CUTOFF)
+                | Q(created_at__lte=F("origin_time") + timedelta(minutes=5))
+            )
+        else:
+            qs = qs.filter(
+                origin_time__gte=DELTA_ON_TIME_CUTOFF,
+                created_at__gt=F("origin_time") + timedelta(minutes=5),
+            )
+
     return qs, pegawai_list, selected_pegawai, date_from_str, date_to_str
 
 
@@ -355,6 +371,7 @@ def event_list(request):
         "selected_pegawai": selected_pegawai,
         "date_from":        date_from_str,
         "date_to":          date_to_str,
+        "delta_filter":     request.GET.get("delta", "").strip(),
     })
 
 
@@ -454,6 +471,8 @@ def _export_rows(request):
             "committed_wit":    ct.strftime("%d/%m/%Y %H:%M") if ct else "–",
             "petugas_dinas":    ", ".join(d["pegawai"].nama for d in on_duty) or "–",
             "petugas_qc":       ", ".join(d["pegawai"].nama for d in on_duty_qc) or "–",
+            "delta_min":        e.insert_delta_minutes,
+            "delta_label":      e.insert_delta_label,
             "sta_total":        str(summary.get("total", 0)),
             "sta_green":        str(summary.get("green", 0)),
             "sta_yellow":       str(summary.get("yellow", 0)),
@@ -473,34 +492,27 @@ def export_csv(request):
     response.write("﻿")  # UTF-8 BOM for Excel
 
     headers = [
-        "Public ID", "Waktu (WIT)", "M", "Jenis", "Kedalaman (km)", "Lokasi",
-        "Lat", "Lon", "Eval Mode", "Eval Status", "Run", "Commit (WIT)",
-        "Petugas Dinas", "Petugas QC",
-        "Sta Total", "Green", "Yellow", "Red", "Unknown",
+        "No", "Public ID", "Waktu (WIT)", "M", "Kdlmn (km)", "Lokasi",
+        "Lat", "Lon", "Status", "Petugas Dinas", "Petugas QC", "Delta",
     ]
     writer = csv.DictWriter(response, fieldnames=headers)
     writer.writeheader()
-    for r in rows:
+    for i, r in enumerate(rows, 1):
+        delta_text = (f"{r['delta_min']} min · {r['delta_label']}"
+                      if r["delta_min"] is not None else r["delta_label"]) or "–"
         writer.writerow({
+            "No":             str(i),
             "Public ID":      r["public_id"],
             "Waktu (WIT)":    r["origin_time_wit"],
             "M":              r["magnitude"],
-            "Jenis":          r["magnitude_type"],
-            "Kedalaman (km)": r["depth_km"],
+            "Kdlmn (km)":     r["depth_km"],
             "Lokasi":         r["region"],
             "Lat":            r["latitude"],
             "Lon":            r["longitude"],
-            "Eval Mode":      r["eval_mode"],
-            "Eval Status":    r["eval_status"],
-            "Run":            r["run_number"],
-            "Commit (WIT)":   r["committed_wit"],
+            "Status":         r["eval_status"],
             "Petugas Dinas":  r["petugas_dinas"],
             "Petugas QC":     r["petugas_qc"],
-            "Sta Total":      r["sta_total"],
-            "Green":          r["sta_green"],
-            "Yellow":         r["sta_yellow"],
-            "Red":            r["sta_red"],
-            "Unknown":        r["sta_unknown"],
+            "Delta":          delta_text,
         })
     return response
 
@@ -538,40 +550,31 @@ def export_pdf(request):
     )
 
     col_headers = [
-        "No", "Public ID", "Waktu (WIT)", "M", "Jenis", "Kdlm\n(km)", "Lokasi",
-        "Lat", "Lon", "Mode", "Status", "Run", "Commit (WIT)",
-        "Petugas\nDinas", "Petugas\nQC",
-        "Sta", "G", "Y", "R", "U",
+        "No", "Public ID", "Waktu (WIT)", "M", "Kdlm\n(km)", "Lokasi",
+        "Lat", "Lon", "Status", "Petugas\nDinas", "Petugas\nQC", "Delta",
     ]
     table_data = [[Paragraph(h, small) for h in col_headers]]
     for i, r in enumerate(rows, 1):
+        delta_text = (f"{r['delta_min']} min · {r['delta_label']}"
+                      if r["delta_min"] is not None else r["delta_label"]) or "–"
         table_data.append([
             Paragraph(str(i), small),
             Paragraph(r["public_id"], small),
             Paragraph(r["origin_time_wit"], small),
             Paragraph(r["magnitude"], small),
-            Paragraph(r["magnitude_type"], small),
             Paragraph(r["depth_km"], small),
             Paragraph(r["region"][:35], small),
             Paragraph(r["latitude"], small),
             Paragraph(r["longitude"], small),
-            Paragraph(r["eval_mode"], small),
             Paragraph(r["eval_status"], small),
-            Paragraph(r["run_number"], small),
-            Paragraph(r["committed_wit"], small),
             Paragraph(r["petugas_dinas"][:30], small),
             Paragraph(r["petugas_qc"][:30], small),
-            Paragraph(r["sta_total"], small),
-            Paragraph(r["sta_green"], small),
-            Paragraph(r["sta_yellow"], small),
-            Paragraph(r["sta_red"], small),
-            Paragraph(r["sta_unknown"], small),
+            Paragraph(delta_text, small),
         ])
 
-    col_widths = [0.7, 2.6, 2.6, 0.8, 0.9, 0.9, 4.5,
-                  1.3, 1.4, 1.2, 1.5, 0.7, 2.6,
-                  3.0, 3.0,
-                  0.6, 0.5, 0.5, 0.5, 0.5]
+    col_widths = [0.7, 2.6, 2.8, 0.8, 1.0, 5.0,
+                  1.5, 1.6, 1.8,
+                  3.0, 3.0, 2.4]
     col_widths = [w * cm for w in col_widths]
 
     tbl = Table(table_data, colWidths=col_widths, repeatRows=1)

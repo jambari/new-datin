@@ -94,6 +94,12 @@
               <input type="date" name="start" value="{{ start }}" class="form-control form-control-sm" style="width:145px">
               <label class="small text-muted mb-0">s/d</label>
               <input type="date" name="end" value="{{ end }}" class="form-control form-control-sm" style="width:145px">
+              <select name="pegawai" class="form-select form-select-sm" style="width:180px">
+                <option value="">— Semua Petugas Dinas —</option>
+                {% for p in pegawai_list %}
+                  <option value="{{ p.pk }}" {% if selected_pegawai and selected_pegawai.pk == p.pk %}selected{% endif %}>{{ p.nama }}</option>
+                {% endfor %}
+              </select>
               <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Tampilkan</button>
             </form>
             <span class="text-muted no-print">|</span>
@@ -824,7 +830,7 @@
       zoomControl: false, attributionControl: false, dragging: false,
       scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false
     });
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(insetMap);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(insetMap);
     var insetRect = null;
     function updateInsetMap() {
       if (insetRect) insetMap.removeLayer(insetRect);
@@ -1072,7 +1078,7 @@
       street:     ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {}],
       imagery:    ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {}],
       darkgray:   ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxZoom:16}],
-      osm:        ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}],
+      osm:        ['https://tile.openstreetmap.org/{z}/{x}/{y}.png', {referrerPolicy: 'strict-origin-when-cross-origin'}],
       opentopo:   ['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {maxZoom:17}],
       cartolight: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {}],
       cartodark:  ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxZoom:16}],
@@ -1424,7 +1430,7 @@
   }
 
   function getEventsTableData() {
-    const headers = ['No', 'Waktu (UTC)', 'Lintang', 'Bujur', 'Magnitudo', 'Kedalaman (km)', 'Lokasi'];
+    const headers = ['No', 'Waktu (UTC)', 'Lintang', 'Bujur', 'Magnitudo', 'Kedalaman (km)', 'Lokasi', 'Petugas Dinas', 'Delta'];
     const rows = getActiveData().map((ev, i) => [
       i + 1,
       ev.time,
@@ -1433,6 +1439,8 @@
       ev.magnitude.toFixed(1),
       ev.depth.toFixed(1),
       ev.nearest_city || ev.location || '',
+      ev.petugas || '–',
+      ev.delta_min != null ? ev.delta_min.toFixed(1) + ' min · ' + ev.delta_label : (ev.delta_label || '–'),
     ]);
     return { headers, rows };
   }
@@ -1440,7 +1448,7 @@
   function exportEventsExcel() {
     const { headers, rows } = getEventsTableData();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws['!cols'] = [{ wch: 5 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 40 }];
+    ws['!cols'] = [{ wch: 5 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 40 }, { wch: 28 }, { wch: 18 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Kejadian Gempa');
     XLSX.writeFile(wb, 'infografis_gempa_{{ start }}_{{ end }}.xlsx');
@@ -1448,7 +1456,7 @@
 
   function exportEventsPDF() {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const { headers, rows } = getEventsTableData();
     doc.setFontSize(11);
     doc.text('Daftar Kejadian Gempabumi — {{ start }} s/d {{ end }}', 14, 14);
@@ -1458,7 +1466,11 @@
       startY: 20,
       styles: { fontSize: 7, cellPadding: 2 },
       headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
-      columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 32 }, 2: { cellWidth: 18 }, 3: { cellWidth: 18 }, 4: { cellWidth: 18 }, 5: { cellWidth: 22 }, 6: { cellWidth: 'auto' } },
+      columnStyles: {
+        0: { cellWidth: 8 }, 1: { cellWidth: 32 }, 2: { cellWidth: 16 }, 3: { cellWidth: 16 },
+        4: { cellWidth: 16 }, 5: { cellWidth: 20 }, 6: { cellWidth: 55 },
+        7: { cellWidth: 45 }, 8: { cellWidth: 30 },
+      },
     });
     doc.save('infografis_gempa_{{ start }}_{{ end }}.pdf');
   }

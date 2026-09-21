@@ -365,11 +365,6 @@
 </style>
 {% endif %}
 
-<!-- Sound unlock banner — hidden once user clicks -->
-<div id="sound-unlock-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:10000;background:#1e40af;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 -2px 8px rgba(0,0,0,.2);">
-  🔔 Klik di sini untuk mengaktifkan suara peringatan instrumen
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const sidebar = document.getElementById('sidebar');
@@ -416,26 +411,9 @@ document.addEventListener('DOMContentLoaded', function() {
     unknown        : 'Status tidak diketahui',
   };
 
-  // ── Audio unlock (browser autoplay policy) ───────────────────────────────
-  const UNLOCK_KEY   = 'instr_audio_unlocked';
-  const unlockBanner = document.getElementById('sound-unlock-banner');
-
+  // ── Audio alert (tanpa banner unlock) ─────────────────────────────────────
   function isAudioUnlocked() {
-    return sessionStorage.getItem(UNLOCK_KEY) === '1';
-  }
-
-  function unlockAudio() {
-    audio.play().then(() => {
-      audio.pause();
-      audio.currentTime = 0;
-    }).catch(() => {});
-    sessionStorage.setItem(UNLOCK_KEY, '1');
-    unlockBanner.style.display = 'none';
-  }
-
-  if (!isAudioUnlocked()) {
-    unlockBanner.style.display = 'block';
-    unlockBanner.addEventListener('click', unlockAudio);
+    return true;
   }
   // ─────────────────────────────────────────────────────────────────────────
 

@@ -305,35 +305,46 @@ def public_spectra_list(request):
 
 
 def _resolve_shakemap_context(pk):
-    from repository.models import FeltEarthquake, ShakemapEvent, EventStationWaveform
+    from repository.models import FeltEarthquake, ShakemapEvent, EventStationWaveform, EventResponseSpectrum
     from django.shortcuts import get_object_or_404
-    from datetime import timezone as dt_timezone, timedelta
+    from datetime import datetime, timezone as dt_timezone, timedelta
     obj = get_object_or_404(FeltEarthquake, pk=pk)
     _WIB = dt_timezone(timedelta(hours=7))
     wib_ts = obj.event_datetime.astimezone(_WIB).strftime("%Y%m%d%H%M%S")
-    shk_event = ShakemapEvent.objects.filter(event_id=wib_ts).first()
-    # Check if this event has downloadable .mseed files (try both WIB and UTC formats)
-    utc_ts  = obj.event_datetime.strftime("%Y%m%d%H%M%S")
-    mseed_count = EventStationWaveform.objects.filter(
-        event_id__in=[wib_ts, utc_ts]
-    ).exclude(
-        mseed__isnull=True
-    ).exclude(
-        mseed=''
-    ).count()
-    # Determine which event_id format has the mseed data
-    mseed_event_id = None
-    for eid in [wib_ts, utc_ts]:
-        if EventStationWaveform.objects.filter(event_id=eid).exclude(mseed__isnull=True).exclude(mseed='').exists():
-            mseed_event_id = eid
+    utc_ts = obj.event_datetime.strftime("%Y%m%d%H%M%S")
+
+    # Origin SeisComP pada nama file .psa5/.mseed bisa beda 1-5 detik dari
+    # event_datetime BMKG (felt). Coba kandidat dalam rentang ±5 detik
+    # (WIB dulu, lalu UTC) dan pakai yang benar-benar punya data.
+    def _candidate_keys(ts):
+        base = datetime.strptime(ts, "%Y%m%d%H%M%S")
+        offsets = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5]
+        return [(base + timedelta(seconds=off)).strftime("%Y%m%d%H%M%S")
+                for off in offsets]
+
+    effective_id = wib_ts
+    for eid in _candidate_keys(wib_ts) + _candidate_keys(utc_ts):
+        has_spectra = EventResponseSpectrum.objects.filter(event_id=eid).exists()
+        has_mseed = EventStationWaveform.objects.filter(event_id=eid).exclude(
+            mseed__isnull=True).exclude(mseed='').exists()
+        if has_spectra or has_mseed:
+            effective_id = eid
             break
+
+    shk_event = (ShakemapEvent.objects.filter(event_id=effective_id).first()
+                 or ShakemapEvent.objects.filter(event_id=wib_ts).first())
+
+    mseed_count = EventStationWaveform.objects.filter(
+        event_id=effective_id
+    ).exclude(mseed__isnull=True).exclude(mseed='').count()
+
     return {
         'object': obj,
         'shk_event': shk_event,
-        'wib_ts': wib_ts,
+        'wib_ts': effective_id,
         'has_mseed': mseed_count > 0,
         'mseed_count': mseed_count,
-        'mseed_zip_url': f'/api/shakemap/{mseed_event_id}/mseed-zip/' if mseed_count > 0 else None,
+        'mseed_zip_url': f'/api/shakemap/{effective_id}/mseed-zip/' if mseed_count > 0 else None,
     }
 
 
