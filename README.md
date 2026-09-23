@@ -8,7 +8,7 @@ presents earthquake and ShakeMap products, geomagnetic and lightning data,
 early-warning information, and a collection of internal operational tools —
 from inventory management to operator logbooks — in one integrated platform.
 
-The project powers the public website at `36.91.166.189` and also provides the
+The project powers the public website at `https://stageof-jayapura.bmkg.go.id` and also provides the
 REST API endpoints used by the station's automated pipelines (SeisComP QC
 worker, ShakeMap generator, WRSNG devices, and instrument status monitors).
 
