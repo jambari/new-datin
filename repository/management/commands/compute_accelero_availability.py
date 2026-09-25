@@ -22,6 +22,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from repository.models import AcceleroDataAvailability
+from stations.constants import ACCELEROGRAPH_STATIONS
 from stations.models import Station, StationAvailabilitySample
 
 CHANNEL_NAME = 'SLINKTOOL'
@@ -110,7 +111,7 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stderr.write(f'WARNING: slinktool failed: {e}')
 
-        stations = list(Station.objects.filter(is_active=True))
+        stations = list(Station.objects.filter(is_active=True, code__in=ACCELEROGRAPH_STATIONS))
 
         for target in targets:
             self._process_date(target, stations, ring_map, options)
