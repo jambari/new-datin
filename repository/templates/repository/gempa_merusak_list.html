@@ -61,7 +61,8 @@
           </thead>
           <tbody>
             {% for obj in object_list %}
-            <tr style="border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <tr style="border-bottom:1px solid #f3f4f6;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''"
+                onclick="window.location.href='{% url 'gempa_merusak_detail' obj.pk %}'">
               <td style="padding:9px 12px;color:#374151;">{{ obj.no }}</td>
               <td style="padding:9px 12px;color:#374151;white-space:nowrap;">{{ obj.tanggal_text }}</td>
               <td style="padding:9px 12px;color:#374151;">{{ obj.wilayah|default:"-" }}</td>
@@ -78,9 +79,9 @@
               </td>
               <td style="padding:9px 12px;text-align:center;color:#6b7280;font-size:12px;">{{ obj.media.count }}</td>
               <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
-                <a href="{% url 'gempa_merusak_detail' obj.pk %}" style="color:#4f46e5;font-size:12px;margin-right:8px;">Detail</a>
-                <a href="{% url 'gempa_merusak_update' obj.pk %}" style="color:#059669;font-size:12px;margin-right:8px;">Edit</a>
-                <a href="{% url 'gempa_merusak_delete' obj.pk %}" style="color:#dc2626;font-size:12px;">Hapus</a>
+                <a href="{% url 'gempa_merusak_detail' obj.pk %}" onclick="event.stopPropagation()" style="color:#4f46e5;font-size:12px;margin-right:8px;">Detail</a>
+                <a href="{% url 'gempa_merusak_update' obj.pk %}" onclick="event.stopPropagation()" style="color:#059669;font-size:12px;margin-right:8px;">Edit</a>
+                <a href="{% url 'gempa_merusak_delete' obj.pk %}" onclick="event.stopPropagation()" style="color:#dc2626;font-size:12px;">Hapus</a>
               </td>
             </tr>
             {% empty %}

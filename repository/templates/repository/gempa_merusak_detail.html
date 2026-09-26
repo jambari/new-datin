@@ -17,6 +17,14 @@
         </div>
       </div>
 
+      {% if object.latitude and object.longitude %}
+      <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;margin-bottom:20px;">
+        <h2 style="font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Episentrum</h2>
+        <div id="epicenter-map" style="height:340px;border-radius:6px;z-index:0;"></div>
+        <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Koordinat: {{ object.latitude }}, {{ object.longitude }}</p>
+      </div>
+      {% endif %}
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
           <h2 style="font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;">Informasi Gempa</h2>
@@ -111,4 +119,33 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') document.getEle
   });
 })();
 </script>
+{% endblock %}
+
+{% block extra_head %}
+{% if object.latitude and object.longitude %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if object.latitude and object.longitude %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  var lat = {{ object.latitude }};
+  var lng = {{ object.longitude }};
+  var mag = {{ object.magnitude|default:0 }};
+  var map = L.map('epicenter-map').setView([lat, lng], 7);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+    referrerPolicy: 'strict-origin-when-cross-origin',
+  }).addTo(map);
+  L.marker([lat, lng]).addTo(map)
+    .bindPopup('<b>Episentrum</b><br>{{ object.tanggal_text|escapejs }}<br>M ' + mag.toFixed(1) + ' · {{ object.wilayah|default:"-"|escapejs }}')
+    .openPopup();
+  L.circle([lat, lng], { radius: 40000, color: '#dc2626', weight: 1, fillOpacity: 0.08 }).addTo(map);
+})();
+</script>
+{% endif %}
 {% endblock %}
