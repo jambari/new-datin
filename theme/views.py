@@ -405,9 +405,10 @@ def public_gempa_detail(request, public_id):
 def public_gempa_merusak(request):
     import json
     from repository.models import GempaMemusak
-    from django.db.models import F, Q
+    from django.db.models import Q
     from django.core.paginator import Paginator
-    qs = GempaMemusak.objects.all().order_by(F('tanggal').desc(nulls_last=True), '-no')
+    # Latest records first — catalog number is chronological (higher no = newer event)
+    qs = GempaMemusak.objects.all().order_by('-no')
     q        = request.GET.get('q', '').strip()
     provinsi = request.GET.get('provinsi', '').strip()
     tsunami  = request.GET.get('tsunami', '').strip()
