@@ -1,0 +1,207 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[{{ object.no }}] {{ object.tanggal_text }} — Gempa Merusak · BMKG Jayapura</title>
+<meta name="description" content="Detail gempa merusak {{ object.tanggal_text }} di {{ object.wilayah }}{% if object.provinsi %}, {{ object.provinsi }}{% endif %} — magnitudo, kedalaman, wilayah merasakan, korban/kerusakan, dan galeri foto.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ SITE_URL }}{% url 'public_gempa_merusak_detail' object.pk %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root[data-theme="dark"] {
+  --bg:#0f172a; --card:#1e293b; --border:#1e293b; --border-input:#334155;
+  --text:#e2e8f0; --muted:#94a3b8; --soft:#64748b; --title:#f1f5f9;
+  --accent:#38bdf8; --th-bg:#1e293b; --th-fg:#94a3b8;
+  --badge-tsun-bg:#1e3a5f; --badge-tsun-fg:#38bdf8;
+  --badge-notsu-bg:#1a2e1a; --badge-notsu-fg:#4ade80;
+}
+:root[data-theme="light"] {
+  --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --border-input:#cbd5e1;
+  --text:#1e293b; --muted:#64748b; --soft:#94a3b8; --title:#0f172a;
+  --accent:#0369a1; --th-bg:#f1f5f9; --th-fg:#64748b;
+  --badge-tsun-bg:#dbeafe; --badge-tsun-fg:#1d4ed8;
+  --badge-notsu-bg:#dcfce7; --badge-notsu-fg:#15803d;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .3s,color .3s; }
+header { background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.hdr-inner { max-width:1100px; margin:0 auto; padding:0 1.2rem; display:flex; align-items:center; gap:1rem; height:56px; }
+.brand { display:flex; align-items:center; gap:.7rem; text-decoration:none; flex:1; }
+.brand img { height:36px; }
+.brand-title { font-size:.85rem; font-weight:700; color:var(--title); display:block; }
+.brand-sub { font-size:.65rem; color:var(--muted); display:block; }
+.header-back { font-size:.8rem; color:var(--muted); text-decoration:none; white-space:nowrap; }
+.header-back:hover { color:var(--text); }
+.theme-toggle { background:var(--border-input); border:none; cursor:pointer; border-radius:6px; padding:.3rem .45rem; color:var(--muted); font-size:.75rem; }
+.page-wrap { max-width:1100px; margin:0 auto; padding:1.5rem 1.2rem 3rem; }
+.page-title { font-size:1.35rem; font-weight:700; color:var(--title); margin-bottom:.25rem; }
+.page-sub { font-size:.8rem; color:var(--soft); margin-bottom:1.25rem; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:1.2rem; margin-bottom:1.2rem; }
+.card h2 { font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:.8rem; }
+#epicenter-map { height:340px; border-radius:8px; z-index:0; }
+table.info { width:100%; border-collapse:collapse; font-size:.82rem; }
+table.info td { padding:.4rem 0; vertical-align:top; }
+table.info td:first-child { color:var(--soft); width:150px; }
+.badge { display:inline-block; padding:.15rem .5rem; border-radius:999px; font-size:.65rem; font-weight:600; }
+.badge-tsunami { background:var(--badge-tsun-bg); color:var(--badge-tsun-fg); }
+.badge-no-tsunami { background:var(--badge-notsu-bg); color:var(--badge-notsu-fg); }
+.preline { white-space:pre-line; line-height:1.6; font-size:.84rem; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
+.gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+.gallery .item { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--card); }
+.gallery img { width:100%; height:160px; object-fit:cover; cursor:zoom-in; display:block; }
+.gallery .cap { padding:6px 8px; font-size:.68rem; color:var(--muted); background:var(--th-bg); }
+.muted { color:var(--soft); }
+#lb { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.88); align-items:center; justify-content:center; }
+#lb img { max-width:90vw; max-height:85vh; object-fit:contain; border-radius:4px; }
+#lb .close { position:fixed; top:16px; right:20px; color:#fff; font-size:28px; cursor:pointer; }
+#lb .cap { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.6); color:#fff; font-size:12px; padding:4px 14px; border-radius:999px; pointer-events:none; max-width:80vw; }
+@media (max-width:640px){ .grid-2 { grid-template-columns:1fr; } .brand-sub { display:none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <span class="brand-title">Stasiun Geofisika Kelas I Jayapura</span>
+        <span class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</span>
+      </div>
+    </a>
+    <a href="{% url 'public_gempa_merusak' %}" class="header-back">← Katalog Gempa Merusak</a>
+    <button class="theme-toggle" id="themeToggle" title="Ganti tema">🌙</button>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="page-title">[{{ object.no }}] {{ object.tanggal_text }}</h1>
+  <p class="page-sub">{{ object.wilayah|default:"-" }}{% if object.provinsi %} · {{ object.provinsi }}{% endif %} · Gempa Bumi Merusak</p>
+
+  {% if object.latitude and object.longitude %}
+  <div class="card">
+    <h2>Episentrum</h2>
+    <div id="epicenter-map"></div>
+    <p class="muted" style="margin-top:.5rem;font-size:.75rem;">Koordinat: {{ object.latitude }}, {{ object.longitude }}</p>
+  </div>
+  {% endif %}
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>Parameter Gempa</h2>
+      <table class="info">
+        <tr><td>Nomor Katalog</td><td>{{ object.no }}</td></tr>
+        <tr><td>Tanggal</td><td>{{ object.tanggal_text }}{% if object.tanggal %} <span class="muted">({{ object.tanggal }})</span>{% endif %}</td></tr>
+        <tr><td>Origin Time</td><td>{{ object.origin_time|default:"-" }}</td></tr>
+        <tr><td>Wilayah</td><td>{{ object.wilayah|default:"-" }}</td></tr>
+        <tr><td>Provinsi</td><td>{{ object.provinsi|default:"-" }}</td></tr>
+        <tr><td>Latitude</td><td>{{ object.latitude|default:"-" }}</td></tr>
+        <tr><td>Longitude</td><td>{{ object.longitude|default:"-" }}</td></tr>
+        <tr><td>Kedalaman</td><td>{% if object.depth_km %}{{ object.depth_km }} km{% else %}-{% endif %}</td></tr>
+        <tr><td>Magnitudo</td><td><strong>{% if object.magnitude %}M{{ object.magnitude }}{% else %}-{% endif %}</strong></td></tr>
+        <tr><td>Lokasi</td><td>{{ object.lokasi|default:"-" }}</td></tr>
+        <tr>
+          <td>Tsunami</td>
+          <td>
+            {% if object.tsunami is True %}<span class="badge badge-tsunami">Ya</span>
+            {% elif object.tsunami is False %}<span class="badge badge-no-tsunami">Tidak</span>
+            {% else %}<span class="muted">-</span>{% endif %}
+          </td>
+        </tr>
+        <tr><td>Sumber</td><td>{{ object.sumber|default:"-" }}</td></tr>
+      </table>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:1.2rem;">
+      <div class="card">
+        <h2>Wilayah Merasakan</h2>
+        <p class="preline">{{ object.wilayah_merasakan|default:"-" }}</p>
+      </div>
+      <div class="card">
+        <h2>Korban / Kerusakan</h2>
+        <p class="preline">{{ object.korban_kerusakan|default:"-" }}</p>
+      </div>
+    </div>
+  </div>
+
+  {% with media=object.media.all %}
+  <div class="card">
+    <h2>Galeri Foto ({{ media.count }})</h2>
+    {% if media %}
+    <div class="gallery">
+      {% for m in media %}
+      <div class="item">
+        {% if m.media_type == 'image' %}
+        <img src="{{ m.file.url }}" alt="{{ m.caption }}" loading="lazy"
+             data-src="{{ m.file.url }}" data-caption="{{ m.caption }}">
+        {% else %}
+        <video src="{{ m.file.url }}" controls style="width:100%;height:160px;object-fit:cover;"></video>
+        {% endif %}
+        {% if m.caption %}<div class="cap">{{ m.caption|truncatechars:90 }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted" style="font-style:italic;font-size:.84rem;">Belum ada foto untuk kejadian ini.</p>
+    {% endif %}
+  </div>
+  {% endwith %}
+</div>
+
+<div id="lb">
+  <span class="close" onclick="document.getElementById('lb').style.display='none'">&times;</span>
+  <img id="lb-img" src="" alt="">
+  <div class="cap" id="lb-cap"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Theme
+(function () {
+  var saved = localStorage.getItem('gmTheme');
+  var dark = saved ? saved === 'dark' : (new Date().getHours() < 6 || new Date().getHours() >= 18);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+})();
+document.getElementById('themeToggle').addEventListener('click', function () {
+  var el = document.documentElement;
+  var dark = el.getAttribute('data-theme') !== 'dark';
+  el.setAttribute('data-theme', dark ? 'dark' : 'light');
+  localStorage.setItem('gmTheme', dark ? 'dark' : 'light');
+});
+
+// Epicenter map
+{% if object.latitude and object.longitude %}
+(function () {
+  var lat = {{ object.latitude }};
+  var lng = {{ object.longitude }};
+  var mag = {{ object.magnitude|default:0 }};
+  var map = L.map('epicenter-map').setView([lat, lng], 7);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+    referrerPolicy: 'strict-origin-when-cross-origin',
+  }).addTo(map);
+  L.marker([lat, lng]).addTo(map)
+    .bindPopup('<b>Episentrum</b><br>{{ object.tanggal_text|escapejs }}<br>M ' + mag.toFixed(1) + ' · {{ object.wilayah|default:"-"|escapejs }}')
+    .openPopup();
+  L.circle([lat, lng], { radius: 40000, color: '#dc2626', weight: 1, fillOpacity: 0.08 }).addTo(map);
+})();
+{% endif %}
+
+// Lightbox
+document.querySelectorAll('.gallery img').forEach(function (img) {
+  img.addEventListener('click', function () {
+    document.getElementById('lb-img').src = img.dataset.src;
+    document.getElementById('lb-cap').textContent = img.dataset.caption || '';
+    document.getElementById('lb').style.display = 'flex';
+  });
+});
+document.getElementById('lb').addEventListener('click', function (e) { if (e.target === this) this.style.display = 'none'; });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.getElementById('lb').style.display = 'none'; });
+</script>
+</body>
+</html>

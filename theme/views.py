@@ -455,6 +455,12 @@ def public_gempa_merusak(request):
     })
 
 
+def public_gempa_merusak_detail(request, pk):
+    from repository.models import GempaMemusak
+    obj = get_object_or_404(GempaMemusak, pk=pk)
+    return render(request, 'public_gempa_merusak_detail.html', {'object': obj})
+
+
 def gempa_public(request):
     import json
     from qc_review.models import Event as QCEvent

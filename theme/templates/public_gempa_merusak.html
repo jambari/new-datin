@@ -304,11 +304,12 @@ td { padding: .55rem .85rem; vertical-align: top; }
             <th>Lokasi</th>
             <th>Tsunami</th>
             <th>Korban / Kerusakan</th>
+            <th style="text-align:center;">Detail</th>
           </tr>
         </thead>
         <tbody>
           {% for obj in object_list %}
-          <tr>
+          <tr style="cursor:pointer;" onclick="window.location.href='{% url 'public_gempa_merusak_detail' obj.pk %}'">
             <td class="td-no">{{ obj.no }}</td>
             <td class="td-date">{{ obj.tanggal_text }}</td>
             <td><strong>{{ obj.wilayah }}</strong></td>
@@ -331,9 +332,13 @@ td { padding: .55rem .85rem; vertical-align: top; }
               {% else %}<span class="text-muted">—</span>{% endif %}
             </td>
             <td class="korban-cell">{{ obj.korban_kerusakan|default:"—"|truncatechars:120 }}</td>
+            <td style="text-align:center;white-space:nowrap;">
+              <a href="{% url 'public_gempa_merusak_detail' obj.pk %}" onclick="event.stopPropagation()"
+                 style="color:var(--accent);font-size:.75rem;font-weight:600;text-decoration:none;">Lihat</a>
+            </td>
           </tr>
           {% empty %}
-          <tr><td colspan="9" style="text-align:center;padding:2rem;" class="text-muted">Tidak ada data ditemukan.</td></tr>
+          <tr><td colspan="10" style="text-align:center;padding:2rem;" class="text-muted">Tidak ada data ditemukan.</td></tr>
           {% endfor %}
         </tbody>
       </table>
