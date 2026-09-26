@@ -25,11 +25,12 @@ from django.views.generic import TemplateView
 from repository.views import station_map_view
 from django.conf import settings
 from django.conf.urls.static import static
-from theme.sitemaps import StaticViewSitemap, ShakemapSitemap
+from theme.sitemaps import StaticViewSitemap, ShakemapSitemap, GempaMerusakSitemap
 
 sitemaps = {
     'static':   StaticViewSitemap,
     'shakemap': ShakemapSitemap,
+    'gempa-merusak': GempaMerusakSitemap,
 }
 
 urlpatterns = [

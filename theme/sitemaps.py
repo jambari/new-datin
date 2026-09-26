@@ -7,7 +7,7 @@ from repository.models import ShakemapEvent
 class StaticViewSitemap(Sitemap):
     priority = 0.8
     changefreq = 'daily'
-    protocol = 'http'
+    protocol = 'https'
 
     def items(self):
         return [
@@ -27,10 +27,25 @@ class StaticViewSitemap(Sitemap):
         return reverse(item)
 
 
+class GempaMerusakSitemap(Sitemap):
+    priority = 0.5
+    changefreq = 'weekly'
+    protocol = 'https'
+
+    def items(self):
+        return GempaMemusak.objects.order_by('-no')
+
+    def location(self, obj):
+        return reverse('public_gempa_merusak_detail', args=[obj.pk])
+
+    def lastmod(self, obj):
+        return obj.tanggal
+
+
 class ShakemapSitemap(Sitemap):
     priority = 0.6
     changefreq = 'monthly'
-    protocol = 'http'
+    protocol = 'https'
 
     def items(self):
         return ShakemapEvent.objects.order_by('-event_time')[:200]
