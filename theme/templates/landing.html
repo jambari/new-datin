@@ -616,6 +616,9 @@
       <span id="landingThemeIcon">🌙</span>
     </button>
 
+    <!-- Translate to English -->
+    <button class="thm-btn" id="langBtn" aria-label="Translate to English" title="Translate to English">EN</button>
+
     <!-- Hamburger -->
     <button id="nav-toggle" aria-label="Toggle menu" style="color:var(--nav-text);">
       <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -858,6 +861,16 @@
   })();
 
   document.getElementById('landingThemeBtn').addEventListener('click', toggleLandingTheme);
+
+  // ── Translate to English ──────────────────────────────────
+  document.getElementById('langBtn').addEventListener('click', function () {
+    const original = new URLSearchParams(window.location.search).get('u');
+    if (original) {
+      window.location.href = original;
+    } else {
+      window.location.href = 'https://translate.google.com/translate?sl=id&tl=en&u=' + encodeURIComponent(window.location.href);
+    }
+  });
 
   // ── Map init ──────────────────────────────────────────────
   const map = L.map('map', {
