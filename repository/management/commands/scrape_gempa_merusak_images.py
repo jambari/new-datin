@@ -1,10 +1,13 @@
 """
-scrape_gempa_merusak_images — Attach event photos to the Gempa Merusak catalog.
+scrape_gempa_merusak_images — Attach news photos to the Gempa Merusak catalog.
 
 Searches image search engines for each event (Google Images first, then Bing
-Images as fallback — Google currently serves a JavaScript-only shell to
-non-browser clients and yields no results) and downloads at least --min-images
-images per event into GempaMemusakMedia.
+Images, then Wikimedia Commons) and downloads at least --min-images images per
+event into GempaMemusakMedia.
+
+Only images that belong to known news-media domains (or Wikimedia Commons) are
+accepted — this filters out e-commerce/product images that reuse earthquake
+keywords for engagement.
 
 Typical usage:
     # Daily: top-up the last 5 catalog events
@@ -34,6 +37,39 @@ UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
 
 GOOGLE_URL = 'https://www.google.com/search'
 BING_URL = 'https://www.bing.com/images/search'
+COMMONS_URL = 'https://commons.wikimedia.org/w/api.php'
+
+# Indonesian / credible news domains — page-URL domains (not CDN hosts)
+NEWS_DOMAINS = (
+    'detik.com', 'kompas.com', 'cnnindonesia.com', 'tribunnews.com',
+    'liputan6.com', 'antaranews.com', 'tempo.co', 'jawapos.com',
+    'inews.id', 'okezone.com', 'merdeka.com', 'sindonews.com',
+    'pikiran-rakyat.com', 'republika.co.id', 'mediaindonesia.com',
+    'beritasatu.com', 'katadata.co.id', 'suara.com', 'idxchannel.com',
+    'tvonenews.com', 'metrotvnews.com', 'rri.co.id', 'bbc.com',
+    'voaindonesia.com', 'cenderawasihpos.com', 'papua.go.id', 'jubi.id',
+    'beritagar.id', 'tirto.id', 'kumparan.com', 'idntimes.com',
+    'medcom.id', 'viva.co.id', 'beritasatu.com', 'cnbcindonesia.com',
+    'kontan.co.id', 'bisnis.com', 'thejakartapost.com', 'jakartaglobe.id',
+    'antara.net.id', 'infopublik.id', 'beritadaerah.co.id',
+)
+
+WIKI_DOMAINS = ('wikimedia.org',)
+
+BLOCKED_DOMAINS = (
+    'shopee', 'tokopedia', 'lazada', 'bukalapak', 'blibli', 'zalora',
+    'orami', 'pngwing', 'freepik', 'shutterstock', 'istockphoto',
+    'gettyimages', 'pinterest', 'pinimg', 'instagram', 'facebook',
+    'tiktok', 'youtube', 'ytimg', 'amazon', 'alibaba', 'aliexpress',
+    'olx', 'flickr', 'shopping', 'belanja', 'jual', 'produk',
+    'product', 'promo',
+)
+
+# Title/description must contain an earthquake-related keyword for Bing results
+RELEVANT_RE = re.compile(
+    r'gempa|earthquake|quake|lindu|tsunami|damage|destroyed|rusak|korban|bencana|disaster',
+    re.IGNORECASE,
+)
 
 # Magic bytes for common image formats
 _JPEG = b'\xff\xd8\xff'
@@ -42,34 +78,64 @@ _GIF = (b'GIF87a', b'GIF89b')
 _WEBP = b'RIFF'
 
 
-def _http_get(url, timeout=15):
-    req = urllib.request.Request(url, headers={'User-Agent': UA})
+def _http_get(url, timeout=15, headers=None):
+    hdrs = {'User-Agent': UA}
+    if headers:
+        hdrs.update(headers)
+    req = urllib.request.Request(url, headers=hdrs)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
 
+COMMONS_UA = ('datin-bmkg/1.0 (new-datin catalog image backfill; '
+              'contact: jambari@bmkg.go.id)')
+
+
+def _host(url):
+    return urllib.parse.urlparse(url).netloc.lower()
+
+
+def is_allowed(url):
+    """Accept only news-media or Wikimedia domains; reject known junk shops."""
+    host = _host(url)
+    if not host:
+        return False
+    if any(b in host for b in BLOCKED_DOMAINS):
+        return False
+    if any(d in host for d in WIKI_DOMAINS):
+        return True
+    if any(d in host for d in NEWS_DOMAINS):
+        return True
+    return False
+
+
+def _domain_label(url):
+    host = _host(url)
+    return host.removeprefix('www.') or host
+
+
 def google_images(query, limit=20):
-    """Return original image URLs from Google Images (often empty — JS wall)."""
+    """Return (url, caption) from Google Images (usually empty — JS wall)."""
     q = urllib.parse.quote(query)
     url = f'{GOOGLE_URL}?q={q}&udm=2&hl=en&gl=id'
     try:
         raw = _http_get(url, timeout=15).decode('utf-8', 'ignore')
     except Exception:
         return []
-    urls = re.findall(r'"ou":"(https?://[^"]+)"', raw)
-    seen, out = set(), []
-    for u in urls:
+    out, seen = [], set()
+    for u in re.findall(r'"ou":"(https?://[^"]+)"', raw):
         u = u.replace('\\u003d', '=').replace('\\u0026', '&')
-        if u not in seen:
-            seen.add(u)
-            out.append(u)
+        if u in seen or not is_allowed(u):
+            continue
+        seen.add(u)
+        out.append((u, f'{query} — {_domain_label(u)}'))
         if len(out) >= limit:
             break
     return out
 
 
 def bing_images(query, limit=20):
-    """Return original image URLs (murl) from Bing Images."""
+    """Return (url, caption) from Bing Images for relevant news-media results."""
     q = urllib.parse.quote(query)
     url = f'{BING_URL}?q={q}&first=1&count=35&form=HDRSC2'
     try:
@@ -82,34 +148,53 @@ def bing_images(query, limit=20):
             data = json.loads(html.unescape(m.group(1)))
         except (json.JSONDecodeError, ValueError):
             continue
-        for key in ('murl', 'turl'):
-            u = data.get(key)
-            if u and u.startswith('http') and u not in seen:
-                seen.add(u)
-                out.append(u)
-                break
+        murl = data.get('murl')
+        purl = data.get('purl')
+        if not murl or not murl.startswith('http'):
+            continue
+        # Filter on the page URL (the news article) when available,
+        # otherwise on the media URL itself.
+        if purl and not is_allowed(purl):
+            continue
+        if not purl and not is_allowed(murl):
+            continue
+        # Only keep images whose title/description is actually about the
+        # earthquake — drops product/dog/news-filler images that matched the
+        # query keywords by accident.
+        title = (data.get('t') or '').strip()
+        desc = (data.get('desc') or '').strip()
+        if not RELEVANT_RE.search(f'{title} {desc}'):
+            continue
+        if murl in seen:
+            continue
+        seen.add(murl)
+        label = _domain_label(purl or murl)
+        caption = title[:150] if title else f'{query} — {label}'
+        out.append((murl, caption))
         if len(out) >= limit:
             break
     return out
 
 
 def commons_images(query, limit=20):
-    """Return (url, caption) tuples from Wikimedia Commons — reliable fallback."""
+    """Return (url, caption) tuples from Wikimedia Commons."""
     q = urllib.parse.quote(query)
-    url = ('https://commons.wikimedia.org/w/api.php?action=query'
+    url = (f'{COMMONS_URL}?action=query'
            f'&generator=search&gsrsearch={q}%20filetype:bitmap&gsrnamespace=6'
            f'&gsrlimit={limit}&prop=imageinfo&iiprop=url&iiurlwidth=800&format=json')
     try:
-        raw = _http_get(url, timeout=20)
+        raw = _http_get(url, timeout=20, headers={'User-Agent': COMMONS_UA})
         data = json.loads(raw.decode('utf-8'))
     except Exception:
         return []
+    if 'error' in data:
+        return []  # rate-limited / API error — skip this round
     out, seen = [], set()
     pages = data.get('query', {}).get('pages', {})
     for page in pages.values():
         info = (page.get('imageinfo') or [{}])[0]
         u = info.get('thumburl') or info.get('url')
-        if not u or u in seen:
+        if not u or u in seen or not is_allowed(u):
             continue
         title = (page.get('title') or '').replace('File:', '', 1).strip()
         seen.add(u)
@@ -124,20 +209,19 @@ def search_images(query, needed):
 
     Returns a list of (url, caption) tuples.
     """
-    results = []
-    seen = set()
+    results, seen = [], set()
 
-    for u in google_images(query, needed):
+    for u, cap in google_images(query, needed):
         if u not in seen:
             seen.add(u)
-            results.append((u, query))
+            results.append((u, cap))
     if len(results) >= needed:
         return results[:needed]
 
-    for u in bing_images(query, needed * 2):
+    for u, cap in bing_images(query, needed * 2):
         if u not in seen:
             seen.add(u)
-            results.append((u, query))
+            results.append((u, cap))
         if len(results) >= needed:
             return results[:needed]
 
@@ -150,8 +234,8 @@ def search_images(query, needed):
     return results[:needed]
 
 
-def build_query(event):
-    """Build an image-search query: prefer Indonesian place names and year."""
+def build_queries(event):
+    """Build a list of image-search queries, most specific first."""
     place = (event.wilayah or '').strip()
     # USGS-style descriptions (e.g. "43 km ESE of Palu, Indonesia") search badly;
     # fall back to province for those.
@@ -169,10 +253,23 @@ def build_query(event):
         if m:
             year = m.group(0)
 
-    q = f'gempa bumi {place}'
+    queries = []
     if year:
-        q += f' {year}'
-    return q.strip()
+        queries.append(f'gempa bumi {place} {year}'.strip())
+        queries.append(f'gempa {place} {year}'.strip())
+    queries.append(f'gempa bumi {place}'.strip())
+    queries.append(f'gempa {place}'.strip())
+    if year:
+        queries.append(f'{place} earthquake {year}'.strip())
+    queries.append(f'{place} earthquake'.strip())
+
+    # De-duplicate while preserving order
+    seen, out = set(), []
+    for q in queries:
+        if q not in seen:
+            seen.add(q)
+            out.append(q)
+    return out
 
 
 def detect_image_ext(data):
@@ -208,7 +305,8 @@ def download_one(args):
             media_type=GempaMemusakMedia.TYPE_IMAGE,
             caption=caption[:255],
         )
-        name = f'gempa_merusak/evt{event_pk}_{idx}{ext}'
+        # upload_to='gempa_merusak/' handles the directory prefix
+        name = f'evt{event_pk}_{idx}{ext}'
         m.file.save(name, ContentFile(data), save=True)
         return url
     except Exception:
@@ -216,7 +314,7 @@ def download_one(args):
 
 
 class Command(BaseCommand):
-    help = 'Scrape and attach event images to the Gempa Merusak catalog'
+    help = 'Scrape news-media images for the Gempa Merusak catalog'
 
     def add_arguments(self, parser):
         parser.add_argument('--last', type=int, default=5,
@@ -233,6 +331,19 @@ class Command(BaseCommand):
                             help='Delay between search requests in seconds (default 0.3)')
         parser.add_argument('--dry-run', action='store_true',
                             help='Resolve queries/URLs without downloading')
+
+    def _search_all(self, queries, needed, delay):
+        """Run all query variants and accumulate unique results up to `needed`."""
+        results, seen = [], set()
+        for query in queries:
+            for u, cap in search_images(query, needed):
+                if u not in seen:
+                    seen.add(u)
+                    results.append((u, cap))
+            if len(results) >= needed:
+                break
+            time.sleep(delay)
+        return results[:needed]
 
     def handle(self, *args, **options):
         min_images = options['min_images']
@@ -261,21 +372,21 @@ class Command(BaseCommand):
                 skipped += 1
                 continue
 
-            query = build_query(event)
+            queries = build_queries(event)
             self.stdout.write(f'\n[{event.no}] {event.tanggal_text} | {event.wilayah or event.provinsi} '
-                              f'| media {existing}/{min_images} | query: {query[:70]}')
+                              f'| media {existing}/{min_images} | queries: {queries[0][:60]}')
 
             if dry_run:
-                results = search_images(query, 5)
-                self.stdout.write(f'  dry-run: found {len(results)} candidate URL(s)')
-                for u, cap in results[:3]:
-                    self.stdout.write(f'    {cap[:40]} | {u[:90]}')
+                results = self._search_all(queries, needed, delay)
+                self.stdout.write(f'  dry-run: found {len(results)} allowed candidate(s)')
+                for u, cap in results[:5]:
+                    self.stdout.write(f'    {cap[:50]} | {u[:80]}')
                 processed += 1
                 continue
 
-            candidates = search_images(query, needed)
+            candidates = self._search_all(queries, needed, delay)
             if not candidates:
-                self.stdout.write(self.style.WARNING('  no image results'))
+                self.stdout.write(self.style.WARNING('  no news-media image results'))
                 failed += 1
                 processed += 1
                 continue
