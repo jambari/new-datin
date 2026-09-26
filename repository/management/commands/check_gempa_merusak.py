@@ -1,25 +1,26 @@
 """
-check_gempa_merusak — Daily check for new significant/tsunami earthquakes in Indonesia.
+check_gempa_merusak — Scrape BMKG "Gempa Bumi Dirasakan" and add VI / VI-VII MMI events.
 
-Fetches the last N days from USGS FDSN, then also pulls BMKG gempaterkini.
-Events are added to GempaMemusak when they meet ANY of these criteria:
-  • tsunami flag from USGS or BMKG, OR
-  • magnitude >= auto_mag (default 7.0), OR
-  • reported felt intensity >= V MMI (USGS mmi/cdi field, or BMKG Dirasakan field)
+The public page https://www.bmkg.go.id/gempabumi/gempabumi-dirasakan renders the
+JSON feed at https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json.
 
-Province is inferred from coordinates using bounding boxes.
+An event is inserted into the Gempa Merusak catalog ONLY when the "Wilayah (MMI)"
+remark (the `Dirasakan` field) mentions VI MMI or VI-VII MMI.
 """
 import datetime
 import json
-import re
-import urllib.request
-import urllib.error
 import logging
+import re
+import urllib.error
+import urllib.request
 
 from django.core.management.base import BaseCommand
+
 from repository.models import GempaMemusak
 
 log = logging.getLogger(__name__)
+
+BMKG_DIRASAKAN_URL = "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"
 
 # ── Province bounding boxes (lat_min, lat_max, lon_min, lon_max) ─────────────
 # Order matters: more specific boxes first, catch-all last
@@ -71,28 +72,36 @@ ID_MONTHS = [
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ]
 
-ROMAN = {'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
-         'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10}
-# Longest patterns first so regex matches correctly
-_ROMAN_RE = re.compile(r'\b(VIII|VII|VI|IV|IX|X{1,3}|V|III|II|I)\b')
+MONTH_NUM = {
+    'jan': 1, 'januari': 1,
+    'feb': 2, 'februari': 2,
+    'mar': 3, 'maret': 3,
+    'apr': 4, 'april': 4,
+    'mei': 5,
+    'jun': 6, 'juni': 6,
+    'jul': 7, 'juli': 7,
+    'agu': 8, 'ags': 8, 'agst': 8, 'agustus': 8,
+    'sep': 9, 'sept': 9, 'september': 9,
+    'okt': 10, 'oktober': 10,
+    'nov': 11, 'november': 11,
+    'des': 12, 'desember': 12,
+}
+
+# "Wilayah (MMI)" remark patterns: VI-VII range or standalone VI numeral.
+_RANGE_RE = re.compile(r'\b([IVX]+)\s*[-–]\s*([IVX]+)\b')
+_SINGLE_RE = re.compile(r'(?<![-–])\b(VI|VII|VIII|IV|IX|III|II|I)\b(?![-–])')
 
 
-def max_mmi(text):
-    """Return max MMI integer parsed from a string like 'IV-V Jayapura, III Nabire'."""
+def vi_mentioned(text):
+    """Return True if the Wilayah (MMI) remark mentions VI MMI or VI-VII MMI."""
     if not text:
-        return 0
-    vals = [ROMAN.get(m, 0) for m in _ROMAN_RE.findall(text.upper())]
-    return max(vals, default=0)
-
-
-BMKG_URL = "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json"
-USGS_URL = (
-    "https://earthquake.usgs.gov/fdsnws/event/1/query"
-    "?format=geojson"
-    "&minlatitude=-12&maxlatitude=8"
-    "&minlongitude=95&maxlongitude=142"
-    "&orderby=time"
-)
+        return False
+    t = ' '.join(str(text).split()).upper()
+    t = re.sub(r'\s*[-–]\s*', '-', t)
+    if re.search(r'\bVI-VII\b', t):
+        return True
+    singles = _SINGLE_RE.findall(t)
+    return 'VI' in singles
 
 
 def coords_to_province(lat, lng):
@@ -121,34 +130,69 @@ def fetch_json(url, timeout=20):
         return None
 
 
+def parse_tanggal(text):
+    """'26 Sep 2026' → datetime.date"""
+    if not text:
+        return None
+    parts = str(text).strip().split()
+    if len(parts) < 3:
+        return None
+    try:
+        day = int(parts[0])
+        month = MONTH_NUM.get(parts[1].lower())
+        year = int(parts[2])
+        if month:
+            return datetime.date(year, month, day)
+    except (ValueError, IndexError):
+        pass
+    return None
+
+
+def parse_jam(text):
+    """'02:39:29 WIB' → datetime.time"""
+    if not text:
+        return None
+    s = str(text).replace('WIB', '').replace('WITA', '').replace('WIT', '').strip()
+    try:
+        parts = s.split(':')
+        return datetime.time(int(parts[0]), int(parts[1]), int(parts[2]))
+    except (ValueError, IndexError):
+        return None
+
+
+def parse_depth(text):
+    """'9 km' → float"""
+    if not text:
+        return None
+    try:
+        return float(str(text).replace('km', '').strip())
+    except ValueError:
+        return None
+
+
 class Command(BaseCommand):
-    help = 'Check USGS/BMKG for new significant/tsunami earthquakes and add to GempaMemusak'
+    help = 'Scrape BMKG gempabumi-dirasakan and add VI / VI-VII MMI events to Gempa Merusak'
 
     def add_arguments(self, parser):
-        parser.add_argument('--days', type=int, default=2,
-                            help='Days to look back (default 2)')
-        parser.add_argument('--min-mag', type=float, default=6.0,
-                            help='Minimum magnitude to consider (default 6.0)')
-        parser.add_argument('--min-mag-tsunami', type=float, default=5.5,
-                            help='Minimum magnitude when tsunami flag is set (default 5.5)')
-        parser.add_argument('--auto-mag', type=float, default=7.0,
-                            help='Magnitude at/above which events are added regardless of tsunami flag (default 7.0)')
-        parser.add_argument('--min-mmi', type=int, default=5,
-                            help='Minimum reported felt intensity (MMI) to trigger inclusion (default 5 = V MMI)')
+        parser.add_argument('--days', type=int, default=30,
+                            help='Only consider events from the last N days (default 30)')
         parser.add_argument('--dry-run', action='store_true',
                             help='Print candidates without saving')
 
     def handle(self, *args, **options):
-        days          = options['days']
-        min_mag       = options['min_mag']
-        min_mag_tsun  = options['min_mag_tsunami']
-        auto_mag      = options['auto_mag']
-        min_mmi_val   = options['min_mmi']
-        dry_run       = options['dry_run']
+        days = options['days']
+        dry_run = options['dry_run']
 
-        start_date = datetime.date.today() - datetime.timedelta(days=days)
+        data = fetch_json(BMKG_DIRASAKAN_URL)
+        if not data:
+            self.stderr.write("Failed to fetch gempadirasakan feed.")
+            return
 
-        # Build existing dedup set
+        gempa_list = data.get('Infogempa', {}).get('gempa', [])
+        self.stdout.write(f"Fetched {len(gempa_list)} felt-earthquake event(s).")
+
+        cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+
         existing = set()
         for obj in GempaMemusak.objects.values('tanggal', 'latitude', 'longitude', 'magnitude'):
             existing.add(dedup_key(
@@ -156,168 +200,93 @@ class Command(BaseCommand):
             ))
 
         next_no = (GempaMemusak.objects.order_by('-no').values_list('no', flat=True).first() or 0) + 1
-        candidates = []  # list of dicts to insert
 
-        # ── 1. USGS FDSN ─────────────────────────────────────────────────────
-        usgs_url = (
-            f"{USGS_URL}"
-            f"&starttime={start_date.isoformat()}"
-            f"&minmagnitude={min_mag_tsun}"
-        )
-        data = fetch_json(usgs_url)
-        if data:
-            for feat in data.get('features', []):
-                props = feat['properties']
-                coords = feat['geometry']['coordinates']  # [lon, lat, depth]
-                mag      = props.get('mag')
-                tsunami  = bool(props.get('tsunami', 0))
-                lng, lat, depth = float(coords[0]), float(coords[1]), float(coords[2])
-                ts_ms    = props.get('time', 0)
-                dt_utc   = datetime.datetime.fromtimestamp(ts_ms / 1000, tz=datetime.timezone.utc)
-                dt_wib   = dt_utc + datetime.timedelta(hours=7)
-                tanggal  = dt_wib.date()
-
-                if mag is None:
-                    continue
-                # Instrumental / community intensity from USGS
-                usgs_mmi = max(
-                    props.get('mmi') or 0,
-                    props.get('cdi') or 0,
-                )
-                felt_v = usgs_mmi >= min_mmi_val
-                # Include if: M >= auto_mag, OR tsunami with sufficient mag,
-                # OR felt intensity reaches V MMI
-                if mag < auto_mag and not (tsunami and mag >= min_mag_tsun) and not felt_v:
-                    continue
-
-                key = dedup_key(tanggal, lat, lng, mag)
-                if key in existing:
-                    continue
-
-                province = coords_to_province(lat, lng)
-                if not province:
-                    continue  # outside Indonesia bounds
-
-                tanggal_text = f"{dt_wib.day} {ID_MONTHS[dt_wib.month]} {dt_wib.year}"
-                origin_time  = dt_wib.time().replace(microsecond=0)
-
-                candidates.append({
-                    'tanggal_text':      tanggal_text,
-                    'tanggal':           tanggal,
-                    'origin_time':       origin_time,
-                    'wilayah':           '',
-                    'provinsi':          province,
-                    'latitude':          round(lat, 4),
-                    'longitude':         round(lng, 4),
-                    'depth_km':          round(depth, 1),
-                    'magnitude':         mag,
-                    'lokasi':            'Laut' if depth < 70 and lat < 0 else '',
-                    'tsunami':           tsunami or None,
-                    'wilayah_merasakan': '',
-                    'korban_kerusakan':  '[Auto-detected — perlu verifikasi korban/kerusakan]',
-                    'sumber':            'USGS',
-                    '_key':              key,
-                })
-
-        # ── 2. BMKG gempaterkini ─────────────────────────────────────────────
-        bmkg_data = fetch_json(BMKG_URL)
-        if bmkg_data:
-            for evt in bmkg_data.get('Infogempa', {}).get('gempa', []):
-                try:
-                    mag = float(evt.get('Magnitude', 0))
-                except (TypeError, ValueError):
-                    continue
-
-                potensi      = str(evt.get('Potensi', '')).lower()
-                tsunami      = 'tsunami' in potensi and 'tidak' not in potensi
-                dirasakan    = str(evt.get('Dirasakan', ''))
-                felt_v       = max_mmi(dirasakan) >= min_mmi_val
-
-                if mag < auto_mag and not (tsunami and mag >= min_mag_tsun) and not felt_v:
-                    continue
-
-                try:
-                    coords_str = evt.get('Coordinates', '')
-                    lat_s, lng_s = coords_str.split(',')
-                    lat, lng = float(lat_s.strip()), float(lng_s.strip())
-                except Exception:
-                    continue
-
-                # Parse date: BMKG format "DD Mmm YYYY"
-                date_str = evt.get('Tanggal', '')
-                time_str = evt.get('Jam', '')
-                try:
-                    parts = date_str.strip().split()
-                    month_num = ID_MONTHS.index(parts[1]) if len(parts) >= 3 else 0
-                    tanggal   = datetime.date(int(parts[2]), month_num, int(parts[0]))
-                except Exception:
-                    continue
-
-                depth_str = str(evt.get('Kedalaman', '0')).replace(' km', '').strip()
-                try:
-                    depth = float(depth_str)
-                except ValueError:
-                    depth = None
-
-                try:
-                    t_parts = time_str.replace(' WIB', '').strip().split(':')
-                    origin_time = datetime.time(int(t_parts[0]), int(t_parts[1]),
-                                                int(float(t_parts[2])) if len(t_parts) > 2 else 0)
-                except Exception:
-                    origin_time = None
-
-                key = dedup_key(tanggal, lat, lng, mag)
-                if key in existing:
-                    continue
-                # also skip if already in candidates from USGS
-                if any(c['_key'] == key for c in candidates):
-                    continue
-
-                province = coords_to_province(lat, lng)
-                if not province:
-                    continue
-
-                tanggal_text = f"{tanggal.day} {ID_MONTHS[tanggal.month]} {tanggal.year}"
-                candidates.append({
-                    'tanggal_text':      tanggal_text,
-                    'tanggal':           tanggal,
-                    'origin_time':       origin_time,
-                    'wilayah':           '',
-                    'provinsi':          province,
-                    'latitude':          round(lat, 4),
-                    'longitude':         round(lng, 4),
-                    'depth_km':          depth,
-                    'magnitude':         mag,
-                    'lokasi':            'Laut' if (depth or 0) < 70 else '',
-                    'tsunami':           tsunami or None,
-                    'wilayah_merasakan': evt.get('Dirasakan', ''),
-                    'korban_kerusakan':  '[Auto-detected — perlu verifikasi korban/kerusakan]',
-                    'sumber':            'BMKG',
-                    '_key':              key,
-                })
-
-        # ── Save ─────────────────────────────────────────────────────────────
-        if not candidates:
-            self.stdout.write("No new significant events found.")
-            return
-
-        for c in candidates:
-            c_display = (
-                f"  {c['tanggal_text']:18s}  M{c['magnitude']}  "
-                f"{c['provinsi']:20s}  tsunami={c['tsunami']}  src={c['sumber']}"
-            )
-            if dry_run:
-                self.stdout.write(f"[DRY-RUN] {c_display}")
+        added = 0
+        for evt in gempa_list:
+            dirasakan = str(evt.get('Dirasakan', '') or '')
+            if not vi_mentioned(dirasakan):
                 continue
 
-            c_save = {k: v for k, v in c.items() if k != '_key'}
-            GempaMemusak.objects.create(no=next_no, **c_save)
-            existing.add(c['_key'])
-            next_no += 1
-            self.stdout.write(self.style.SUCCESS(f"[ADDED No={next_no-1}] {c_display}"))
+            tanggal = parse_tanggal(evt.get('Tanggal'))
+            if not tanggal:
+                self.stderr.write(f"  [SKIP] cannot parse date: {evt.get('Tanggal')!r}")
+                continue
 
-        if not dry_run:
+            # Optional recency filter using the feed's ISO DateTime
+            dt_str = evt.get('DateTime', '')
+            if dt_str:
+                try:
+                    dt = datetime.datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
+                    if dt < cutoff:
+                        self.stdout.write(f"  [SKIP] older than {days} days: {evt.get('Tanggal')}")
+                        continue
+                except ValueError:
+                    pass
+
+            coords = str(evt.get('Coordinates', '') or '').split(',')
+            try:
+                lat = float(coords[0].strip())
+                lng = float(coords[1].strip())
+            except (IndexError, ValueError):
+                self.stderr.write(f"  [SKIP] cannot parse coordinates: {evt.get('Coordinates')!r}")
+                continue
+
+            try:
+                mag = float(str(evt.get('Magnitude', '') or '').replace(',', '.'))
+            except ValueError:
+                mag = None
+
+            key = dedup_key(tanggal, lat, lng, mag)
+            if key in existing:
+                self.stdout.write(f"  [EXISTS] {tanggal} M{mag} {evt.get('Wilayah', '')[:40]}")
+                continue
+
+            wilayah = str(evt.get('Wilayah', '') or '')
+            lokasi = ''
+            w_lower = wilayah.lower()
+            if 'laut' in w_lower:
+                lokasi = 'Laut'
+            elif 'darat' in w_lower:
+                lokasi = 'Darat'
+
+            province = coords_to_province(lat, lng)
+            if province not in VALID_PROVINCES:
+                province = ''
+
+            tanggal_text = f"{tanggal.day} {ID_MONTHS[tanggal.month]} {tanggal.year}"
+
+            record = dict(
+                tanggal_text=tanggal_text,
+                tanggal=tanggal,
+                origin_time=parse_jam(evt.get('Jam')),
+                wilayah=wilayah,
+                provinsi=province,
+                latitude=round(lat, 4),
+                longitude=round(lng, 4),
+                depth_km=parse_depth(evt.get('Kedalaman')),
+                magnitude=mag,
+                lokasi=lokasi,
+                tsunami=None,
+                wilayah_merasakan=dirasakan,
+                korban_kerusakan='[Auto dari gempabumi-dirasakan — perlu verifikasi korban/kerusakan]',
+                sumber='BMKG Dirasakan',
+            )
+
+            display = f"{tanggal_text:20s} M{mag}  {province:20s}  {dirasakan[:50]}"
+            if dry_run:
+                self.stdout.write(f"[DRY-RUN] {display}")
+                continue
+
+            GempaMemusak.objects.create(no=next_no, **record)
+            existing.add(key)
+            next_no += 1
+            added += 1
+            self.stdout.write(self.style.SUCCESS(f"[ADDED No={next_no - 1}] {display}"))
+
+        if dry_run:
+            self.stdout.write("Dry run — nothing saved.")
+        else:
             self.stdout.write(self.style.SUCCESS(
-                f"\nDone. Added {len(candidates)} new event(s). "
+                f"\nDone. Added {added} new VI/VI-VII MMI event(s). "
                 f"Total records: {GempaMemusak.objects.count()}"
             ))

@@ -22,7 +22,7 @@ def fetch_bmkg_felt_task():
 
 @shared_task
 def check_gempa_merusak_task():
-    """Daily check: add events with M>=7.0, tsunami warning, or felt >= V MMI."""
+    """Daily check: scrape gempabumi-dirasakan, add VI / VI-VII MMI events."""
     print("Starting check_gempa_merusak task...")
-    call_command('check_gempa_merusak', days=2, min_mag=5.5, auto_mag=7.0, min_mmi=5)
+    call_command('check_gempa_merusak')
     print("Finished check_gempa_merusak task.")
