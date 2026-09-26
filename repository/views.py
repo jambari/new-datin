@@ -1208,6 +1208,9 @@ def gempa_merusak_list(request):
     elif tsunami == '0':
         qs = qs.filter(tsunami=False)
 
+    # Latest records first (catalog number is chronological: higher no = newer)
+    qs = qs.order_by('-no')
+
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv; charset=utf-8')
         response['Content-Disposition'] = 'attachment; filename="gempa_merusak.csv"'
@@ -1226,8 +1229,15 @@ def gempa_merusak_list(request):
             ])
         return response
 
+    paginator = Paginator(qs, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    elided_pages = paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1)
+
     return render(request, 'repository/gempa_merusak_list.html', {
-        'object_list': qs,
+        'object_list': page_obj,
+        'page_obj': page_obj,
+        'elided_pages': elided_pages,
         'province_choices': GempaMemusak.PROVINCE_CHOICES,
         'filter_q': q,
         'filter_provinsi': provinsi,
