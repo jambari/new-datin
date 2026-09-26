@@ -1,0 +1,157 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skala MMI (Modified Mercalli Intensity) · BMKG Jayapura</title>
+<meta name="description" content="Skala MMI (Modified Mercalli Intensity) — 12 tingkat intensitas guncangan gempa bumi dari I MMI hingga XII MMI beserta deskripsi dampaknya.">
+<meta name="keywords" content="skala MMI, modified mercalli intensity, skala mercalli, intensitas gempa, BMKG">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ SITE_URL }}{% url 'public_skala_mmi' %}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Skala MMI (Modified Mercalli Intensity) · BMKG Jayapura">
+<meta property="og:description" content="12 tingkat intensitas guncangan gempa bumi dari I MMI hingga XII MMI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root[data-theme="dark"] {
+  --bg:#0f172a; --card:#1e293b; --border:#1e293b; --border-input:#334155;
+  --text:#e2e8f0; --muted:#94a3b8; --soft:#64748b; --title:#f1f5f9;
+  --accent:#38bdf8; --accent-soft:rgba(56,189,248,.12);
+}
+:root[data-theme="light"] {
+  --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --border-input:#cbd5e1;
+  --text:#1e293b; --muted:#64748b; --soft:#94a3b8; --title:#0f172a;
+  --accent:#0369a1; --accent-soft:rgba(3,105,161,.08);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .3s,color .3s; }
+header { background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+.hdr-inner { max-width:1100px; margin:0 auto; padding:0 1.2rem; display:flex; align-items:center; gap:1rem; height:56px; }
+.brand { display:flex; align-items:center; gap:.7rem; text-decoration:none; flex:1; }
+.brand img { height:36px; }
+.brand-title { font-size:.85rem; font-weight:700; color:var(--title); display:block; }
+.brand-sub { font-size:.65rem; color:var(--muted); display:block; }
+.header-back { font-size:.8rem; color:var(--muted); text-decoration:none; white-space:nowrap; }
+.header-back:hover { color:var(--text); }
+.theme-toggle { background:var(--border-input); border:none; cursor:pointer; border-radius:6px; padding:.3rem .45rem; color:var(--muted); font-size:.75rem; }
+.page-wrap { max-width:1100px; margin:0 auto; padding:1.5rem 1.2rem 3rem; }
+.page-title { font-size:1.4rem; font-weight:700; color:var(--title); margin-bottom:.4rem; }
+.page-sub { font-size:.82rem; color:var(--soft); margin-bottom:1.5rem; line-height:1.6; }
+.intro { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:1.2rem; margin-bottom:1.4rem; font-size:.86rem; line-height:1.7; }
+.mmi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1rem; }
+.mmi-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:1rem; display:flex; flex-direction:column; gap:.6rem; }
+.mmi-head { display:flex; align-items:center; gap:.6rem; }
+.mmi-badge { display:inline-flex; align-items:center; justify-content:center; min-width:52px; padding:.25rem .6rem; border-radius:999px; background:var(--accent-soft); color:var(--accent); font-weight:800; font-size:.85rem; letter-spacing:.03em; }
+.mmi-img { width:100%; height:150px; object-fit:contain; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:.4rem; }
+.mmi-desc { font-size:.78rem; line-height:1.6; color:var(--muted); }
+.source { margin-top:1.4rem; font-size:.72rem; color:var(--soft); }
+@media (max-width:640px){ .brand-sub{display:none;} }
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr-inner">
+    <a href="{% url 'landing' %}" class="brand">
+      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
+      <div>
+        <span class="brand-title">Stasiun Geofisika Kelas I Jayapura</span>
+        <span class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</span>
+      </div>
+    </a>
+    <a href="{% url 'landing' %}" class="header-back">← Beranda</a>
+    <button class="theme-toggle" id="themeToggle" title="Ganti tema">🌙</button>
+  </div>
+</header>
+
+<div class="page-wrap">
+  <h1 class="page-title">Skala MMI (Modified Mercalli Intensity)</h1>
+
+  <div class="intro">
+    <strong>Skala Mercalli</strong> adalah satuan untuk mengukur kekuatan gempa bumi. Satuan ini diciptakan oleh seorang vulkanologis dari Italia yang bernama Giuseppe Mercalli pada tahun 1902. Skala Mercalli terbagi menjadi 12 pecahan berdasarkan informasi dari orang-orang yang selamat dari gempa tersebut dan juga dengan melihat serta membandingkan tingkat kerusakan akibat gempa bumi tersebut. Oleh itu skala Mercalli adalah sangat subjektif dan kurang tepat dibanding dengan perhitungan magnitudo gempa yang lain. Oleh karena itu, saat ini penggunaan Skala Richter lebih luas digunakan untuk mengukur kekuatan gempa bumi. Tetapi skala Mercalli yang dimodifikasi pada tahun 1931 oleh ahli seismologi Harry Wood dan Frank Neumann masih sering digunakan terutama apabila tidak terdapat peralatan seismometer yang dapat mengukur kekuatan gempa bumi di tempat kejadian.
+  </div>
+
+  <div class="mmi-grid">
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">I MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi1.png' %}" alt="I MMI" loading="lazy">
+      <p class="mmi-desc">Getaran tidak dirasakan kecuali dalam keadaan luar biasa oleh beberapa orang.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">II MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi2.png' %}" alt="II MMI" loading="lazy">
+      <p class="mmi-desc">Getaran dirasakan oleh beberapa orang, benda-benda ringan yang digantung bergoyang.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">III MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi3.png' %}" alt="III MMI" loading="lazy">
+      <p class="mmi-desc">Getaran dirasakan nyata dalam rumah. Terasa getaran seakan-akan ada truk berlalu.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">IV MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi4.png' %}" alt="IV MMI" loading="lazy">
+      <p class="mmi-desc">Pada siang hari dirasakan oleh orang banyak dalam rumah, di luar oleh beberapa orang, gerabah pecah, jendela/pintu berderik, dan dinding berbunyi.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">V MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi5.png' %}" alt="V MMI" loading="lazy">
+      <p class="mmi-desc">Getaran dirasakan oleh hampir semua penduduk, orang banyak terbangun, gerabah pecah, barang-barang terpelanting, tiang-tiang dan barang besar tampak bergoyang, bandul lonceng dapat berhenti.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">VI MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi6.png' %}" alt="VI MMI" loading="lazy">
+      <p class="mmi-desc">Getaran dirasakan oleh semua penduduk. Kebanyakan semua terkejut dan lari keluar, plester dinding jatuh dan cerobong asap pada pabrik rusak, kerusakan ringan.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">VII MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi7.png' %}" alt="VII MMI" loading="lazy">
+      <p class="mmi-desc">Tiap-tiap orang keluar rumah. Kerusakan ringan pada rumah-rumah dengan bangunan dan konstruksi yang baik. Sedangkan pada bangunan yang konstruksinya kurang baik terjadi retak-retak bahkan hancur, cerobong asap pecah. Terasa oleh orang yang naik kendaraan.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">VIII MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi8.png' %}" alt="VIII MMI" loading="lazy">
+      <p class="mmi-desc">Kerusakan ringan pada bangunan dengan konstruksi yang kuat. Retak-retak pada bangunan dengan konstruksi kurang baik, dinding dapat lepas dari rangka rumah, cerobong asap pabrik dan monumen-monumen roboh, air menjadi keruh.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">IX MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi9.png' %}" alt="IX MMI" loading="lazy">
+      <p class="mmi-desc">Kerusakan pada bangunan yang kuat, rangka-rangka rumah menjadi tidak lurus, banyak retak. Rumah tampak agak berpindah dari pondamennya. Pipa-pipa dalam rumah putus.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">X MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi10.png' %}" alt="X MMI" loading="lazy">
+      <p class="mmi-desc">Bangunan dari kayu yang kuat rusak, rangka rumah lepas dari pondamennya, tanah terbelah rel melengkung, tanah longsor di tiap-tiap sungai dan di tanah-tanah yang curam.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">XI MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi11.png' %}" alt="XI MMI" loading="lazy">
+      <p class="mmi-desc">Bangunan-bangunan hanya sedikit yang tetap berdiri. Jembatan rusak, terjadi lembah. Pipa dalam tanah tidak dapat dipakai sama sekali, tanah terbelah, rel melengkung sekali.</p>
+    </div>
+    <div class="mmi-card">
+      <div class="mmi-head"><span class="mmi-badge">XII MMI</span></div>
+      <img class="mmi-img" src="{% static 'theme/images/mmi/mmi12.png' %}" alt="XII MMI" loading="lazy">
+      <p class="mmi-desc">Hancur sama sekali, Gelombang tampak pada permukaan tanah. Pemandangan menjadi gelap. Benda-benda terlempar ke udara.</p>
+    </div>
+  </div>
+
+  <p class="source">Sumber: <a href="https://www.bmkg.go.id/gempabumi/skala-mmi" target="_blank" rel="noopener" style="color:var(--accent);">BMKG — Skala MMI</a></p>
+</div>
+
+<script>
+(function () {
+  var saved = localStorage.getItem('gmTheme');
+  var dark = saved ? saved === 'dark' : (new Date().getHours() < 6 || new Date().getHours() >= 18);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('themeToggle').textContent = dark ? '☀️' : '🌙';
+})();
+document.getElementById('themeToggle').addEventListener('click', function () {
+  var el = document.documentElement;
+  var dark = el.getAttribute('data-theme') !== 'dark';
+  el.setAttribute('data-theme', dark ? 'dark' : 'light');
+  localStorage.setItem('gmTheme', dark ? 'dark' : 'light');
+  document.getElementById('themeToggle').textContent = dark ? '☀️' : '🌙';
+});
+</script>
+</body>
+</html>

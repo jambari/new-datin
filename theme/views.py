@@ -461,6 +461,10 @@ def public_gempa_merusak_detail(request, pk):
     return render(request, 'public_gempa_merusak_detail.html', {'object': obj})
 
 
+def public_skala_mmi(request):
+    return render(request, 'public_skala_mmi.html', {})
+
+
 def gempa_public(request):
     import json
     from qc_review.models import Event as QCEvent

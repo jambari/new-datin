@@ -11,6 +11,7 @@ urlpatterns = [
     path('gempa/<str:public_id>/', views.public_gempa_detail, name='public_gempa_detail'),
     path('gempa-merusak/', views.public_gempa_merusak, name='public_gempa_merusak'),
     path('gempa-merusak/<int:pk>/', views.public_gempa_merusak_detail, name='public_gempa_merusak_detail'),
+    path('skala-mmi/', views.public_skala_mmi, name='public_skala_mmi'),
     path('shakemap/', views.public_shakemap_list, name='public_shakemap_list'),
     path('spectra-acceleration/', views.public_spectra_list, name='public_spectra_list'),
     path('shakemap/<int:pk>/', views.public_shakemap_detail, name='public_shakemap_detail'),
