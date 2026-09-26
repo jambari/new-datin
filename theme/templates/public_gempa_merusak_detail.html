@@ -90,6 +90,21 @@ table.info td:first-child { color:var(--soft); width:150px; }
   </div>
   {% endif %}
 
+  {% if object.strike is not None and object.dip is not None and object.rake is not None %}
+  <div class="card">
+    <h2>Mekanisme Sumber (Beachball)</h2>
+    <div style="display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;">
+      <canvas id="beachball" width="220" height="220" style="max-width:100%;"></canvas>
+      <div style="font-size:.8rem;color:var(--muted);line-height:1.8;">
+        <div>Strike: <strong>{{ object.strike|floatformat:1 }}°</strong></div>
+        <div>Dip: <strong>{{ object.dip|floatformat:1 }}°</strong></div>
+        <div>Rake: <strong>{{ object.rake|floatformat:1 }}°</strong></div>
+        {% if object.tensor_source %}<div class="muted" style="font-size:.72rem;margin-top:.4rem;">Sumber: {{ object.tensor_source }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="grid-2">
     <div class="card">
       <h2>Parameter Gempa</h2>
@@ -159,6 +174,23 @@ table.info td:first-child { color:var(--soft); width:150px; }
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% if object.strike is not None and object.dip is not None and object.rake is not None %}
+<script src="{% static 'theme/js/beachball.umd.min.js' %}"></script>
+<script>
+(function () {
+  var canvas = document.getElementById('beachball');
+  if (!canvas || !window.SeismicBeachball) return;
+  var ctx = canvas.getContext('2d');
+  window.SeismicBeachball.drawBeachball(ctx, [{{ object.strike }}, {{ object.dip }}, {{ object.rake }}], {
+    width: 220,
+    height: 220,
+    facecolor: '#6ea8ff',
+    bgcolor: '#ffffff',
+    edgecolor: '#333333'
+  });
+})();
+</script>
+{% endif %}
 <script>
 // Theme
 (function () {

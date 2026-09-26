@@ -205,6 +205,12 @@ class GempaMemusak(models.Model):
     korban_kerusakan  = models.TextField(blank=True, default='')
     sumber         = models.CharField(max_length=100, blank=True, default='')
 
+    # Focal mechanism (nodal plane 1) for the beachball plot
+    strike         = models.FloatField(null=True, blank=True, help_text="Strike (deg) nodal plane 1")
+    dip            = models.FloatField(null=True, blank=True, help_text="Dip (deg) nodal plane 1")
+    rake           = models.FloatField(null=True, blank=True, help_text="Rake (deg) nodal plane 1")
+    tensor_source  = models.CharField(max_length=60, blank=True, default='', help_text="Source of the focal mechanism, e.g. USGS")
+
     class Meta:
         ordering = ['no']
         verbose_name = 'Gempa Merusak'

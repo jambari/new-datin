@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 <div class="flex h-screen bg-gray-100">
   {% include 'partials/_sidebar.html' %}
@@ -22,6 +23,21 @@
         <h2 style="font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Episentrum</h2>
         <div id="epicenter-map" style="height:340px;border-radius:6px;z-index:0;"></div>
         <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Koordinat: {{ object.latitude }}, {{ object.longitude }}</p>
+      </div>
+      {% endif %}
+
+      {% if object.strike is not None and object.dip is not None and object.rake is not None %}
+      <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;margin-bottom:20px;">
+        <h2 style="font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Mekanisme Sumber (Beachball)</h2>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+          <canvas id="beachball" width="220" height="220"></canvas>
+          <div style="font-size:13px;color:#374151;line-height:1.9;">
+            <div>Strike: <strong>{{ object.strike|floatformat:1 }}°</strong></div>
+            <div>Dip: <strong>{{ object.dip|floatformat:1 }}°</strong></div>
+            <div>Rake: <strong>{{ object.rake|floatformat:1 }}°</strong></div>
+            {% if object.tensor_source %}<div style="font-size:11px;color:#9ca3af;margin-top:4px;">Sumber: {{ object.tensor_source }}</div>{% endif %}
+          </div>
+        </div>
       </div>
       {% endif %}
 
@@ -145,6 +161,23 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') document.getEle
     .bindPopup('<b>Episentrum</b><br>{{ object.tanggal_text|escapejs }}<br>M ' + mag.toFixed(1) + ' · {{ object.wilayah|default:"-"|escapejs }}')
     .openPopup();
   L.circle([lat, lng], { radius: 40000, color: '#dc2626', weight: 1, fillOpacity: 0.08 }).addTo(map);
+})();
+</script>
+{% endif %}
+{% if object.strike is not None and object.dip is not None and object.rake is not None %}
+<script src="{% static 'theme/js/beachball.umd.min.js' %}"></script>
+<script>
+(function () {
+  var canvas = document.getElementById('beachball');
+  if (!canvas || !window.SeismicBeachball) return;
+  var ctx = canvas.getContext('2d');
+  window.SeismicBeachball.drawBeachball(ctx, [{{ object.strike }}, {{ object.dip }}, {{ object.rake }}], {
+    width: 220,
+    height: 220,
+    facecolor: '#6ea8ff',
+    bgcolor: '#ffffff',
+    edgecolor: '#333333'
+  });
 })();
 </script>
 {% endif %}
