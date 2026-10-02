@@ -169,3 +169,19 @@ class HujanTelegramNotifyTest(TestCase):
     def test_import_task_still_exists_for_manual_use(self):
         from hujan.tasks import import_today_hujan_data
         self.assertTrue(callable(import_today_hujan_data))
+
+    def test_string_date_does_not_crash_the_signal(self):
+        """Record bisa saja dibuat dengan tanggal string (fixture/command)."""
+        _, post = self._create(tanggal='2026-10-02')
+        self.assertEqual(post.call_count, 1)
+        self.assertIn('2026-10-02', post.call_args.kwargs['data']['text'])
+
+    def test_formatting_error_never_breaks_the_save(self):
+        """Notifikasi adalah efek samping: gagal menyusun pesan != data hilang."""
+        with mock.patch('hujan.signals.format_hujan_message',
+                        side_effect=ValueError('boom')):
+            with mock.patch('theme.telegram.requests.post') as post:
+                with self.captureOnCommitCallbacks(execute=True):
+                    record = make_hujan(obs=55.5)
+        self.assertTrue(Hujan.objects.filter(pk=record.pk).exists())
+        self.assertEqual(post.call_count, 0)

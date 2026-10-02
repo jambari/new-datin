@@ -501,3 +501,12 @@ class BartingtonTelegramNotifyTest(TestCase):
     def test_no_message_when_telegram_not_configured(self):
         _, post = self._create(deklinasi_readings=self.READINGS)
         self.assertEqual(post.call_count, 0)
+
+    def test_formatting_error_never_breaks_the_save(self):
+        with mock.patch('magnet.signals.format_bartington_message',
+                        side_effect=ValueError('boom')):
+            with mock.patch('theme.telegram.requests.post') as post:
+                with self.captureOnCommitCallbacks(execute=True):
+                    obs = make_observation(deklinasi_readings=self.READINGS)
+        self.assertTrue(MagneticObservation.objects.filter(pk=obs.pk).exists())
+        self.assertEqual(post.call_count, 0)

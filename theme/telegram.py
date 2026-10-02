@@ -27,6 +27,21 @@ def esc(value) -> str:
     return html.escape(str(value), quote=False)
 
 
+def fmt_date(value) -> str:
+    """Tanggal -> 'dd-mm-yyyy'.
+
+    Menerima date/datetime maupun string. String dikembalikan apa adanya:
+    record bisa saja dibuat dengan tanggal berupa string (fixture, management
+    command, skrip uji), dan notifikasi tidak boleh gagal karenanya.
+    """
+    if value is None or value == '':
+        return '-'
+    strftime = getattr(value, 'strftime', None)
+    if callable(strftime):
+        return strftime('%d-%m-%Y')
+    return str(value)
+
+
 def send_telegram_message(text, chat_id=None, token=None, timeout=DEFAULT_TIMEOUT) -> bool:
     """Kirim satu pesan. Kembalikan True kalau Telegram menerimanya.
 
