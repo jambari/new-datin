@@ -399,6 +399,19 @@ class FmiIndicesPublicPageTest(TestCase):
         self.assertNotContains(resp, 'chart-grid')
         self.assertNotContains(resp, 'chart-D')
 
+    def test_indices_page_header_css_matches_other_public_pages(self):
+        """Halaman ini merender <header id="site-header"> sendiri.
+
+        Halaman publik lain memasangkannya dengan CSS `#site-header {
+        position: fixed; ... }` sehingga header bawaan base.html
+        (_landing_header.html) menumpuk di posisi yang sama — tampak satu header.
+        Tanpa CSS itu, keduanya tersusun vertikal dan header terlihat DOBEL.
+        """
+        resp = self.client.get(reverse('public_magnetbumi_indices'))
+        self.assertContains(resp, '<header id="site-header"')
+        self.assertContains(resp, 'position: fixed; top: 0; left: 0; right: 0; z-index: 1000;')
+        self.assertContains(resp, '.header-inner')
+
     # ── /magnetbumi/ tetap 7 komponen, tanpa citra indeks ────────────────────
 
     def test_magnetbumi_page_has_seven_component_charts(self):
