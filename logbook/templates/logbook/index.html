@@ -157,6 +157,48 @@
     }
 
     .hidden { display: none; }
+
+    /* ── Modal pengingat shakemap ── */
+    .reminder-overlay {
+        position: fixed; inset: 0; z-index: 9999;
+        background: rgba(0, 0, 0, 0.55);
+        display: none; align-items: center; justify-content: center;
+        padding: 20px;
+        -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+    }
+    .reminder-overlay.show { display: flex; animation: reminderFade .25s ease-out; }
+    .reminder-box {
+        background: var(--ios-card); border-radius: 18px;
+        max-width: 460px; width: 100%; padding: 26px 24px 22px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        text-align: center; animation: reminderPop .3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .reminder-icon { font-size: 2.6rem; line-height: 1; margin-bottom: 10px; }
+    .reminder-title {
+        font-size: 1.05rem; font-weight: 700; color: var(--ios-text);
+        margin-bottom: 10px; letter-spacing: -0.2px;
+    }
+    .reminder-text {
+        font-size: 0.98rem; line-height: 1.55; color: #3A3A3C;
+        margin-bottom: 20px;
+    }
+    .reminder-text strong { color: var(--ios-blue); }
+    .reminder-btn {
+        background: var(--ios-blue); color: #fff; border: none;
+        padding: 13px 20px; border-radius: 14px; width: 100%;
+        font-size: 0.98rem; font-weight: 700; cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .reminder-btn:active { transform: scale(0.97); opacity: 0.9; }
+    .reminder-hint { font-size: 0.72rem; color: var(--ios-label); margin-top: 10px; }
+
+    @keyframes reminderFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes reminderPop {
+        from { transform: scale(0.9); opacity: 0; }
+        to   { transform: scale(1);   opacity: 1; }
+    }
+
+    @media print { .reminder-overlay { display: none !important; } }
 </style>
 
 <div class="flex h-screen bg-gray-100 overflow-hidden">
@@ -265,6 +307,21 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- ── Modal pengingat: muncul setelah halaman selesai dimuat ── -->
+                <div class="reminder-overlay" id="shakemap-reminder"
+                     role="dialog" aria-modal="true" aria-labelledby="shakemap-reminder-title">
+                    <div class="reminder-box">
+                        <div class="reminder-icon">🫶</div>
+                        <h2 class="reminder-title" id="shakemap-reminder-title">Pengingat Shakemap</h2>
+                        <p class="reminder-text">
+                            Ops sayang, tolong generate tiap gempa <strong>M&gt;=3.6</strong>,
+                            agar tangan tra kaku dengan shakemap
+                        </p>
+                        <button type="button" class="reminder-btn" id="shakemap-reminder-close">Siap, Ops! 👍</button>
+                        <p class="reminder-hint">Tekan Esc atau klik di luar kotak untuk menutup</p>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </main>
@@ -297,6 +354,49 @@
             }
         }
         if(s) { s.addEventListener('change', toggle); toggle(); }
+
+        // --- Modal pengingat shakemap: tampil setelah halaman 100% termuat ---
+        (function () {
+            // window 'load' = seluruh aset (gambar/CSS) selesai dimuat,
+            // bukan sekadar DOMContentLoaded.
+            window.addEventListener('load', function () {
+                const overlay = document.getElementById('shakemap-reminder');
+                if (!overlay) return;
+
+                const closeBtn = document.getElementById('shakemap-reminder-close');
+                let lastFocused = null;
+
+                function openReminder() {
+                    lastFocused = document.activeElement;
+                    overlay.classList.add('show');
+                    if (closeBtn) closeBtn.focus();
+                }
+
+                function closeReminder() {
+                    overlay.classList.remove('show');
+                    if (lastFocused && typeof lastFocused.focus === 'function') {
+                        lastFocused.focus();
+                    }
+                }
+
+                // Beri jeda singkat supaya transisi render tidak terpotong.
+                setTimeout(openReminder, 300);
+
+                if (closeBtn) closeBtn.addEventListener('click', closeReminder);
+
+                // Klik area gelap di luar kotak
+                overlay.addEventListener('click', function (e) {
+                    if (e.target === overlay) closeReminder();
+                });
+
+                // Tombol Esc
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && overlay.classList.contains('show')) {
+                        closeReminder();
+                    }
+                });
+            });
+        })();
 
         // --- AJAX Fetch Data ---
         window.fetchLogs = function(page = 1) {

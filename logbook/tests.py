@@ -106,3 +106,43 @@ class LogbookViewsTest(TestCase):
             REMOTE_ADDR='127.0.0.1',
         )
         self.assertEqual(resp.status_code, 404)
+
+
+class LogbookShakemapReminderTest(TestCase):
+    """Modal pengingat shakemap di halaman logbook."""
+
+    URL = '/logbook/'
+
+    def test_modal_markup_present_for_allowed_ip(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'id="shakemap-reminder"')
+        self.assertContains(resp, 'id="shakemap-reminder-close"')
+        self.assertContains(resp, 'Ops sayang, tolong generate tiap gempa')
+
+    def test_modal_message_mentions_threshold(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        # Pesan harus menyebut ambang magnitudo 3.6 dengan '>' ter-escape.
+        self.assertContains(resp, 'M&gt;=3.6')
+
+    def test_modal_absent_for_unauthorized_ip(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='1.2.3.4')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Akses Ditolak')
+        self.assertNotContains(resp, 'id="shakemap-reminder"')
+        self.assertNotContains(resp, 'Ops sayang')
+
+    def test_modal_triggers_on_window_load(self):
+        """Popup dipicu oleh window 'load' (halaman 100% termuat), bukan DOMContentLoaded."""
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        self.assertContains(resp, "window.addEventListener('load'")
+
+    def test_print_view_has_no_modal(self):
+        user = make_user('printer')
+        log = make_logbook(user)
+        resp = self.client.get(
+            reverse('logbook:print_log_detail', args=[log.id]),
+            REMOTE_ADDR='127.0.0.1',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'shakemap-reminder')
