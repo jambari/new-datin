@@ -339,7 +339,7 @@ class FmiIndicesViewTest(TestCase):
 
 
 class FmiIndicesPublicPageTest(TestCase):
-    """Halaman publik /magnetbumi/ + submenu navbar landing."""
+    """Halaman publik indeks K & A + /magnetbumi/ + submenu navbar landing."""
 
     def setUp(self):
         self.media_root = tempfile.mkdtemp(prefix='fmi-test-media-')
@@ -357,43 +357,75 @@ class FmiIndicesPublicPageTest(TestCase):
         obj.save()
         return obj
 
-    def test_magnetbumi_page_shows_latest_pair(self):
+    # ── halaman khusus indeks K & A ──────────────────────────────────────────
+
+    def test_indices_page_shows_latest_pair(self):
         self._make(FmiIndicesImage.K)
         self._make(FmiIndicesImage.A)
 
-        resp = self.client.get(reverse('public_magnetbumi'))
+        resp = self.client.get(reverse('public_magnetbumi_indices'))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'id="indeks-k-a"')
         self.assertContains(resp, 'FMI-K-Indices-JYP-20261003.png')
         self.assertContains(resp, 'FMI-A-Indices-JYP-20261003.png')
         self.assertContains(resp, 'K Indices')
         self.assertContains(resp, 'A Indices')
 
-    def test_magnetbumi_page_shows_only_latest_date(self):
+    def test_indices_page_shows_only_latest_date(self):
         self._make(FmiIndicesImage.K, tanggal=datetime.date(2026, 10, 3))
         self._make(FmiIndicesImage.A, tanggal=datetime.date(2026, 10, 3))
         self._make(FmiIndicesImage.K, tanggal=datetime.date(2026, 10, 2))
         self._make(FmiIndicesImage.A, tanggal=datetime.date(2026, 10, 2))
 
-        resp = self.client.get(reverse('public_magnetbumi'))
+        resp = self.client.get(reverse('public_magnetbumi_indices'))
         self.assertContains(resp, 'FMI-K-Indices-JYP-20261003.png')
         self.assertNotContains(resp, 'FMI-K-Indices-JYP-20261002.png')
 
-    def test_magnetbumi_page_empty_state_without_data(self):
-        resp = self.client.get(reverse('public_magnetbumi'))
+    def test_indices_page_empty_state_without_data(self):
+        resp = self.client.get(reverse('public_magnetbumi_indices'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Citra indeks K &amp; A belum tersedia')
 
-    def test_magnetbumi_partial_pair_does_not_break(self):
+    def test_indices_page_partial_pair_does_not_break(self):
         """Hanya citra K tersimpan — halaman tetap tampil."""
         self._make(FmiIndicesImage.K)
-        resp = self.client.get(reverse('public_magnetbumi'))
+        resp = self.client.get(reverse('public_magnetbumi_indices'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Citra A belum tersedia')
 
-    def test_landing_navbar_has_magnetbumi_submenu(self):
+    def test_indices_page_has_no_magnetbumi_charts(self):
+        """Halaman indeks tidak boleh memuat chart 7 komponen."""
+        self._make(FmiIndicesImage.K)
+        resp = self.client.get(reverse('public_magnetbumi_indices'))
+        self.assertNotContains(resp, 'chart-grid')
+        self.assertNotContains(resp, 'chart-D')
+
+    # ── /magnetbumi/ tetap 7 komponen, tanpa citra indeks ────────────────────
+
+    def test_magnetbumi_page_has_seven_component_charts(self):
+        resp = self.client.get(reverse('public_magnetbumi'))
+        self.assertEqual(resp.status_code, 200)
+        for canvas in ['chart-D', 'chart-I', 'chart-F', 'chart-H', 'chart-Z', 'chart-X', 'chart-Y']:
+            self.assertContains(resp, canvas)
+
+    def test_magnetbumi_page_has_no_index_images(self):
+        """Citra K & A tidak lagi ditampilkan di /magnetbumi/ (terpisah)."""
+        self._make(FmiIndicesImage.K)
+        self._make(FmiIndicesImage.A)
+
+        resp = self.client.get(reverse('public_magnetbumi'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'id="indeks-k-a"')
+        self.assertNotContains(resp, 'FMI-K-Indices-JYP-20261003.png')
+        self.assertNotContains(resp, 'FMI-A-Indices-JYP-20261003.png')
+
+    # ── navbar ───────────────────────────────────────────────────────────────
+
+    def test_landing_navbar_links_to_separate_pages(self):
         resp = self.client.get(reverse('landing'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Absolut Magnetik')
         self.assertContains(resp, 'K dan A Indeks')
-        self.assertContains(resp, '/magnetbumi/#indeks-k-a')
+        # masing-masing menuju halaman sendiri, bukan anchor di halaman yang sama
+        self.assertContains(resp, 'href="/magnetbumi/"')
+        self.assertContains(resp, 'href="/magnetbumi/indeks-k-a/"')
+        self.assertNotContains(resp, '/magnetbumi/#indeks-k-a')

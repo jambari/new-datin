@@ -548,10 +548,14 @@ def our_work(request):
 
 
 def public_magnetbumi(request):
-    """Halaman publik magnetbumi: observasi absolut + citra indeks K & A terbaru."""
+    """Halaman publik magnetbumi: 7 komponen observasi absolut (seperti semula)."""
+    return render(request, 'public_magnetbumi.html')
+
+
+def _latest_fmi_indices():
+    """Pasangan citra indeks K & A untuk tanggal terbaru yang tersedia."""
     from magnet.models import FmiIndicesImage
 
-    # Pasangan citra indeks K & A terbaru (diisi job harian 16:00 WIT).
     fmi_date = (
         FmiIndicesImage.objects.order_by('-tanggal')
         .values_list('tanggal', flat=True).first()
@@ -566,12 +570,17 @@ def public_magnetbumi(request):
         newest = fmi_k or fmi_a
         fmi_fetched_at = newest.fetched_at if newest else None
 
-    return render(request, 'public_magnetbumi.html', {
+    return {
         'fmi_date':       fmi_date,
         'fmi_k':          fmi_k,
         'fmi_a':          fmi_a,
         'fmi_fetched_at': fmi_fetched_at,
-    })
+    }
+
+
+def public_magnetbumi_indices(request):
+    """Halaman publik khusus citra indeks magnetbumi K & A (JYP)."""
+    return render(request, 'public_magnetbumi_indices.html', _latest_fmi_indices())
 
 
 def public_magnetbumi_data(request):

@@ -19,6 +19,7 @@ urlpatterns = [
     path('kegiatan/', views.our_work, name='our_work'),
     path('magnetbumi/', views.public_magnetbumi, name='public_magnetbumi'),
     path('magnetbumi/data/', views.public_magnetbumi_data, name='public_magnetbumi_data'),
+    path('magnetbumi/indeks-k-a/', views.public_magnetbumi_indices, name='public_magnetbumi_indices'),
     path('petir/', views.public_petir, name='public_petir'),
     path('petir/data/', views.public_petir_data, name='public_petir_data'),
     path('tentang/', views.public_about, name='public_about'),

@@ -28,7 +28,8 @@ utama area kerja internal: **Dashboard** (`/dashboard/`) dan **Logbook** (`/logb
 │   ├── /shakemap/<pk>/spectrum/      Spektrum respons
 │   ├── /spectra-acceleration/        Daftar spektra akselerasi
 │   ├── /petir/                       Informasi petir
-│   ├── /magnetbumi/                  Informasi magnetbumi + indeks K & A (anchor #indeks-k-a)
+│   ├── /magnetbumi/                  Informasi magnetbumi — 7 komponen observasi absolut
+│   ├── /magnetbumi/indeks-k-a/       Indeks K & A magnetbumi (citra harian) — halaman terpisah
 │   ├── /kegiatan/                    Kegiatan / our work
 │   ├── /tentang/ · /glosarium/       Halaman statis
 │   ├── /poster/                      Poster Datin
@@ -541,9 +542,9 @@ python manage.py fetch_fmi_indices --force             # kirim ulang walau citra
 
 | Tempat | Isi |
 |---|---|
-| `/magnetbumi/` (section `id="indeks-k-a"`, `theme.views.public_magnetbumi`) | Pasangan citra **K** dan **A** terbaru (tanggal terbaru yang tersedia), masing-masing dengan tanggal WIT, jam pengambilan (dikonversi ke Asia/Jayapura), ukuran berkas, dan tautan ukuran penuh. Bila belum ada data → state kosong. |
-| Navbar landing (`theme/templates/landing.html`) | Item **Magnetbumi** kini berupa dropdown: **Absolut Magnetik** → `/magnetbumi/`, **K dan A Indeks** → `/magnetbumi/#indeks-k-a`. Memakai CSS/JS `.nav-dropdown` yang sudah ada (hover + klik di mobile). |
-| Section anchor | `.fmi-section` memakai `scroll-margin-top: 80px` agar tidak tertutup header tetap. |
+| `/magnetbumi/` (`theme.views.public_magnetbumi`) | **7 komponen** observasi absolut (D, I, F, H, Z, X, Y) seperti semula — **tidak** memuat citra indeks K & A. |
+| `/magnetbumi/indeks-k-a/` (`theme.views.public_magnetbumi_indices`, template `public_magnetbumi_indices.html`) | Halaman publik **terpisah** khusus pasangan citra **K** dan **A** terbaru (tanggal terbaru yang tersedia), masing-masing dengan jam pengambilan (dikonversi ke Asia/Jayapura), ukuran berkas, dan tautan ukuran penuh. Bila belum ada data → state kosong. Tidak memuat chart. |
+| Navbar landing (`theme/templates/landing.html`) | Item **Magnetbumi** berupa dropdown: **Absolut Magnetik** → `/magnetbumi/`, **K dan A Indeks** → `/magnetbumi/indeks-k-a/`. Dua tautan berbeda, bukan anchor di halaman yang sama. |
 
 > Halaman galeri internal `/magnet/fmi-indices/` tetap menyediakan riwayat lengkap +
 > filter; halaman publik sengaja hanya menampilkan pasangan terbaru.
