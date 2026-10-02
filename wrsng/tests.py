@@ -1,6 +1,8 @@
 import datetime
 import json
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
+from django.test import RequestFactory
+from django.middleware.security import SecurityMiddleware
 from django.urls import reverse
 from django.contrib.auth.models import User
 from .models import WRSNGStatus, WRSNGDataAvailability
@@ -122,3 +124,78 @@ class WRSNGViewsTest(TestCase):
         self.client.logout()
         resp = self.client.get(reverse('wrsng:status_list'))
         self.assertIn(resp.status_code, [200, 302, 403])
+
+
+class SecureRedirectExemptTest(TestCase):
+    """Ingest API harus tetap bisa di-POST lewat plain HTTP.
+
+    Perangkat WRSNG (dan monitor instrumen) tidak mengikuti redirect 301,
+    sehingga begitu SECURE_SSL_REDIRECT diaktifkan datanya hilang kecuali
+    path-nya dikecualikan di SECURE_REDIRECT_EXEMPT (dan di-proxy nginx port 80).
+    """
+
+    EXEMPT_PATHS = [
+        '/api/wrsng/status/update/',
+        '/api/yolo/state/',
+        '/api/yolo/snapshot/',
+        '/magnet/api/instrument/status/',
+    ]
+
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_ingest_paths_are_not_redirected_over_http(self):
+        middleware = SecurityMiddleware(lambda request: None)
+        for path in self.EXEMPT_PATHS:
+            with self.subTest(path=path):
+                request = RequestFactory().post(path, secure=False)
+                self.assertIsNone(
+                    middleware.process_request(request),
+                    f'{path} tidak boleh di-redirect ke HTTPS',
+                )
+
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_other_paths_still_redirect_to_https(self):
+        middleware = SecurityMiddleware(lambda request: None)
+        request = RequestFactory().get('/wrsng/status/list/', secure=False)
+        response = middleware.process_request(request)
+        self.assertIsNotNone(response)
+        self.assertEqual(response.status_code, 301)
+
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_exempt_paths_are_reachable_over_https_too(self):
+        """HTTPS tidak boleh terpengaruh oleh pengecualian ini."""
+        middleware = SecurityMiddleware(lambda request: None)
+        request = RequestFactory().post('/api/wrsng/status/update/', secure=True)
+        self.assertIsNone(middleware.process_request(request))
+
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_ingest_post_survives_the_redirect_middleware(self):
+        """End-to-end lewat middleware: POST HTTP harus sampai ke view (bukan 301).
+
+        Perangkat WRSNG memakai path /api/wrsng/status/update/ (lihat README dan
+        nginx access log), bukan /wrsng/status/update/ dari namespace app.
+        """
+        payload = {
+            'status_datetime': '2024-03-01T10:00:00Z',
+            'wrs_code': 'WRS-01',
+            'display_status': 1,
+            'chrome_status': 1,
+        }
+        resp = self.client.post(
+            '/api/wrsng/status/update/',
+            data=json.dumps(payload),
+            content_type='application/json',
+            secure=False,
+        )
+        self.assertIn(resp.status_code, [200, 201], f'dapat {resp.status_code}, bukan 301')
+        self.assertTrue(WRSNGStatus.objects.filter(wrs_code='WRS-01').exists())
+
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_app_namespaced_route_still_redirects(self):
+        """Route duplikat /wrsng/status/update/ tidak dikecualikan (bukan jalur device)."""
+        resp = self.client.post(
+            reverse('wrsng:status_update_api'),
+            data='{}',
+            content_type='application/json',
+            secure=False,
+        )
+        self.assertEqual(resp.status_code, 301)

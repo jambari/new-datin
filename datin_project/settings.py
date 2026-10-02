@@ -380,3 +380,17 @@ SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# ── HTTP ingest endpoints (exempt from the HTTPS redirect) ─────────────────
+# Beberapa pengirim data (perangkat WRSNG, monitor instrumen, agen YOLO) hanya
+# bisa melakukan POST plain HTTP dan tidak mengikuti redirect 301, sehingga
+# datanya hilang begitu HTTPS diwajibkan (SECURE_SSL_REDIRECT=True).
+# Path di bawah ini di-proxy oleh nginx di port 80 (lihat /etc/nginx/sites-enabled/datin)
+# dan dikecualikan dari redirect supaya POST-nya sampai ke view.
+# Catatan: Django mencocokkan pola ini dengan request.path TANPA garis miring di depan.
+SECURE_REDIRECT_EXEMPT = [
+    r'^api/wrsng/status/update/?$',   # WRSNG device status  (banyak IP publik)
+    r'^api/yolo/state/?$',            # YOLO training state push
+    r'^api/yolo/snapshot/?$',         # YOLO weight snapshot push
+    r'^magnet/api/instrument/',       # LEMI-018 / Proton / Nexstorm monitor
+]
