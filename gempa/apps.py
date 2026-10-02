@@ -1,34 +1,86 @@
+"""App config + the operator groups, mirroring the permissions on .188.
+
+On 36.91.166.188 each regional office has its OWN permission set on its own
+catalog table, so an operator can only edit their office's events:
+
+    angkasa  view balaigempa + full CRUD city/gempa/satudatagempa/significant
+    pgr5     full CRUD balaigempa/city/satudatagempa/significant
+    nabire   full CRUD gempanabire + satudatagempa
+    sorong   full CRUD gempasorong + satudatagempa
+
+Here that is expressed as one group per office (same effective permissions,
+easier to administer: add a user to the group instead of setting 8-17
+individual permissions).
+"""
 from django.apps import AppConfig
 from django.db.models.signals import post_migrate
 
-#: Grup pemilik akses katalog gempa. Dibuat/dirapikan otomatis setiap `migrate`.
-KATALOG_GROUP_NAME = 'Operator Katalog Gempa'
+#: Satu grup per kantor, sama dengan izin per-user di .188.
+OPERATOR_GROUPS = {
+    'Operator Angkasa': [
+        'view_balaigempa',
+        'add_city', 'change_city', 'delete_city', 'view_city',
+        'add_gempa', 'change_gempa', 'delete_gempa', 'view_gempa',
+        'add_satudatagempa', 'change_satudatagempa', 'delete_satudatagempa', 'view_satudatagempa',
+        'add_significant', 'change_significant', 'delete_significant', 'view_significant',
+    ],
+    'Operator PGR V': [
+        'add_balaigempa', 'change_balaigempa', 'delete_balaigempa', 'view_balaigempa',
+        'add_city', 'change_city', 'delete_city', 'view_city',
+        'add_satudatagempa', 'change_satudatagempa', 'delete_satudatagempa', 'view_satudatagempa',
+        'add_significant', 'change_significant', 'delete_significant', 'view_significant',
+    ],
+    'Operator Nabire': [
+        'add_gempanabire', 'change_gempanabire', 'delete_gempanabire', 'view_gempanabire',
+        'add_satudatagempa', 'change_satudatagempa', 'delete_satudatagempa', 'view_satudatagempa',
+    ],
+    'Operator Sorong': [
+        'add_gempasorong', 'change_gempasorong', 'delete_gempasorong', 'view_gempasorong',
+        'add_satudatagempa', 'change_satudatagempa', 'delete_satudatagempa', 'view_satudatagempa',
+    ],
+}
+
+#: Grup awal (semua izin katalog) — digantikan grup per-kantor di atas.
+LEGACY_GROUP_NAME = 'Operator Katalog Gempa'
 
 
-def ensure_operator_group(sender, using=None, **kwargs):
-    """Pastikan grup operator ada dan memuat SEMUA izin model katalog.
+def ensure_operator_groups(sender, using=None, **kwargs):
+    """Buat/rapikan grup per-kantor setiap kali `migrate` dijalankan.
 
-    Sengaja lewat post_migrate, bukan data migration: izin model baru dibuat
-    Django pada post_migrate (create_permissions) SETELAH migrasi selesai, jadi
-    data migration bisa berjalan saat izin belum lengkap — persis yang terjadi
-    pada percobaan pertama (hanya 20 dari 36 izin yang terpasang).
-
-    Idempoten: aman dijalankan berulang kali.
+    Lewat post_migrate, bukan data migration: izin model baru dibuat Django pada
+    post_migrate (create_permissions), jadi data migration bisa berjalan saat
+    izin belum ada. Idempoten.
     """
     from django.apps import apps as global_apps
     from django.contrib.auth.management import create_permissions
     from django.contrib.auth.models import Group, Permission
 
-    # Pastikan baris Permission untuk app ini sudah ada sebelum dipakai.
-    # (urutan receiver post_migrate antar app tidak dijamin)
     app_config = global_apps.get_app_config('gempa')
     create_permissions(app_config, verbosity=0, apps=global_apps)
 
-    group, _ = Group.objects.get_or_create(name=KATALOG_GROUP_NAME)
-    # list(), bukan queryset: M2M set() menolak queryset yang terikat alias DB
-    # berbeda dan bisa berhenti separuh jalan. Proyek ini single-database.
-    permissions = list(Permission.objects.filter(content_type__app_label='gempa'))
-    group.permissions.set(permissions)
+    available = dict(
+        Permission.objects.filter(content_type__app_label='gempa')
+        .values_list('codename', 'id')
+    )
+
+    missing = []
+    for name, codenames in OPERATOR_GROUPS.items():
+        group, _ = Group.objects.get_or_create(name=name)
+        ids = []
+        for codename in codenames:
+            if codename in available:
+                ids.append(available[codename])
+            else:
+                missing.append(f'{name}:{codename}')
+        # list() of ids, bukan queryset: M2M set() menolak queryset beda alias DB
+        group.permissions.set(ids)
+
+    if missing:
+        import sys
+        print(f'[gempa] PERINGATAN izin tidak ditemukan: {missing}', file=sys.stderr)
+
+    # Grup versi pertama (semua izin) tidak dipakai lagi.
+    Group.objects.filter(name=LEGACY_GROUP_NAME).delete()
 
 
 class GempaConfig(AppConfig):
@@ -44,7 +96,7 @@ class GempaConfig(AppConfig):
 
     def ready(self):
         post_migrate.connect(
-            ensure_operator_group,
+            ensure_operator_groups,
             sender=self,
-            dispatch_uid='gempa.ensure_operator_group',
+            dispatch_uid='gempa.ensure_operator_groups',
         )

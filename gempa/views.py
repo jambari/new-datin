@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 
+from .apps import OPERATOR_GROUPS
 from .models import (Gempa, Balaigempa, Gempasorong, Gempanabire,
                      Satudatagempa, Significant)
 
@@ -49,22 +50,22 @@ def latest_event_notify(request):
     })
 
 
-# Nama grup pemilik akses katalog (dibuat oleh migrasi 0002_operator_group).
-KATALOG_GROUP_NAME = 'Operator Katalog Gempa'
+# Grup operator katalog (dibuat/dirapikan oleh post_migrate, lihat gempa/apps.py).
+CATALOG_GROUP_NAMES = frozenset(OPERATOR_GROUPS)
 
 
 def post_login_redirect(request):
     """Tujuan setelah login tanpa parameter ?next=.
 
-    User yang hanya anggota grup "Operator Katalog Gempa" diarahkan ke
-    /gempa-admin/ (admin katalog, tanpa OTP). Semua user lain tetap ke
-    halaman biasa (POST_LOGIN_REDIRECT_URL, default /dashboard/).
+    Anggota salah satu grup operator katalog diarahkan ke /gempa-admin/ (admin
+    katalog, tanpa OTP). Semua user lain tetap ke halaman biasa
+    (POST_LOGIN_REDIRECT_URL, default /dashboard/).
     """
     if not request.user.is_authenticated:
         return redirect(settings.LOGIN_URL)
 
     group_names = set(request.user.groups.values_list('name', flat=True))
-    if KATALOG_GROUP_NAME in group_names and not request.user.is_superuser:
+    if group_names & CATALOG_GROUP_NAMES and not request.user.is_superuser:
         return redirect('gempa_admin:index')
 
     return redirect(settings.POST_LOGIN_REDIRECT_URL)

@@ -9,19 +9,26 @@ Focus areas:
 """
 import datetime
 import json
+import os
 
 from django.contrib import admin as django_admin
 from django.contrib.auth.models import Group, User
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
-from .apps import ensure_operator_group, KATALOG_GROUP_NAME
+from .apps import (ensure_operator_groups, OPERATOR_GROUPS,
+                  LEGACY_GROUP_NAME)
+from .sites import gempa_admin_site
 from .models import (Gempa, Balaigempa, Gempasorong, Gempanabire,
                      Satudatagempa, Gempanganjuk, Significant, City,
                      FocalMechanism)
 
 CATALOG_MODELS = [Gempa, Balaigempa, Gempasorong, Gempanabire,
                   Satudatagempa, Gempanganjuk, Significant, City, FocalMechanism]
+
+#: Grup operator yang dipakai di test (Angkasa punya akses ke Gempa JAY).
+ANGKASA_GROUP = 'Operator Angkasa'
 
 
 def make_event(model, **kwargs):
@@ -46,7 +53,7 @@ class GempaAdminSiteTest(TestCase):
     def setUp(self):
         self.staff = User.objects.create_user('operator', password='pass12345',
                                              is_staff=True)
-        self.staff.groups.add(Group.objects.get(name=KATALOG_GROUP_NAME))
+        self.staff.groups.add(Group.objects.get(name=ANGKASA_GROUP))
 
     def test_login_page_renders_without_otp(self):
         resp = self.client.get('/gempa-admin/login/')
@@ -73,11 +80,30 @@ class GempaAdminSiteTest(TestCase):
         """Halaman admin ini hanya menampilkan katalog gempa."""
         self.client.force_login(self.staff)
         resp = self.client.get('/gempa-admin/')
-        for model in CATALOG_MODELS:
-            self.assertContains(resp, model._meta.verbose_name)
         # app lain di project ini tidak boleh muncul di sini
         for absent in ['Logbook', 'Repository', 'Jadwal', 'Perjadin', 'Tiket']:
             self.assertNotContains(resp, absent)
+        # katalognya sendiri muncul
+        self.assertContains(resp, 'Gempa JAY')
+
+    def test_index_is_scoped_to_the_operators_own_office(self):
+        """Angkasa hanya melihat katalog yang jadi haknya, bukan kantor lain."""
+        self.client.force_login(self.staff)          # anggota Operator Angkasa
+        body = self.client.get('/gempa-admin/').content.decode()
+
+        for visible in ['Gempa JAY', 'Gempa PGR V (Balai)', 'Gempa Signifikan',
+                        'Kota', 'Satu Data Gempa']:
+            self.assertIn(visible, body)
+
+        for hidden in ['Gempa Sorong (SWI)', 'Gempa Nabire (NBPI)',
+                       'Gempa Nganjuk (NGJ)', 'Focal Mechanism']:
+            self.assertNotIn(hidden, body, f'{hidden} tidak boleh terlihat oleh Angkasa')
+
+    def test_all_office_models_are_registered_on_the_gempa_site(self):
+        """Semua 9 model terdaftar di site katalog (terlepas dari izin user)."""
+        registered = set(gempa_admin_site._registry.keys())
+        for model in CATALOG_MODELS:
+            self.assertIn(model, registered)
 
     def test_catalog_models_are_not_registered_on_the_otp_admin(self):
         """Regresi: /admin/ (OTP) tidak boleh ikut kebagian model katalog."""
@@ -107,25 +133,70 @@ class CatalogTablesTest(TestCase):
 
 
 class OperatorGroupTest(TestCase):
-    def test_group_exists_with_all_catalog_permissions(self):
-        group = Group.objects.get(name=KATALOG_GROUP_NAME)
-        apps = {p.content_type.app_label for p in group.permissions.all()}
-        self.assertEqual(apps, {'gempa'})
-        # view/add/change/delete untuk 9 model
-        self.assertEqual(group.permissions.count(), 36)
+    """Satu grup per kantor, izinnya sama dengan akun per-user di .188."""
+
+    EXPECTED = {
+        'Operator Angkasa': 17,
+        'Operator PGR V':   16,
+        'Operator Nabire':   8,
+        'Operator Sorong':   8,
+    }
+
+    def test_all_office_groups_exist_with_expected_permissions(self):
+        for name, count in self.EXPECTED.items():
+            with self.subTest(group=name):
+                group = Group.objects.get(name=name)
+                self.assertEqual(group.permissions.count(), count)
+
+    def test_every_group_only_holds_catalog_permissions(self):
+        for name in self.EXPECTED:
+            group = Group.objects.get(name=name)
+            apps = {p.content_type.app_label for p in group.permissions.all()}
+            self.assertEqual(apps, {'gempa'}, name)
+
+    def test_legacy_single_group_is_gone(self):
+        self.assertFalse(Group.objects.filter(name=LEGACY_GROUP_NAME).exists())
+
+    def test_nabire_cannot_touch_the_jayapura_catalog(self):
+        """Inti pemisahan kantor: Nabire hanya boleh mengubah tabelnya sendiri."""
+        nabire = Group.objects.get(name='Operator Nabire')
+        codenames = set(nabire.permissions.values_list('codename', flat=True))
+        self.assertIn('change_gempanabire', codenames)
+        self.assertIn('view_gempanabire', codenames)
+        self.assertNotIn('view_gempa', codenames)
+        self.assertNotIn('change_gempa', codenames)
+        self.assertNotIn('delete_gempasorong', codenames)
+
+    def test_sorong_scoped_to_its_own_catalog(self):
+        sorong = Group.objects.get(name='Operator Sorong')
+        codenames = set(sorong.permissions.values_list('codename', flat=True))
+        self.assertIn('change_gempasorong', codenames)
+        self.assertNotIn('change_gempanabire', codenames)
+        self.assertNotIn('change_gempa', codenames)
+
+    def test_angkasa_sees_balaigempa_but_only_view(self):
+        angkasa = Group.objects.get(name='Operator Angkasa')
+        codenames = set(angkasa.permissions.values_list('codename', flat=True))
+        self.assertIn('view_balaigempa', codenames)
+        self.assertNotIn('change_balaigempa', codenames)
 
     def test_sync_is_idempotent(self):
-        group = Group.objects.get(name=KATALOG_GROUP_NAME)
-        before = group.permissions.count()
-        ensure_operator_group(sender=None)
-        self.assertEqual(group.permissions.count(), before)
+        before = {n: Group.objects.get(name=n).permissions.count()
+                  for n in self.EXPECTED}
+        ensure_operator_groups(sender=None)
+        after = {n: Group.objects.get(name=n).permissions.count()
+                 for n in self.EXPECTED}
+        self.assertEqual(before, after)
 
-    def test_group_member_can_delete_via_admin(self):
-        """Izin delete harus benar-benar terpasang, bukan hanya view."""
-        group = Group.objects.get(name=KATALOG_GROUP_NAME)
-        codenames = set(group.permissions.values_list('codename', flat=True))
-        self.assertIn('delete_gempa', codenames)
-        self.assertIn('change_balaigempa', codenames)
+    def test_declared_codenames_all_exist(self):
+        """Kalau nama izin berubah, tes ini memberi tahu lebih awal."""
+        from django.contrib.auth.models import Permission
+        available = set(Permission.objects
+                        .filter(content_type__app_label='gempa')
+                        .values_list('codename', flat=True))
+        for name, codenames in OPERATOR_GROUPS.items():
+            with self.subTest(group=name):
+                self.assertEqual(set(codenames) - available, set())
 
 
 class NotifyEndpointTest(TestCase):
@@ -169,7 +240,7 @@ class EarthquakesAPITest(TestCase):
 class PostLoginRedirectTest(TestCase):
     def test_catalog_group_member_lands_in_gempa_admin(self):
         user = User.objects.create_user('op2', password='pass12345', is_staff=True)
-        user.groups.add(Group.objects.get(name=KATALOG_GROUP_NAME))
+        user.groups.add(Group.objects.get(name=ANGKASA_GROUP))
         self.client.force_login(user)
 
         resp = self.client.get(reverse('post_login'))
@@ -187,7 +258,7 @@ class PostLoginRedirectTest(TestCase):
     def test_superuser_is_not_hijacked(self):
         """Superuser tidak dipaksa ke admin katalog meski jadi anggotanya."""
         user = User.objects.create_superuser('root', password='pass12345')
-        user.groups.add(Group.objects.get(name=KATALOG_GROUP_NAME))
+        user.groups.add(Group.objects.get(name=ANGKASA_GROUP))
         self.client.force_login(user)
 
         resp = self.client.get(reverse('post_login'))
@@ -200,7 +271,7 @@ class AdminSubPageTest(TestCase):
     def setUp(self):
         self.staff = User.objects.create_user('subop', password='pass12345',
                                              is_staff=True)
-        self.staff.groups.add(Group.objects.get(name=KATALOG_GROUP_NAME))
+        self.staff.groups.add(Group.objects.get(name=ANGKASA_GROUP))
         self.client.force_login(self.staff)
         self.gempa = make_event(Gempa, event_id='ev-sub')
         self.balai = make_event(Balaigempa, event_id='ev-balai')
@@ -245,3 +316,86 @@ class AdminSubPageTest(TestCase):
         self.assertEqual(Satudatagempa.objects.count(), before + 1)
         created = Satudatagempa.objects.latest('id')
         self.assertEqual(created.sumber, 'BMKG-JAY')
+
+
+class ImportOperatorsCommandTest(TestCase):
+    """Akun operator dari .188: hash password dipakai apa adanya, grup per kantor."""
+
+    def _fixture(self, accounts):
+        import json
+        import tempfile
+        fd, path = tempfile.mkstemp(suffix='.json')
+        with open(fd, 'w') as fh:
+            json.dump(accounts, fh)
+        self.addCleanup(os.unlink, path)
+        return path
+
+    def _account(self, username, password='rahasia123', **extra):
+        from django.contrib.auth.hashers import make_password
+        data = {
+            'username': username,
+            'password': make_password(password),   # hash asli dari .188
+            'email': f'{username}@bmkg.go.id',
+            'first_name': username.capitalize(),
+            'last_name': '',
+            'is_active': True,
+            'is_staff': True,
+            'is_superuser': False,
+            'date_joined': '2024-05-09T01:10:00+00:00',
+            'last_login': None,
+            'permissions': [],
+        }
+        data.update(extra)
+        return data
+
+    def test_imported_operator_keeps_its_password(self):
+        """Bukti utama: operator bisa login pakai password .188-nya."""
+        path = self._fixture([self._account('nabire')])
+        call_command('import_operators', path, verbosity=0)
+
+        user = User.objects.get(username='nabire')
+        self.assertTrue(user.check_password('rahasia123'))
+        self.assertTrue(user.is_staff)
+        self.assertFalse(user.is_superuser)
+        self.assertTrue(user.is_active)
+        self.assertEqual(user.email, 'nabire@bmkg.go.id')
+        self.assertEqual(list(user.groups.values_list('name', flat=True)),
+                         ['Operator Nabire'])
+
+    def test_superuser_flag_is_never_imported(self):
+        path = self._fixture([self._account('sorong', is_superuser=True)])
+        call_command('import_operators', path, verbosity=0)
+        self.assertFalse(User.objects.get(username='sorong').is_superuser)
+
+    def test_angkasa_collision_frees_the_username_without_deleting_history(self):
+        old = User.objects.create_user('angkasa', password='lama-sekali')
+        old_pk = old.pk
+
+        path = self._fixture([self._account('angkasa')])
+        call_command('import_operators', path, verbosity=0)
+
+        # akun lama TIDAK dihapus, hanya diparkir
+        parked = User.objects.get(pk=old_pk)
+        self.assertEqual(parked.username, 'angkasa_lama')
+        self.assertFalse(parked.is_active)
+
+        # username kini milik akun .188, dengan password .188
+        new = User.objects.get(username='angkasa')
+        self.assertNotEqual(new.pk, old_pk)
+        self.assertTrue(new.check_password('rahasia123'))
+        self.assertEqual(list(new.groups.values_list('name', flat=True)),
+                         ['Operator Angkasa'])
+
+    def test_reimport_is_idempotent(self):
+        path = self._fixture([self._account('pgr5')])
+        call_command('import_operators', path, verbosity=0)
+        first_pk = User.objects.get(username='pgr5').pk
+        call_command('import_operators', path, verbosity=0)
+        user = User.objects.get(username='pgr5')
+        self.assertEqual(user.pk, first_pk)          # diperbarui, bukan diduplikasi
+        self.assertEqual(User.objects.filter(username='pgr5').count(), 1)
+
+    def test_dry_run_changes_nothing(self):
+        path = self._fixture([self._account('nabire')])
+        call_command('import_operators', path, '--dry-run', verbosity=0)
+        self.assertFalse(User.objects.filter(username='nabire').exists())
