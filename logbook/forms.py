@@ -8,7 +8,7 @@ class LogbookForm(forms.ModelForm):
         fields = [
             'shift', 'status_absen', 'petugas_sebelum', 'petugas_selanjutnya',
             'hv_counter_hour', 'hv_flow_rate', 'hv_berat_kertas','hv_jam_pasang', 'hv_jam_angkat',
-            'seiscomp_seismik', 'seiscomp_accelero', 'esdx', 'petir', 'lemi', 'proton', 'catatan'
+            'seiscomp_seismik', 'seiscomp_accelero', 'esdx', 'petir', 'lemi', 'proton', 'sirine', 'catatan'
         ]
         widgets = {
             'shift': forms.Select(attrs={'class': 'form-control'}),
@@ -26,6 +26,7 @@ class LogbookForm(forms.ModelForm):
             'petir': forms.Select(attrs={'class': 'form-control'}),
             'lemi': forms.Select(attrs={'class': 'form-control'}),
             'proton': forms.Select(attrs={'class': 'form-control'}),
+            'sirine': forms.Select(attrs={'class': 'form-control'}),
             'catatan': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 

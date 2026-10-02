@@ -43,6 +43,7 @@ def send_telegram_log(log_entry, is_update=False):
         f"{status_emoji(log_entry.petir)} Petir: {log_entry.petir}\n"
         f"{status_emoji(log_entry.lemi)} LEMI: {log_entry.lemi}\n"
         f"{status_emoji(log_entry.proton)} Proton: {log_entry.proton}\n"
+        f"{status_emoji(log_entry.sirine)} Sirine: {log_entry.sirine}\n"
         f"----------------------------------\n📝 <b>Catatan:</b>\n{log_entry.catatan or '-'}"
     )
 
