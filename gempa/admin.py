@@ -15,8 +15,14 @@ import os
 
 from .models import Gempa, Balaigempa, Gempasorong, Gempanabire, Satudatagempa, Gempanganjuk, Significant, City
 from .models import nearest_city_description, compute_delta
+from django.core.exceptions import ImproperlyConfigured
 from django.conf import settings
 from .sites import gempa_admin_site
+from . import gmt
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -255,10 +261,88 @@ class SatudatagempaResource(resources.ModelResource):
                   'ket','terasa','sumber','created_at')
     def dehydrate_magnitudo(self, obj): return f'{obj.magnitudo}' if obj.magnitudo is not None else ''
 
+class GmtMapMixin:
+    """Tombol "Buat Peta GMT" di halaman press/template.
+
+    Port dari alur .188: di sana peta dibuat otomatis oleh `ingest_gempa`.
+    Di .189 tidak ada feed SeisComp, jadi operator bisa membuat/menyegarkan
+    peta sendiri lewat tombol ini. Region diambil dari `report_source`
+    (JAY/PGR5/SWI/NBPI) yang sudah ada di tiap ModelAdmin.
+    """
+
+    _PREFIX_TO_REGION = {prefix: region for region, prefix in gmt.REGIONS.items()}
+
+    @property
+    def gmt_region(self):
+        prefix = getattr(self, 'report_source', None)
+        region = self._PREFIX_TO_REGION.get(prefix)
+        if region is None:
+            raise ImproperlyConfigured(
+                f'{type(self).__name__}: report_source {prefix!r} tidak dikenal '
+                f'(pilihan: {sorted(self._PREFIX_TO_REGION)})')
+        return region
+
+    def gmt_event_args(self, obj):
+        """(tanggal, origin) yang menentukan nama berkas peta."""
+        return obj.tanggal, obj.origin
+
+    def buat_peta_context(self, obj):
+        """Konteks tombol untuk halaman template/press."""
+        tanggal, origin = self.gmt_event_args(obj)
+        return {
+            'buat_peta_url': reverse(
+                f'gempa_admin:{self.model._meta.model_name}-buat-peta', args=[obj.pk]),
+            'gmt_map_exists': gmt.map_exists(self.gmt_region, tanggal, origin),
+        }
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path('<int:pk>/buat-peta/',
+                 self.admin_site.admin_view(self.buat_peta_view),
+                 name=f'{self.model._meta.model_name}-buat-peta'),
+        ]
+        return custom + urls
+
+    def buat_peta_view(self, request, pk):
+        """POST saja: buat ulang peta GMT untuk satu event."""
+        changelist = reverse(
+            f'gempa_admin:{self.model._meta.app_label}_'
+            f'{self.model._meta.model_name}_changelist')
+        obj = self.model.objects.filter(pk=pk).first()
+        if obj is None:
+            messages.error(request, f'Event pk={pk} tidak ditemukan.')
+            return redirect(changelist)
+
+        back = request.META.get('HTTP_REFERER') or changelist
+        if request.method != 'POST':
+            messages.error(request, 'Peta dibuat lewat tombol "Buat Peta GMT", bukan URL langsung.')
+            return redirect(back)
+
+        tanggal, origin = self.gmt_event_args(obj)
+        try:
+            result = gmt.generate(
+                self.gmt_region,
+                lat=obj.lintang, lon=obj.bujur, mag=obj.magnitudo,
+                tanggal=tanggal, origin=origin, depth=obj.depth,
+                force=True,
+            )
+        except gmt.GmtError as exc:
+            logger.warning('Peta GMT gagal untuk %s pk=%s: %s',
+                           self.model.__name__, pk, exc)
+            messages.error(request, f'Gagal membuat peta GMT: {exc}')
+        else:
+            messages.success(
+                request,
+                f'Peta GMT dibuat: {result.filename} ({result.seconds:.1f} detik). '
+                f'Muat ulang halaman untuk melihatnya.')
+        return redirect(back)
+
+
 # ── Gempa JAY ─────────────────────────────────────────────────────────────────
 
 @admin.register(Gempa, site=gempa_admin_site)
-class GempaAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
+class GempaAdmin(GmtMapMixin, TopFilterMixin, ExportMixin, VersionAdmin):
     report_source = 'JAY'
 
     def get_changeform_initial_data(self, request):
@@ -407,7 +491,8 @@ class GempaAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
                     'lon': format_lon(obj.bujur), 'mag': round(float(obj.magnitudo), 1),
                     'epic_map': gmt_image('JAY', obj.tanggal, obj.origin),
                     'tz_data': tz_data,
-                    'default_tz': 'WIT'})
+                    'default_tz': 'WIT',
+                    **self.buat_peta_context(obj)})
         tpl = 'gempa/angkasatemplatebalai_gfz.html' if request.GET.get('gfz') else 'gempa/angkasatemplatebalai.html'
         return render(request, tpl, ctx)
 
@@ -435,7 +520,7 @@ class BalaigempaForm(forms.ModelForm):
         }
 
 @admin.register(Balaigempa, site=gempa_admin_site)
-class BalaigempaAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
+class BalaigempaAdmin(GmtMapMixin, TopFilterMixin, ExportMixin, VersionAdmin):
     report_source = 'PGR5'
 
     class Media:
@@ -514,7 +599,8 @@ class BalaigempaAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
                     'depth': obj.depth, 'terdampak': obj.terdampak,
                     'epic_map': gmt_image('PGR5', obj.tanggal, obj.origin),
                     'tz_data': json.dumps(tz_data),
-                    'default_tz': 'WIT'})
+                    'default_tz': 'WIT',
+                    **self.buat_peta_context(obj)})
         return render(request, 'gempa/balaisms.html', ctx)
 
     def press_view(self, request, pk):
@@ -553,7 +639,7 @@ class BalaigempaAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
 # ── Gempasorong SWI ───────────────────────────────────────────────────────────
 
 @admin.register(Gempasorong, site=gempa_admin_site)
-class GempasorongAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
+class GempasorongAdmin(GmtMapMixin, TopFilterMixin, ExportMixin, VersionAdmin):
     report_source = 'SWI'
 
     class Media:
@@ -621,7 +707,8 @@ class GempasorongAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
                     'latmap': obj.lintang, 'lonmap': obj.bujur,
                     'epic_map': gmt_image('SWI', obj.tanggal, obj.origin),
                     'tz_data': tz_data,
-                    'default_tz': 'WIT'})
+                    'default_tz': 'WIT',
+                    **self.buat_peta_context(obj)})
         return render(request, 'gempa/sorongtemplatebalai.html', ctx)
 
     def inject_view(self, request, pk):
@@ -650,7 +737,7 @@ class GempasorongAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
 # ── Gempanabire NBPI ──────────────────────────────────────────────────────────
 
 @admin.register(Gempanabire, site=gempa_admin_site)
-class GempanahireAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
+class GempanahireAdmin(GmtMapMixin, TopFilterMixin, ExportMixin, VersionAdmin):
     report_source = 'NBPI'
 
     class Media:
@@ -717,7 +804,8 @@ class GempanahireAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
                     'latmap': obj.lintang, 'lonmap': obj.bujur,
                     'epic_map': gmt_image('NBPI', obj.tanggal, obj.origin),
                     'tz_data': tz_data,
-                    'default_tz': 'WIT'})
+                    'default_tz': 'WIT',
+                    **self.buat_peta_context(obj)})
         return render(request, 'gempa/nabiretemplatebalai.html', ctx)
 
     def kirim_sdg_view(self, request, pk):
@@ -805,7 +893,19 @@ class GempanganjukAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
 # ── Gempa Signifikan ─────────────────────────────────────────────────────────
 
 @admin.register(Significant, site=gempa_admin_site)
-class SignificantAdmin(TopFilterMixin, VersionAdmin):
+class SignificantAdmin(GmtMapMixin, TopFilterMixin, VersionAdmin):
+    report_source = 'JAY'          # template significant memakai peta JAY
+
+    def gmt_event_args(self, obj):
+        """Significant menyimpan tanggal/jam sebagai teks, bukan date + origin."""
+        BULAN_ID = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'Mei': 5, 'Jun': 6,
+                    'Jul': 7, 'Agu': 8, 'Sep': 9, 'Okt': 10, 'Nov': 11, 'Des': 12}
+        try:
+            d, m, y = [x.strip() for x in str(obj.tanggal).split('-')]
+            return f"20{y}-{BULAN_ID[m]:02d}-{int(d):02d}", obj.jam
+        except Exception:
+            return obj.tanggal, obj.jam
+
     class Media:
         css = {"all": ("https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css",)}
         js = (
@@ -863,6 +963,7 @@ class SignificantAdmin(TopFilterMixin, VersionAdmin):
             'latmap': obj.lintang,
             'lonmap': obj.bujur,
             'epic_map': gmt_image('JAY', tanggal_iso, obj.jam),
+            **self.buat_peta_context(obj),
         })
         return render(request, 'gempa/significanttemplate.html', ctx)
 

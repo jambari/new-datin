@@ -128,3 +128,5 @@ class GempaConfig(AppConfig):
             sender=self,
             dispatch_uid='gempa.ensure_operator_groups',
         )
+        # Buat peta GMT otomatis saat ada event katalog baru.
+        import gempa.signals  # noqa: F401

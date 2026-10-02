@@ -50,6 +50,16 @@
         Peta GMT<br>tidak tersedia
       </div>
       {% endif %}
+      {% if buat_peta_url %}
+      <form method="post" action="{{ buat_peta_url }}" style="margin-top:8px;text-align:center;">
+        {% csrf_token %}
+        <button type="submit"
+                title="Jalankan buat_peta.sh untuk event ini (peta dibuat ulang)"
+                style="background:#0d6efd;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          {% if gmt_map_exists %}Buat ulang peta GMT{% else %}Buat Peta GMT{% endif %}
+        </button>
+      </form>
+      {% endif %}
     </div>
 
   

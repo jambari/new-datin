@@ -19,6 +19,7 @@ are naive UTC. This project runs USE_TZ=True, so Django will emit
 still correct UTC, because settings.TIME_ZONE is UTC.
 """
 from django.core.management import call_command
+from gempa.signals import gmt_generation_suspended
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 
@@ -50,12 +51,16 @@ class Command(BaseCommand):
                     self.stdout.write(f'  {model.__name__:16s} dihapus: {deleted}')
 
         self.stdout.write('Memuat fixture...')
-        for fixture in fixtures:
-            try:
-                call_command('loaddata', fixture, verbosity=0)
-            except Exception as exc:
-                raise CommandError(f'Gagal memuat {fixture}: {exc}')
-            self.stdout.write(f'  dimuat: {fixture}')
+        # loaddata memanggil save() per objek, jadi tanpa ini 113.000 event akan
+        # menjadwalkan 113.000 render GMT. Peta arsipnya sendiri sudah disalin
+        # dari .188, dan gmt.generate() melewati berkas yang sudah ada.
+        with gmt_generation_suspended():
+            for fixture in fixtures:
+                try:
+                    call_command('loaddata', fixture, verbosity=0)
+                except Exception as exc:
+                    raise CommandError(f'Gagal memuat {fixture}: {exc}')
+                self.stdout.write(f'  dimuat: {fixture}')
 
         self.stdout.write('Merapikan sequence PK...')
         for model in MODELS:

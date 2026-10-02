@@ -636,3 +636,258 @@ class GempaStaticAssetsTest(TestCase):
             if re.search(r'\{#[^\n#]*\n[^\n]*#\}', text):
                 offenders.append(str(tpl.relative_to(base)))
         self.assertEqual(offenders, [])
+
+
+# ── Peta GMT (port dari buat_peta.sh .188) ───────────────────────────────────
+import shutil
+import subprocess
+import tempfile
+from unittest import mock
+
+from django.test import override_settings
+
+from gempa import gmt
+from gempa.signals import gmt_generation_suspended
+
+
+class GmtMapTest(TestCase):
+    """Kontrak argumen + perilaku generator peta."""
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.work = self.tmp / 'jay'
+        self.out = self.tmp / 'uploads'
+        self.work.mkdir()
+        self.out.mkdir()
+        self.script = self.work / 'buat_peta.sh'
+        self.script.write_text('#!/bin/bash\nexit 0\n')
+        over = override_settings(GMT_ENABLED=True,
+                                 GMT_UPLOADS_DIR=str(self.out),
+                                 GMT_WORKDIR=str(self.work))
+        over.enable()
+        self.addCleanup(over.disable)
+
+    def _expected(self, name):
+        return self.out / name
+
+    def test_filename_contract_matches_what_the_templates_look_for(self):
+        """gmt_image() mencari PREFIX_YYYY-MM-DD_HHMMSSUTC.png."""
+        self.assertEqual(gmt.map_filename('jay', '2026-10-02', '19:34:47'),
+                         'JAY_2026-10-02_193447UTC.png')
+        self.assertEqual(gmt.map_filename('balai', '2026-10-02', '19:34:47'),
+                         'PGR5_2026-10-02_193447UTC.png')
+        self.assertEqual(gmt.map_filename('nabire', '2026-10-02', '193447'),
+                         'NBPI_2026-10-02_193447UTC.png')
+        self.assertEqual(gmt.map_filename('sorong', '2026-10-02', '19:34:47'),
+                         'SWI_2026-10-02_193447UTC.png')
+
+    def test_generate_passes_the_exact_arguments_of_the_original_script(self):
+        expected = self._expected('JAY_2026-10-02_193447UTC.png')
+
+        def fake_run(cmd, **kwargs):
+            expected.write_bytes(b'png')
+            return subprocess.CompletedProcess(cmd, 0, stdout='ok', stderr='')
+
+        with mock.patch('gempa.gmt.subprocess.run', side_effect=fake_run) as run:
+            result = gmt.generate('jay', lat='-4.89', lon='134.04', mag='3.5',
+                                 tanggal='2026-10-02', origin='19:34:47', depth=91)
+
+        self.assertTrue(result.created)
+        self.assertEqual(result.filename, 'JAY_2026-10-02_193447UTC.png')
+
+        cmd = run.call_args.args[0]
+        self.assertEqual(cmd[0], 'bash')
+        self.assertEqual(cmd[1], str(self.script))
+        self.assertEqual(cmd[2:], ['-4.89', '134.04', '3.5', '2026-10-02', '193447', '91'])
+
+        env = run.call_args.kwargs['env']
+        self.assertEqual(env['GMT_UPLOADS_DIR'], str(self.out))
+        self.assertEqual(env['GMT_WORKDIR'], str(self.work))
+        self.assertEqual(env['GMT_HISTORI'], str(self.tmp / 'jay' / 'histori_gmt.gmt'))
+
+    def test_existing_map_is_skipped_unless_forced(self):
+        (self.out / 'JAY_2026-10-02_193447UTC.png').write_bytes(b'png')
+        with mock.patch('gempa.gmt.subprocess.run') as run:
+            result = gmt.generate('jay', lat='-4.89', lon='134.04', mag='3.5',
+                                  tanggal='2026-10-02', origin='19:34:47', depth=91)
+        self.assertTrue(result.skipped)
+        run.assert_not_called()
+
+    def test_force_regenerates(self):
+        (self.out / 'JAY_2026-10-02_193447UTC.png').write_bytes(b'png')
+        with mock.patch('gempa.gmt.subprocess.run') as run:
+            run.return_value = subprocess.CompletedProcess([], 0, stdout='', stderr='')
+            result = gmt.generate('jay', lat='-4.89', lon='134.04', mag='3.5',
+                                  tanggal='2026-10-02', origin='19:34:47', depth=91,
+                                  force=True)
+        self.assertEqual(run.call_count, 1)
+        self.assertTrue(result.skipped or result.created)   # berkas dianggap ada -> skip aman
+
+    def test_failed_script_raises(self):
+        with mock.patch('gempa.gmt.subprocess.run') as run:
+            run.return_value = subprocess.CompletedProcess([], 1, stdout='', stderr='GMT ERROR')
+            with self.assertRaises(gmt.GmtError) as ctx:
+                gmt.generate('jay', lat='-4.89', lon='134.04', mag='3.5',
+                             tanggal='2026-10-02', origin='19:34:47', depth=91)
+        self.assertIn('GMT ERROR', str(ctx.exception))
+
+    def test_success_without_output_file_raises(self):
+        with mock.patch('gempa.gmt.subprocess.run') as run:
+            run.return_value = subprocess.CompletedProcess([], 0, stdout='ok', stderr='')
+            with self.assertRaises(gmt.GmtError):
+                gmt.generate('jay', lat='-4.89', lon='134.04', mag='3.5',
+                             tanggal='2026-10-02', origin='19:34:47', depth=91)
+
+    def test_invalid_inputs_are_rejected(self):
+        cases = [
+            dict(region='nganjuk'),                       # tidak ada script di .188
+            dict(tanggal='2 Oktober 2026'),
+            dict(origin='19:34'),                          # kurang detik
+            dict(lat='-4.89; rm -rf /'),                   # argumen masuk shell!
+            dict(lon='abc'),
+            dict(mag=''),
+            dict(depth='dangkal'),
+        ]
+        base = dict(region='jay', lat='-4.89', lon='134.04', mag='3.5',
+                    tanggal='2026-10-02', origin='19:34:47', depth=91)
+        for case in cases:
+            with self.subTest(case=case):
+                with self.assertRaises(gmt.GmtError):
+                    gmt.generate(**{**base, **case})
+
+    @override_settings(GMT_ENABLED=False)
+    def test_disabled_setting_skips_everything(self):
+        with mock.patch('gempa.gmt.subprocess.run') as run:
+            result = gmt.generate('jay', lat='-4.89', lon='134.04', mag='3.5',
+                                  tanggal='2026-10-02', origin='19:34:47', depth=91)
+        self.assertTrue(result.skipped)
+        run.assert_not_called()
+
+
+class GmtSignalTest(TestCase):
+    """Event baru otomatis menjadwalkan pembuatan peta."""
+
+    def setUp(self):
+        over = override_settings(GMT_ENABLED=True)
+        over.enable()
+        self.addCleanup(over.disable)
+
+    def test_new_event_queues_the_task(self):
+        with mock.patch('gempa.tasks.generate_gmt_map_task.delay') as delay:
+            with self.captureOnCommitCallbacks(execute=True):
+                obj = make_event(Gempa)
+        self.assertEqual(delay.call_count, 1)
+        self.assertEqual(delay.call_args.args, ('jay', obj.pk))
+
+    def test_region_mapping_per_model(self):
+        for model, region in ((Gempa, 'jay'), (Balaigempa, 'balai'),
+                              (Gempasorong, 'sorong'), (Gempanabire, 'nabire')):
+            with self.subTest(model=model.__name__):
+                with mock.patch('gempa.tasks.generate_gmt_map_task.delay') as delay:
+                    with self.captureOnCommitCallbacks(execute=True):
+                        obj = make_event(model, event_id=f'ev-{region}')
+                self.assertEqual(delay.call_args.args, (region, obj.pk))
+
+    def test_incomplete_event_does_not_queue(self):
+        with mock.patch('gempa.tasks.generate_gmt_map_task.delay') as delay:
+            with self.captureOnCommitCallbacks(execute=True):
+                make_event(Gempa, origin='')          # tanpa origin
+        delay.assert_not_called()
+
+    def test_suspended_context_prevents_queueing(self):
+        """load_katalog membungkus loaddata: 113k event tidak boleh render peta."""
+        with mock.patch('gempa.tasks.generate_gmt_map_task.delay') as delay:
+            with self.captureOnCommitCallbacks(execute=True):
+                with gmt_generation_suspended():
+                    make_event(Gempa)
+        delay.assert_not_called()
+
+    def test_update_does_not_queue(self):
+        obj = make_event(Gempa)
+        with mock.patch('gempa.tasks.generate_gmt_map_task.delay') as delay:
+            with self.captureOnCommitCallbacks(execute=True):
+                obj.ket = 'diubah'
+                obj.save()
+        delay.assert_not_called()
+
+    def test_bulk_create_does_not_queue(self):
+        """loaddata/bulk tidak memicu signal — jaring pengaman kedua."""
+        with mock.patch('gempa.tasks.generate_gmt_map_task.delay') as delay:
+            with self.captureOnCommitCallbacks(execute=True):
+                Gempa.objects.bulk_create([Gempa(
+                    event_id='ev-bulk', tanggal=datetime.date(2026, 10, 2),
+                    origin='10:00:00', lintang='-2.5', bujur='140.7',
+                    magnitudo='4.5', depth=10, ket='bulk')])
+        delay.assert_not_called()
+
+    def test_broker_failure_does_not_break_the_save(self):
+        with mock.patch('gempa.tasks.generate_gmt_map_task.delay',
+                        side_effect=RuntimeError('redis mati')):
+            with self.captureOnCommitCallbacks(execute=True):
+                obj = make_event(Gempa, event_id='ev-broker')
+        self.assertTrue(Gempa.objects.filter(pk=obj.pk).exists())
+
+
+class GmtAdminButtonTest(TestCase):
+    """Tombol 'Buat Peta GMT' di halaman press/template."""
+
+    def setUp(self):
+        self.staff = User.objects.create_user('gmtop', password='pass12345',
+                                              is_staff=True)
+        self.staff.groups.add(Group.objects.get(name=ANGKASA_GROUP))
+        self.client.force_login(self.staff)
+        self.event = make_event(Gempa, event_id='ev-gmt')
+
+    def test_template_page_offers_the_button(self):
+        url = reverse('gempa_admin:gempa-template-balai', args=[self.event.pk])
+        body = self.client.get(url).content.decode()
+        self.assertIn('/buat-peta/', body)
+        self.assertIn('Buat Peta GMT', body)
+
+    def test_post_generates_the_map(self):
+        url = reverse('gempa_admin:gempa-buat-peta', args=[self.event.pk])
+        with mock.patch('gempa.admin.gmt.generate') as generate:
+            generate.return_value = gmt.GmtResult(created=True, seconds=4.2,
+                                                  filename='JAY_x.png')
+            resp = self.client.post(url)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(generate.called)
+        kwargs = generate.call_args.kwargs
+        self.assertEqual(generate.call_args.args[0], 'jay')
+        self.assertTrue(kwargs['force'])            # tombol selalu menyegarkan
+        self.assertEqual(kwargs['origin'], self.event.origin)
+
+    def test_get_is_refused(self):
+        url = reverse('gempa_admin:gempa-buat-peta', args=[self.event.pk])
+        with mock.patch('gempa.admin.gmt.generate') as generate:
+            resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 302)
+        generate.assert_not_called()
+
+    def test_gmt_error_is_reported_not_raised(self):
+        url = reverse('gempa_admin:gempa-buat-peta', args=[self.event.pk])
+        with mock.patch('gempa.admin.gmt.generate',
+                        side_effect=gmt.GmtError('script meledak')):
+            resp = self.client.post(url, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Gagal membuat peta GMT')
+
+    def test_every_map_admin_knows_its_region(self):
+        expected = {'GempaAdmin': 'jay', 'BalaigempaAdmin': 'balai',
+                    'GempasorongAdmin': 'sorong', 'GempanahireAdmin': 'nabire',
+                    'SignificantAdmin': 'jay'}
+        for model, adm in gempa_admin_site._registry.items():
+            name = type(adm).__name__
+            if name in expected:
+                with self.subTest(admin=name):
+                    self.assertEqual(adm.gmt_region, expected[name])
+
+    def test_significant_maps_its_text_date_to_the_file_name(self):
+        adm = gempa_admin_site._registry[Significant]
+        sig = Significant.objects.create(event_id='ev-sig-gmt', tanggal='02-Okt-26',
+                                         jam='19:34:47', lintang='-2.5',
+                                         bujur='140.7', magnitudo='4.5', depth=10)
+        tanggal, origin = adm.gmt_event_args(sig)
+        self.assertEqual(tanggal, '2026-10-02')
+        self.assertEqual(origin, '19:34:47')

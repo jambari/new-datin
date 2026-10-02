@@ -385,6 +385,14 @@ REST_FRAMEWORK = {
     ],
 }
 
+# ── Pembuat peta GMT (port dari .188) ──────────────────────
+# Skrip buat_peta.sh per region + data relief ada di /var/www/gmt,
+# hasilnya disajikan nginx di /uploads/ (lihat GMT_UPLOADS_DIR).
+GMT_ENABLED = config('GMT_ENABLED', default=True, cast=bool)
+GMT_UPLOADS_DIR = config('GMT_UPLOADS_DIR', default='/var/www/gmt/uploads')
+GMT_WORKDIR = config('GMT_WORKDIR', default='/var/www/gmt/jay')
+GMT_TIMEOUT = config('GMT_TIMEOUT', default=120, cast=int)
+
 # ── Panel sirene tsunami (Alfar Smart) ─────────────────────
 # Dipakai tombol "Cek Sirene (ping)" di halaman logbook. Hanya aksi ping
 # yang dipanggil — lihat logbook/sirine.py untuk pengamanannya.
