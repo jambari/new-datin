@@ -240,19 +240,25 @@ else:
 
 HUJAN_API_URL = 'http://36.91.166.188/api/hujans/today'
 CELERY_BEAT_SCHEDULE = {
-    # PRIMARY IMPORT: Run at 00:15 UTC = 09:15 WIT
-    # This gives users 45 minutes after 08:30 WIT input time to ensure data is ready
-    'import-hujan-data-daily': {
-        'task': 'hujan.tasks.import_today_hujan_data',
-        'schedule': crontab(minute=15, hour=0),  # 00:15 UTC = 09:15 WIT
-    },
-    
-    # RETRY IMPORT: Run at 02:15 UTC = 11:15 WIT
-    # Catches any delayed data updates or API availability issues
-    'import-hujan-data-retry': {
-        'task': 'hujan.tasks.import_hujan_data_retry',
-        'schedule': crontab(minute=15, hour=2),  # 02:15 UTC = 11:15 WIT
-    },
+    # ── IMPOR HUJAN HARIAN DIMATIKAN ────────────────────────────────────────
+    # Data hujan kini diinput manual dan setiap record baru langsung dikabarkan
+    # ke Telegram (hujan/signals.py). Impor otomatis ini tidak dipakai lagi —
+    # selain itu API sumbernya (36.91.166.188/api/hujans/today) sudah membalas
+    # 404 sehingga tidak pernah memasukkan baris apa pun.
+    #
+    # Task-nya sengaja TIDAK dihapus supaya masih bisa dijalankan manual:
+    #     python manage.py shell -c "from hujan.tasks import import_today_hujan_data;
+    #                                import_today_hujan_data()"
+    # Kalau nanti mau dinyalakan lagi, cukup aktifkan kembali dua entri di bawah.
+    #
+    # 'import-hujan-data-daily': {
+    #     'task': 'hujan.tasks.import_today_hujan_data',
+    #     'schedule': crontab(minute=15, hour=0),  # 00:15 UTC = 09:15 WIT
+    # },
+    # 'import-hujan-data-retry': {
+    #     'task': 'hujan.tasks.import_hujan_data_retry',
+    #     'schedule': crontab(minute=15, hour=2),  # 02:15 UTC = 11:15 WIT
+    # },
     
     'process-shakemaps-daily': {
         'task': 'repository.tasks.run_process_shakemaps',

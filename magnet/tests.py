@@ -442,3 +442,62 @@ class FmiIndicesPublicPageTest(TestCase):
         self.assertContains(resp, 'href="/magnetbumi/"')
         self.assertContains(resp, 'href="/magnetbumi/indeks-k-a/"')
         self.assertNotContains(resp, '/magnetbumi/#indeks-k-a')
+
+
+# ── Notifikasi Telegram ──────────────────────────────────────────────────────
+from unittest import mock
+
+from django.test import override_settings
+
+
+@override_settings(TELEGRAM_BOT_TOKEN='tok-123', TELEGRAM_CHAT_ID='-100123')
+class BartingtonTelegramNotifyTest(TestCase):
+    """Observasi absolut Bartington baru dikabarkan ke Telegram."""
+
+    READINGS = {'WU': {'deg': 10, 'min': 30, 'sec': 0}}
+
+    def _create(self, **kwargs):
+        with mock.patch('theme.telegram.requests.post') as post:
+            post.return_value = mock.Mock(status_code=200, text='')
+            with self.captureOnCommitCallbacks(execute=True):
+                obs = make_observation(**kwargs)
+        return obs, post
+
+    def test_bartington_record_is_sent(self):
+        obs, post = self._create(
+            observer='Jambari', session='Pagi',
+            deklinasi_readings=self.READINGS,
+            declination=1.0, inclination=-30.0, total_intensity=45000.0)
+        self.assertEqual(post.call_count, 1)
+
+        payload = post.call_args.kwargs['data']
+        self.assertEqual(payload['chat_id'], '-100123')
+        text = payload['text']
+        self.assertIn('BARTINGTON', text)
+        self.assertIn('01-03-2024', text)
+        self.assertIn('Jambari', text)
+        self.assertIn('Pagi', text)
+        self.assertIn('45000', text)          # F (nT)
+
+    def test_mingeo_record_is_not_sent(self):
+        """Form MinGeo menulis model yang sama tapi satuannya grad."""
+        obs, post = self._create()            # tanpa pembacaan 'deg'
+        self.assertFalse(obs.is_bartington)
+        self.assertEqual(post.call_count, 0)
+
+    def test_update_does_not_notify(self):
+        obs, _ = self._create(deklinasi_readings=self.READINGS)
+        with mock.patch('theme.telegram.requests.post') as post:
+            with self.captureOnCommitCallbacks(execute=True):
+                obs.session = 'Sore'
+                obs.save()
+        self.assertEqual(post.call_count, 0)
+
+    def test_observer_name_is_escaped(self):
+        _, post = self._create(observer='A <b>X</b>', deklinasi_readings=self.READINGS)
+        self.assertIn('A &lt;b&gt;X&lt;/b&gt;', post.call_args.kwargs['data']['text'])
+
+    @override_settings(TELEGRAM_BOT_TOKEN='', TELEGRAM_CHAT_ID='')
+    def test_no_message_when_telegram_not_configured(self):
+        _, post = self._create(deklinasi_readings=self.READINGS)
+        self.assertEqual(post.call_count, 0)
