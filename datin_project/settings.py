@@ -389,6 +389,10 @@ REST_FRAMEWORK = {
 # Skrip buat_peta.sh per region + data relief ada di /var/www/gmt,
 # hasilnya disajikan nginx di /uploads/ (lihat GMT_UPLOADS_DIR).
 GMT_ENABLED = config('GMT_ENABLED', default=True, cast=bool)
+
+# Token untuk ingest event SeisComp (exportevent.sh di host 192.168.1.7).
+# Dikirim sebagai 'Authorization: Bearer <token>' ke /api/gempa/ingest/<region>/.
+SEISCOMP_INGEST_TOKEN = config('SEISCOMP_INGEST_TOKEN', default='')
 GMT_UPLOADS_DIR = config('GMT_UPLOADS_DIR', default='/var/www/gmt/uploads')
 GMT_WORKDIR = config('GMT_WORKDIR', default='/var/www/gmt/jay')
 GMT_TIMEOUT = config('GMT_TIMEOUT', default=120, cast=int)

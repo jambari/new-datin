@@ -891,3 +891,179 @@ class GmtAdminButtonTest(TestCase):
         tanggal, origin = adm.gmt_event_args(sig)
         self.assertEqual(tanggal, '2026-10-02')
         self.assertEqual(origin, '19:34:47')
+
+
+# ── Ingest event SeisComp (pengganti insertgempa.php .188) ───────────────────
+from django.test import Client as _Client
+
+from gempa.seiscomp import INGEST_REGIONS, SeiscompError, ingest, parse_bulletin
+
+#: Contoh isi `scbulletin -E <id> -3` (mailexportfile.txt).
+BULLETIN = """Date            2026-10-02
+Time            19:34:47
+Latitude        -4.8900   0.5   -4.89
+Longitude       134.0400  0.7   134.04
+Depth           91
+Magnitude       ML 3.5
+preferred       3.5  0.2  ML
+Public ID       20261002193447.000000
+Residual        0.47  0.0  1.2
+"""
+
+
+class SeiscompParseTest(TestCase):
+    """Parser harus sama dengan _parse_seiscomp.py di .188."""
+
+    def test_parses_a_real_bulletin_layout(self):
+        data = parse_bulletin(BULLETIN)
+        self.assertEqual(data['tanggal'], '2026-10-02')
+        self.assertEqual(data['origin'], '19:34:47')
+        self.assertEqual(data['lintang'], '-4.8900')
+        self.assertEqual(data['bujur'], '134.0400')
+        self.assertEqual(data['magnitudo'], 3.5)
+        self.assertEqual(data['depth'], 91)
+        self.assertEqual(data['event_id'], '20261002193447.000000')
+
+    def test_handles_conservative_crlf_and_blank_lines(self):
+        data = parse_bulletin(BULLETIN.replace('\n', '\r\n') + '\n\n')
+        self.assertEqual(data['event_id'], '20261002193447.000000')
+
+    def test_second_call_without_time_is_ignored(self):
+        data = parse_bulletin(BULLETIN)
+        self.assertEqual(data['origin'], '19:34:47')
+
+    def test_odd_optional_line_does_not_break_the_parse(self):
+        """Satu baris pendek/aneh tidak boleh menggagalkan seluruh bulletin."""
+        data = parse_bulletin('Residual        0.47\n' + BULLETIN)
+        self.assertEqual(data['event_id'], '20261002193447.000000')
+
+    def test_unparseable_required_value_is_caught_by_ingest(self):
+        """Nilai wajib yang rusak -> pesan 'kurang lengkap', bukan 500."""
+        with self.assertRaises(SeiscompError) as ctx:
+            ingest('jay', BULLETIN.replace('Depth           91', 'Depth           dalam'))
+        self.assertIn('kurang lengkap', str(ctx.exception))
+        self.assertIn('depth', str(ctx.exception))
+
+
+class SeiscompIngestTest(TestCase):
+    """Penyimpanan: idempoten, ket & delta terisi."""
+
+    def test_first_ingest_inserts(self):
+        result = ingest('jay', BULLETIN)
+        self.assertEqual(result['action'], 'inserted')
+        self.assertEqual(result['model'], 'Gempa')
+        self.assertEqual(result['event_id'], '20261002193447.000000')
+        obj = Gempa.objects.get(event_id=result['event_id'])
+        self.assertEqual(str(obj.tanggal), '2026-10-02')
+        self.assertEqual(str(obj.origin), '19:34:47')
+        self.assertEqual(str(obj.magnitudo), '3.5')
+        self.assertEqual(obj.depth, 91)
+        self.assertEqual(obj.sumber, 'angkasa')      # extra khusus region jay
+        self.assertNotEqual(result['ket'], '')        # nearest city terhitung
+
+    def test_second_ingest_updates_without_duplicating(self):
+        first = ingest('jay', BULLETIN)
+        changed = BULLETIN.replace('preferred       3.5', 'preferred       4.1')
+        second = ingest('jay', changed)
+        self.assertEqual(second['action'], 'updated')
+        self.assertEqual(second['pk'], first['pk'])
+        self.assertEqual(Gempa.objects.filter(event_id=first['event_id']).count(), 1)
+        self.assertEqual(str(Gempa.objects.get(pk=first['pk']).magnitudo), '4.1')
+
+    def test_created_at_is_preserved_on_update(self):
+        """Waktu sebar pertama tidak boleh tertimpa sinkronisasi."""
+        first = ingest('jay', BULLETIN)
+        before = Gempa.objects.get(pk=first['pk']).created_at
+        ingest('jay', BULLETIN.replace('preferred       3.5', 'preferred       4.2'))
+        self.assertEqual(Gempa.objects.get(pk=first['pk']).created_at, before)
+
+    def test_region_maps_to_the_right_model(self):
+        expected = {'jay': 'Gempa', 'balai': 'Balaigempa', 'nabire': 'Gempanabire',
+                    'sorong': 'Gempasorong', 'nganjuk': 'Gempanganjuk'}
+        self.assertEqual(INGEST_REGIONS, expected)
+
+    def test_incomplete_bulletin_is_rejected(self):
+        with self.assertRaises(SeiscompError) as ctx:
+            ingest('jay', 'Date            2026-10-02\nTime            19:34:47\n')
+        self.assertIn('kurang lengkap', str(ctx.exception))
+
+    def test_unknown_region_is_rejected(self):
+        with self.assertRaises(SeiscompError):
+            ingest('bandung', BULLETIN)
+
+
+@override_settings(SEISCOMP_INGEST_TOKEN='tok-rahasia-123')
+class SeiscompIngestApiTest(TestCase):
+    """Endpoint POST /api/gempa/ingest/<region>/."""
+
+    URL = '/api/gempa/ingest/jay/'
+
+    def _post(self, body=BULLETIN, token='tok-rahasia-123', url=None,
+              content_type='text/plain'):
+        headers = {}
+        if token is not None:
+            headers['HTTP_AUTHORIZATION'] = f'Bearer {token}'
+        return self.client.post(url or self.URL, data=body,
+                                content_type=content_type, **headers)
+
+    def test_requires_a_token(self):
+        self.assertEqual(self._post(token=None).status_code, 401)
+        self.assertEqual(self._post(token='salah').status_code, 401)
+        self.assertEqual(Gempa.objects.count(), 0)
+
+    def test_accepts_the_raw_bulletin(self):
+        resp = self._post()
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['ok'])
+        self.assertEqual(data['action'], 'inserted')
+        self.assertEqual(data['region'], 'jay')
+        self.assertTrue(Gempa.objects.filter(event_id=data['event_id']).exists())
+
+    def test_unknown_region_is_404(self):
+        resp = self._post(url='/api/gempa/ingest/bandung/')
+        self.assertEqual(resp.status_code, 404)
+        self.assertIn('region', resp.json()['error'])
+
+    def test_empty_body_is_400(self):
+        self.assertEqual(self._post(body='   ').status_code, 400)
+
+    def test_incomplete_body_is_400_with_reason(self):
+        resp = self._post(body='Date            2026-10-02\n')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('kurang lengkap', resp.json()['error'])
+
+    def test_repeat_delivery_is_idempotent(self):
+        first = self._post().json()
+        second = self._post().json()
+        self.assertEqual(second['action'], 'updated')
+        self.assertEqual(second['pk'], first['pk'])
+        self.assertEqual(Gempa.objects.count(), 1)
+
+    def test_new_event_queues_the_gmt_map(self):
+        """Peta GMT otomatis dibuat untuk event baru (lihat gempa/signals.py)."""
+        # GMT_ENABLED=False di dev (tidak ada /var/www/gmt), jadi dinyalakan khusus di sini.
+        with override_settings(GMT_ENABLED=True):
+            with mock.patch('gempa.tasks.generate_gmt_map_task.delay') as delay:
+                with self.captureOnCommitCallbacks(execute=True):
+                    resp = self._post()
+        self.assertEqual(resp.json()['action'], 'inserted')
+        self.assertEqual(delay.call_count, 1)
+        self.assertEqual(delay.call_args.args[0], 'jay')
+
+    def test_csrf_is_not_required_for_the_api(self):
+        """Bukti csrf_exempt: klien yang menegakkan CSRF pun tetap diterima."""
+        strict = _Client(enforce_csrf_checks=True)
+        resp = strict.post(self.URL, data=BULLETIN, content_type='text/plain',
+                           HTTP_AUTHORIZATION='Bearer tok-rahasia-123')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_json_body_is_not_accepted_as_bulletin(self):
+        """Klien salah format harus dapat pesan jelas, bukan 500."""
+        resp = self._post(body='{"latitude": -4.89}')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('kurang lengkap', resp.json()['error'])
+
+    def test_get_is_rejected(self):
+        resp = self.client.get(self.URL)
+        self.assertEqual(resp.status_code, 405)
