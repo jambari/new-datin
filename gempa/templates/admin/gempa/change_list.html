@@ -155,7 +155,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
   </form>
 </div>
-{# Tombol "Gempa Susulan" & "Laporan Bulanan" tidak ikut diport: halaman
-   /gempa-susulan/ dan /laporan-bulanan/ di luar scope tahap ini. #}
+{% comment %}
+Tombol "Gempa Susulan" & "Laporan Bulanan" tidak ikut diport: halaman
+/gempa-susulan/ dan /laporan-bulanan/ di luar scope tahap ini.
+
+Catatan: komentar Django satu-baris saja yang aman; komentar multi-baris
+harus memakai tag comment seperti ini, kalau tidak teksnya ikut tercetak
+ke halaman.
+{% endcomment %}
 {{ block.super }}
 {% endblock %}

@@ -13,6 +13,10 @@ import os
 
 from django.contrib import admin as django_admin
 from django.contrib.auth.models import Group, User
+import pathlib
+import re
+from django.conf import settings
+from django.contrib.staticfiles import finders
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
@@ -556,3 +560,79 @@ class EmailLoginTest(TestCase):
         self.user.save(update_fields=['is_active'])
         self.assertIsNone(
             authenticate(username='angkasa@bmkg.go.id', password='rahasiaku123'))
+
+
+class GempaStaticAssetsTest(TestCase):
+    """Regresi: setiap {% static %} di template gempa harus benar-benar ada.
+
+    Kerusakan yang dicegah: template hasil port memakai aset dari .188
+    (css/js/images/gjson) yang tidak ikut tercopy, sehingga halaman
+    template-balai penuh 404 dan peta gagal render ('png is not defined').
+    """
+
+    #: Aset yang dipinjam dari .188 dan wajib ada.
+    REQUIRED_ASSETS = [
+        'css/L.Icon.Pulse.css',
+        'js/L.Icon.Pulse.js',
+        'images/earthquake.png',
+        'images/header-balai-sep-2024.png',
+        'gjson/png.js',
+        'gjson/batasinapng.js',
+        'gjson/indofaults.js',
+        'gjson/patahan.js',
+        'gjson/plates.js',
+        'gjson/subduksi.js',
+    ]
+
+    def test_borrowed_assets_are_present(self):
+        for ref in self.REQUIRED_ASSETS:
+            with self.subTest(asset=ref):
+                self.assertIsNotNone(finders.find(ref), f'aset hilang: {ref}')
+
+    def test_every_static_tag_in_gempa_templates_resolves(self):
+        """Kalau ada {% static 'x' %} yang filenya tidak ada, tes ini gagal."""
+        base = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates'
+        missing = {}
+        for tpl in base.rglob('*.html'):
+            text = tpl.read_text(errors='replace')
+            for ref in re.findall(r"{%\s*static\s+['\"]([^'\"]+)['\"]", text):
+                # {% static '/x' %} tetap benar saat dirender (Django membuang
+                # garis miring depan), tapi finders.find() menolaknya.
+                if finders.find(ref.lstrip('/')) is None:
+                    missing.setdefault(ref, set()).add(str(tpl.relative_to(base)))
+        self.assertEqual(missing, {}, f'static tidak ditemukan: {missing}')
+
+    def test_gjson_files_define_the_variables_the_templates_use(self):
+        """template-balai memakai variabel 'png', 'worldPlates', dst dari gjson."""
+        expected = {
+            'gjson/png.js': 'var png',
+            'gjson/plates.js': 'var worldPlates',
+            'gjson/patahan.js': 'var',
+            'gjson/subduksi.js': 'var',
+        }
+        for ref, needle in expected.items():
+            with self.subTest(asset=ref):
+                found = finders.find(ref)
+                head = pathlib.Path(found).read_text(errors='replace')[:200]
+                self.assertIn(needle, head)
+
+    def test_port_note_is_not_printed_on_the_admin_page(self):
+        """Komentar multi-baris {# #} dulu ikut tercetak ke halaman."""
+        staff = User.objects.create_user('staticcheck', password='pass12345',
+                                         is_staff=True)
+        staff.groups.add(Group.objects.get(name='Operator Angkasa'))
+        self.client.force_login(staff)
+
+        body = self.client.get('/gempa-admin/gempa/gempa/').content.decode()
+        self.assertNotIn('tidak ikut diport', body)
+        self.assertNotIn('/laporan-bulanan/', body)
+
+    def test_no_multiline_hash_comments_in_gempa_templates(self):
+        """{#' #} Django hanya berlaku satu baris — multi-baris bocor ke halaman."""
+        base = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates'
+        offenders = []
+        for tpl in base.rglob('*.html'):
+            text = tpl.read_text(errors='replace')
+            if re.search(r'\{#[^\n#]*\n[^\n]*#\}', text):
+                offenders.append(str(tpl.relative_to(base)))
+        self.assertEqual(offenders, [])
