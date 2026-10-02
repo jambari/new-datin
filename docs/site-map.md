@@ -548,3 +548,40 @@ python manage.py fetch_fmi_indices --force             # kirim ulang walau citra
 
 > Halaman galeri internal `/magnet/fmi-indices/` tetap menyediakan riwayat lengkap +
 > filter; halaman publik sengaja hanya menampilkan pasangan terbaru.
+
+---
+
+## 9. Ingest API lewat HTTP (pengecualian redirect HTTPS)
+
+Sejak HTTPS diwajibkan (`SECURE_SSL_REDIRECT = True`, default di `settings.py`),
+nginx di port 80 me-redirect **semua** request ke HTTPS dengan `301`. Perangkat
+pengirim yang hanya bisa plain HTTP dan tidak mengikuti redirect jadi kehilangan
+datanya — ini pernah mematikan ingest WRSNG & instrumen selama ~2 bulan
+(data terakhir 2026-08-06) tanpa error yang terlihat di aplikasi.
+
+**Aturannya: pengecualian harus ada di DUA tempat sekaligus.**
+
+| Tempat | Isi |
+|---|---|
+| `datin_project/settings.py` → `SECURE_REDIRECT_EXEMPT` | daftar regex path yang tidak di-redirect Django. **Django mencocokkan `request.path` tanpa garis miring di depan**, jadi tulis `^api/...` bukan `^/api/...` |
+| `/etc/nginx/sites-enabled/datin` (port 80) | `location` yang mem-proxy path tersebut ke gunicorn (bukan `return 301`). Konfigurasi ini **di luar repo** — diubah manual di server, backup di `/root/datin.nginx.*.bak`, lalu `sudo nginx -t && sudo systemctl reload nginx` |
+
+Bila hanya salah satu dikonfigurasi, request tetap gagal (nginx 301, atau nginx
+proxy lalu Django 301). Path yang saat ini dikecualikan:
+
+```
+/api/wrsng/status/update/     perangkat WRSNG (~6 IP publik, kirim tiap jam ~:04)
+/api/yolo/state/              push state training YOLO
+/api/yolo/snapshot/           push snapshot bobot YOLO
+/magnet/api/instrument/       monitor LEMI-018 / Proton / Nexstorm
+```
+
+Catatan:
+
+- Semua path lain **tetap HTTPS-only** (dicek: `/`, `/wrsng/status/list/` → 301).
+- `POST /magnet/api/instrument/status/` butuh header
+  `Authorization: Bearer <LEMI_MONITOR_TOKEN>`; tanpa itu → 401 (perilaku normal).
+- View yang sama juga ter-mount di `/wrsng/status/update/` (namespace app) dan
+  **tidak** dikecualikan — jangan dipakai perangkat.
+- `send_events.py` menembak `https://36.91.166.189/api/gempa/create/`, padahal
+  path itu tidak ada di urlconf (endpoint push event bernama `/api/events/push/`).
