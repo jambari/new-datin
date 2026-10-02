@@ -548,7 +548,30 @@ def our_work(request):
 
 
 def public_magnetbumi(request):
-    return render(request, 'public_magnetbumi.html')
+    """Halaman publik magnetbumi: observasi absolut + citra indeks K & A terbaru."""
+    from magnet.models import FmiIndicesImage
+
+    # Pasangan citra indeks K & A terbaru (diisi job harian 16:00 WIT).
+    fmi_date = (
+        FmiIndicesImage.objects.order_by('-tanggal')
+        .values_list('tanggal', flat=True).first()
+    )
+    fmi_k = fmi_a = fmi_fetched_at = None
+    if fmi_date:
+        for rec in FmiIndicesImage.objects.filter(tanggal=fmi_date):
+            if rec.jenis == FmiIndicesImage.K:
+                fmi_k = rec
+            elif rec.jenis == FmiIndicesImage.A:
+                fmi_a = rec
+        newest = fmi_k or fmi_a
+        fmi_fetched_at = newest.fetched_at if newest else None
+
+    return render(request, 'public_magnetbumi.html', {
+        'fmi_date':       fmi_date,
+        'fmi_k':          fmi_k,
+        'fmi_a':          fmi_a,
+        'fmi_fetched_at': fmi_fetched_at,
+    })
 
 
 def public_magnetbumi_data(request):

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block site_header %}{% include "partials/_landing_header.html" %}{% endblock %}
 {% load static %}
+{% load tz %}
 {% block seo_title %}Data Magnetbumi Papua · Stasiun Geofisika Kelas I Jayapura BMKG{% endblock %}
 {% block meta_description %}Data komponen magnetbumi (H, D, Z) wilayah Papua dari Stasiun Geofisika Kelas I Jayapura BMKG. Pemantauan variasi medan magnet bumi.{% endblock %}
 {% block og_title %}Data Magnetbumi Papua · BMKG Jayapura{% endblock %}
@@ -77,6 +78,28 @@
 
   .empty-msg { text-align: center; color: var(--muted); padding: 3rem 0; font-size: 0.85rem; display: none; }
 
+  /* ── Indeks K & A ── */
+  .fmi-section { margin-top: 2.25rem; scroll-margin-top: 80px; }
+  .fmi-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.2rem; }
+  .fmi-title { font-size: 1.15rem; font-weight: 700; color: var(--ink); }
+  .fmi-date  { font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .fmi-sub   { font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; }
+  .fmi-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .fmi-card  { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  .fmi-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--line); background: #f9fafb;
+  }
+  .fmi-card-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .fmi-card-link { font-size: 0.66rem; color: var(--blue); text-decoration: none; white-space: nowrap; }
+  .fmi-card-link:hover { text-decoration: underline; }
+  .fmi-card img { display: block; width: 100%; height: auto; background: #fff; }
+  .fmi-card-foot { padding: 0.5rem 0.9rem; font-size: 0.62rem; color: #9ca3af; border-top: 1px solid var(--line); background: #f9fafb; }
+  .fmi-empty {
+    background: #fff; border: 1px dashed var(--line); border-radius: 12px;
+    padding: 2rem 1rem; text-align: center; color: var(--muted); font-size: 0.82rem;
+  }
+
   #site-footer {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
     height: 36px; background: rgba(255,255,255,0.96);
@@ -89,6 +112,7 @@
     .chart-grid { grid-template-columns: 1fr; }
     .chart-card.full { grid-column: 1; }
     .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .fmi-grid { grid-template-columns: 1fr; }
   }
 </style>
 {% endblock %}
@@ -179,6 +203,68 @@
       <div class="chart-wrap"><canvas id="chart-Y"></canvas></div>
     </div>
   </div>
+
+  <!-- ── Indeks K & A (citra harian dari dataweb.bmkg.go.id) ─────────────── -->
+  <section class="fmi-section" id="indeks-k-a">
+    <div class="fmi-head">
+      <h2 class="fmi-title">Indeks K &amp; A Magnetbumi</h2>
+      {% if fmi_date %}
+        <span class="fmi-date">{{ fmi_date|date:"d F Y" }} WIT</span>
+      {% endif %}
+    </div>
+    <p class="fmi-sub">
+      Indeks aktivitas geomagnet harian Stasiun Jayapura (JYP). Diperbarui otomatis setiap hari
+      pukul 16:00 WIT.
+    </p>
+
+    {% if fmi_k or fmi_a %}
+      <div class="fmi-grid">
+        <div class="fmi-card">
+          <div class="fmi-card-head">
+            <span class="fmi-card-title">K Indices</span>
+            {% if fmi_k %}
+              <a class="fmi-card-link" href="{{ fmi_k.image.url }}" target="_blank" rel="noopener">Lihat ukuran penuh ↗</a>
+            {% endif %}
+          </div>
+          {% if fmi_k %}
+            <a href="{{ fmi_k.image.url }}" target="_blank" rel="noopener">
+              <img src="{{ fmi_k.image.url }}"
+                   alt="Indeks K Magnetbumi Jayapura {{ fmi_date|date:'d F Y' }}"
+                   loading="lazy">
+            </a>
+            <div class="fmi-card-foot">Diambil {{ fmi_k.fetched_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT &middot; {{ fmi_k.size_bytes|filesizeformat }}</div>
+          {% else %}
+            <div class="fmi-card-foot">Citra K belum tersedia.</div>
+          {% endif %}
+        </div>
+
+        <div class="fmi-card">
+          <div class="fmi-card-head">
+            <span class="fmi-card-title">A Indices</span>
+            {% if fmi_a %}
+              <a class="fmi-card-link" href="{{ fmi_a.image.url }}" target="_blank" rel="noopener">Lihat ukuran penuh ↗</a>
+            {% endif %}
+          </div>
+          {% if fmi_a %}
+            <a href="{{ fmi_a.image.url }}" target="_blank" rel="noopener">
+              <img src="{{ fmi_a.image.url }}"
+                   alt="Indeks A Magnetbumi Jayapura {{ fmi_date|date:'d F Y' }}"
+                   loading="lazy">
+            </a>
+            <div class="fmi-card-foot">Diambil {{ fmi_a.fetched_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT &middot; {{ fmi_a.size_bytes|filesizeformat }}</div>
+          {% else %}
+            <div class="fmi-card-foot">Citra A belum tersedia.</div>
+          {% endif %}
+        </div>
+      </div>
+      <p class="fmi-sub" style="margin-top:0.6rem;">
+        Sumber: <span style="font-family:'JetBrains Mono',monospace;">dataweb.bmkg.go.id</span>
+        {% if fmi_fetched_at %} &middot; pembaruan terakhir {{ fmi_fetched_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT{% endif %}
+      </p>
+    {% else %}
+      <div class="fmi-empty">Citra indeks K &amp; A belum tersedia.</div>
+    {% endif %}
+  </section>
 </div>
 
 <footer id="site-footer">

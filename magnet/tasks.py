@@ -1,5 +1,6 @@
 # magnet/tasks.py
 from celery import shared_task
+from django.core.management import call_command
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -122,3 +123,19 @@ def fill_external_form(self, selenium_data):
 
     finally:
         driver.quit()
+
+
+@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 300})
+def fetch_fmi_indices_task(date=None, jenis='all', force=False):
+    """Celery wrapper for the fetch_fmi_indices management command.
+
+    Dijadwalkan setiap 16:00 WIT (07:00 UTC) — lihat CELERY_BEAT_SCHEDULE.
+    `date` (YYYY-MM-DD) untuk mengisi hari yang terlewat, `jenis` = K / A / all.
+    """
+    kwargs = {'jenis': jenis, 'force': force}
+    if date:
+        kwargs['date'] = date
+
+    print(f"Starting fetch_fmi_indices task... {kwargs}")
+    call_command('fetch_fmi_indices', **kwargs)
+    print("Finished fetch_fmi_indices task.")

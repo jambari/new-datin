@@ -1246,3 +1246,89 @@ def instrument_status_list(request):
         ],
     }
     return render(request, 'magnet/instrument_status_list.html', context)
+
+
+def fmi_indices_list(request):
+    """Galeri citra indeks magnetbumi K & A (hasil scraping harian dataweb.bmkg.go.id)."""
+    import zoneinfo
+    from .models import FmiIndicesImage
+    from .tasks import fetch_fmi_indices_task
+
+    WIT = zoneinfo.ZoneInfo('Asia/Jayapura')
+
+    # Tombol "Ambil Sekarang": jalankan job lewat Celery (non-blocking).
+    if request.method == 'POST':
+        if request.POST.get('action') == 'fetch':
+            requested_date = parse_date(request.POST.get('tanggal', '') or '')
+            try:
+                fetch_fmi_indices_task.delay(
+                    date=requested_date.isoformat() if requested_date else None,
+                )
+                messages.success(
+                    request,
+                    'Pengambilan citra indeks K & A dijadwalkan. '
+                    'Muat ulang halaman ini beberapa saat lagi.',
+                )
+            except Exception as exc:  # broker mati, dsb.
+                detail = ' '.join(str(exc).split())[:200]
+                messages.error(request, f'Gagal menjadwalkan job: {detail}')
+        return redirect('fmi_indices_list')
+
+    jenis_filter   = request.GET.get('jenis', '')
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str   = request.GET.get('end_date', '')
+
+    qs = FmiIndicesImage.objects.all()
+    if jenis_filter in (FmiIndicesImage.K, FmiIndicesImage.A):
+        qs = qs.filter(jenis=jenis_filter)
+    if start_date_str:
+        d = parse_date(start_date_str)
+        if d:
+            qs = qs.filter(tanggal__gte=d)
+    if end_date_str:
+        d = parse_date(end_date_str)
+        if d:
+            qs = qs.filter(tanggal__lte=d)
+
+    # Paginasi per tanggal (bukan per baris) agar citra K & A selalu tampil sepasang.
+    tanggal_list = list(qs.order_by('-tanggal').values_list('tanggal', flat=True).distinct())
+    paginator    = Paginator(tanggal_list, 15)
+    page_obj     = paginator.get_page(request.GET.get('page'))
+
+    by_date = {}
+    for rec in qs.filter(tanggal__in=list(page_obj.object_list)):
+        by_date.setdefault(rec.tanggal, {})[rec.jenis] = rec
+
+    rows = [
+        {
+            'tanggal': t,
+            'K': by_date.get(t, {}).get(FmiIndicesImage.K),
+            'A': by_date.get(t, {}).get(FmiIndicesImage.A),
+            # Pasangan (jenis, record) agar template bisa iterasi berurutan K lalu A.
+            'cards': [
+                ('K', by_date.get(t, {}).get(FmiIndicesImage.K)),
+                ('A', by_date.get(t, {}).get(FmiIndicesImage.A)),
+            ],
+        }
+        for t in page_obj.object_list
+    ]
+
+    context = {
+        'rows':           rows,
+        'page_obj':       page_obj,
+        'paginator':      paginator,
+        'is_paginated':   page_obj.has_other_pages(),
+        'jenis_filter':   jenis_filter,
+        'start_date':     start_date_str,
+        'end_date':       end_date_str,
+        'jenis_choices':  [
+            ('',                  'Semua'),
+            (FmiIndicesImage.K,   'K Indices'),
+            (FmiIndicesImage.A,   'A Indices'),
+        ],
+        'today_wit':      timezone.localtime(timezone.now(), WIT).date(),
+        'total_records':  FmiIndicesImage.objects.count(),
+        'latest_record':  FmiIndicesImage.objects.order_by('-tanggal', 'jenis').first(),
+        'telegram_ready': bool(settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID),
+    }
+    return render(request, 'magnet/fmi_indices_list.html', context)

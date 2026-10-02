@@ -156,3 +156,244 @@ class MagnetViewsTest(TestCase):
 
 
 import json
+
+
+# ── Indeks magnetbumi K & A (scraping harian) ────────────────────────────────
+
+import hashlib
+import shutil
+import tempfile
+from unittest import mock
+
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.test import override_settings
+
+from .models import FmiIndicesImage
+
+# PNG minimal (header valid) — cukup untuk pengecekan magic bytes di command.
+TINY_PNG = (
+    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00'
+    b'\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00'
+    b'\x00\x00IEND\xaeB`\x82'
+)
+
+_CMD = 'magnet.management.commands.fetch_fmi_indices'
+
+
+class FmiIndicesImageModelTest(TestCase):
+    def setUp(self):
+        # Jangan tulis ke MEDIA_ROOT sungguhan saat test.
+        self.media_root = tempfile.mkdtemp(prefix='fmi-test-media-')
+        self.addCleanup(shutil.rmtree, self.media_root, True)
+        ctx = override_settings(MEDIA_ROOT=self.media_root)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    def test_create_and_str(self):
+        obj = FmiIndicesImage.objects.create(
+            jenis=FmiIndicesImage.K,
+            tanggal=datetime.date(2026, 10, 3),
+            image=SimpleUploadedFile('k.png', TINY_PNG, content_type='image/png'),
+        )
+        self.assertIn('K', str(obj))
+        self.assertIn('2026-10-03', str(obj))
+        self.assertEqual(obj.jenis_label, 'K Indices')
+
+    def test_unique_per_jenis_and_tanggal(self):
+        from django.db import IntegrityError
+
+        FmiIndicesImage.objects.create(
+            jenis=FmiIndicesImage.K, tanggal=datetime.date(2026, 10, 3),
+            image=SimpleUploadedFile('a.png', TINY_PNG),
+        )
+        with self.assertRaises(IntegrityError):
+            FmiIndicesImage.objects.create(
+                jenis=FmiIndicesImage.K, tanggal=datetime.date(2026, 10, 3),
+                image=SimpleUploadedFile('b.png', TINY_PNG),
+            )
+
+    def test_k_and_a_can_share_the_same_date(self):
+        for jenis in (FmiIndicesImage.K, FmiIndicesImage.A):
+            FmiIndicesImage.objects.create(
+                jenis=jenis, tanggal=datetime.date(2026, 10, 3),
+                image=SimpleUploadedFile(f'{jenis}.png', TINY_PNG),
+            )
+        self.assertEqual(FmiIndicesImage.objects.filter(tanggal=datetime.date(2026, 10, 3)).count(), 2)
+
+    def test_filename_property(self):
+        obj = FmiIndicesImage(jenis='A', tanggal=datetime.date(2026, 10, 3))
+        self.assertEqual(obj.filename, 'FMI-A-Indices-JYP-20261003.png')
+
+
+class FmiIndicesFetchCommandTest(TestCase):
+    def setUp(self):
+        self.media_root = tempfile.mkdtemp(prefix='fmi-test-media-')
+        self.addCleanup(shutil.rmtree, self.media_root, True)
+        ctx = override_settings(MEDIA_ROOT=self.media_root)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    @staticmethod
+    def _response(content=TINY_PNG, status=200, headers=None):
+        resp = mock.Mock()
+        resp.status_code = status
+        resp.content = content
+        resp.headers = headers if headers is not None else {'ETag': '"etag-1"', 'Content-Type': 'image/png'}
+        return resp
+
+    def test_fetch_stores_one_record_per_jenis(self):
+        with mock.patch(f'{_CMD}.requests.get', return_value=self._response()):
+            call_command('fetch_fmi_indices', '--date', '2026-10-03', '--no-telegram')
+
+        self.assertEqual(FmiIndicesImage.objects.count(), 2)
+        expected_sha = hashlib.sha256(TINY_PNG).hexdigest()
+        for rec in FmiIndicesImage.objects.all():
+            self.assertEqual(rec.tanggal, datetime.date(2026, 10, 3))
+            self.assertEqual(rec.size_bytes, len(TINY_PNG))
+            self.assertEqual(rec.sha256, expected_sha)
+            self.assertTrue(rec.image.storage.exists(rec.image.name))
+            self.assertIsNone(rec.telegram_sent_at)  # --no-telegram
+
+    def test_rerun_same_day_is_idempotent(self):
+        with mock.patch(f'{_CMD}.requests.get', return_value=self._response()):
+            call_command('fetch_fmi_indices', '--date', '2026-10-03', '--no-telegram')
+            call_command('fetch_fmi_indices', '--date', '2026-10-03', '--no-telegram')
+
+        self.assertEqual(FmiIndicesImage.objects.count(), 2)
+        names = sorted(FmiIndicesImage.objects.values_list('image', flat=True))
+        self.assertEqual(len(set(names)), 2)  # tidak ada file bersuffix
+
+    def test_single_jenis_flag(self):
+        with mock.patch(f'{_CMD}.requests.get', return_value=self._response()):
+            call_command('fetch_fmi_indices', '--date', '2026-10-03', '--jenis', 'K', '--no-telegram')
+        self.assertEqual(FmiIndicesImage.objects.count(), 1)
+        self.assertEqual(FmiIndicesImage.objects.first().jenis, 'K')
+
+    def test_non_png_response_is_rejected(self):
+        bad = self._response(content=b'<html>not an image</html>', headers={'Content-Type': 'text/html'})
+        with mock.patch(f'{_CMD}.requests.get', return_value=bad), \
+             mock.patch(f'{_CMD}.time.sleep', return_value=None):
+            with self.assertRaises(CommandError):
+                call_command('fetch_fmi_indices', '--date', '2026-10-03', '--no-telegram')
+        self.assertEqual(FmiIndicesImage.objects.count(), 0)
+
+    def test_telegram_failure_does_not_block_storage(self):
+        """Token kosong => pengiriman dilewati, tetapi citra tetap tersimpan."""
+        with override_settings(TELEGRAM_BOT_TOKEN='', TELEGRAM_CHAT_ID=''), \
+             mock.patch(f'{_CMD}.requests.get', return_value=self._response()):
+            call_command('fetch_fmi_indices', '--date', '2026-10-03')
+        self.assertEqual(FmiIndicesImage.objects.count(), 2)
+        self.assertIsNone(FmiIndicesImage.objects.first().telegram_sent_at)
+
+
+class FmiIndicesViewTest(TestCase):
+    def setUp(self):
+        # Jangan tulis ke MEDIA_ROOT sungguhan saat test.
+        self.media_root = tempfile.mkdtemp(prefix='fmi-test-media-')
+        self.addCleanup(shutil.rmtree, self.media_root, True)
+        ctx = override_settings(MEDIA_ROOT=self.media_root)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    @staticmethod
+    def _make(jenis, tanggal=datetime.date(2026, 10, 3)):
+        """Buat record dengan nama file deterministik seperti hasil command."""
+        obj = FmiIndicesImage(jenis=jenis, tanggal=tanggal)
+        obj.image.save(obj.filename, ContentFile(TINY_PNG), save=False)
+        obj.size_bytes = len(TINY_PNG)
+        obj.sha256 = hashlib.sha256(TINY_PNG).hexdigest()
+        obj.save()
+        return obj
+
+    def test_list_get(self):
+        resp = self.client.get(reverse('fmi_indices_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Indeks K')
+
+    def test_list_shows_stored_images(self):
+        self._make(FmiIndicesImage.K)
+        self._make(FmiIndicesImage.A)
+        resp = self.client.get(reverse('fmi_indices_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'FMI-K-Indices-JYP-20261003.png')
+        self.assertContains(resp, 'FMI-A-Indices-JYP-20261003.png')
+
+    def test_list_empty_state(self):
+        resp = self.client.get(reverse('fmi_indices_list'))
+        self.assertContains(resp, 'Belum ada citra indeks')
+
+    def test_filter_by_jenis(self):
+        self._make(FmiIndicesImage.K)
+        resp = self.client.get(reverse('fmi_indices_list'), {'jenis': 'A'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'FMI-K-Indices-JYP-20261003.png')
+
+    def test_post_fetch_does_not_error_when_broker_unavailable(self):
+        with mock.patch('magnet.tasks.fetch_fmi_indices_task.delay', side_effect=RuntimeError('broker down')):
+            resp = self.client.post(reverse('fmi_indices_list'), {'action': 'fetch'}, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Gagal menjadwalkan job')
+
+
+class FmiIndicesPublicPageTest(TestCase):
+    """Halaman publik /magnetbumi/ + submenu navbar landing."""
+
+    def setUp(self):
+        self.media_root = tempfile.mkdtemp(prefix='fmi-test-media-')
+        self.addCleanup(shutil.rmtree, self.media_root, True)
+        ctx = override_settings(MEDIA_ROOT=self.media_root)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    @staticmethod
+    def _make(jenis, tanggal=datetime.date(2026, 10, 3)):
+        obj = FmiIndicesImage(jenis=jenis, tanggal=tanggal)
+        obj.image.save(obj.filename, ContentFile(TINY_PNG), save=False)
+        obj.size_bytes = len(TINY_PNG)
+        obj.sha256 = hashlib.sha256(TINY_PNG).hexdigest()
+        obj.save()
+        return obj
+
+    def test_magnetbumi_page_shows_latest_pair(self):
+        self._make(FmiIndicesImage.K)
+        self._make(FmiIndicesImage.A)
+
+        resp = self.client.get(reverse('public_magnetbumi'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'id="indeks-k-a"')
+        self.assertContains(resp, 'FMI-K-Indices-JYP-20261003.png')
+        self.assertContains(resp, 'FMI-A-Indices-JYP-20261003.png')
+        self.assertContains(resp, 'K Indices')
+        self.assertContains(resp, 'A Indices')
+
+    def test_magnetbumi_page_shows_only_latest_date(self):
+        self._make(FmiIndicesImage.K, tanggal=datetime.date(2026, 10, 3))
+        self._make(FmiIndicesImage.A, tanggal=datetime.date(2026, 10, 3))
+        self._make(FmiIndicesImage.K, tanggal=datetime.date(2026, 10, 2))
+        self._make(FmiIndicesImage.A, tanggal=datetime.date(2026, 10, 2))
+
+        resp = self.client.get(reverse('public_magnetbumi'))
+        self.assertContains(resp, 'FMI-K-Indices-JYP-20261003.png')
+        self.assertNotContains(resp, 'FMI-K-Indices-JYP-20261002.png')
+
+    def test_magnetbumi_page_empty_state_without_data(self):
+        resp = self.client.get(reverse('public_magnetbumi'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Citra indeks K &amp; A belum tersedia')
+
+    def test_magnetbumi_partial_pair_does_not_break(self):
+        """Hanya citra K tersimpan — halaman tetap tampil."""
+        self._make(FmiIndicesImage.K)
+        resp = self.client.get(reverse('public_magnetbumi'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Citra A belum tersedia')
+
+    def test_landing_navbar_has_magnetbumi_submenu(self):
+        resp = self.client.get(reverse('landing'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Absolut Magnetik')
+        self.assertContains(resp, 'K dan A Indeks')
+        self.assertContains(resp, '/magnetbumi/#indeks-k-a')

@@ -38,4 +38,7 @@ urlpatterns = [
     path('api/lemi/status/',       views.lemi_status_api,       name='lemi_status_api'),
     path('api/instrument/status/', views.instrument_status_api, name='instrument_status_api'),
     path('instrument/status/log/', views.instrument_status_list, name='instrument_status_list'),
+
+    # Indeks magnetbumi K & A (scraping harian dataweb.bmkg.go.id)
+    path('fmi-indices/', views.fmi_indices_list, name='fmi_indices_list'),
 ]

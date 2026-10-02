@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.gis.db import models as gis_models
 from repository.models import Gempa
 from django import forms
+from django.utils import timezone
 import math
 from decimal import Decimal
 
@@ -279,3 +280,52 @@ class InstrumentStatus(models.Model):
 
     def __str__(self):
         return f"{self.instrument} {self.status} @ {self.computer_name} ({self.reported_at})"
+
+
+def fmi_indices_upload_to(instance, filename):
+    """Deterministic media path: magnet/fmi_indices/YYYY/MM/FMI-<J>-Indices-JYP-YYYYMMDD.png"""
+    tanggal = instance.tanggal or timezone.now().date()
+    return f"magnet/fmi_indices/{tanggal:%Y/%m}/{filename}"
+
+
+class FmiIndicesImage(models.Model):
+    """Citra indeks magnetbumi harian (K & A) hasil scraping dataweb.bmkg.go.id.
+
+    Satu baris per (jenis, tanggal). Menjalankan ulang job pada hari yang sama
+    akan memperbarui baris yang sudah ada, bukan membuat duplikat.
+    """
+
+    K = 'K'
+    A = 'A'
+    JENIS_CHOICES = [
+        (K, 'K Indices'),
+        (A, 'A Indices'),
+    ]
+
+    jenis            = models.CharField(max_length=1, choices=JENIS_CHOICES, verbose_name="Jenis Indeks")
+    tanggal          = models.DateField(verbose_name="Tanggal (WIT)")
+    image            = models.ImageField(upload_to=fmi_indices_upload_to, verbose_name="Gambar")
+    source_url       = models.URLField(max_length=500, blank=True, verbose_name="URL Sumber")
+    etag             = models.CharField(max_length=100, blank=True, verbose_name="ETag Sumber")
+    sha256           = models.CharField(max_length=64, blank=True, verbose_name="SHA-256")
+    size_bytes       = models.PositiveIntegerField(default=0, verbose_name="Ukuran (byte)")
+    fetched_at       = models.DateTimeField(auto_now_add=True, verbose_name="Waktu Pengambilan")
+    updated_at       = models.DateTimeField(auto_now=True, verbose_name="Waktu Pembaruan")
+    telegram_sent_at = models.DateTimeField(null=True, blank=True, verbose_name="Terkirim ke Telegram")
+
+    class Meta:
+        ordering = ['-tanggal', 'jenis']
+        unique_together = ('jenis', 'tanggal')
+        verbose_name = "Indeks K & A Magnetbumi"
+        verbose_name_plural = "Indeks K & A Magnetbumi"
+
+    def __str__(self):
+        return f"FMI {self.jenis} Indices - {self.tanggal}"
+
+    @property
+    def jenis_label(self):
+        return dict(self.JENIS_CHOICES).get(self.jenis, self.jenis)
+
+    @property
+    def filename(self):
+        return f"FMI-{self.jenis}-Indices-JYP-{self.tanggal:%Y%m%d}.png"

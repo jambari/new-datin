@@ -286,6 +286,12 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'lightning.tasks.compute_previous_monthly_grid',
         'schedule': crontab(minute=15, hour=0, day_of_month=1),
     },
+
+    # INDEKS MAGNETBUMI K & A: ambil citra dari dataweb.bmkg.go.id, simpan, kirim Telegram
+    'fetch-fmi-indices-daily': {
+        'task': 'magnet.tasks.fetch_fmi_indices_task',
+        'schedule': crontab(minute=0, hour=7),  # 07:00 UTC = 16:00 WIT
+    },
 }
 
 # settings.py
