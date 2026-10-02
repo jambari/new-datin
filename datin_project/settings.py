@@ -62,6 +62,10 @@ INSTALLED_APPS = [
     'theme',
     'django_browser_reload',
 
+    'import_export',
+    'reversion',
+
+    'gempa',
     'repository',
     'magnet',
     'hujan.apps.HujanConfig',
@@ -196,7 +200,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 TAILWIND_APP_NAME = 'theme'
 
-LOGIN_REDIRECT_URL = '/dashboard/'
+# Login tanpa ?next= mampir ke dispatcher: anggota grup katalog gempa
+# diarahkan ke /gempa-admin/, user lain ke POST_LOGIN_REDIRECT_URL.
+LOGIN_REDIRECT_URL = '/post-login/'
+POST_LOGIN_REDIRECT_URL = '/dashboard/'
 
 LOGOUT_REDIRECT_URL = 'login'
 

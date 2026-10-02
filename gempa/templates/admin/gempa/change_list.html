@@ -1,0 +1,161 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls %}
+
+{% block extrahead %}{{ block.super }}<script src="/static/js/gempa_notify.js" defer></script>
+<script>
+// Per-page dropdown next to the Django admin Action bar (delete/bulk delete).
+document.addEventListener("DOMContentLoaded", function() {
+    var actions = document.querySelector("#changelist-form .actions");
+    if (!actions) return;
+    var url = new URL(window.location.href);
+    var current = url.searchParams.get("per_page") || "10";
+
+    var wrap = document.createElement("span");
+    wrap.style.cssText = "margin-left:14px;font-size:13px;display:inline-flex;align-items:center;gap:4px;";
+    wrap.innerHTML = "Per page: <select id='per_page_inline' " +
+                     "style='padding:1px 4px;font-size:13px;'>" +
+        [10, 15, 25, 50].map(function(n) {
+            return "<option value='" + n + "'" + (String(n) === current ? " selected" : "") + ">" + n + "</option>";
+        }).join("") + "</select>";
+
+    wrap.querySelector("select").addEventListener("change", function() {
+        var u = new URL(window.location.href);
+        u.searchParams.set("per_page", this.value);
+        u.searchParams.delete("p");  // reset to first page
+        window.location.href = u.toString();
+    });
+
+    actions.appendChild(wrap);
+});
+</script>
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  #changelist { border: none !important; }
+  #changelist .results { overflow-x: auto; }
+  #result_list { width: 100%; min-width: 600px; }
+
+  .gempa-filter-bar {
+    color-scheme: light;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 9px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #333 !important;
+  }
+  .gempa-filter-bar,
+  .gempa-filter-bar span,
+  .gempa-filter-bar label,
+  .gempa-filter-bar strong { color: #333 !important; }
+  .gempa-filter-bar select,
+  .gempa-filter-bar input[type="date"] {
+    color-scheme: light;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 3px 7px;
+    font-size: 13px;
+    background: #fff !important;
+    color: #333 !important;
+  }
+  .gempa-filter-bar input[type="number"] {
+    color-scheme: light;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 3px 7px;
+    font-size: 13px;
+    background: #fff !important;
+    color: #333 !important;
+    width: 72px;
+  }
+  .gempa-filter-bar .sep { color: #bbb !important; padding: 0 2px; }
+  .gempa-filter-bar .btn-apply {
+    padding: 3px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .gempa-filter-bar .btn-reset {
+    font-size: 13px;
+    color: #ba2121 !important;
+    text-decoration: none;
+    padding: 3px 6px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gempa-filter-bar">
+  <form method="get" style="display:contents;">
+
+    {% for key, value in request.GET.items %}
+      {% if key != "date_from" and key != "date_to" and key != "terasa" and key != "mag_range" and key != "depth_range" and key != "lat_min" and key != "lat_max" and key != "lon_min" and key != "lon_max" and key != "p" %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+      {% endif %}
+    {% endfor %}
+
+    <span>📅</span>
+    <input type="date" name="date_from" value="{{ date_from }}" title="Dari tanggal">
+    <span>–</span>
+    <input type="date" name="date_to" value="{{ date_to }}" title="Sampai tanggal">
+
+    <span class="sep">|</span>
+
+    <select name="terasa">
+      <option value="">Semua</option>
+      <option value="1"{% if filter_terasa == "1" %} selected{% endif %}>Dirasakan</option>
+      <option value="0"{% if filter_terasa == "0" %} selected{% endif %}>Tidak Dirasakan</option>
+    </select>
+
+    <select name="mag_range">
+      <option value="">Semua Mag</option>
+      <option value="lt3"{% if filter_mag == "lt3" %} selected{% endif %}>&lt; M3.0</option>
+      <option value="3to5"{% if filter_mag == "3to5" %} selected{% endif %}>M3.0 – M4.9</option>
+      <option value="5to6"{% if filter_mag == "5to6" %} selected{% endif %}>M5.0 – M5.9</option>
+      <option value="ge6"{% if filter_mag == "ge6" %} selected{% endif %}>M6.0+</option>
+    </select>
+
+    <select name="depth_range">
+      <option value="">Semua Kedalaman</option>
+      <option value="shallow"{% if filter_depth == "shallow" %} selected{% endif %}>Dangkal &lt;60 km</option>
+      <option value="intermediate"{% if filter_depth == "intermediate" %} selected{% endif %}>Menengah 60–300 km</option>
+      <option value="deep"{% if filter_depth == "deep" %} selected{% endif %}>Dalam &gt;300 km</option>
+    </select>
+
+    <select name="delta_filter">
+      <option value="">Pengiriman</option>
+      <option value="ONTIME"{% if filter_delta == "ONTIME" %} selected{% endif %}>ONTIME</option>
+      <option value="LATE"{% if filter_delta == "LATE" %} selected{% endif %}>LATE</option>
+    </select>
+
+    <span class="sep">|</span>
+
+    <label style="font-size:13px;color:#333;">Lat</label>
+    <input type="number" name="lat_min" value="{{ filter_lat_min }}" step="0.01" placeholder="Min" title="Lintang minimum">
+    <span>–</span>
+    <input type="number" name="lat_max" value="{{ filter_lat_max }}" step="0.01" placeholder="Max" title="Lintang maksimum">
+
+    <span class="sep">|</span>
+
+    <label style="font-size:13px;color:#333;">Lon</label>
+    <input type="number" name="lon_min" value="{{ filter_lon_min }}" step="0.01" placeholder="Min" title="Bujur minimum">
+    <span>–</span>
+    <input type="number" name="lon_max" value="{{ filter_lon_max }}" step="0.01" placeholder="Max" title="Bujur maksimum">
+
+    <button type="submit" class="button default btn-apply">Terapkan</button>
+    {% if date_from or date_to or filter_terasa or filter_mag or filter_depth or filter_delta or filter_lat_min or filter_lat_max or filter_lon_min or filter_lon_max %}
+      <a href="?" class="btn-reset">✕ Reset</a>
+    {% endif %}
+
+  </form>
+</div>
+{# Tombol "Gempa Susulan" & "Laporan Bulanan" tidak ikut diport: halaman
+   /gempa-susulan/ dan /laporan-bulanan/ di luar scope tahap ini. #}
+{{ block.super }}
+{% endblock %}

@@ -1,0 +1,63 @@
+{% load l10n %}<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Siaran Pers Gempa</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+<style>
+  textarea { font-family: monospace; }
+  .eq-info { background: #f0f8ff; border: 1px solid #ccc; padding: 10px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="container mt-4">
+  <div class="alert alert-warning">
+    Ini adalah rilis media otomatis. Harap periksa kembali parameter yang ditandai dan sunting narasi.
+  </div>
+
+  <div class="eq-info mb-3">
+    <strong>Tanggal:</strong> {{ event.tanggal }} |
+    <strong>Origin:</strong> {{ event.origin }} UTC |
+    <strong>Lintang:</strong> {{ event.lintang }} |
+    <strong>Bujur:</strong> {{ event.bujur|unlocalize }} |
+    <strong>Kedalaman:</strong> {{ event.depth }} Km |
+    <strong>Jarak:</strong> {{ event.ket }}
+  </div>
+
+  <h4>Sunting Narasi</h4>
+  <div class="form-group">
+    <label>Judul</label>
+    <input type="text" class="form-control" id="judulText"
+      value="GEMPA BUMI TEKTONIK M{{ mag|stringformat:".1f" }} {% if event.terasa %}DIRASAKAN DI {{ event.terdampak }}{% endif %}">
+  </div>
+
+  <div class="form-group">
+    <label>*Kejadian dan Parameter Gempa Bumi*</label>
+    <textarea class="form-control" rows="4" id="parameterText">Hari {{ hari }}, {{ tanggal_indo }} pukul {{ jam_wit }} WIT wilayah {{ event.ket }} diguncang gempa bumi tektonik. Hasil analisis BMKG menunjukkan gempa bumi memiliki parameter kekuatan M{{ mag|stringformat:".1f" }}. Episenter gempa bumi terletak pada koordinat {{ lat }} dan {{ lon }}, dengan kedalaman {{ event.depth }} Km.</textarea>
+  </div>
+
+  <div class="form-group">
+    <label>*Jenis dan Mekanisme Gempa Bumi*</label>
+    <textarea class="form-control" rows="3" id="mekanismeText">Dengan memperhatikan lokasi episenter dan kedalaman hiposenternya, gempa bumi yang terjadi merupakan jenis gempa bumi dangkal akibat aktivitas Sesar Lokal.</textarea>
+  </div>
+
+  <div class="form-group">
+    <label>*Dampak Gempa Bumi*</label>
+    <textarea class="form-control" rows="3" id="terdampakText">Berdasarkan informasi dari masyarakat, gempa bumi dirasakan di {{ event.terdampak|default:"(isi kolom terdampak)" }}. Hingga saat ini belum ada laporan kerusakan.</textarea>
+  </div>
+
+  <div class="form-group">
+    <label>*Gempa Bumi Susulan*</label>
+    <textarea class="form-control" rows="2" id="susulanText">Hingga pukul {{ jam_susulan }} WIT, hasil monitoring BMKG belum menunjukkan adanya aktivitas gempa bumi susulan.</textarea>
+  </div>
+
+  <div class="form-group">
+    <label>*Rekomendasi*</label>
+    <textarea class="form-control" rows="3" id="rekomendasiText">Masyarakat diimbau agar tetap tenang dan tidak terpengaruh oleh isu yang tidak dapat dipertanggungjawabkan kebenarannya.</textarea>
+  </div>
+
+  <a href="javascript:history.back()" class="btn btn-secondary mt-2">Kembali</a>
+</div>
+</body>
+</html>

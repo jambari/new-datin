@@ -1,0 +1,11 @@
+{% extends "admin/login.html" %}
+{% block content %}{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var lbl = document.querySelector('label[for="id_username"]');
+  if (lbl) lbl.childNodes[0].textContent = 'Email:';
+  var inp = document.getElementById('id_username');
+  if (inp) { inp.type = 'email'; inp.placeholder = 'nama@domain.com'; }
+});
+</script>
+{% endblock %}

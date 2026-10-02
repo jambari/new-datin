@@ -1,0 +1,126 @@
+{% load static %}{% load l10n %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Template Balai - Gempa JAY</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'css/L.Icon.Pulse.css' %}">
+<style>
+#streetmap-baru{display:flex;justify-content:center;align-items:center;flex-direction:column;border:2px solid black;}
+#streetmap-baru p{color:#313131;font-size:1.3em;margin-left:5%;margin-right:5%;padding-top:1.5%;font-family:Courier,monospace;text-align:center;}
+.kota{color:black;background-color:white;border:3px solid #FF0000;}
+.white-icon{}
+.gps_ring{border:3px solid #FF0000;-webkit-border-radius:100px;height:100px;width:100px;-webkit-animation:pulsate 1s ease-out;-webkit-animation-iteration-count:infinite;}
+@-webkit-keyframes pulsate{0%{-webkit-transform:scale(0.1,0.1);opacity:0.0;}50%{opacity:1.0;}100%{opacity:1.0;}}
+.map-label{position:absolute;bottom:0;left:-50%;display:flex;flex-direction:column;text-align:center;}
+.map-label-content{order:1;position:relative;left:-50%;padding:3px;white-space:nowrap;color:white;}
+.tz-panel{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:Courier,monospace;font-size:13px;background:#f5f5f5;padding:6px 12px;border-radius:4px;border:1px solid #ddd;}
+.tz-panel select{padding:4px 8px;font-size:13px;font-family:inherit;border:1px solid #ccc;border-radius:3px;background:#fff;}
+.map-label-arrow{order:2;width:0px;height:0px;left:50%;border-style:solid;border-color:#444 transparent transparent transparent;border-width:10px 6px 0 6px;margin-left:-6px;}
+</style>
+</head>
+<body>
+<div style="position:fixed;top:10px;right:10px;z-index:9999;"><a href="?gfz=1" style="background:#333;color:#fff;padding:6px 14px;border-radius:4px;text-decoration:none;font-family:sans-serif;font-size:12px;">GFZ Tiles</a></div>
+<div style="display:flex;gap:5%;align-items:flex-start;justify-content:center;padding:10px;margin-top:5%;">
+
+    <!-- LEFT: black-bordered leaflet block -->
+    <div id="streetmap-baru" style="flex:0 0 756px;width:756px;">
+      <img src="{% static 'images/header-balai-sep-2024.png' %}" alt="header" width="100%">
+      <div id="map-baru" style="width:100%;height:500px;"></div>
+      <p class="text-center"><strong>Info Gempa Mag:{{ mag|stringformat:".1f" }}, <span id="tz-date">{{ tanggal_indo }}</span> <span id="tz-time">{{ jam_wit }}</span> <span id="tz-label">WIT</span>, Lok:{{ lat }} - {{ lon }} ({{ event.ket|default:"-" }}), Kedlmn:{{ event.depth }} Km{% if event.terasa %} {{ event.terdampak }}{% endif %} ::BMKG-JAY</strong></p>
+    </div>
+
+    <!-- RIGHT: GMT image + zone selector -->
+    <div style="flex:0 0 580px;width:580px;display:flex;flex-direction:column;align-items:flex-start;">
+    <div class="tz-panel">
+      <span>Zona Waktu:</span>
+      <select id="tz-selector" onchange="switchTimezone(this.value)">
+        <option value="WIB">WIB (UTC+7)</option>
+        <option value="WITA">WITA (UTC+8)</option>
+        <option value="WIT" selected>WIT (UTC+9)</option>
+      </select>
+    </div>
+    <div style="width:100%;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;">
+      {% if epic_map %}
+      <img src="/uploads/{{ epic_map }}" alt="Peta GMT" style="width:100%;object-fit:contain;">
+      {% else %}
+      <div style="color:#9ca3af;font-family:Courier,monospace;font-size:0.9em;text-align:center;padding:40px 0;">
+        Peta GMT<br>tidak tersedia
+      </div>
+      {% endif %}
+    </div>
+
+  
+</div>
+<script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet@2.2.3/dist/esri-leaflet.js"></script>
+<script src="{% static 'js/L.Icon.Pulse.js' %}"></script>
+<script src="{% static 'gjson/patahan.js' %}"></script>
+<script src="{% static 'gjson/subduksi.js' %}"></script>
+<script src="{% static 'gjson/plates.js' %}"></script>
+<script src="{% static 'gjson/png.js' %}"></script>
+<script src="{% static 'gjson/batasinapng.js' %}"></script>
+<script src="{% static 'gjson/indofaults.js' %}"></script>
+<script>
+var mymap = L.map('map-baru').setView([{{ event.lintang }}, {{ event.bujur|unlocalize }}], 7);
+var layer = L.esri.basemapLayer('Imagery').addTo(mymap);
+var layerLabels;
+function setBasemap(basemap){
+  if(layer){mymap.removeLayer(layer);}
+  layer=L.esri.basemapLayer(basemap);mymap.addLayer(layer);
+  if(layerLabels){mymap.removeLayer(layerLabels);}
+  if(['ShadedRelief','Oceans','Gray','DarkGray','Terrain'].includes(basemap)){layerLabels=L.esri.basemapLayer(basemap+'Labels');mymap.addLayer(layerLabels);}
+  else if(basemap.includes('Imagery')){layerLabels=L.esri.basemapLayer('ImageryLabels');mymap.addLayer(layerLabels);}
+}
+var eqIcon=L.icon({iconUrl:'{% static "images/earthquake.png" %}',iconSize:[40,40]});
+L.marker([{{ event.lintang }}, {{ event.bujur|unlocalize }}],{icon:eqIcon}).addTo(mymap);
+var subduksiStyle={"color":"#ffff00","weight":1,"opacity":0.5,"fillColor":"transparent"};
+var pngStyle={fillColor:'#0AA53E',weight:1,opacity:1,color:'#0AA53E',fillOpacity:1};
+L.geoJSON(png,{style:pngStyle}).addTo(mymap);
+var batasStyle={fillColor:'#D31B1B',weight:2,opacity:1,color:'#D31B1B',fillOpacity:1};
+L.geoJSON(batasInapng,{style:batasStyle}).addTo(mymap);
+L.geoJSON(indoFaults,{style:subduksiStyle}).addTo(mymap);
+var pulsingIcon=L.icon.pulse({iconSize:[30,30],color:'red'});
+var whiteIcon=L.divIcon({className:'white-icon',html:'<div class="white-icon"></div>',iconSize:[100,100]});
+L.marker([{{ event.lintang }}, {{ event.bujur|unlocalize }}],{icon:pulsingIcon}).addTo(mymap);
+L.marker([{{ event.lintang }}, {{ event.bujur|unlocalize }}],{icon:whiteIcon}).addTo(mymap);
+function kota(name){return L.divIcon({className:'kota',html:'<div class="map-label"><div class="map-label-content">'+name+'</div></div>'});}
+L.marker([-2.56,140.7],{icon:kota('Jayapura')}).addTo(mymap);
+L.marker([-2.58,140.350],{icon:kota('Sentani')}).addTo(mymap);
+L.marker([-1.183,136.09],{icon:kota('Biak')}).addTo(mymap);
+L.marker([-6.083,140.316],{icon:kota('Tanah Merah')}).addTo(mymap);
+L.marker([-4.066,138.966],{icon:kota('Wamena')}).addTo(mymap);
+L.marker([-3.026,140.515],{icon:kota('Arso')}).addTo(mymap);
+L.marker([-1.88,136.24],{icon:kota('Serui')}).addTo(mymap);
+L.marker([-8.466,140.383],{icon:kota('Merauke')}).addTo(mymap);
+L.marker([-4.542,136.888],{icon:kota('Timika')}).addTo(mymap);
+L.marker([-3.363,135.503],{icon:kota('Nabire')}).addTo(mymap);
+L.marker([-3.833,136.35],{icon:kota('Enarotali')}).addTo(mymap);
+L.marker([-4.98,140.56],{icon:kota('Oksibil')}).addTo(mymap);
+L.marker([-1.877,138.753],{icon:kota('Sarmi')}).addTo(mymap);
+L.marker([-2.26,136.37],{icon:kota('Waren')}).addTo(mymap);
+L.marker([-4.69,139.35],{icon:kota('Sumohai')}).addTo(mymap);
+L.marker([-2.92,132.298],{icon:kota('Fak Fak')}).addTo(mymap);
+L.marker([-3.67,133.77],{icon:kota('Kaimana')}).addTo(mymap);
+L.marker([-0.86,134.07],{icon:kota('Manokwari')}).addTo(mymap);
+L.marker([-2.12,133.54],{icon:kota('Bintuni')}).addTo(mymap);
+L.marker([-0.87,131.25],{icon:kota('Sorong')}).addTo(mymap);
+L.marker([-0.395,130.803],{icon:kota('Waisai')}).addTo(mymap);
+L.marker([-1.45,132.01],{icon:kota('Teminabuan')}).addTo(mymap);
+</script>
+
+<script>
+// -- Timezone selector --
+var tzData = {{ tz_data|safe }};
+
+function switchTimezone(tz) {
+  var data = tzData[tz];
+  if (!data) return;
+  document.getElementById('tz-date').textContent = data.date;
+  document.getElementById('tz-time').textContent = data.time;
+  document.getElementById('tz-label').textContent = tz;
+}
+</script>
+</body>
+</html>

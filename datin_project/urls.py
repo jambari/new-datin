@@ -23,6 +23,9 @@ admin.site.__class__ = OTPAdminSite
 from django.contrib.sitemaps.views import sitemap
 from django.views.generic import TemplateView
 from repository.views import station_map_view
+from gempa import api_views as gempa_api_views
+from gempa import views as gempa_views
+from gempa.sites import gempa_admin_site
 from django.conf import settings
 from django.conf.urls.static import static
 from theme.sitemaps import StaticViewSitemap, ShakemapSitemap, GempaMerusakSitemap
@@ -39,11 +42,17 @@ urlpatterns = [
     )),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('admin/', admin.site.urls),
+    # Admin katalog gempa: site terpisah, login biasa (tanpa OTP).
+    path('gempa-admin/', gempa_admin_site.urls),
+    path('', include('gempa.urls')),
+    path('post-login/', gempa_views.post_login_redirect, name='post_login'),
     path('', include('theme.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path("__reload__/", include("django_browser_reload.urls")), 
     path('', include('monitor.urls')),
     path('repository/', include('repository.urls')),
+    # GeoJSON katalog gempa (dipakai skrip pemantau eksternal).
+    path('api/earthquakes', gempa_api_views.earthquakes, name='api-earthquakes'),
     path('api/', include('repository.api_urls')),
     path('magnet/', include('magnet.urls')),
     path('', include('hujan.urls')),

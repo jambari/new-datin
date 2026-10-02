@@ -43,3 +43,5 @@ urllib3==2.5.0
 wheel==0.42.0
 reportlab
 django-redis
+django-reversion==6.3.0
+django-import-export==4.4.1

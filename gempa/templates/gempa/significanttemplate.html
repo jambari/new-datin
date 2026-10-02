@@ -1,0 +1,73 @@
+{% load static %}{% load l10n %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Gempa Signifikan</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'css/L.Icon.Pulse.css' %}">
+<link rel="stylesheet" href="https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css">
+<style>
+#streetmap-baru{display:flex;justify-content:center;align-items:center;flex-direction:column;border:2px solid black;}
+#streetmap-baru p{color:#313131;font-size:1.3em;margin-left:5%;margin-right:5%;padding-top:1.5%;font-family:Courier,monospace;text-align:center;}
+.kota{color:black;background-color:white;border:3px solid #FF0000;}
+.map-label{position:absolute;bottom:0;left:-50%;display:flex;flex-direction:column;text-align:center;}
+.map-label-content{order:1;position:relative;left:-50%;padding:3px;white-space:nowrap;color:white;}
+.map-label-arrow{order:2;width:0;height:0;left:50%;border-style:solid;border-color:#444 transparent transparent transparent;border-width:10px 6px 0 6px;margin-left:-6px;}
+</style>
+</head>
+<body>
+<div style="display:flex;gap:5%;align-items:flex-start;justify-content:center;padding:10px;margin-top:10%;">
+
+    <!-- LEFT: black-bordered leaflet block -->
+    <div id="streetmap-baru" style="flex:0 0 756px;width:756px;">
+      <img src="{% static 'images/header-balai-sep-2024.png' %}" alt="header" width="100%">
+      <div id="map-baru" style="width:100%;height:522px;"></div>
+      <p><strong>Info Gempa Mag:{{ mag|stringformat:".1f" }}, {{ tanggal_indo }} {{ jam_wit }} WIT, Lok:{{ lat }} - {{ lon }} ({{ event.lokasi|default:"-" }}), Kedlmn:{{ event.depth }} Km ::BMKG-JAY{% if event.dirasakan %} {{ event.dirasakan }}{% endif %}</strong></p>
+    </div>
+
+    <!-- RIGHT: GMT image, separate div, no border -->
+    <div style="flex:0 0 580px;width:580px;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;">
+      {% if epic_map %}
+      <img src="/uploads/{{ epic_map }}" alt="Peta GMT" style="width:100%;object-fit:contain;">
+      {% else %}
+      <div style="color:#9ca3af;font-family:Courier,monospace;font-size:0.9em;text-align:center;padding:40px 0;">
+        Peta GMT<br>tidak tersedia
+      </div>
+      {% endif %}
+    </div>
+
+  
+</div>
+<script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js" integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA==" crossorigin=""></script>
+<script src="https://unpkg.com/esri-leaflet@2.2.3/dist/esri-leaflet.js" integrity="sha512-YZ6b5bXRVwipfqul5krehD9qlbJzc6KOGXYsDjU9HHXW2gK57xmWl2gU6nAegiErAqFXhygKIsWPKbjLPXVb2g==" crossorigin=""></script>
+<script src="{% static 'js/L.Icon.Pulse.js' %}"></script>
+<script src="{% static 'gjson/png.js' %}"></script>
+<script src="{% static 'gjson/batasinapng.js' %}"></script>
+<script src="{% static 'gjson/indofaults.js' %}"></script>
+<script>
+var mymap=L.map('map-baru').setView([{{ latmap }},{{ lonmap }}],7);
+L.esri.basemapLayer('Imagery').addTo(mymap);
+var eqIcon=L.icon({iconUrl:'{% static "images/earthquake.png" %}',iconSize:[40,40]});
+L.marker([{{ latmap }},{{ lonmap }}],{icon:eqIcon}).addTo(mymap);
+L.geoJSON(png,{style:{fillColor:'#0AA53E',weight:1,opacity:1,color:'#0AA53E',fillOpacity:1}}).addTo(mymap);
+L.geoJSON(batasInapng,{style:{fillColor:'#D31B1B',weight:2,opacity:1,color:'#D31B1B',fillOpacity:1}}).addTo(mymap);
+L.geoJSON(indoFaults,{style:{color:'#ffff00',weight:1,opacity:0.5,fillColor:'transparent'}}).addTo(mymap);
+var pulsingIcon=L.icon.pulse({iconSize:[30,30],color:'red'});
+L.marker([{{ latmap }},{{ lonmap }}],{icon:pulsingIcon}).addTo(mymap);
+L.marker([{{ latmap }},{{ lonmap }}],{icon:L.divIcon({className:'white-icon',html:'<div></div>',iconSize:[100,100]})}).addTo(mymap);
+function k(n){return L.divIcon({className:'kota',html:'<div class="map-label"><div class="map-label-content">'+n+'</div></div>'});}
+L.marker([-2.56,140.7],{icon:k('Jayapura')}).addTo(mymap);L.marker([-2.58,140.35],{icon:k('Sentani')}).addTo(mymap);
+L.marker([-1.183,136.09],{icon:k('Biak')}).addTo(mymap);L.marker([-6.083,140.316],{icon:k('Tanah Merah')}).addTo(mymap);
+L.marker([-4.066,138.966],{icon:k('Wamena')}).addTo(mymap);L.marker([-3.026,140.515],{icon:k('Arso')}).addTo(mymap);
+L.marker([-1.88,136.24],{icon:k('Serui')}).addTo(mymap);L.marker([-8.466,140.383],{icon:k('Merauke')}).addTo(mymap);
+L.marker([-4.542,136.888],{icon:k('Timika')}).addTo(mymap);L.marker([-3.363,135.503],{icon:k('Nabire')}).addTo(mymap);
+L.marker([-3.833,136.35],{icon:k('Enarotali')}).addTo(mymap);L.marker([-4.98,140.56],{icon:k('Oksibil')}).addTo(mymap);
+L.marker([-1.877,138.753],{icon:k('Sarmi')}).addTo(mymap);L.marker([-2.26,136.37],{icon:k('Waren')}).addTo(mymap);
+L.marker([-4.69,139.35],{icon:k('Sumohai')}).addTo(mymap);L.marker([-2.92,132.298],{icon:k('Fak Fak')}).addTo(mymap);
+L.marker([-3.67,133.77],{icon:k('Kaimana')}).addTo(mymap);L.marker([-0.86,134.07],{icon:k('Manokwari')}).addTo(mymap);
+L.marker([-2.12,133.54],{icon:k('Bintuni')}).addTo(mymap);L.marker([-0.87,131.25],{icon:k('Sorong')}).addTo(mymap);
+</script>
+
+</body>
+</html>
