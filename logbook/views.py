@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
@@ -8,6 +10,13 @@ from .forms import LogbookForm
 from .utils import send_telegram_log
 import zoneinfo
 from jadwal.models import JadwalHVSampler
+from django.conf import settings as dj_settings
+from django.core.cache import cache
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .sirine import SirineClient, SirineError, SirineSafetyError, SirineAuthError
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_IPS = ['36.91.166.189', '36.91.166.186', '127.0.0.1', '192.168.1.7', '192.168.1.5']
 
@@ -116,3 +125,59 @@ def edit_log(request, log_id):
 
 def print_log_detail(request, log_id):
     return render(request, 'logbook/print_detail.html', {'log': get_object_or_404(Logbook, pk=log_id)})
+
+
+# ── Cek sirene (ping) ────────────────────────────────────────────────────────
+# Memanggil aksi "ping" di panel sirene lewat logbook/sirine.py. Aksi itu HANYA
+# mengecek jaringan — tidak membunyikan sirene. lihat logbook/sirine.py.
+
+SIRINE_COOLDOWN_KEY = 'logbook:sirine_ping_cooldown'
+
+
+@require_POST
+def sirine_check(request):
+    """Ping sirene, balas JSON {ok, status, transmitted, received, loss_percent, message}."""
+    if get_client_ip(request) not in ALLOWED_IPS:
+        return JsonResponse(
+            {'ok': False, 'error': 'Cek sirene hanya bisa dari jaringan kantor.'},
+            status=403)
+
+    # Cooldown dipasang SEBELUM request supaya klik dobel tidak menghajar panel,
+    # tapi dibatalkan kalau gagal supaya operator bisa langsung mencoba lagi.
+    cooldown = getattr(dj_settings, 'SIRINE_COOLDOWN_SECONDS', 15)
+    if cooldown and cache.get(SIRINE_COOLDOWN_KEY):
+        return JsonResponse(
+            {'ok': False, 'error': 'Baru saja dicek. Tunggu beberapa detik lagi.'},
+            status=429)
+    if cooldown:
+        cache.set(SIRINE_COOLDOWN_KEY, True, cooldown)
+
+    def _fail(message, status_code, log_level='warning'):
+        if cooldown:
+            cache.delete(SIRINE_COOLDOWN_KEY)      # gagal -> boleh coba lagi
+        getattr(logger, log_level)('SIRINE %s', message)
+        return JsonResponse({'ok': False, 'error': message}, status=status_code)
+
+    try:
+        client = SirineClient(
+            base_url=dj_settings.SIRINE_BASE_URL,
+            username=dj_settings.SIRINE_USER,
+            password=dj_settings.SIRINE_PASS,
+            device_id=dj_settings.SIRINE_DEVICE_ID,
+            timeout=getattr(dj_settings, 'SIRINE_TIMEOUT', 20),
+        )
+        result = client.ping()
+    except SirineSafetyError as exc:
+        # Tidak seharusnya terjadi — berarti ada percobaan memanggil aksi bunyi.
+        return _fail(str(exc), 500, log_level='error')
+    except SirineAuthError as exc:
+        return _fail(str(exc), 502)
+    except SirineError as exc:
+        return _fail(str(exc), 502)
+
+    logger.info(
+        'SIRINE ping dari %s: %s (%s/%s, %s%% loss)',
+        get_client_ip(request), result.status, result.received,
+        result.transmitted, result.loss_percent)
+
+    return JsonResponse({'ok': True, **result.as_dict()})

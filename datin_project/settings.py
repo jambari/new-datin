@@ -379,6 +379,16 @@ REST_FRAMEWORK = {
     ],
 }
 
+# ── Panel sirene tsunami (Alfar Smart) ─────────────────────
+# Dipakai tombol "Cek Sirene (ping)" di halaman logbook. Hanya aksi ping
+# yang dipanggil — lihat logbook/sirine.py untuk pengamanannya.
+SIRINE_BASE_URL = config('SIRINE_BASE_URL', default='https://sirine.id:8088')
+SIRINE_USER = config('SIRINE_USER', default='')
+SIRINE_PASS = config('SIRINE_PASS', default='')
+SIRINE_DEVICE_ID = config('SIRINE_DEVICE_ID', default='')
+SIRINE_TIMEOUT = config('SIRINE_TIMEOUT', default=20, cast=int)
+SIRINE_COOLDOWN_SECONDS = config('SIRINE_COOLDOWN_SECONDS', default=15, cast=int)
+
 # ── Authentication ────────────────────────────────────────
 # Operator katalog (.188) login memakai ALAMAT EMAIL: halaman login katalog
 # berlabel "Email:" dan input type=email. Backend ini menerima email maupun

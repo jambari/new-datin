@@ -199,6 +199,19 @@
     }
 
     @media print { .reminder-overlay { display: none !important; } }
+
+    .sirine-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .btn-cek-sirine {
+        background-color: var(--ios-blue); color: #fff; padding: 8px 14px;
+        border-radius: 10px; font-weight: 600; font-size: 0.85rem;
+        border: none; cursor: pointer; white-space: nowrap;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-cek-sirine:active { transform: scale(0.97); opacity: 0.9; }
+    .btn-cek-sirine[disabled] { opacity: 0.6; cursor: progress; }
+    .sirine-detail { font-size: 0.72rem; color: #6b7280; margin-top: 5px; white-space: pre-line; }
+    .sirine-detail.sirine-ok  { color: var(--ios-green); font-weight: 700; }
+    .sirine-detail.sirine-off { color: #d9534f; font-weight: 700; }
 </style>
 
 <div class="flex h-screen bg-gray-100 overflow-hidden">
@@ -263,13 +276,25 @@
 
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-5 mb-6">
                             {% for field in form %}
-                                {% if field.name not in 'shift status_absen petugas_sebelum petugas_selanjutnya catatan hv_counter_hour hv_flow_rate hv_berat_kertas hv_jam_pasang hv_jam_angkat' %}
+                                {% if field.name not in 'shift status_absen petugas_sebelum petugas_selanjutnya catatan hv_counter_hour hv_flow_rate hv_berat_kertas hv_jam_pasang hv_jam_angkat sirine' %}
                                 <div>
                                     <label class="form-label">{{ field.label }}</label>
                                     {{ field }}
                                 </div>
                                 {% endif %}
                             {% endfor %}
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="form-label">Sirine</label>
+                            <div class="sirine-row">
+                                {{ form.sirine }}
+                                <button type="button" id="btn-cek-sirine" class="btn-cek-sirine"
+                                        title="Cek jaringan sirene lewat panel (ping) — tidak membunyikan sirene">
+                                    Cek Sirene (ping)
+                                </button>
+                            </div>
+                            <p id="sirine-check-detail" class="sirine-detail"></p>
                         </div>
 
                         <div class="mb-6">
@@ -421,5 +446,57 @@
             }
         }
     });
+    // ── Cek sirene (ping) ────────────────────────────────────────────────
+    // Memanggil endpoint logbook yang hanya men-PING panel sirene; hasilnya
+    // dipakai untuk mengisi otomatis field SIRINE. Kalau pengecekan gagal,
+    // field TIDAK diubah sama sekali.
+    (function () {
+        const btn = document.getElementById('btn-cek-sirine');
+        if (!btn) return;
+        const select = document.getElementById('id_sirine');
+        const detail = document.getElementById('sirine-check-detail');
+        const csrfInput = document.querySelector('input[name=csrfmiddlewaretoken]');
+
+        function show(text, cls) {
+            detail.textContent = text;
+            detail.className = 'sirine-detail' + (cls ? ' ' + cls : '');
+        }
+
+        btn.addEventListener('click', function () {
+            if (btn.disabled) return;
+            btn.disabled = true;
+            const label = btn.textContent;
+            btn.textContent = 'Mengecek...';
+            show('Menghubungi panel sirene (ping)...');
+
+            fetch("{% url 'logbook:sirine_check' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfInput ? csrfInput.value : '',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d.ok) {
+                        show('Gagal cek sirene: ' + (d.error || 'kesalahan tidak dikenal')
+                             + ' — field SIRINE tidak diubah.', 'sirine-off');
+                        return;
+                    }
+                    if (select) select.value = d.status;    // auto-isi field SIRINE
+                    show('Sirene ' + d.status + ' — ' + d.message,
+                         d.status === 'ON' ? 'sirine-ok' : 'sirine-off');
+                })
+                .catch(function (err) {
+                    show('Gagal menghubungi server: ' + err + ' — field SIRINE tidak diubah.',
+                         'sirine-off');
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.textContent = label;
+                });
+        });
+    })();
 </script>
 {% endblock %}
