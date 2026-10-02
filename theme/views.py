@@ -898,7 +898,11 @@ def custom_login(request):
             # OTP redirect disabled — uncomment after CSIRT pentest
             # if devices_for_user(user):
             #     return redirect('otp_verify')
-            return redirect('dashboard')
+            # Halaman ini tidak memakai LOGIN_REDIRECT_URL, jadi tujuan akhir
+            # ditentukan oleh dispatcher /post-login/: operator katalog gempa
+            # mendarat di katalog kantornya (mis. angkasa -> /gempa-admin/gempa/gempa/),
+            # user lain tetap ke dashboard.
+            return redirect('post_login')
     else:
         form = AuthenticationForm(request)
 

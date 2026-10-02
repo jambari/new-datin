@@ -194,9 +194,9 @@ class OperatorGroupTest(TestCase):
         available = set(Permission.objects
                         .filter(content_type__app_label='gempa')
                         .values_list('codename', flat=True))
-        for name, codenames in OPERATOR_GROUPS.items():
+        for name, spec in OPERATOR_GROUPS.items():
             with self.subTest(group=name):
-                self.assertEqual(set(codenames) - available, set())
+                self.assertEqual(set(spec['permissions']) - available, set())
 
 
 class NotifyEndpointTest(TestCase):
@@ -238,14 +238,39 @@ class EarthquakesAPITest(TestCase):
 
 
 class PostLoginRedirectTest(TestCase):
-    def test_catalog_group_member_lands_in_gempa_admin(self):
-        user = User.objects.create_user('op2', password='pass12345', is_staff=True)
+    """Setelah login, operator mendarat di katalog kantornya sendiri."""
+
+    LANDINGS = {
+        ANGKASA_GROUP:     '/gempa-admin/gempa/gempa/',
+        'Operator PGR V':  '/gempa-admin/gempa/balaigempa/',
+        'Operator Nabire': '/gempa-admin/gempa/gempanabire/',
+        'Operator Sorong': '/gempa-admin/gempa/gempasorong/',
+    }
+
+    def test_each_office_lands_on_its_own_catalog(self):
+        for group_name, expected in self.LANDINGS.items():
+            with self.subTest(group=group_name):
+                username = 'op-' + group_name.split()[-1].lower()
+                user = User.objects.create_user(username, password='pass12345',
+                                                is_staff=True)
+                user.groups.add(Group.objects.get(name=group_name))
+                self.client.force_login(user)
+
+                resp = self.client.get(reverse('post_login'))
+                self.assertEqual(resp.status_code, 302)
+                self.assertEqual(resp['Location'], expected)
+                # halaman tujuan memang boleh dibuka user itu
+                self.assertEqual(self.client.get(expected).status_code, 200)
+                self.client.logout()
+
+    def test_angkasa_example_from_the_request(self):
+        """Contoh yang diminta: angkasa -> /gempa-admin/gempa/gempa/."""
+        user = User.objects.create_user('angkasa_op', password='pass12345',
+                                        is_staff=True, email='angkasa@bmkg.go.id')
         user.groups.add(Group.objects.get(name=ANGKASA_GROUP))
         self.client.force_login(user)
-
-        resp = self.client.get(reverse('post_login'))
-        self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp['Location'], reverse('gempa_admin:index'))
+        self.assertEqual(self.client.get(reverse('post_login'))['Location'],
+                         '/gempa-admin/gempa/gempa/')
 
     def test_other_users_keep_the_old_destination(self):
         user = User.objects.create_user('biasa', password='pass12345')
@@ -263,6 +288,67 @@ class PostLoginRedirectTest(TestCase):
 
         resp = self.client.get(reverse('post_login'))
         self.assertEqual(resp['Location'], '/dashboard/')
+
+    def test_every_office_declares_a_reversible_landing(self):
+        from django.urls import reverse as rev
+        for name, spec in OPERATOR_GROUPS.items():
+            with self.subTest(group=name):
+                self.assertIn('landing', spec)
+                self.assertTrue(rev(spec['landing']).startswith('/gempa-admin/'))
+
+
+class AccountsLoginRedirectTest(TestCase):
+    """End-to-end lewat /accounts/login/ — halaman yang benar-benar dipakai user."""
+
+    def test_operator_logging_in_by_email_lands_on_its_catalog(self):
+        user = User.objects.create_user('angkasa', password='rahasiaku123',
+                                        is_staff=True, email='angkasa@bmkg.go.id')
+        user.groups.add(Group.objects.get(name=ANGKASA_GROUP))
+
+        resp = self.client.post('/accounts/login/',
+                                {'username': 'angkasa@bmkg.go.id',
+                                 'password': 'rahasiaku123'},
+                                follow=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.redirect_chain[-1][0], '/gempa-admin/gempa/gempa/')
+        self.assertContains(resp, 'Gempa JAY')
+
+    def test_nabire_operator_lands_on_the_nabire_catalog(self):
+        user = User.objects.create_user('nabire', password='rahasiaku123',
+                                        is_staff=True, email='nabire@bmkg.go.id')
+        user.groups.add(Group.objects.get(name='Operator Nabire'))
+
+        resp = self.client.post('/accounts/login/',
+                                {'username': 'nabire@bmkg.go.id',
+                                 'password': 'rahasiaku123'},
+                                follow=True)
+        self.assertEqual(resp.redirect_chain[-1][0], '/gempa-admin/gempa/gempanabire/')
+
+    def test_explicit_next_url_is_respected(self):
+        """Kalau ada ?next=, hormati itu — bukan halaman katalog."""
+        user = User.objects.create_user('sorong_op', password='rahasiaku123',
+                                        is_staff=True, email='sorong@bmkg.go.id')
+        user.groups.add(Group.objects.get(name='Operator Sorong'))
+
+        resp = self.client.post('/accounts/login/?next=/logbook/', {
+            'username': 'sorong@bmkg.go.id',
+            'password': 'rahasiaku123',
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp['Location'], '/logbook/')
+
+    def test_ordinary_user_still_goes_to_dashboard(self):
+        User.objects.create_user('pegawai', password='rahasiaku123',
+                                 email='pegawai@bmkg.go.id')
+        resp = self.client.post('/accounts/login/', {
+            'username': 'pegawai@bmkg.go.id',
+            'password': 'rahasiaku123',
+        }, follow=True)
+        # dilewatkan dispatcher, tapi berakhir tetap di dashboard
+        self.assertEqual(resp.redirect_chain[-1][0], '/dashboard/')
+        self.assertNotIn('/gempa-admin/', str(resp.redirect_chain))
+        self.assertEqual(resp.status_code, 200)
 
 
 class AdminSubPageTest(TestCase):

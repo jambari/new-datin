@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 
-from .apps import OPERATOR_GROUPS
+from .apps import OPERATOR_GROUPS, landing_url_name_for
 from .models import (Gempa, Balaigempa, Gempasorong, Gempanabire,
                      Satudatagempa, Significant)
 
@@ -57,16 +57,21 @@ CATALOG_GROUP_NAMES = frozenset(OPERATOR_GROUPS)
 def post_login_redirect(request):
     """Tujuan setelah login tanpa parameter ?next=.
 
-    Anggota salah satu grup operator katalog diarahkan ke /gempa-admin/ (admin
-    katalog, tanpa OTP). Semua user lain tetap ke halaman biasa
+    Operator katalog diarahkan ke katalog kantornya sendiri, misalnya
+    angkasa@bmkg.go.id -> /gempa-admin/gempa/gempa/ (lihat OPERATOR_GROUPS
+    di gempa/apps.py). Semua user lain tetap ke halaman biasa
     (POST_LOGIN_REDIRECT_URL, default /dashboard/).
+
+    Superuser tidak dialihkan: mereka memakai situs utama seperti biasa.
     """
     if not request.user.is_authenticated:
         return redirect(settings.LOGIN_URL)
 
     group_names = set(request.user.groups.values_list('name', flat=True))
-    if group_names & CATALOG_GROUP_NAMES and not request.user.is_superuser:
-        return redirect('gempa_admin:index')
+    if not request.user.is_superuser:
+        landing = landing_url_name_for(group_names)
+        if landing:
+            return redirect(landing)
 
     return redirect(settings.POST_LOGIN_REDIRECT_URL)
 

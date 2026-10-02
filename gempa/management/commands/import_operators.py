@@ -118,7 +118,7 @@ class Command(BaseCommand):
 
             created_n += is_new
             updated_n += not is_new
-            perms = len(OPERATOR_GROUPS[group_name])
+            perms = len(OPERATOR_GROUPS[group_name]['permissions'])
             self.stdout.write(
                 f'  {"buat " if is_new else "perbarui"} {username:8s} '
                 f'groups=[{group_name}] ({perms} izin) staff=True super=False')
