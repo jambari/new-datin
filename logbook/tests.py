@@ -372,3 +372,49 @@ class SirineCheckViewTest(TestCase):
             client_cls.return_value.ping.side_effect = None
             client_cls.return_value.ping.return_value = self._ping_result('ON')
             self.assertEqual(self.client.post(self.url).status_code, 200)
+
+
+class SireneOffModalTest(TestCase):
+    """Kalau hasil ping = OFF, muncul modal "kontak rekanan"."""
+
+    URL = '/logbook/'
+
+    def test_modal_markup_present_for_allowed_ip(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'id="sirene-off-modal"')
+        self.assertContains(resp, 'id="sirene-off-close"')
+        self.assertContains(resp, 'Sirene OFF')
+
+    def test_modal_shows_the_vendor_contact(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        self.assertContains(resp, 'kontak rekanan')
+        self.assertContains(resp, '0812 8773 8748')
+        # nomor bisa langsung ditelepon dari ponsel
+        self.assertContains(resp, 'tel:+6281287738748')
+
+    def test_modal_absent_for_unauthorized_ip(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='1.2.3.4')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Akses Ditolak')
+        self.assertNotContains(resp, 'id="sirene-off-modal"')
+        self.assertNotContains(resp, 'tel:+6281287738748')   # hanya ada di markup modal
+
+    def test_modal_opens_only_when_result_is_off(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        html = resp.content.decode()
+        self.assertIn("if (d.status === 'OFF')", html)
+        self.assertIn('openOffModal(d.message)', html)
+
+    def test_modal_not_shown_when_the_check_fails(self):
+        """Gagal cek bukan berarti OFF — jangan menyuruh kontak rekanan."""
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        html = resp.content.decode()
+        # cabang gagal keluar lebih dulu dan tidak memanggil openOffModal
+        fail_branch = html[html.index("if (!d.ok) {"):html.index("if (select) select.value")]
+        self.assertNotIn('openOffModal', fail_branch)
+
+    def test_modal_hidden_when_printing(self):
+        """Aturan cetak menyembunyikan semua .reminder-overlay."""
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        self.assertContains(resp, '.reminder-overlay { display: none !important; }')

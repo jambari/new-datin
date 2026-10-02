@@ -212,6 +212,8 @@
     .sirine-detail { font-size: 0.72rem; color: #6b7280; margin-top: 5px; white-space: pre-line; }
     .sirine-detail.sirine-ok  { color: var(--ios-green); font-weight: 700; }
     .sirine-detail.sirine-off { color: #d9534f; font-weight: 700; }
+    .reminder-box.reminder-danger .reminder-title { color: #d9534f; }
+    .reminder-box.reminder-danger .reminder-text strong { color: #d9534f; }
 </style>
 
 <div class="flex h-screen bg-gray-100 overflow-hidden">
@@ -347,6 +349,21 @@
                         <p class="reminder-hint">Tekan Esc atau klik di luar kotak untuk menutup</p>
                     </div>
                 </div>
+
+                <!-- Muncul kalau hasil ping sirene = OFF -->
+                <div class="reminder-overlay" id="sirene-off-modal"
+                     role="dialog" aria-modal="true" aria-labelledby="sirene-off-title">
+                    <div class="reminder-box reminder-danger">
+                        <div class="reminder-icon">🚨</div>
+                        <h2 class="reminder-title" id="sirene-off-title">Sirene OFF</h2>
+                        <p class="reminder-text">
+                            kontak rekanan <a href="tel:+6281287738748"><strong>0812 8773 8748</strong></a>
+                        </p>
+                        <p class="reminder-hint" id="sirene-off-detail"></p>
+                        <button type="button" class="reminder-btn" id="sirene-off-close">Tutup</button>
+                        <p class="reminder-hint">Tekan Esc atau klik di luar kotak untuk menutup</p>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </main>
@@ -457,6 +474,40 @@
         const detail = document.getElementById('sirine-check-detail');
         const csrfInput = document.querySelector('input[name=csrfmiddlewaretoken]');
 
+        // Modal peringatan vendor — hanya muncul kalau hasil ping OFF.
+        const offModal = document.getElementById('sirene-off-modal');
+        const offDetail = document.getElementById('sirene-off-detail');
+        const offClose = document.getElementById('sirene-off-close');
+        let offLastFocused = null;
+
+        function openOffModal(evidence) {
+            if (!offModal) return;                 // user tanpa izin: modal tidak ada
+            if (offDetail) offDetail.textContent = evidence || '';
+            offLastFocused = document.activeElement;
+            offModal.classList.add('show');
+            if (offClose) offClose.focus();
+        }
+
+        function closeOffModal() {
+            if (!offModal) return;
+            offModal.classList.remove('show');
+            if (offLastFocused && typeof offLastFocused.focus === 'function') {
+                offLastFocused.focus();
+            }
+        }
+
+        if (offClose) offClose.addEventListener('click', closeOffModal);
+        if (offModal) {
+            offModal.addEventListener('click', function (e) {
+                if (e.target === offModal) closeOffModal();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && offModal.classList.contains('show')) {
+                    closeOffModal();
+                }
+            });
+        }
+
         function show(text, cls) {
             detail.textContent = text;
             detail.className = 'sirine-detail' + (cls ? ' ' + cls : '');
@@ -487,6 +538,9 @@
                     if (select) select.value = d.status;    // auto-isi field SIRINE
                     show('Sirene ' + d.status + ' — ' + d.message,
                          d.status === 'ON' ? 'sirine-ok' : 'sirine-off');
+                    if (d.status === 'OFF') {
+                        openOffModal(d.message);   // beri tahu rekanan siapa yang dihubungi
+                    }
                 })
                 .catch(function (err) {
                     show('Gagal menghubungi server: ' + err + ' — field SIRINE tidak diubah.',
