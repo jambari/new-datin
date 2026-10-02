@@ -379,6 +379,16 @@ REST_FRAMEWORK = {
     ],
 }
 
+# ── Authentication ────────────────────────────────────────
+# Operator katalog (.188) login memakai ALAMAT EMAIL: halaman login katalog
+# berlabel "Email:" dan input type=email. Backend ini menerima email maupun
+# username; ModelBackend standar tetap dipasang sebagai cadangan sehingga
+# login lama dengan username tidak berubah.
+AUTHENTICATION_BACKENDS = [
+    'gempa.auth_backends.EmailOrUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 # ── Security: HTTPS / HSTS ─────────────────────────────────
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
 SECURE_HSTS_SECONDS = 31536000

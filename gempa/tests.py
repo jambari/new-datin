@@ -399,3 +399,74 @@ class ImportOperatorsCommandTest(TestCase):
         path = self._fixture([self._account('nabire')])
         call_command('import_operators', path, '--dry-run', verbosity=0)
         self.assertFalse(User.objects.filter(username='nabire').exists())
+
+
+class EmailLoginTest(TestCase):
+    """Operator .188 login dengan ALAMAT EMAIL (bukan username).
+
+    Halaman /gempa-admin/login/ berlabel "Email:" dan memakai input type=email,
+    jadi backend EmailOrUsernameBackend wajib aktif — tanpa itu login dengan
+    angkasa@bmkg.go.id ditolak walaupun passwordnya benar.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            'angkasa', password='rahasiaku123', is_staff=True,
+            email='angkasa@bmkg.go.id')
+        self.user.groups.add(Group.objects.get(name=ANGKASA_GROUP))
+
+    def test_authenticate_with_email(self):
+        from django.contrib.auth import authenticate
+        user = authenticate(username='angkasa@bmkg.go.id', password='rahasiaku123')
+        self.assertIsNotNone(user)
+        self.assertEqual(user.pk, self.user.pk)
+
+    def test_authenticate_with_email_is_case_insensitive(self):
+        from django.contrib.auth import authenticate
+        user = authenticate(username='ANGKASA@BMKG.GO.ID', password='rahasiaku123')
+        self.assertIsNotNone(user)
+
+    def test_authenticate_with_username_still_works(self):
+        from django.contrib.auth import authenticate
+        self.assertIsNotNone(
+            authenticate(username='angkasa', password='rahasiaku123'))
+
+    def test_wrong_password_is_rejected(self):
+        from django.contrib.auth import authenticate
+        self.assertIsNone(
+            authenticate(username='angkasa@bmkg.go.id', password='salah'))
+
+    def test_blank_username_is_rejected(self):
+        """10 dari 17 user .189 beremail kosong — jangan sampai cocok semua."""
+        from django.contrib.auth import authenticate
+        self.assertIsNone(authenticate(username='', password='rahasiaku123'))
+
+    def test_unknown_email_is_rejected(self):
+        from django.contrib.auth import authenticate
+        self.assertIsNone(
+            authenticate(username='tidak@ada.go.id', password='rahasiaku123'))
+
+    def test_real_login_form_accepts_the_email(self):
+        """End-to-end: POST ke halaman login katalog pakai email -> 302."""
+        resp = self.client.post(
+            '/gempa-admin/login/?next=/gempa-admin/',
+            {'username': 'angkasa@bmkg.go.id', 'password': 'rahasiaku123'},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp['Location'], '/gempa-admin/')
+
+    def test_non_staff_email_cannot_enter_the_admin(self):
+        User.objects.create_user('bukanstaf', password='rahasiaku123',
+                                is_staff=False, email='bukanstaf@bmkg.go.id')
+        resp = self.client.post(
+            '/gempa-admin/login/?next=/gempa-admin/',
+            {'username': 'bukanstaf@bmkg.go.id', 'password': 'rahasiaku123'},
+        )
+        self.assertEqual(resp.status_code, 200)      # form ditolak, bukan redirect
+
+    def test_inactive_user_is_rejected(self):
+        from django.contrib.auth import authenticate
+        self.user.is_active = False
+        self.user.save(update_fields=['is_active'])
+        self.assertIsNone(
+            authenticate(username='angkasa@bmkg.go.id', password='rahasiaku123'))
