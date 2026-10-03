@@ -1067,3 +1067,82 @@ class SeiscompIngestApiTest(TestCase):
     def test_get_is_rejected(self):
         resp = self.client.get(self.URL)
         self.assertEqual(resp.status_code, 405)
+
+
+# ── Tombol "Copy Info Gempa" + "Capture Peta" (WhatsApp) ─────────────────────
+PETA_TEMPLATES = ['angkasatemplatebalai.html', 'angkasatemplatebalai_gfz.html',
+                  'balaisms.html', 'sorongtemplatebalai.html',
+                  'nabiretemplatebalai.html', 'significanttemplate.html']
+
+
+class PetaWhatsappButtonsTest(TestCase):
+    """Tombol salin-tempel untuk WhatsApp di halaman peta/press."""
+
+    def _read(self, name):
+        path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates' / 'gempa' / name
+        self.assertTrue(path.exists(), f'{name} tidak ada')
+        return path.read_text()
+
+    def test_every_peta_page_has_the_info_line_and_both_buttons(self):
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                html = self._read(name)
+                self.assertIn('id="info-gempa"', html)
+                self.assertIn('id="btn-copy-info"', html)
+                self.assertIn('id="btn-capture-peta"', html)
+                self.assertIn('data-target="info-gempa"', html)
+                self.assertIn('data-target="streetmap-baru"', html)
+
+    def test_each_page_names_its_own_seiscomp_code_in_the_download(self):
+        expected = {
+            'angkasatemplatebalai.html': 'peta-BMKG-JAY',
+            'angkasatemplatebalai_gfz.html': 'peta-BMKG-JAY',
+            'balaisms.html': 'peta-BMKG-PGR-V',
+            'sorongtemplatebalai.html': 'peta-BMKG-SWI',
+            'nabiretemplatebalai.html': 'peta-BMKG-NBPI',
+            'significanttemplate.html': 'peta-BMKG-JAY',
+        }
+        for name, filename in expected.items():
+            with self.subTest(template=name):
+                self.assertIn(f'data-filename="{filename}"', self._read(name))
+
+    def test_buttons_sit_OUTSIDE_the_captured_element(self):
+        """Kalau tombolnya ikut terfoto, gambar yang dikirim ke WhatsApp jelek."""
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                html = self._read(name)
+                info_end = html.index('</strong></p>')
+                streetmap_close = html.index('</div>', info_end)
+                buttons = html.index('peta-actions')
+                self.assertGreater(buttons, streetmap_close,
+                                   'tombol harus setelah </div> penutup streetmap-baru')
+
+    def test_pages_load_the_helper_and_html2canvas_lazily(self):
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                html = self._read(name)
+                self.assertIn("js/peta_copy_capture.js", html)
+                self.assertIn('data-h2c-url="{% static \'js/html2canvas.min.js\' %}"', html)
+
+    def test_helper_assets_exist_and_are_served(self):
+        for rel in ('js/peta_copy_capture.js', 'js/html2canvas.min.js'):
+            with self.subTest(asset=rel):
+                path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / rel
+                self.assertTrue(path.exists(), f'{rel} tidak ada di app static')
+                self.assertGreater(path.stat().st_size, 1000)
+                self.assertIsNotNone(finders.find(rel), f'{rel} tidak ditemukan finders')
+
+    def test_rendered_peta_page_shows_the_real_info_text_and_buttons(self):
+        staff = User.objects.create_user('peta_probe', password='pass12345', is_staff=True)
+        staff.groups.add(Group.objects.get(name='Operator Angkasa'))
+        self.client.force_login(staff)
+        event = make_event(Gempa, event_id='ev-peta-buttons')
+        url = reverse('gempa_admin:gempa-template-balai', args=[event.pk])
+        body = self.client.get(url).content.decode()
+
+        self.assertIn('id="info-gempa"', body)
+        self.assertIn('id="btn-copy-info"', body)
+        self.assertIn('id="btn-capture-peta"', body)
+        self.assertIn('::BMKG-JAY', body)                 # kode SeisComp di teksnya
+        self.assertIn('/static/js/peta_copy_capture.js', body)
+        self.assertIn('/static/js/html2canvas.min.js', body)

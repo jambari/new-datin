@@ -23,8 +23,22 @@
     <div id="streetmap-baru" style="flex:0 0 756px;width:756px;">
       <img src="{% static 'images/header-balai-sep-2024.png' %}" alt="header" width="100%">
       <div id="map-baru" style="width:100%;height:522px;"></div>
-      <p><strong>Info Gempa Mag:{{ mag|stringformat:".1f" }}, {{ tanggal_indo }} {{ jam_wit }} WIT, Lok:{{ lat }} - {{ lon }} ({{ event.lokasi|default:"-" }}), Kedlmn:{{ event.depth }} Km ::BMKG-JAY{% if event.dirasakan %} {{ event.dirasakan }}{% endif %}</strong></p>
+      <p id="info-gempa"><strong>Info Gempa Mag:{{ mag|stringformat:".1f" }}, {{ tanggal_indo }} {{ jam_wit }} WIT, Lok:{{ lat }} - {{ lon }} ({{ event.lokasi|default:"-" }}), Kedlmn:{{ event.depth }} Km ::BMKG-JAY{% if event.dirasakan %} {{ event.dirasakan }}{% endif %}</strong></p>
     </div>
+
+    <!-- Tombol bantu WhatsApp: di LUAR #streetmap-baru supaya tidak ikut terfoto -->
+    <div class="peta-actions">
+      <button type="button" id="btn-copy-info" class="peta-btn" data-target="info-gempa">
+        Copy Info Gempa
+      </button>
+      <button type="button" id="btn-capture-peta" class="peta-btn is-secondary"
+              data-target="streetmap-baru" data-filename="peta-BMKG-JAY">
+        Capture Peta (siap WhatsApp)
+      </button>
+      <span id="peta-action-msg" class="peta-msg"></span>
+    </div>
+    <script src="{% static 'js/peta_copy_capture.js' %}" defer
+            data-h2c-url="{% static 'js/html2canvas.min.js' %}"></script>
 
     <!-- RIGHT: GMT image, separate div, no border -->
     <div style="flex:0 0 580px;width:580px;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;">
