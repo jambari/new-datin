@@ -1069,143 +1069,124 @@ class SeiscompIngestApiTest(TestCase):
         self.assertEqual(resp.status_code, 405)
 
 
-# ── Tombol "Copy Info Gempa" + "Capture Peta" (WhatsApp) ─────────────────────
+# ── Tombol "Copy Info Gempa" di halaman peta/press ───────────────────────────
+# Catatan: fitur "Capture Peta" (screenshot peta) sudah DIHAPUS atas permintaan
+# operator — html2canvas tidak bisa menggambar ubin Esri dengan benar, jadi
+# gambar hasilnya tidak sesuai kenyataan.
 PETA_TEMPLATES = ['angkasatemplatebalai.html', 'angkasatemplatebalai_gfz.html',
                   'balaisms.html', 'sorongtemplatebalai.html',
                   'nabiretemplatebalai.html', 'significanttemplate.html']
+PETA_HELPER = 'js/peta_copy_info.js'
 
 
-class PetaWhatsappButtonsTest(TestCase):
-    """Tombol salin-tempel untuk WhatsApp di halaman peta/press."""
+class PetaCopyButtonTest(TestCase):
+    """Tombol salin info gempa; letaknya di bawah peta."""
 
     def _read(self, name):
         path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates' / 'gempa' / name
         self.assertTrue(path.exists(), f'{name} tidak ada')
         return path.read_text()
 
-    def test_every_peta_page_has_the_info_line_and_both_buttons(self):
+    def _helper(self):
+        return (pathlib.Path(settings.BASE_DIR) / 'gempa' /
+                'static' / PETA_HELPER).read_text()
+
+    def test_every_peta_page_has_the_info_line_and_the_copy_button(self):
         for name in PETA_TEMPLATES:
             with self.subTest(template=name):
                 html = self._read(name)
                 self.assertIn('id="info-gempa"', html)
                 self.assertIn('id="btn-copy-info"', html)
-                self.assertIn('id="btn-capture-peta"', html)
                 self.assertIn('data-target="info-gempa"', html)
-                self.assertIn('data-target="streetmap-baru"', html)
+                self.assertIn("{% static_v 'js/peta_copy_info.js' %}", html)
 
-    def test_each_page_names_its_own_seiscomp_code_in_the_download(self):
-        expected = {
-            'angkasatemplatebalai.html': 'peta-BMKG-JAY',
-            'angkasatemplatebalai_gfz.html': 'peta-BMKG-JAY',
-            'balaisms.html': 'peta-BMKG-PGR-V',
-            'sorongtemplatebalai.html': 'peta-BMKG-SWI',
-            'nabiretemplatebalai.html': 'peta-BMKG-NBPI',
-            'significanttemplate.html': 'peta-BMKG-JAY',
-        }
-        for name, filename in expected.items():
-            with self.subTest(template=name):
-                self.assertIn(f'data-filename="{filename}"', self._read(name))
-
-    def test_buttons_sit_OUTSIDE_the_captured_element(self):
-        """Kalau tombolnya ikut terfoto, gambar yang dikirim ke WhatsApp jelek."""
+    def test_capture_feature_is_gone(self):
+        """Tombol capture, html2canvas, dan opsi render-nya tidak boleh tersisa."""
         for name in PETA_TEMPLATES:
             with self.subTest(template=name):
                 html = self._read(name)
-                info_end = html.index('</strong></p>')
-                streetmap_close = html.index('</div>', info_end)
-                buttons = html.index('peta-actions')
-                self.assertGreater(buttons, streetmap_close,
-                                   'tombol harus setelah </div> penutup streetmap-baru')
+                # Penanda fungsional, bukan sekadar kata: komentar boleh
+                # menyebut latarnya untuk menjelaskan kenapa dulu dipakai.
+                for gone in ('btn-capture-peta', 'data-h2c-url', 'Capture Peta',
+                             'preferCanvas', 'any3d', 'foreignObject'):
+                    self.assertNotIn(gone, html)
+        helper = self._helper()
+        for gone in ('html2canvas(', 'loadHtml2Canvas', 'foreignObjectRendering',
+                     'mapLooksBlank', 'toBlob'):
+            self.assertNotIn(gone, helper)
 
-    def test_pages_load_the_helper_and_html2canvas_lazily(self):
+    def test_copy_button_sits_below_the_map_inside_the_column(self):
+        """Di bawah peta, di dalam kolom peta -> margin/tata letak tidak bergeser."""
         for name in PETA_TEMPLATES:
             with self.subTest(template=name):
                 html = self._read(name)
-                self.assertIn("{% static_v 'js/peta_copy_capture.js' %}", html)
-                self.assertIn("data-h2c-url=\"{% static_v 'js/html2canvas.min.js' %}\"", html)
+                map_at = html.index('id="map-baru"')
+                bar_at = html.index('peta-copy-bar')
+                info_at = html.index('id="info-gempa"')
+                close_at = html.index('</div>', info_at)
+                self.assertGreater(bar_at, map_at, 'tombol harus setelah peta')
+                self.assertLess(bar_at, info_at, 'tombol harus sebelum baris info gempa')
+                self.assertLess(info_at, close_at, 'baris info tetap di dalam kolom')
 
-    def test_helper_assets_exist_and_are_served(self):
-        for rel in ('js/peta_copy_capture.js', 'js/html2canvas.min.js'):
-            with self.subTest(asset=rel):
-                path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / rel
-                self.assertTrue(path.exists(), f'{rel} tidak ada di app static')
-                self.assertGreater(path.stat().st_size, 1000)
-                self.assertIsNotNone(finders.find(rel), f'{rel} tidak ditemukan finders')
+    def test_helper_is_not_positioned_over_the_page(self):
+        """Dulu toolbar memakai position:fixed/absolute; sekarang ikut alur normal."""
+        helper = self._helper()
+        self.assertIn('.peta-copy-bar{display:flex', helper)
+        self.assertNotIn('position:fixed', helper)
+        self.assertNotIn('position: absolute', helper)
+        self.assertIn('@media print{.peta-copy-bar{display:none !important;}}', helper)
 
-    def test_rendered_peta_page_shows_the_real_info_text_and_buttons(self):
-        staff = User.objects.create_user('peta_probe', password='pass12345', is_staff=True)
+    def test_maps_are_initialised_exactly_as_before(self):
+        """Perubahan peta yang dulu demi capture sudah dikembalikan."""
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                html = self._read(name)
+                self.assertIn("L.map('map-baru')", html)
+
+    def test_helper_asset_exists_and_is_served(self):
+        path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / PETA_HELPER
+        self.assertTrue(path.exists())
+        self.assertGreater(path.stat().st_size, 1000)
+        self.assertIsNotNone(finders.find(PETA_HELPER))
+
+    def test_rendered_peta_page_shows_the_info_text_and_button(self):
+        staff = User.objects.create_user('peta_copy_probe', password='pass12345',
+                                         is_staff=True)
         staff.groups.add(Group.objects.get(name='Operator Angkasa'))
         self.client.force_login(staff)
-        event = make_event(Gempa, event_id='ev-peta-buttons')
+        event = make_event(Gempa, event_id='ev-peta-copy')
         url = reverse('gempa_admin:gempa-template-balai', args=[event.pk])
         body = self.client.get(url).content.decode()
 
         self.assertIn('id="info-gempa"', body)
         self.assertIn('id="btn-copy-info"', body)
-        self.assertIn('id="btn-capture-peta"', body)
-        self.assertIn('::BMKG-JAY', body)                 # kode SeisComp di teksnya
-        self.assertIn('/static/js/peta_copy_capture.js', body)
-        self.assertIn('/static/js/html2canvas.min.js', body)
-
-
-class PetaCaptureQualityTest(TestCase):
-    """Dua bug yang dilaporkan operator: peta miring + layout tergeser."""
-
-    def _read(self, name):
-        return (pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates' / 'gempa' / name).read_text()
-
-    def test_leaflet_is_forced_to_2d_before_the_map_is_created(self):
-        """translate3d bikin lapisan SHP (SVG) bergeser dari ubin Esri di html2canvas."""
-        for name in PETA_TEMPLATES:
-            with self.subTest(template=name):
-                html = self._read(name)
-                self.assertIn('L.Browser.any3d = false', html)
-                self.assertLess(html.index('L.Browser.any3d = false'), html.index('L.map('),
-                                'any3d harus dimatikan SEBELUM peta dibuat')
-
-    def test_toolbar_is_out_of_flow_so_the_page_margins_stay_put(self):
-        """Toolbar dulu jadi item flex ketiga -> margin peta bergeser."""
-        js = (pathlib.Path(settings.BASE_DIR) / 'gempa' /
-              'static' / 'js' / 'peta_copy_capture.js').read_text()
-        self.assertIn('.peta-actions{position:fixed', js)
-        self.assertIn('flex-wrap:nowrap', js)          # satu baris, tidak membungkus
-        self.assertIn('margin:0', js)                  # tidak menambah margin
-        self.assertIn('@media print{.peta-actions{display:none !important;}}', js)
-
-    def test_helper_still_captures_only_the_map_block(self):
-        js = (pathlib.Path(settings.BASE_DIR) / 'gempa' /
-              'static' / 'js' / 'peta_copy_capture.js').read_text()
-        self.assertIn('useCORS: true', js)
-        self.assertIn("data-target", js)               # target dari atribut, bukan hardcode
-        for name in PETA_TEMPLATES:
-            with self.subTest(template=name):
-                self.assertIn('data-target="streetmap-baru"', self._read(name))
+        self.assertIn('::BMKG-JAY', body)                     # kode SeisComp di teksnya
+        self.assertIn('/static/js/peta_copy_info.js', body)
+        self.assertNotIn('btn-capture-peta', body)
+        self.assertNotIn('html2canvas', body)
 
 
 class StaticVersionTagTest(TestCase):
-    """Tanpa cache-buster, operator masih memakai berkas lama sampai 7 hari.
+    """Tanpa cache-buster, operator masih memakai berkas lama sampai 7 hari."""
 
-    /static/ disajikan nginx dengan Cache-Control: immutable dan tanpa nama
-    ber-hash (collectstatic produksi jalan dengan DEBUG aktif), jadi URL harus
-    berubah setiap berkas berubah.
-    """
+    PATH = 'js/peta_copy_info.js'
 
     def test_adds_mtime_version_and_keeps_the_real_path(self):
         from gempa.templatetags.static_v import static_v
-        url = static_v('js/peta_copy_capture.js')
-        self.assertIn('/static/js/peta_copy_capture.js?v=', url)
+        url = static_v(self.PATH)
+        self.assertIn('/static/js/peta_copy_info.js?v=', url)
         version = url.split('?v=')[-1]
         self.assertTrue(version.isdigit() and int(version) > 0)
 
     def test_version_changes_when_the_file_changes(self):
-        import time
+        import os
         from gempa.templatetags.static_v import static_v
-        path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / 'js' / 'peta_copy_capture.js'
-        before = static_v('js/peta_copy_capture.js')
+        path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / self.PATH
+        before = static_v(self.PATH)
         original = path.stat().st_mtime
         try:
             os.utime(path, (original + 5, original + 5))
-            after = static_v('js/peta_copy_capture.js')
+            after = static_v(self.PATH)
         finally:
             os.utime(path, (original, original))
         self.assertNotEqual(before, after)
@@ -1220,49 +1201,4 @@ class StaticVersionTagTest(TestCase):
             with self.subTest(template=name):
                 html = (base / name).read_text()
                 self.assertIn('{% load static_v %}', html)
-                self.assertIn("{% static_v 'js/peta_copy_capture.js' %}", html)
-                self.assertNotIn("{% static 'js/peta_copy_capture.js' %}", html)
-
-
-class PetaCaptureRenderModeTest(TestCase):
-    """Perbaikan lapisan SHP yang bergeser: render mode + renderer vector."""
-
-    def _html(self, name):
-        return (pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates' / 'gempa' / name).read_text()
-
-    def _js(self):
-        return (pathlib.Path(settings.BASE_DIR) / 'gempa' /
-                'static' / 'js' / 'peta_copy_capture.js').read_text()
-
-    def test_vectors_render_to_canvas_not_svg(self):
-        """html2canvas menggambar ulang SVG (posisinya meleset); canvas disalin apa adanya."""
-        for name in PETA_TEMPLATES:
-            with self.subTest(template=name):
-                html = self._html(name)
-                self.assertIn("L.map('map-baru', {preferCanvas: true})", html)
-
-    def test_renderer_is_chosen_before_any_layer_is_added(self):
-        for name in PETA_TEMPLATES:
-            with self.subTest(template=name):
-                html = self._html(name)
-                map_at = html.index("L.map('map-baru', {preferCanvas: true})")
-                first_layer = min(
-                    [i for i in (html.find('addTo(mymap)'), html.find('addTo(map)')) if i != -1])
-                self.assertLess(map_at, first_layer)
-
-    def test_capture_uses_browser_rendering_with_a_fallback(self):
-        js = self._js()
-        self.assertIn('foreignObjectRendering: true', js)     # mode 1: paling mirip layar
-        self.assertIn('function render(', js)
-        self.assertIn('function mapLooksBlank(', js)          # deteksi hasil kosong
-        self.assertIn('await render(target, {})', js)         # mode 2: fallback
-
-    def test_capture_does_not_force_a_narrow_clone_viewport(self):
-        # Periksa bentuk opsi ('key:'), bukan katanya: komentarnya menyebut nama
-        # opsi itu untuk menjelaskan kenapa tidak dipakai.
-        js = self._js()
-        self.assertNotIn('windowWidth:', js)
-        self.assertNotIn('windowHeight:', js)
-        self.assertNotIn('target.scrollWidth', js)
-        self.assertIn('useCORS: true', js)
-        self.assertIn('scale: SCALE', js)
+                self.assertIn("{% static_v 'js/peta_copy_info.js' %}", html)
