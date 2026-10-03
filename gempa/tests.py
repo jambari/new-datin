@@ -1146,3 +1146,37 @@ class PetaWhatsappButtonsTest(TestCase):
         self.assertIn('::BMKG-JAY', body)                 # kode SeisComp di teksnya
         self.assertIn('/static/js/peta_copy_capture.js', body)
         self.assertIn('/static/js/html2canvas.min.js', body)
+
+
+class PetaCaptureQualityTest(TestCase):
+    """Dua bug yang dilaporkan operator: peta miring + layout tergeser."""
+
+    def _read(self, name):
+        return (pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates' / 'gempa' / name).read_text()
+
+    def test_leaflet_is_forced_to_2d_before_the_map_is_created(self):
+        """translate3d bikin lapisan SHP (SVG) bergeser dari ubin Esri di html2canvas."""
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                html = self._read(name)
+                self.assertIn('L.Browser.any3d = false', html)
+                self.assertLess(html.index('L.Browser.any3d = false'), html.index('L.map('),
+                                'any3d harus dimatikan SEBELUM peta dibuat')
+
+    def test_toolbar_is_out_of_flow_so_the_page_margins_stay_put(self):
+        """Toolbar dulu jadi item flex ketiga -> margin peta bergeser."""
+        js = (pathlib.Path(settings.BASE_DIR) / 'gempa' /
+              'static' / 'js' / 'peta_copy_capture.js').read_text()
+        self.assertIn('.peta-actions{position:fixed', js)
+        self.assertIn('flex-wrap:nowrap', js)          # satu baris, tidak membungkus
+        self.assertIn('margin:0', js)                  # tidak menambah margin
+        self.assertIn('@media print{.peta-actions{display:none !important;}}', js)
+
+    def test_helper_still_captures_only_the_map_block(self):
+        js = (pathlib.Path(settings.BASE_DIR) / 'gempa' /
+              'static' / 'js' / 'peta_copy_capture.js').read_text()
+        self.assertIn('useCORS: true', js)
+        self.assertIn("data-target", js)               # target dari atribut, bukan hardcode
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                self.assertIn('data-target="streetmap-baru"', self._read(name))

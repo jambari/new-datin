@@ -85,6 +85,11 @@
 <script src="{% static 'gjson/batasinapng.js' %}"></script>
 <script src="{% static 'gjson/indofaults.js' %}"></script>
 <script>
+/* html2canvas memfoto blok ini. Leaflet 1.3 memakai translate3d untuk
+   memposisikan pane/ubin, dan html2canvas tidak menanganinya dengan
+   benar: lapisan SHP (SVG) jadi bergeser terhadap ubin Esri. Paksa
+   posisi 2D (left/top) supaya kedua lapisan sejajar di hasil foto. */
+if (window.L && L.Browser) { L.Browser.any3d = false; }
 var mymap=L.map('map-baru').setView([{{ event.lintang }},{{ event.bujur|unlocalize }}],7);
 L.esri.basemapLayer('Imagery').addTo(mymap);
 var eqIcon=L.icon({iconUrl:'{% static "images/earthquake.png" %}',iconSize:[40,40]});

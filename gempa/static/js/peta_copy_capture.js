@@ -35,8 +35,13 @@
         var style = document.createElement('style');
         style.id = 'peta-actions-style';
         style.textContent = [
-            '.peta-actions{display:flex;gap:8px;justify-content:center;align-items:center;',
-            'flex-wrap:wrap;margin:10px 0;font-family:inherit;}',
+            // position:fixed -> keluar dari alur flex dua kolom halaman peta,
+            // jadi margin/tata letak aslinya tidak tergeser sama sekali.
+            '.peta-actions{position:fixed;top:10px;right:12px;z-index:2147483000;',
+            'display:flex;flex-wrap:nowrap;gap:8px;align-items:center;justify-content:flex-end;',
+            'margin:0;padding:6px 9px;background:rgba(255,255,255,.94);',
+            'border:1px solid #d0d7de;border-radius:10px;font-family:inherit;',
+            'box-shadow:0 2px 10px rgba(0,0,0,.12);}',
             '.peta-btn{background:#0d6efd;color:#fff;border:none;border-radius:8px;',
             'padding:8px 14px;font-size:.85rem;font-weight:600;cursor:pointer;',
             'transition:transform .15s ease,opacity .15s ease;}',
@@ -44,7 +49,8 @@
             '.peta-btn:active{transform:scale(.97);}',
             '.peta-btn[disabled]{opacity:.6;cursor:progress;}',
             '.peta-btn.is-secondary{background:#198754;}',
-            '.peta-msg{font-size:.78rem;font-weight:600;color:#0f5132;}',
+            '.peta-msg{font-size:.78rem;font-weight:600;color:#0f5132;max-width:46vw;',
+            'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '.peta-msg.is-error{color:#b02a37;}',
             '@media print{.peta-actions{display:none !important;}}'
         ].join('');
