@@ -90,7 +90,7 @@
    benar: lapisan SHP (SVG) jadi bergeser terhadap ubin Esri. Paksa
    posisi 2D (left/top) supaya kedua lapisan sejajar di hasil foto. */
 if (window.L && L.Browser) { L.Browser.any3d = false; }
-var mymap = L.map('map-baru').setView([{{ event.lintang }}, {{ event.bujur|unlocalize }}], 7);
+var mymap = L.map('map-baru', {preferCanvas: true}).setView([{{ event.lintang }}, {{ event.bujur|unlocalize }}], 7);
 
 // GFZ WMTS GEOFON (ETOPO1) tiles
 var gfzUrl = 'https://map-services.gfz-potsdam.de/mapproxy/service?layer=GEOFON&style=default&tilematrixset=generic_google_mercator&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix={z}&TileCol={x}&TileRow={y}';

@@ -91,7 +91,7 @@
    benar: lapisan SHP (SVG) jadi bergeser terhadap ubin Esri. Paksa
    posisi 2D (left/top) supaya kedua lapisan sejajar di hasil foto. */
 if (window.L && L.Browser) { L.Browser.any3d = false; }
-var mymap=L.map('map-baru').setView([{{ event.lintang }},{{ event.bujur|unlocalize }}],7);
+var mymap=L.map('map-baru', {preferCanvas: true}).setView([{{ event.lintang }},{{ event.bujur|unlocalize }}],7);
 L.esri.basemapLayer('Imagery').addTo(mymap);
 var eqIcon=L.icon({iconUrl:'{% static "images/earthquake.png" %}',iconSize:[40,40]});
 L.marker([{{ event.lintang }},{{ event.bujur|unlocalize }}],{icon:eqIcon}).addTo(mymap);

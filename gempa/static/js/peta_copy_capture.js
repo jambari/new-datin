@@ -18,8 +18,11 @@
  *   berkasnya otomatis diunduh (Firefox/Safari) supaya operator tetap dapat
  *   gambarnya dan bisa lampirkan ke WhatsApp.
  * - html2canvas dimuat baru saat tombol capture diklik (halaman tetap ringan).
- * - Ubin peta OSM mengirim Access-Control-Allow-Origin: *, jadi useCORS:true
- *   membuat petanya ikut terfoto (tanpa itu canvas jadi kosong).
+ * - Ubin peta (Esri/OSM) mengirim Access-Control-Allow-Origin: *, jadi
+ *   useCORS:true membuat petanya ikut terfoto (tanpa itu canvas jadi kosong).
+ * - Lapisan SHP digambar Leaflet ke <canvas> (preferCanvas di template), bukan
+ *   SVG: html2canvas menyalin canvas apa adanya, sedangkan SVG digambar ulang
+ *   dan posisinya bisa meleset dari ubin.
  */
 (function () {
     'use strict';
@@ -134,32 +137,91 @@
                two(d.getHours()) + two(d.getMinutes());
     }
 
-    async function capture(target, filename, button) {
-        var h2c = await loadHtml2Canvas();
-        var canvas = await h2c(target, {
-            useCORS: true,                 // ubin OSM punya ACAO: *
-            allowTaint: false,
-            backgroundColor: '#ffffff',
-            scale: 2,                      // tajam untuk WhatsApp
-            logging: false,
-            width: target.scrollWidth,
-            height: target.scrollHeight,
-            windowWidth: target.scrollWidth,
-            windowHeight: target.scrollHeight
+    var SCALE = 2;                         // tajam untuk WhatsApp
+
+    // Catatan: jangan mengoper width/height/windowWidth/windowHeight. Nilai itu
+    // memaksa html2canvas membuat ulang halaman pada lebar 756px (bukan lebar
+    // jendela sebenarnya), sehingga tata letak di klon berbeda dari yang
+    // dilihat operator. Biarkan html2canvas memakai ukuran jendela asli lalu
+    // memotong sesuai elemennya.
+    function render(target, options) {
+        return loadHtml2Canvas().then(function (h2c) {
+            return h2c(target, Object.assign({
+                useCORS: true,             // ubin Esri/OSM mengirim ACAO: *
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                scale: SCALE,
+                logging: false
+            }, options || {}));
         });
+    }
+
+    /**
+     * Apakah area peta kosong/satu warna?
+     *
+     * Dipakai untuk memutuskan perlu fallback: mode render bawaan browser
+     * (foreignObject) paling akurat, tapi kalau ubinnya gagal dimuat hasilnya
+     * bisa rata satu warna. Kalau begitu, ambil ulang dengan mode html2canvas
+     * biasa supaya operator tetap dapat gambar.
+     */
+    function mapLooksBlank(canvas, target) {
+        var mapEl = document.getElementById('map-baru');
+        if (!mapEl) return false;
+        var tr = target.getBoundingClientRect();
+        var mr = mapEl.getBoundingClientRect();
+        var x = Math.max(0, Math.round((mr.left - tr.left) * SCALE));
+        var y = Math.max(0, Math.round((mr.top - tr.top) * SCALE));
+        var w = Math.min(Math.round(mr.width * SCALE), 220);
+        var h = Math.min(Math.round(mr.height * SCALE), 220);
+        if (w < 4 || h < 4) return false;
+        var data;
+        try {
+            data = canvas.getContext('2d').getImageData(x, y, w, h).data;
+        } catch (err) {
+            return false;                  // canvas tercemar -> jangan mengarang
+        }
+        var seen = {}, distinct = 0;
+        for (var i = 0; i < data.length; i += 4) {
+            var key = data[i] + ',' + data[i + 1] + ',' + data[i + 2];
+            if (!seen[key]) {
+                seen[key] = 1;
+                if (++distinct > 12) return false;   // ada isi
+            }
+        }
+        return true;                       // <=12 warna -> kemungkinan kosong
+    }
+
+    async function capture(target, filename, button) {
+        var canvas, mode;
+        try {
+            // Mode 1: biarkan browser menggambar sendiri (paling mirip layar,
+            // termasuk lapisan SHP dan penanda). Didukung Chrome/Edge.
+            canvas = await render(target, { foreignObjectRendering: true });
+            if (mapLooksBlank(canvas, target)) {
+                throw new Error('hasil mode foreignObject kosong');
+            }
+            mode = 'browser';
+        } catch (primaryError) {
+            // Mode 2: cara lama, html2canvas menggambar ulang DOM.
+            canvas = await render(target, {});
+            mode = 'kompatibilitas';
+        }
         var blob = await toBlob(canvas);
         var name = (filename || 'peta') + '-' + stamp() + '.png';
+
+        // Mode ditulis di pesan supaya operator bisa melaporkan mana yang dipakai.
+        var note = mode === 'browser' ? ' (mode: browser)' : ' (mode: kompatibilitas)';
 
         if (navigator.clipboard && window.ClipboardItem) {
             try {
                 await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                return 'Gambar tersalin ke clipboard — tempel di WhatsApp.';
+                return 'Gambar tersalin ke clipboard — tempel di WhatsApp.' + note;
             } catch (err) {
                 /* Chrome menolak kalau dokumen tidak fokus, dsb. -> unduh saja */
             }
         }
         download(blob, name);
-        return 'Gambar diunduh (' + name + ') — lampirkan ke WhatsApp.';
+        return 'Gambar diunduh (' + name + ') — lampirkan ke WhatsApp.' + note;
     }
 
     function init() {

@@ -1222,3 +1222,47 @@ class StaticVersionTagTest(TestCase):
                 self.assertIn('{% load static_v %}', html)
                 self.assertIn("{% static_v 'js/peta_copy_capture.js' %}", html)
                 self.assertNotIn("{% static 'js/peta_copy_capture.js' %}", html)
+
+
+class PetaCaptureRenderModeTest(TestCase):
+    """Perbaikan lapisan SHP yang bergeser: render mode + renderer vector."""
+
+    def _html(self, name):
+        return (pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates' / 'gempa' / name).read_text()
+
+    def _js(self):
+        return (pathlib.Path(settings.BASE_DIR) / 'gempa' /
+                'static' / 'js' / 'peta_copy_capture.js').read_text()
+
+    def test_vectors_render_to_canvas_not_svg(self):
+        """html2canvas menggambar ulang SVG (posisinya meleset); canvas disalin apa adanya."""
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                html = self._html(name)
+                self.assertIn("L.map('map-baru', {preferCanvas: true})", html)
+
+    def test_renderer_is_chosen_before_any_layer_is_added(self):
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                html = self._html(name)
+                map_at = html.index("L.map('map-baru', {preferCanvas: true})")
+                first_layer = min(
+                    [i for i in (html.find('addTo(mymap)'), html.find('addTo(map)')) if i != -1])
+                self.assertLess(map_at, first_layer)
+
+    def test_capture_uses_browser_rendering_with_a_fallback(self):
+        js = self._js()
+        self.assertIn('foreignObjectRendering: true', js)     # mode 1: paling mirip layar
+        self.assertIn('function render(', js)
+        self.assertIn('function mapLooksBlank(', js)          # deteksi hasil kosong
+        self.assertIn('await render(target, {})', js)         # mode 2: fallback
+
+    def test_capture_does_not_force_a_narrow_clone_viewport(self):
+        # Periksa bentuk opsi ('key:'), bukan katanya: komentarnya menyebut nama
+        # opsi itu untuk menjelaskan kenapa tidak dipakai.
+        js = self._js()
+        self.assertNotIn('windowWidth:', js)
+        self.assertNotIn('windowHeight:', js)
+        self.assertNotIn('target.scrollWidth', js)
+        self.assertIn('useCORS: true', js)
+        self.assertIn('scale: SCALE', js)
