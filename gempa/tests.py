@@ -595,7 +595,7 @@ class GempaStaticAssetsTest(TestCase):
         missing = {}
         for tpl in base.rglob('*.html'):
             text = tpl.read_text(errors='replace')
-            for ref in re.findall(r"{%\s*static\s+['\"]([^'\"]+)['\"]", text):
+            for ref in re.findall(r"{%\s*static(?:_v)?\s+['\"]([^'\"]+)['\"]", text):
                 # {% static '/x' %} tetap benar saat dirender (Django membuang
                 # garis miring depan), tapi finders.find() menolaknya.
                 if finders.find(ref.lstrip('/')) is None:
@@ -1121,8 +1121,8 @@ class PetaWhatsappButtonsTest(TestCase):
         for name in PETA_TEMPLATES:
             with self.subTest(template=name):
                 html = self._read(name)
-                self.assertIn("js/peta_copy_capture.js", html)
-                self.assertIn('data-h2c-url="{% static \'js/html2canvas.min.js\' %}"', html)
+                self.assertIn("{% static_v 'js/peta_copy_capture.js' %}", html)
+                self.assertIn("data-h2c-url=\"{% static_v 'js/html2canvas.min.js' %}\"", html)
 
     def test_helper_assets_exist_and_are_served(self):
         for rel in ('js/peta_copy_capture.js', 'js/html2canvas.min.js'):
@@ -1180,3 +1180,45 @@ class PetaCaptureQualityTest(TestCase):
         for name in PETA_TEMPLATES:
             with self.subTest(template=name):
                 self.assertIn('data-target="streetmap-baru"', self._read(name))
+
+
+class StaticVersionTagTest(TestCase):
+    """Tanpa cache-buster, operator masih memakai berkas lama sampai 7 hari.
+
+    /static/ disajikan nginx dengan Cache-Control: immutable dan tanpa nama
+    ber-hash (collectstatic produksi jalan dengan DEBUG aktif), jadi URL harus
+    berubah setiap berkas berubah.
+    """
+
+    def test_adds_mtime_version_and_keeps_the_real_path(self):
+        from gempa.templatetags.static_v import static_v
+        url = static_v('js/peta_copy_capture.js')
+        self.assertIn('/static/js/peta_copy_capture.js?v=', url)
+        version = url.split('?v=')[-1]
+        self.assertTrue(version.isdigit() and int(version) > 0)
+
+    def test_version_changes_when_the_file_changes(self):
+        import time
+        from gempa.templatetags.static_v import static_v
+        path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / 'js' / 'peta_copy_capture.js'
+        before = static_v('js/peta_copy_capture.js')
+        original = path.stat().st_mtime
+        try:
+            os.utime(path, (original + 5, original + 5))
+            after = static_v('js/peta_copy_capture.js')
+        finally:
+            os.utime(path, (original, original))
+        self.assertNotEqual(before, after)
+
+    def test_unknown_asset_falls_back_without_version(self):
+        from gempa.templatetags.static_v import static_v
+        self.assertEqual(static_v('js/tidak-ada.js'), '/static/js/tidak-ada.js')
+
+    def test_every_peta_page_uses_it_for_the_helper(self):
+        base = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'templates' / 'gempa'
+        for name in PETA_TEMPLATES:
+            with self.subTest(template=name):
+                html = (base / name).read_text()
+                self.assertIn('{% load static_v %}', html)
+                self.assertIn("{% static_v 'js/peta_copy_capture.js' %}", html)
+                self.assertNotIn("{% static 'js/peta_copy_capture.js' %}", html)
