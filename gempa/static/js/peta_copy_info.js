@@ -31,7 +31,7 @@
         style.textContent = [
             // in-flow (bukan fixed/absolute), jadi tidak mengubah tata letak
             '.peta-copy-bar{display:flex;align-items:center;justify-content:center;',
-            'gap:8px;flex-wrap:wrap;margin:8px 0 0;padding:0 10px;font-family:inherit;}',
+            'gap:8px;flex-wrap:wrap;margin:16px 0 0;padding:0 10px;font-family:inherit;}',
             '.peta-btn{background:#0d6efd;color:#fff;border:none;border-radius:8px;',
             'padding:8px 14px;font-size:.85rem;font-weight:600;cursor:pointer;',
             'transition:opacity .15s ease,transform .15s ease;}',

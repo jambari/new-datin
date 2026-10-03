@@ -148,6 +148,24 @@ class LogbookShakemapReminderTest(TestCase):
         self.assertNotContains(resp, 'shakemap-reminder')
 
 
+class LogbookSirineGateTest(TestCase):
+    """Submit logbook ditahan sampai tombol Cek Sirene (ping) diklik."""
+
+    URL = '/logbook/'
+
+    def test_gate_present_for_allowed_ip(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Oops, belum cek sirine')
+        self.assertContains(resp, 'sireneChecked')
+
+    def test_gate_absent_for_unauthorized_ip(self):
+        resp = self.client.get(self.URL, REMOTE_ADDR='1.2.3.4')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Akses Ditolak')
+        self.assertNotContains(resp, 'id="btn-cek-sirine"')
+
+
 # ── Cek sirene (ping) ────────────────────────────────────────────────────────
 from unittest import mock
 

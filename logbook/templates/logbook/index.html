@@ -470,6 +470,11 @@
     (function () {
         const btn = document.getElementById('btn-cek-sirine');
         if (!btn) return;
+
+        // Gerbang submit: logbook hanya boleh disimpan kalau tombol
+        // "Cek Sirene (ping)" sudah diklik setidaknya sekali.
+        let sireneChecked = false;
+
         const select = document.getElementById('id_sirine');
         const detail = document.getElementById('sirine-check-detail');
         const csrfInput = document.querySelector('input[name=csrfmiddlewaretoken]');
@@ -515,6 +520,7 @@
 
         btn.addEventListener('click', function () {
             if (btn.disabled) return;
+            sireneChecked = true;            // klik sudah dilakukan -> submit diizinkan
             btn.disabled = true;
             const label = btn.textContent;
             btn.textContent = 'Mengecek...';
@@ -551,6 +557,17 @@
                     btn.textContent = label;
                 });
         });
+
+        // Cegah submit sebelum tombol "Cek Sirene (ping)" diklik.
+        const form = btn.closest('form');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (!sireneChecked) {
+                    e.preventDefault();
+                    alert('Oops, belum cek sirine');
+                }
+            });
+        }
     })();
 </script>
 {% endblock %}

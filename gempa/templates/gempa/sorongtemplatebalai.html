@@ -24,19 +24,19 @@
 <body>
 <div style="display:flex;gap:5%;align-items:flex-start;justify-content:center;padding:10px;margin-top:5%;">
 
-    <!-- LEFT: black-bordered leaflet block -->
-    <div id="streetmap-baru" style="flex:0 0 756px;width:756px;">
-      <img src="{% static 'images/header-balai-sep-2024.png' %}" alt="header" width="100%">
-      <div id="map-baru" style="width:100%;height:500px;"></div>
-      <!-- Tombol salin info gempa. Diletakkan DI DALAM kolom ini, tepat di
-           bawah peta, supaya tata letak dua kolom halaman tidak tergeser. -->
+    <!-- LEFT: black-bordered leaflet block + copy button below it -->
+    <div style="flex:0 0 756px;width:756px;display:flex;flex-direction:column;align-items:stretch;">
+      <div id="streetmap-baru" style="width:100%;">
+        <img src="{% static 'images/header-balai-sep-2024.png' %}" alt="header" width="100%">
+        <div id="map-baru" style="width:100%;height:500px;"></div>
+        <p class="text-center" id="info-gempa"><strong>Info Gempa Mag:{{ mag|stringformat:".1f" }}, <span id="tz-date">{{ tanggal_indo }}</span> <span id="tz-time">{{ jam_wit }}</span> <span id="tz-label">WIT</span>, Lok:{{ lat }} - {{ lon }} ({{ event.ket|default:"-" }}), Kedlmn:{{ event.depth }} Km{% if event.terasa %} {{ event.terdampak }}{% endif %} ::BMKG-SWI</strong></p>
+      </div>
+      <!-- Tombol salin info gempa: di bawah dan di LUAR #streetmap-baru -->
       <div class="peta-copy-bar">
         <button type="button" id="btn-copy-info" class="peta-btn"
                 data-target="info-gempa">Copy Info Gempa</button>
         <span id="peta-action-msg" class="peta-msg"></span>
       </div>
-      <p class="text-center" id="info-gempa"><strong>Info Gempa Mag:{{ mag|stringformat:".1f" }}, <span id="tz-date">{{ tanggal_indo }}</span> <span id="tz-time">{{ jam_wit }}</span> <span id="tz-label">WIT</span>, Lok:{{ lat }} - {{ lon }} ({{ event.ket|default:"-" }}), Kedlmn:{{ event.depth }} Km{% if event.terasa %} {{ event.terdampak }}{% endif %} ::BMKG-SWI</strong></p>
-    
     </div>
 <script src="{% static_v 'js/peta_copy_info.js' %}" defer></script>
 

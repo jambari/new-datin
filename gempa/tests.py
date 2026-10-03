@@ -1070,12 +1070,13 @@ class SeiscompIngestApiTest(TestCase):
 
 
 # ── Tombol "Copy Info Gempa" di halaman peta/press ───────────────────────────
-# Catatan: fitur "Capture Peta" (screenshot peta) sudah DIHAPUS atas permintaan
-# operator — html2canvas tidak bisa menggambar ubin Esri dengan benar, jadi
-# gambar hasilnya tidak sesuai kenyataan.
+# Empat halaman balai regional (JAY/NBPI/SWI) menaruh tombol DI BAWAH dan DI
+# LUAR #streetmap-baru; halaman SMS/signifikan tetap di dalam kolom peta.
 PETA_TEMPLATES = ['angkasatemplatebalai.html', 'angkasatemplatebalai_gfz.html',
                   'balaisms.html', 'sorongtemplatebalai.html',
                   'nabiretemplatebalai.html', 'significanttemplate.html']
+REGIONAL_BALAI_TEMPLATES = ['angkasatemplatebalai.html', 'angkasatemplatebalai_gfz.html',
+                            'sorongtemplatebalai.html', 'nabiretemplatebalai.html']
 PETA_HELPER = 'js/peta_copy_info.js'
 
 
@@ -1105,8 +1106,6 @@ class PetaCopyButtonTest(TestCase):
         for name in PETA_TEMPLATES:
             with self.subTest(template=name):
                 html = self._read(name)
-                # Penanda fungsional, bukan sekadar kata: komentar boleh
-                # menyebut latarnya untuk menjelaskan kenapa dulu dipakai.
                 for gone in ('btn-capture-peta', 'data-h2c-url', 'Capture Peta',
                              'preferCanvas', 'any3d', 'foreignObject'):
                     self.assertNotIn(gone, html)
@@ -1115,18 +1114,29 @@ class PetaCopyButtonTest(TestCase):
                      'mapLooksBlank', 'toBlob'):
             self.assertNotIn(gone, helper)
 
-    def test_copy_button_sits_below_the_map_inside_the_column(self):
-        """Di bawah peta, di dalam kolom peta -> margin/tata letak tidak bergeser."""
+    def test_copy_button_sits_below_the_map(self):
+        """Tombol salin selalu setelah peta. Di halaman balai regional tombol
+        berada DI BAWAH dan DI LUAR #streetmap-baru; di halaman SMS/signifikan
+        tetap di dalam kolom sebelum baris info."""
         for name in PETA_TEMPLATES:
             with self.subTest(template=name):
                 html = self._read(name)
                 map_at = html.index('id="map-baru"')
                 bar_at = html.index('peta-copy-bar')
                 info_at = html.index('id="info-gempa"')
-                close_at = html.index('</div>', info_at)
                 self.assertGreater(bar_at, map_at, 'tombol harus setelah peta')
-                self.assertLess(bar_at, info_at, 'tombol harus sebelum baris info gempa')
-                self.assertLess(info_at, close_at, 'baris info tetap di dalam kolom')
+                if name in REGIONAL_BALAI_TEMPLATES:
+                    street_close = html.index('</div>', info_at)
+                    self.assertLess(info_at, street_close,
+                                    'baris info tetap di dalam streetmap-baru')
+                    self.assertGreater(bar_at, street_close,
+                                       'tombol harus di luar/di bawah streetmap-baru')
+                else:
+                    close_at = html.index('</div>', info_at)
+                    self.assertLess(bar_at, info_at,
+                                    'tombol harus sebelum baris info gempa')
+                    self.assertLess(info_at, close_at,
+                                    'baris info tetap di dalam kolom')
 
     def test_helper_is_not_positioned_over_the_page(self):
         """Dulu toolbar memakai position:fixed/absolute; sekarang ikut alur normal."""
@@ -1136,12 +1146,10 @@ class PetaCopyButtonTest(TestCase):
         self.assertNotIn('position: absolute', helper)
         self.assertIn('@media print{.peta-copy-bar{display:none !important;}}', helper)
 
-    def test_maps_are_initialised_exactly_as_before(self):
-        """Perubahan peta yang dulu demi capture sudah dikembalikan."""
-        for name in PETA_TEMPLATES:
-            with self.subTest(template=name):
-                html = self._read(name)
-                self.assertIn("L.map('map-baru')", html)
+    def test_copy_bar_has_top_margin(self):
+        """Jarak tombol dari #streetmap-baru cukup (tidak menempel)."""
+        helper = self._helper()
+        self.assertIn('margin:16px 0 0', helper)
 
     def test_helper_asset_exists_and_is_served(self):
         path = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / PETA_HELPER
