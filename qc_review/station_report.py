@@ -21,6 +21,7 @@ from theme.telegram import esc, send_telegram_document, send_telegram_message
 
 from . import station_rules
 from .models import StationDailyQC, StationDiagnosis
+from .station_views import COMPONENT_ORDER
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +59,26 @@ def report_data(day: date) -> dict:
                                              severity__in=("red", "yellow")):
         n_find[(d.network, d.station)][d.day] += 1
 
+    # Same rule on several components of one sensor (e.g. data gaps on SHE,
+    # SHN and SHZ) reads better as one row listing all affected channels.
+    groups = {}
+    for f in findings:
+        key = (f.network, f.station, f.location, f.code, f.severity)
+        g = groups.setdefault(key, {"finding": f, "channels": []})
+        if f.channel:
+            g["channels"].append(f.channel)
+    rows_grouped = []
+    for (net, sta, loc, _code, sev), g in groups.items():
+        f = g["finding"]
+        chans = sorted(g["channels"], key=lambda c: (c[:2], COMPONENT_ORDER.get(c[-1:], 9), c))
+        msg_id, msg_en = f.message_id, f.message_en
+        if len(chans) > 1:
+            joined = "/".join(chans)
+            msg_id, msg_en = msg_id.replace(f.channel, joined, 1), msg_en.replace(f.channel, joined, 1)
+        label = ", ".join(f"{loc}.{c}" if loc else c for c in chans) or "semua / all"
+        rows_grouped.append({"station": f"{net}.{sta}", "channels": label, "severity": sev,
+                             "message_id": msg_id, "message_en": msg_en})
+
     days = [since + timedelta(days=i) for i in range(GRID_DAYS)]
     grid_rows = [{
         "station": f"{net}.{sta}",
@@ -67,6 +88,7 @@ def report_data(day: date) -> dict:
 
     return {"day": day, "n_stations": len(worst), "n_channels": len(rows),
             "counts": dict(counts), "worst": worst, "findings": findings,
+            "finding_rows": rows_grouped,
             "days": days, "grid": grid_rows}
 
 
@@ -120,18 +142,18 @@ def build_pdf(day: date, data: dict | None = None) -> bytes:
     ]))
     story += [summary, Paragraph("Temuan / Findings", h2)]
 
-    if data["findings"]:
+    if data["finding_rows"]:
         rows = [[Paragraph(f"<b>{h}</b>", small) for h in
-                 ("No", "Stasiun / Station", "Kanal", "Status", "Temuan (ID) / Finding (EN)")]]
-        for i, f in enumerate(data["findings"], 1):
+                 ("No", "Stasiun / Station", "Kanal / Channel", "Status", "Temuan (ID) / Finding (EN)")]]
+        for i, f in enumerate(data["finding_rows"], 1):
             rows.append([
                 Paragraph(str(i), small),
-                Paragraph(escape(f"{f.network}.{f.station}"), small),
-                Paragraph(escape(f.channel or "semua / all"), small),
-                Paragraph(f"<font color='{SEV_COLORS[f.severity]}'><b>{f.severity.upper()}</b></font>", small),
-                [Paragraph(escape(f.message_id), small), Paragraph(escape(f.message_en), small_en)],
+                Paragraph(escape(f["station"]), small),
+                Paragraph(escape(f["channels"]), small),
+                Paragraph(f"<font color='{SEV_COLORS[f['severity']]}'><b>{f['severity'].upper()}</b></font>", small),
+                [Paragraph(escape(f["message_id"]), small), Paragraph(escape(f["message_en"]), small_en)],
             ])
-        t = Table(rows, colWidths=[0.8 * cm, 2.3 * cm, 1.4 * cm, 1.5 * cm, 12.2 * cm], repeatRows=1)
+        t = Table(rows, colWidths=[0.8 * cm, 2.2 * cm, 2.4 * cm, 1.7 * cm, 11.1 * cm], repeatRows=1)
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f3f4f6")),
             ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#e5e7eb")),

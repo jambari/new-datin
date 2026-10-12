@@ -254,3 +254,19 @@ class StationReportTest(TestCase):
             call_command("send_station_qc_report", day=DAY.isoformat(), out=out)
             with open(out, "rb") as fh:
                 self.assertTrue(fh.read(4) == b"%PDF")
+
+
+class StationReportGroupingTest(TestCase):
+    def test_same_rule_on_three_components_is_one_row(self):
+        from . import station_report
+        user = User.objects.create_user("qcworker", password="x")
+        token = Token.objects.create(user=user)
+        gap = dict(availability_pct=50.0, n_gaps=2, max_gap_s=40000)
+        self.client.post(URL, {"day": DAY.isoformat(), "stations": [
+            {"network": "AU", "station": "MANU", "channels": zne(z=good(**gap), n=good(**gap),
+                                                                e=good(**gap), band="BH")}]},
+            content_type="application/json", HTTP_AUTHORIZATION=f"Token {token.key}")
+        rows = station_report.report_data(DAY)["finding_rows"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["channels"], "BHZ, BHN, BHE")
+        self.assertIn("BHZ/BHN/BHE", rows[0]["message_en"])
