@@ -270,3 +270,15 @@ class StationReportGroupingTest(TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["channels"], "BHZ, BHN, BHE")
         self.assertIn("BHZ/BHN/BHE", rows[0]["message_en"])
+
+    def test_merged_message_drops_single_component_name(self):
+        from . import station_report
+        user = User.objects.create_user("qcworker", password="x")
+        token = Token.objects.create(user=user)
+        off = dict(availability_pct=0.0)
+        self.client.post(URL, {"day": DAY.isoformat(), "stations": [
+            {"network": "IA", "station": "AMPM", "channels": zne(z=good(**off), n=good(**off), e=good(**off))}]},
+            content_type="application/json", HTTP_AUTHORIZATION=f"Token {token.key}")
+        row = station_report.report_data(DAY)["finding_rows"][0]
+        self.assertEqual(row["message_en"], "No data on channel SHZ/SHN/SHE for the whole day.")
+        self.assertEqual(row["message_id"], "Tidak ada data pada kanal SHZ/SHN/SHE sepanjang hari.")

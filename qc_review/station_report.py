@@ -73,8 +73,12 @@ def report_data(day: date) -> dict:
         chans = sorted(g["channels"], key=lambda c: (c[:2], COMPONENT_ORDER.get(c[-1:], 9), c))
         msg_id, msg_en = f.message_id, f.message_en
         if len(chans) > 1:
+            # "SHE (horizontal timur-barat)" -> "SHZ/SHN/SHE": the component
+            # name only fitted the first channel.
             joined = "/".join(chans)
-            msg_id, msg_en = msg_id.replace(f.channel, joined, 1), msg_en.replace(f.channel, joined, 1)
+            name_id, name_en = station_rules._comp_name(f.channel)
+            msg_id = msg_id.replace(f"{f.channel} ({name_id})", f.channel).replace(f.channel, joined, 1)
+            msg_en = msg_en.replace(f"{f.channel} ({name_en})", f.channel).replace(f.channel, joined, 1)
         label = ", ".join(f"{loc}.{c}" if loc else c for c in chans) or "semua / all"
         rows_grouped.append({"station": f"{net}.{sta}", "channels": label, "severity": sev,
                              "message_id": msg_id, "message_en": msg_en})
