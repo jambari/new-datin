@@ -38,6 +38,21 @@ SPIKES_MIN = 100
 SPIKES_FACTOR = 10
 BASELINE_MIN_DAYS = 5
 
+# Short Indonesian labels for compact places (Telegram caption).
+CODE_LABELS_ID = {
+    "NO_DATA": "Tidak ada data",
+    "DATA_GAPS": "Data terputus",
+    "FLATLINE": "Sinyal datar",
+    "FUTURE_TIMESTAMP": "Pergeseran waktu",
+    "TIMING_QUALITY": "Timing GPS buruk",
+    "CLOCK_UNLOCKED": "GPS tidak terkunci",
+    "COMPONENT_DEAD": "Komponen rusak",
+    "COMPONENT_NOISY": "Komponen noisy",
+    "AMPLITUDE_CHANGE": "Perubahan amplitudo",
+    "SPIKES": "Banyak spike",
+    "CLIPPING": "Clipping",
+}
+
 COMPONENT_NAMES = {
     "Z": ("vertikal", "vertical"),
     "N": ("horizontal utara-selatan", "north-south horizontal"),

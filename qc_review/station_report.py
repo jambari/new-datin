@@ -204,15 +204,22 @@ def build_caption(data: dict) -> str:
     day = data["day"].strftime("%d-%m-%Y")
     lines = [f"<b>Laporan Kesehatan Stasiun / Station Health</b> — {day} (UTC)",
              f"{data['n_stations']} stasiun: 🔴 {c.get('red', 0)} · 🟡 {c.get('yellow', 0)} · 🟢 {c.get('green', 0)}"]
-    red = defaultdict(set)
+    # {station: {code: [channels]}} -> "• IA.ARMI: Komponen rusak (SHZ)"
+    red = defaultdict(lambda: defaultdict(list))
     for f in data["findings"]:
         if f.severity == "red":
-            red[f"{f.network}.{f.station}"].add(f.code)
+            red[f"{f.network}.{f.station}"][f.code].append(f.channel)
     if red:
         lines.append("")
-        lines.append("<b>Masalah / Problems:</b>")
+        lines.append("<b>Masalah:</b>")
         for sta in sorted(red):
-            lines.append(f"• {esc(sta)}: {esc(', '.join(sorted(red[sta])))}")
+            parts = []
+            for code, chans in sorted(red[sta].items()):
+                label = station_rules.CODE_LABELS_ID.get(code, code)
+                chans = [c for c in chans if c]
+                # Listing all three components adds nothing; name them only when partial.
+                parts.append(f"{label} ({', '.join(chans)})" if 0 < len(chans) < 3 else label)
+            lines.append(f"• {esc(sta)}: {esc('; '.join(parts))}")
     site = getattr(settings, "SITE_URL", "").rstrip("/")
     if site:
         lines += ["", f"{esc(site)}/qc/stations/"]

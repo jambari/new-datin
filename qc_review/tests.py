@@ -32,6 +32,14 @@ def codes(findings):
 
 
 class StationRulesTest(TestCase):
+    def test_every_rule_code_has_an_indonesian_label(self):
+        import inspect
+        import re
+        src = inspect.getsource(R)
+        codes_in_rules = set(re.findall(r'add\("([A-Z_]+)"', src)) | set(re.findall(r'Finding\(\s*"([A-Z_]+)"', src))
+        self.assertGreaterEqual(len(codes_in_rules), 11)
+        self.assertEqual(codes_in_rules - set(R.CODE_LABELS_ID), set())
+
     def test_healthy_station_has_no_findings(self):
         self.assertEqual(R.evaluate(zne()), [])
 
@@ -212,8 +220,8 @@ class StationReportTest(TestCase):
         from . import station_report
         cap = station_report.build_caption(station_report.report_data(DAY))
         self.assertIn("🔴 2", cap)
-        self.assertIn("IA.ARMI: COMPONENT_DEAD", cap)
-        self.assertIn("IA.SWPM: TIMING_QUALITY", cap)
+        self.assertIn("IA.ARMI: Komponen rusak (SHZ)", cap)
+        self.assertIn("IA.SWPM: Timing GPS buruk (SHZ)", cap)
         self.assertLessEqual(len(cap), 1024)
 
     def test_send_posts_pdf_to_telegram(self):
