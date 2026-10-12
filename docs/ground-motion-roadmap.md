@@ -36,7 +36,7 @@ The dev box (192.168.88.x) only reaches 172.21.63.50 when the internal network/V
 | # | Step | Output | Status |
 |---|---|---|---|
 | 0 | Backup of jaygenerator config/app state | `~/backups/gm-initiative-<ts>.tar.gz` on jaygenerator + copy on dev box | see log |
-| 1 | **Site characterization**: compare ShakeMap slope-Vs30 with earthquake H/V (Zhao et al. 2006 classes) per station; fix `stavel.csv` signs | `docs/ground-motion/step1/`, `scripts/ground_motion/` | analysis done; `stavel.csv` fix + Vs30-grid decision pending |
+| 1 | **Site characterization**: compare ShakeMap slope-Vs30 with earthquake H/V (Zhao et al. 2006 classes) per station; fix `stavel.csv` signs | `docs/ground-motion/step1/`, `scripts/ground_motion/` | done (keep slope map; field checks JMPI/SJPM/SKPM/SRPI + instrument checks SATPI/WWPI outstanding) |
 | 2 | Ground-motion flatfile in new-datin: event × station × component with M, depth, regime, Rhyp/Rrup, Vs30, PGA, PGV, PSA(T), Arias, D5-95 | new model + management command | todo |
 | 3 | GMPE residual analysis: BA08/Zhao06/AB07 (current) vs Zhao16, BCHydro, NGA-West2; between-/within-event + station terms δS2S | report + recommended `grind.conf` | todo |
 | 4 | Operational feedback: chosen GMPEs + station terms into ShakeMap; "observed vs GMM vs SNI design" panel per event on new-datin | config change + UI | todo |
@@ -79,7 +79,10 @@ are EOL; `mysql -uroot` without password in the pipeline; PSA5 API token committ
   Scenario-mode only; operational ShakeMaps are unaffected.
 - **Pending (needs user):**
   1. ~~stavel.csv sign fix~~ done.
-  2. Decide the operational Vs30 grid: (a) obtain BMKG HQ's `vs30_bmkgpusat2.grd` (previously
-     referenced in grind.conf), or (b) slope proxy + station corrections after Step 3. Do not change
-     operations on H/V class alone.
+  2. ~~Decide the operational Vs30 grid~~ **Decided 2026-10-13: option (b)** — keep ShakeMap's
+     slope-proxy Vs30 map unchanged; derive per-station corrections (station terms δS2S) in Step 3
+     and apply them in Step 4. BMKG HQ's `vs30_bmkgpusat2.grd` is not being pursued for now.
+     No operational change until Step 3 quantifies the amplification.
   3. Field verification priority: JMPI, SJPM, SKPM, SRPI; instrument check: SATPI, WWPI.
+- 2026-10-13: **Paused after Step 1** at the user's request. Next session starts at Step 2
+  (flatfile in new-datin) only when the user asks.
