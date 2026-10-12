@@ -32,7 +32,7 @@ from django.db.models import Prefetch
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from .models import JSONDataUpload, FeltEarthquake, GempaMemusak, GempaMemusakMedia, Bulletin, SiaranPress
+from .models import JSONDataUpload, FeltEarthquake, GempaMemusak, GempaMemusakMedia, Bulletin, SiaranPress, EventBrowser
 from .utils import calculate_remark
 import json
 from io import StringIO

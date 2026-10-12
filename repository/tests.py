@@ -209,3 +209,25 @@ class RepositoryViewsTest(TestCase):
         self.client.logout()
         resp = self.client.get(reverse('gempa_list'))
         self.assertIn(resp.status_code, [200, 302, 403])
+
+
+class EventBrowserViewsTest(TestCase):
+    """Regresi: /repository/integrasi/ 500 (NameError: EventBrowser tidak diimpor)."""
+
+    def setUp(self):
+        from .models import EventBrowser
+        self.user = User.objects.create_user('integrasi', password='pass123')
+        self.client.force_login(self.user)
+        self.ev = EventBrowser.objects.create(
+            event_id='bmg2026abcd',
+            origin_time=datetime.datetime(2026, 10, 1, 3, tzinfo=datetime.timezone.utc),
+            magnitude=4.2, latitude=-2.5, longitude=140.7, depth_km=10)
+
+    def test_list_and_detail_render(self):
+        resp = self.client.get(reverse('event_browser_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'bmg2026abcd')
+        resp = self.client.get(reverse('event_browser_detail', args=[self.ev.pk]))
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(reverse('event_browser_edit', args=[self.ev.pk]))
+        self.assertEqual(resp.status_code, 200)
