@@ -189,3 +189,68 @@ class StationHealthPagesTest(TestCase):
         self.assertContains(r, "likely broken")
         self.assertEqual([c["channel"] for c in r.context["channels"]], ["SHZ", "SHN", "SHE"])
         self.assertEqual(self.client.get("/qc/stations/IA.NOPE/").status_code, 404)
+
+
+class StationReportTest(TestCase):
+    def setUp(self):
+        user = User.objects.create_user("qcworker", password="x")
+        token = Token.objects.create(user=user)
+        body = {"day": DAY.isoformat(), "stations": [
+            {"network": "IA", "station": "ARMI", "channels": zne(z=good(noise_rms=0.5))},
+            {"network": "IA", "station": "SWPM", "channels": zne(z=good(timing_quality_mean=10.0))},
+            {"network": "IA", "station": "JAY", "channels": zne(band="BH")}]}
+        self.client.post(URL, body, content_type="application/json",
+                         HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    def test_pdf_is_built(self):
+        from . import station_report
+        pdf = station_report.build_pdf(DAY)
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertGreater(len(pdf), 2000)
+
+    def test_caption_lists_red_stations(self):
+        from . import station_report
+        cap = station_report.build_caption(station_report.report_data(DAY))
+        self.assertIn("🔴 2", cap)
+        self.assertIn("IA.ARMI: COMPONENT_DEAD", cap)
+        self.assertIn("IA.SWPM: TIMING_QUALITY", cap)
+        self.assertLessEqual(len(cap), 1024)
+
+    def test_send_posts_pdf_to_telegram(self):
+        from unittest import mock
+        from django.test import override_settings
+        from . import station_report
+        with override_settings(TELEGRAM_BOT_TOKEN="T", TELEGRAM_CHAT_ID="-100",
+                               STATION_QC_TELEGRAM_CHAT_ID=""), \
+                mock.patch("theme.telegram.requests.post") as post:
+            post.return_value.status_code = 200
+            self.assertTrue(station_report.send_daily_report(DAY))
+        url = post.call_args.args[0]
+        self.assertTrue(url.endswith("/sendDocument"))
+        self.assertEqual(post.call_args.kwargs["data"]["chat_id"], "-100")
+        name, content, mime = post.call_args.kwargs["files"]["document"]
+        self.assertEqual(name, f"kesehatan-stasiun-{DAY.isoformat()}.pdf")
+        self.assertTrue(content.startswith(b"%PDF"))
+
+    def test_missing_day_sends_warning_instead(self):
+        from unittest import mock
+        from django.test import override_settings
+        from . import station_report
+        with override_settings(TELEGRAM_BOT_TOKEN="T", TELEGRAM_CHAT_ID="-100",
+                               STATION_QC_TELEGRAM_CHAT_ID="-200"), \
+                mock.patch("theme.telegram.requests.post") as post:
+            post.return_value.status_code = 200
+            station_report.send_daily_report(DAY - datetime.timedelta(days=3))
+        self.assertTrue(post.call_args.args[0].endswith("/sendMessage"))
+        self.assertEqual(post.call_args.kwargs["data"]["chat_id"], "-200")
+        self.assertIn("belum masuk", post.call_args.kwargs["data"]["text"])
+
+    def test_command_writes_pdf(self):
+        import os
+        import tempfile
+        from django.core.management import call_command
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "r.pdf")
+            call_command("send_station_qc_report", day=DAY.isoformat(), out=out)
+            with open(out, "rb") as fh:
+                self.assertTrue(fh.read(4) == b"%PDF")

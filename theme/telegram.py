@@ -81,3 +81,38 @@ def send_after_commit(text, **kwargs) -> None:
     from django.db import transaction
 
     transaction.on_commit(lambda: send_telegram_message(text, **kwargs))
+
+
+_SEND_DOC_URL = 'https://api.telegram.org/bot{token}/sendDocument'
+
+
+def send_telegram_document(content: bytes, filename: str, caption='', chat_id=None,
+                           token=None, timeout=60, mime='application/pdf') -> bool:
+    """Kirim satu berkas (mis. laporan PDF) dengan caption HTML.
+
+    Aturannya sama dengan send_telegram_message: tidak pernah melempar
+    exception, diam kalau token/chat belum dikonfigurasi. Caption Telegram
+    maksimal 1024 karakter — dipotong bila lebih.
+    """
+    token = token or getattr(settings, 'TELEGRAM_BOT_TOKEN', '')
+    chat_id = chat_id or getattr(settings, 'TELEGRAM_CHAT_ID', '')
+    if not token or not chat_id:
+        logger.info('Telegram dilewati: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID kosong.')
+        return False
+
+    try:
+        resp = requests.post(
+            _SEND_DOC_URL.format(token=token),
+            data={'chat_id': chat_id, 'parse_mode': 'HTML', 'caption': caption[:1024]},
+            files={'document': (filename, content, mime)},
+            timeout=timeout,
+        )
+    except requests.RequestException as exc:
+        logger.warning('Dokumen Telegram tidak terkirim: %s', exc)
+        return False
+
+    if resp.status_code != 200:
+        logger.warning('Telegram menolak dokumen (HTTP %s): %s',
+                       resp.status_code, resp.text[:200])
+        return False
+    return True

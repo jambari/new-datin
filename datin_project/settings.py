@@ -300,6 +300,13 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=15, hour=0, day_of_month=1),
     },
 
+    # LAPORAN KESEHATAN STASIUN: PDF harian ke Telegram. Data dikirim scproc
+    # (station_qc.py) pukul 01:40 UTC; laporan dibuat setelahnya.
+    'send-station-qc-report-daily': {
+        'task': 'qc_review.tasks.send_station_qc_report_task',
+        'schedule': crontab(minute=30, hour=2),  # 02:30 UTC = 11:30 WIT
+    },
+
     # INDEKS MAGNETBUMI K & A: ambil citra dari dataweb.bmkg.go.id, simpan, kirim Telegram
     'fetch-fmi-indices-daily': {
         'task': 'magnet.tasks.fetch_fmi_indices_task',
@@ -349,6 +356,8 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 # --- Telegram Configuration ---
 TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
 TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default='')
+# Grup khusus laporan kesehatan stasiun (opsional; kosong = TELEGRAM_CHAT_ID).
+STATION_QC_TELEGRAM_CHAT_ID = config('STATION_QC_TELEGRAM_CHAT_ID', default='')
 
 # If using Gmail, you need an "App Password"
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

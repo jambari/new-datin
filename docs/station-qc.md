@@ -60,6 +60,17 @@ module constants — tune after a few weeks of data.
 - Re-posting a day replaces that station-day's rows and findings.
 - Log: `~/logs/station_qc.log` on scproc.
 
+## Daily PDF report (Telegram)
+
+Celery beat `send-station-qc-report-daily` at 02:30 UTC (11:30 WIT) runs
+`manage.py send_station_qc_report` for yesterday (UTC): a PDF (summary, all red/yellow
+findings in ID + EN, 7-day station grid) is sent with `sendDocument` to
+`STATION_QC_TELEGRAM_CHAT_ID`, or `TELEGRAM_CHAT_ID` when that is empty. If scproc has not
+delivered the day, a warning message is sent instead.
+
+- Preview: `manage.py send_station_qc_report --day 2026-10-11 --out /tmp/r.pdf`
+- Resend: `manage.py send_station_qc_report --day 2026-10-11`
+
 ## Planned (Phase 2/3)
 
 PPSD noise spectra vs NLNM/NHNM and station baseline; P-residual timing bias from
