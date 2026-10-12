@@ -1,5 +1,6 @@
 """Tests for the daily station waveform-health feature (station QC)."""
 import datetime
+import os
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -77,11 +78,32 @@ class StationRulesTest(TestCase):
         self.assertIn(("SHZ", "TIMING_QUALITY", "red"),
                       codes(R.evaluate(zne(z=good(timing_quality_mean=10.0)))))
 
-    def test_timing_quality_judged_against_station_baseline(self):
-        # A digitizer that always reports 60% is not flagged once its history says so.
-        hist = {("", "SHZ"): [good(timing_quality_mean=60.0)] * 7}
-        self.assertNotIn("TIMING_QUALITY",
-                         {x.code for x in R.evaluate(zne(z=good(timing_quality_mean=60.0)), hist)})
+    def test_chronic_bad_timing_is_still_flagged(self):
+        # SWPM: timing quality 10% every day must not become "normal".
+        hist = {("", "SHZ"): [good(timing_quality_mean=10.0)] * 14}
+        f = [x for x in R.evaluate(zne(z=good(timing_quality_mean=10.0)), hist)
+             if x.code == "TIMING_QUALITY"]
+        self.assertEqual(len(f), 1)
+        self.assertEqual(f[0].severity, "red")
+        self.assertIn("berlangsung terus", f[0].message_id)
+        self.assertIn("ongoing", f[0].message_en)
+
+    def test_duration_format(self):
+        self.assertEqual(R.fmt_duration(34), "34s")
+        self.assertEqual(R.fmt_duration(173), "2m 53s")
+        self.assertEqual(R.fmt_duration(4352), "1j 12m 32s")
+        self.assertEqual(R.fmt_duration(4352, "en"), "1h 12m 32s")
+        f = R.evaluate(zne(z=good(availability_pct=3.3, n_gaps=3, max_gap_s=80961)))
+        gap = next(x for x in f if x.code == "DATA_GAPS")
+        self.assertIn("terpanjang 22j 29m 21s", gap.message_id)
+        self.assertIn("longest 22h 29m 21s", gap.message_en)
+
+    def test_no_data_says_since_when(self):
+        f = R.evaluate(zne(z=good(availability_pct=0.0, last_data_day="2026-09-19",
+                                  days_without_data=22)))
+        nd = next(x for x in f if x.code == "NO_DATA")
+        self.assertIn("sejak 19-09-2026 (22 hari tanpa data)", nd.message_id)
+        self.assertIn("since 19-09-2026 (22 days without data)", nd.message_en)
 
     def test_clock_unlocked_needs_baseline(self):
         today = zne(z=good(clock_locked_pct=0.0))
@@ -164,6 +186,52 @@ class StationDailyApiTest(TestCase):
         self.post(self.batch(channels=zne(z=good(clock_locked_pct=0.0))))
         self.assertTrue(StationDiagnosis.objects.filter(day=DAY, code="CLOCK_UNLOCKED",
                                                         channel="SHZ").exists())
+
+
+class SilentStationTest(TestCase):
+    """A station that stops sending must stay in the report as 'no data since'."""
+
+    def setUp(self):
+        user = User.objects.create_user("qcworker", password="x")
+        self.auth = {"HTTP_AUTHORIZATION": f"Token {Token.objects.create(user=user).key}"}
+
+    def post(self, day, stations, complete=True):
+        return self.client.post(URL, {"day": day.isoformat(), "complete": complete, "stations": [
+            {"network": "IA", "station": s, "channels": zne()} for s in stations]},
+            content_type="application/json", **self.auth)
+
+    def silent_for_three_days(self):
+        """MBPI sends until DAY-3, then only JAY is in the daily batches."""
+        for i in range(5, -1, -1):
+            self.post(DAY - datetime.timedelta(days=i), ["JAY", "MBPI"] if i >= 3 else ["JAY"])
+
+    def test_missing_station_is_added_as_no_data(self):
+        self.silent_for_three_days()
+        rows = StationDailyQC.objects.filter(station="MBPI", day=DAY)
+        self.assertEqual(rows.count(), 3)
+        self.assertEqual(set(rows.values_list("status", flat=True)), {"red"})
+        d = StationDiagnosis.objects.filter(station="MBPI", day=DAY, code="NO_DATA").first()
+        last = (DAY - datetime.timedelta(days=3)).strftime('%d-%m-%Y')
+        self.assertIn(f"sejak {last} (3 hari tanpa data)", d.message_id)
+
+    def test_partial_batch_does_not_invent_missing_stations(self):
+        self.post(DAY - datetime.timedelta(days=1), ["JAY", "MBPI"])
+        self.post(DAY, ["JAY"], complete=False)
+        self.assertFalse(StationDailyQC.objects.filter(station="MBPI", day=DAY).exists())
+
+    def test_reevaluate_command_applies_current_rules(self):
+        from django.core.management import call_command
+        for i in range(3, -1, -1):
+            self.post(DAY - datetime.timedelta(days=i), ["JAY", "MBPI"] if i else ["JAY"])
+        StationDiagnosis.objects.all().delete()
+        call_command("reevaluate_station_qc", stdout=open(os.devnull, "w"))
+        self.assertTrue(StationDiagnosis.objects.filter(station="MBPI", day=DAY, code="NO_DATA").exists())
+
+    def test_caption_names_silent_station_with_date(self):
+        from . import station_report
+        self.silent_for_three_days()
+        cap = station_report.build_caption(station_report.report_data(DAY))
+        self.assertIn(f"IA.MBPI: Tidak ada data sejak {(DAY - datetime.timedelta(days=3)).strftime('%d-%m')}", cap)
 
 
 class StationHealthPagesTest(TestCase):
@@ -288,5 +356,5 @@ class StationReportGroupingTest(TestCase):
             {"network": "IA", "station": "AMPM", "channels": zne(z=good(**off), n=good(**off), e=good(**off))}]},
             content_type="application/json", HTTP_AUTHORIZATION=f"Token {token.key}")
         row = station_report.report_data(DAY)["finding_rows"][0]
-        self.assertEqual(row["message_en"], "No data on channel SHZ/SHN/SHE for the whole day.")
-        self.assertEqual(row["message_id"], "Tidak ada data pada kanal SHZ/SHN/SHE sepanjang hari.")
+        self.assertTrue(row["message_en"].startswith("No data on channel SHZ/SHN/SHE for the whole day."))
+        self.assertTrue(row["message_id"].startswith("Tidak ada data pada kanal SHZ/SHN/SHE sepanjang hari."))

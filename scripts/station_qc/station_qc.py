@@ -233,7 +233,9 @@ def build_day(archive: str, day: dt.date, workers: int, only: set[str] | None) -
                 m["future_dates"] = sorted(set(future[(net, sta, loc, cha)]))
             stations.setdefault((net, sta), []).append(
                 {"location": loc, "channel": cha, "metrics": m})
-    return {"day": day.isoformat(),
+    # complete: the whole archive was scanned, so .189 may treat channels that
+    # are missing from this batch as silent (not just not-yet-processed).
+    return {"day": day.isoformat(), "complete": not only,
             "stations": [{"network": n, "station": s, "channels": c}
                          for (n, s), c in sorted(stations.items())]}
 

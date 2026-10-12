@@ -10,7 +10,9 @@ The scproc station-QC job POSTs one JSON batch per UTC day:
 
 For every station the channel rows are upserted, the diagnosis rules in
 station_rules.py are run against the station's last BASELINE_DAYS days,
-and that station-day's diagnoses are replaced.
+and that station-day's diagnoses are replaced. The daily job sends
+"complete": true, so channels silent for up to EXPECTED_DAYS are kept in the
+report as "no data since <date>".
 """
 from __future__ import annotations
 
@@ -30,6 +32,7 @@ from . import station_rules
 from .models import StationDailyQC, StationDiagnosis
 
 BASELINE_DAYS = 14
+EXPECTED_DAYS = 60      # channels with data in this window are expected every day
 COMPONENT_ORDER = {"Z": 0, "N": 1, "1": 1, "E": 2, "2": 2}
 
 
@@ -45,18 +48,59 @@ def ingest_station_daily(request):
     stations = request.data.get("stations")
     if day is None or not isinstance(stations, list):
         return Response({"detail": "need 'day' (YYYY-MM-DD) and 'stations' list"}, status=400)
-
-    n_channels = n_diag = 0
-    for st in stations:
-        net, sta = st.get("network"), st.get("station")
-        channels = [c for c in (st.get("channels") or []) if c.get("channel")]
-        if not net or not sta or not channels:
-            continue
-        n_channels += len(channels)
-        n_diag += _store_station_day(net, sta, day, channels)
-
+    n_channels, n_diag = ingest_day(day, stations, complete=bool(request.data.get("complete")))
     return Response({"day": day.isoformat(), "stations": len(stations),
                      "channels": n_channels, "diagnoses": n_diag})
+
+
+def ingest_day(day: date, stations: list[dict], complete: bool = False) -> tuple[int, int]:
+    """Store one day's channel metrics and (re)evaluate the diagnoses.
+
+    complete=True means the batch covers the whole archive for that day (the
+    daily job, not a --stations subset). Channels that had data in the last
+    EXPECTED_DAYS but are missing from the batch are then added with 0%
+    availability, so a station that went silent stays in the report instead
+    of quietly disappearing.
+    """
+    by_station: dict[tuple[str, str], dict[tuple[str, str], dict]] = defaultdict(dict)
+    for st in stations:
+        net, sta = st.get("network"), st.get("station")
+        if not net or not sta:
+            continue
+        for c in st.get("channels") or []:
+            if c.get("channel"):
+                by_station[(net, sta)][(c.get("location") or "", c["channel"])] = c
+
+    if complete:
+        expected = (StationDailyQC.objects
+                    .filter(day__lt=day, day__gte=day - timedelta(days=EXPECTED_DAYS),
+                            metrics__availability_pct__gt=0)
+                    .values_list("network", "station", "location", "channel").distinct())
+        for net, sta, loc, cha in expected:
+            by_station[(net, sta)].setdefault((loc, cha), {
+                "location": loc, "channel": cha,
+                "metrics": {"availability_pct": 0.0, "not_in_archive": True}})
+
+    n_channels = n_diag = 0
+    for (net, sta), chans in by_station.items():
+        n_channels += len(chans)
+        n_diag += _store_station_day(net, sta, day, list(chans.values()))
+    return n_channels, n_diag
+
+
+def _add_last_data_day(net, sta, day, loc, cha, metrics: dict) -> dict:
+    """For a channel without data: when did it last have data?"""
+    if (metrics.get("availability_pct") or 0) > 0:
+        return metrics
+    last = (StationDailyQC.objects
+            .filter(network=net, station=sta, location=loc, channel=cha,
+                    day__lt=day, metrics__availability_pct__gt=0)
+            .aggregate(d=Max("day"))["d"])
+    metrics = dict(metrics)
+    if last:
+        metrics["last_data_day"] = last.isoformat()
+        metrics["days_without_data"] = (day - last).days
+    return metrics
 
 
 @transaction.atomic
@@ -64,10 +108,10 @@ def _store_station_day(net: str, sta: str, day: date, channels: list[dict]) -> i
     rows = {}
     for c in channels:
         loc = c.get("location") or ""
+        metrics = _add_last_data_day(net, sta, day, loc, c["channel"], c.get("metrics") or {})
         row, _ = StationDailyQC.objects.update_or_create(
             network=net, station=sta, location=loc, channel=c["channel"], day=day,
-            defaults={"sampling_rate": c.get("sampling_rate"),
-                      "metrics": c.get("metrics") or {}},
+            defaults={"sampling_rate": c.get("sampling_rate"), "metrics": metrics},
         )
         rows[(loc, c["channel"])] = row
 

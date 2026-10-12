@@ -37,11 +37,11 @@ is unchanged.
 
 | code | severity | trigger |
 |---|---|---|
-| `NO_DATA` | red | availability 0 % (channel seen in the previous 7 days) |
+| `NO_DATA` | red | availability 0 %; message says "no data since <last day with data> (N days)". Channels with data in the last 60 days are expected every day: when the daily batch is complete, .189 adds missing channels itself, so a dead station never silently disappears |
 | `DATA_GAPS` | red < 80 %, yellow < 98 % | availability |
 | `FLATLINE` | red | flatline > 5 % |
 | `FUTURE_TIMESTAMP` | red | any future-dated file → "time shift / clock fault" |
-| `TIMING_QUALITY` | red < 50, yellow < 80 | mean timing quality, unless the channel's own baseline is already that low |
+| `TIMING_QUALITY` | red < 50, yellow < 80 | mean timing quality — always flagged; when the 14-day baseline is also low the message says the problem is ongoing |
 | `CLOCK_UNLOCKED` | red | locked < 20 % while the baseline is ≥ 80 % (digitizers that never set the bit are ignored) |
 | `COMPONENT_DEAD` | red | one of Z/N/E ≥ 20 dB below the median of the three ("vertical component broken") |
 | `COMPONENT_NOISY` | yellow | one component ≥ 20 dB above the median |
@@ -58,6 +58,8 @@ module constants — tune after a few weeks of data.
 - Dry run without posting: `station_qc.py --day yesterday --out /tmp/qc.json`.
 - Backfill: `--day yesterday --backfill 60 --post` (≈ 75 s per day for ~190 channels).
 - Re-posting a day replaces that station-day's rows and findings.
+- After changing the rules: `manage.py reevaluate_station_qc [--since D]` re-runs them over stored metrics (oldest first).
+- Durations in messages: `34s`, `2m 53s`, `1j 12m 32s` (EN `1h 12m 32s`).
 - Log: `~/logs/station_qc.log` on scproc.
 
 ## Daily PDF report (Telegram)

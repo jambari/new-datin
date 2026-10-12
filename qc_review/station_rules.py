@@ -73,6 +73,23 @@ class Finding:
     evidence: dict = field(default_factory=dict)
 
 
+def fmt_duration(seconds, lang: str = "id") -> str:
+    """34s · 2m 53s · 1j 12m 32s (EN: 1h 12m 32s)."""
+    total = int(round(float(seconds or 0)))
+    h, rest = divmod(total, 3600)
+    m, s = divmod(rest, 60)
+    if h:
+        return f"{h}{'j' if lang == 'id' else 'h'} {m}m {s}s"
+    if m:
+        return f"{m}m {s}s"
+    return f"{s}s"
+
+
+def _fmt_day(iso: str) -> str:
+    y, mo, d = iso.split("-")
+    return f"{d}-{mo}-{y}"
+
+
 def _db(ratio: float) -> float:
     return 20.0 * math.log10(ratio)
 
@@ -106,19 +123,28 @@ def evaluate(channels: list[dict], history: dict | None = None) -> list[Finding]
 
         avail = m.get("availability_pct")
         if avail is not None and avail <= 0:
+            # last_data_day / days_without_data are added on .189 at ingest.
+            last, n_days = m.get("last_data_day"), m.get("days_without_data")
+            if last and n_days and n_days > 1:
+                since_id = f"sejak {_fmt_day(last)} ({n_days} hari tanpa data)"
+                since_en = f"since {_fmt_day(last)} ({n_days} days without data)"
+            else:
+                since_id, since_en = "sepanjang hari", "for the whole day"
             add("NO_DATA", "red",
-                f"Tidak ada data pada kanal {cha} ({name_id}) sepanjang hari.",
-                f"No data on channel {cha} ({name_en}) for the whole day.",
-                {"availability_pct": avail})
+                f"Tidak ada data pada kanal {cha} ({name_id}) {since_id}. "
+                f"Sensor/digitizer mati atau komunikasi terputus.",
+                f"No data on channel {cha} ({name_en}) {since_en}. "
+                f"Sensor/digitizer down or telemetry lost.",
+                {"availability_pct": avail, "last_data_day": last, "days_without_data": n_days})
             continue   # nothing else can be judged without data
         if avail is not None and avail < AVAIL_YELLOW_PCT:
             sev = "red" if avail < AVAIL_RED_PCT else "yellow"
             add("DATA_GAPS", sev,
                 f"Data terputus pada {cha}: hanya {avail:.1f}% tersedia "
-                f"({m.get('n_gaps', 0)} gap, terpanjang {m.get('max_gap_s', 0):.0f} detik). "
+                f"({m.get('n_gaps', 0)} gap, terpanjang {fmt_duration(m.get('max_gap_s'), 'id')}). "
                 f"Periksa komunikasi/daya stasiun.",
                 f"Data gaps on {cha}: only {avail:.1f}% available "
-                f"({m.get('n_gaps', 0)} gaps, longest {m.get('max_gap_s', 0):.0f} s). "
+                f"({m.get('n_gaps', 0)} gaps, longest {fmt_duration(m.get('max_gap_s'), 'en')}). "
                 f"Check station telemetry/power.",
                 {k: m.get(k) for k in ("availability_pct", "n_gaps", "max_gap_s")})
 
@@ -141,19 +167,27 @@ def evaluate(channels: list[dict], history: dict | None = None) -> list[Finding]
                 f"phase arrival times from this station cannot be trusted.",
                 {"future_dates": sorted(set(future))})
 
+        # Always flagged: a GPS that is bad every day is still bad. When the
+        # baseline is low too, the message says the problem is ongoing.
         tq = m.get("timing_quality_mean")
         tq_base = _baseline(hist, "timing_quality_mean")
-        if tq is not None and tq < TIMING_YELLOW and (tq_base is None or tq_base >= TIMING_YELLOW):
+        if tq is not None and tq < TIMING_YELLOW:
             sev = "red" if tq < TIMING_RED else "yellow"
+            chronic = tq_base is not None and tq_base < TIMING_YELLOW
+            if chronic:
+                note_id = f" Masalah ini berlangsung terus (rata-rata {len(hist)} hari terakhir {tq_base:.0f}%)."
+                note_en = f" This is ongoing (last {len(hist)} days averaged {tq_base:.0f}%)."
+            elif tq_base is not None:
+                note_id, note_en = f" Biasanya {tq_base:.0f}%.", f" Normally {tq_base:.0f}%."
+            else:
+                note_id = note_en = ""
             add("TIMING_QUALITY", sev,
-                f"Kualitas waktu (timing quality) {cha} rendah: rata-rata {tq:.0f}%"
-                f"{f', biasanya {tq_base:.0f}%' if tq_base is not None else ''}. "
-                f"Kemungkinan GPS bermasalah — risiko pergeseran waktu.",
-                f"Low timing quality on {cha}: mean {tq:.0f}%"
-                f"{f', normally {tq_base:.0f}%' if tq_base is not None else ''}. "
-                f"Possible GPS problem — risk of time shift.",
+                f"Kualitas waktu (timing quality) {cha} rendah: rata-rata {tq:.0f}%. "
+                f"Kemungkinan GPS bermasalah — risiko pergeseran waktu.{note_id}",
+                f"Low timing quality on {cha}: mean {tq:.0f}%. "
+                f"Possible GPS problem — risk of time shift.{note_en}",
                 {"timing_quality_mean": tq, "timing_quality_min": m.get("timing_quality_min"),
-                 "baseline": tq_base})
+                 "baseline": tq_base, "chronic": chronic})
 
         locked = m.get("clock_locked_pct")
         locked_base = _baseline(hist, "clock_locked_pct")

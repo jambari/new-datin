@@ -208,15 +208,20 @@ def build_caption(data: dict) -> str:
     red = defaultdict(lambda: defaultdict(list))
     for f in data["findings"]:
         if f.severity == "red":
-            red[f"{f.network}.{f.station}"][f.code].append(f.channel)
+            red[f"{f.network}.{f.station}"][f.code].append(f)
     if red:
         lines.append("")
         lines.append("<b>Masalah:</b>")
         for sta in sorted(red):
             parts = []
-            for code, chans in sorted(red[sta].items()):
+            for code, fs in sorted(red[sta].items()):
                 label = station_rules.CODE_LABELS_ID.get(code, code)
-                chans = [c for c in chans if c]
+                chans = [f.channel for f in fs if f.channel]
+                if code == "NO_DATA":
+                    lasts = [f.evidence.get("last_data_day") for f in fs
+                             if (f.evidence.get("days_without_data") or 0) > 1]
+                    if lasts:
+                        label += " sejak " + station_rules._fmt_day(max(lasts))[:5]
                 # Listing all three components adds nothing; name them only when partial.
                 parts.append(f"{label} ({', '.join(chans)})" if 0 < len(chans) < 3 else label)
             lines.append(f"• {esc(sta)}: {esc('; '.join(parts))}")
