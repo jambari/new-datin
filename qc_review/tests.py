@@ -1,0 +1,191 @@
+"""Tests for the daily station waveform-health feature (station QC)."""
+import datetime
+
+from django.contrib.auth.models import User
+from django.test import TestCase
+from rest_framework.authtoken.models import Token
+
+from . import station_rules as R
+from .models import StationDailyQC, StationDiagnosis
+
+DAY = datetime.date(2026, 10, 12)
+URL = "/qc/api/station-daily/"
+
+
+def good(**over):
+    """Metrics of a healthy short-period channel."""
+    m = {"availability_pct": 100.0, "n_gaps": 0, "n_overlaps": 0, "max_gap_s": 0.0,
+         "timing_quality_mean": 100.0, "timing_quality_min": 100.0, "clock_locked_pct": 100.0,
+         "noise_rms": 50.0, "flatline_pct": 0.0, "n_spikes": 5, "n_clip_runs": 0}
+    m.update(over)
+    return m
+
+
+def zne(z=None, n=None, e=None, band="SH"):
+    return [{"location": "", "channel": f"{band}Z", "metrics": z or good()},
+            {"location": "", "channel": f"{band}N", "metrics": n or good()},
+            {"location": "", "channel": f"{band}E", "metrics": e or good()}]
+
+
+def codes(findings):
+    return {(f.channel, f.code, f.severity) for f in findings}
+
+
+class StationRulesTest(TestCase):
+    def test_healthy_station_has_no_findings(self):
+        self.assertEqual(R.evaluate(zne()), [])
+
+    def test_dead_vertical_component(self):
+        f = R.evaluate(zne(z=good(noise_rms=0.5)))
+        self.assertIn(("SHZ", "COMPONENT_DEAD", "red"), codes(f))
+        msg = next(x for x in f if x.code == "COMPONENT_DEAD")
+        self.assertIn("vertikal", msg.message_id)
+        self.assertIn("Vertical component", msg.message_en)
+
+    def test_noisy_component(self):
+        self.assertIn(("SHN", "COMPONENT_NOISY", "yellow"),
+                      codes(R.evaluate(zne(n=good(noise_rms=5000)))))
+
+    def test_no_data_and_gaps(self):
+        f = codes(R.evaluate(zne(z=good(availability_pct=0.0),
+                                 n=good(availability_pct=60.0, n_gaps=4, max_gap_s=9000),
+                                 e=good(availability_pct=95.0, n_gaps=1, max_gap_s=100))))
+        self.assertIn(("SHZ", "NO_DATA", "red"), f)
+        self.assertIn(("SHN", "DATA_GAPS", "red"), f)
+        self.assertIn(("SHE", "DATA_GAPS", "yellow"), f)
+
+    def test_flatline(self):
+        self.assertIn(("SHE", "FLATLINE", "red"),
+                      codes(R.evaluate(zne(e=good(flatline_pct=100.0, noise_rms=0.0)))))
+
+    def test_future_timestamp_is_time_shift(self):
+        f = R.evaluate(zne(z=good(future_dates=["2036-02-07"])))
+        hit = next(x for x in f if x.code == "FUTURE_TIMESTAMP")
+        self.assertEqual(hit.severity, "red")
+        self.assertIn("Pergeseran waktu", hit.message_id)
+        self.assertIn("2036-02-07", hit.message_en)
+
+    def test_low_timing_quality(self):
+        self.assertIn(("SHZ", "TIMING_QUALITY", "red"),
+                      codes(R.evaluate(zne(z=good(timing_quality_mean=10.0)))))
+
+    def test_timing_quality_judged_against_station_baseline(self):
+        # A digitizer that always reports 60% is not flagged once its history says so.
+        hist = {("", "SHZ"): [good(timing_quality_mean=60.0)] * 7}
+        self.assertNotIn("TIMING_QUALITY",
+                         {x.code for x in R.evaluate(zne(z=good(timing_quality_mean=60.0)), hist)})
+
+    def test_clock_unlocked_needs_baseline(self):
+        today = zne(z=good(clock_locked_pct=0.0))
+        self.assertNotIn("CLOCK_UNLOCKED", {x.code for x in R.evaluate(today)})
+        hist = {("", "SHZ"): [good()] * 7}
+        self.assertIn(("SHZ", "CLOCK_UNLOCKED", "red"), codes(R.evaluate(today, hist)))
+        # Digitizers that never set the lock bit stay quiet.
+        hist0 = {("", "SHZ"): [good(clock_locked_pct=0.0)] * 7}
+        self.assertNotIn("CLOCK_UNLOCKED", {x.code for x in R.evaluate(today, hist0)})
+
+    def test_amplitude_change_vs_baseline(self):
+        hist = {("", "SHZ"): [good(noise_rms=50.0)] * 7}
+        self.assertIn(("SHZ", "AMPLITUDE_CHANGE", "yellow"),
+                      codes(R.evaluate(zne(z=good(noise_rms=800.0), n=good(noise_rms=800.0),
+                                           e=good(noise_rms=800.0)), hist)))
+
+    def test_spikes_only_against_baseline(self):
+        today = zne(z=good(n_spikes=3000))
+        self.assertNotIn("SPIKES", {x.code for x in R.evaluate(today)})
+        hist = {("", "SHZ"): [good(n_spikes=2500)] * 7}
+        self.assertNotIn("SPIKES", {x.code for x in R.evaluate(today, hist)})
+        # A one-day burst (e.g. an earthquake) is not flagged ...
+        hist = {("", "SHZ"): [good(n_spikes=20)] * 7}
+        self.assertNotIn("SPIKES", {x.code for x in R.evaluate(today, hist)})
+        # ... but two elevated days in a row are.
+        hist = {("", "SHZ"): [good(n_spikes=20)] * 7 + [good(n_spikes=2000)]}
+        self.assertIn(("SHZ", "SPIKES", "yellow"), codes(R.evaluate(today, hist)))
+
+    def test_flatline_is_not_reported_as_clipping(self):
+        f = {x.code for x in R.evaluate(zne(e=good(flatline_pct=100.0, n_clip_runs=1, noise_rms=0.0)))}
+        self.assertIn("FLATLINE", f)
+        self.assertNotIn("CLIPPING", f)
+
+    def test_worst(self):
+        self.assertEqual(R.worst([]), "green")
+        self.assertEqual(R.worst(["yellow", "green", "red"]), "red")
+
+
+class StationDailyApiTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("qcworker", password="x")
+        self.token = Token.objects.create(user=self.user)
+
+    def post(self, body, token=True):
+        kw = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"} if token else {}
+        return self.client.post(URL, body, content_type="application/json", **kw)
+
+    def batch(self, day=DAY, channels=None, station="RKPI"):
+        return {"day": day.isoformat(),
+                "stations": [{"network": "IA", "station": station, "channels": channels or zne()}]}
+
+    def test_requires_token(self):
+        self.assertIn(self.post(self.batch(), token=False).status_code, (401, 403))
+        self.assertEqual(StationDailyQC.objects.count(), 0)
+
+    def test_rejects_bad_payload(self):
+        self.assertEqual(self.post({"stations": []}).status_code, 400)
+
+    def test_ingest_stores_rows_and_diagnoses(self):
+        r = self.post(self.batch(channels=zne(e=good(flatline_pct=100.0, noise_rms=0.0))))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["channels"], 3)
+        self.assertEqual(StationDailyQC.objects.count(), 3)
+        self.assertEqual(StationDailyQC.objects.get(channel="SHE").status, "red")
+        self.assertEqual(StationDailyQC.objects.get(channel="SHZ").status, "green")
+        d = StationDiagnosis.objects.get()
+        self.assertEqual((d.channel, d.code), ("SHE", "FLATLINE"))
+        self.assertTrue(d.message_id and d.message_en)
+
+    def test_reingest_replaces_the_day(self):
+        self.post(self.batch(channels=zne(e=good(flatline_pct=100.0, noise_rms=0.0))))
+        self.post(self.batch())
+        self.assertEqual(StationDailyQC.objects.count(), 3)
+        self.assertEqual(StationDiagnosis.objects.count(), 0)
+        self.assertEqual(set(StationDailyQC.objects.values_list("status", flat=True)), {"green"})
+
+    def test_history_is_used_for_baseline_rules(self):
+        for i in range(7, 0, -1):
+            self.post(self.batch(day=DAY - datetime.timedelta(days=i)))
+        self.post(self.batch(channels=zne(z=good(clock_locked_pct=0.0))))
+        self.assertTrue(StationDiagnosis.objects.filter(day=DAY, code="CLOCK_UNLOCKED",
+                                                        channel="SHZ").exists())
+
+
+class StationHealthPagesTest(TestCase):
+    def setUp(self):
+        user = User.objects.create_user("qcworker", password="x")
+        token = Token.objects.create(user=user)
+        body = {"day": DAY.isoformat(), "stations": [
+            {"network": "IA", "station": "ARMI", "channels": zne(z=good(noise_rms=0.5))},
+            {"network": "IA", "station": "JAY", "channels": zne(band="BH")}]}
+        self.client.post(URL, body, content_type="application/json",
+                         HTTP_AUTHORIZATION=f"Token {token.key}")
+
+    def test_empty_page(self):
+        StationDailyQC.objects.all().delete()
+        r = self.client.get("/qc/stations/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Belum ada data QC stasiun")
+
+    def test_grid_and_findings_in_both_languages(self):
+        r = self.client.get("/qc/stations/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "IA.ARMI")
+        self.assertContains(r, "IA.JAY")
+        self.assertContains(r, "Komponen vertikal (SHZ) kemungkinan rusak")
+        self.assertContains(r, "Vertical component (SHZ) likely broken")
+        self.assertEqual(r.context["counts"], {"red": 1, "green": 1})
+
+    def test_station_detail(self):
+        r = self.client.get("/qc/stations/IA.ARMI/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "likely broken")
+        self.assertEqual([c["channel"] for c in r.context["channels"]], ["SHZ", "SHN", "SHE"])
+        self.assertEqual(self.client.get("/qc/stations/IA.NOPE/").status_code, 404)

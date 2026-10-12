@@ -1,0 +1,92 @@
+{% extends "qc_review/base.html" %}
+
+{% block seo_title %}{{ network }}.{{ station }} · Kesehatan Stasiun{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
+
+{% block qc_extra_head %}
+<style>
+  .sd-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:.5rem 1.5rem; margin-bottom:1rem; }
+  .sd-head h1 { font-size:1.4rem; font-weight:700; margin:0; font-family:'JetBrains Mono',monospace; }
+  .sh-sub { color:var(--muted); font-size:.85rem; }
+  .card h2 { font-size:1rem; font-weight:600; padding:.7rem .8rem; margin:0; border-bottom:1px solid var(--line); }
+  .card { margin-bottom:1.25rem; }
+  .tbl-wrap { overflow-x:auto; }
+  table.m { border-collapse:collapse; width:100%; font-size:.82rem; }
+  table.m th, table.m td { padding:.35rem .6rem; border-bottom:1px solid var(--grid); text-align:right; white-space:nowrap; }
+  table.m th { color:var(--muted); font-weight:500; background:var(--paper-2); }
+  table.m td:first-child, table.m th:first-child, table.m td.l { text-align:left; }
+  .strip { display:flex; gap:2px; }
+  .strip span { width:.7rem; height:1rem; border-radius:2px; background:var(--grid); }
+  .strip .green { background:var(--green); } .strip .yellow { background:var(--yellow); } .strip .red { background:var(--red); }
+  .diag { display:grid; grid-template-columns:6.5rem auto 6rem 1fr; gap:.25rem 1rem; padding:.55rem .8rem; border-bottom:1px solid var(--grid); align-items:start; }
+  .diag .msg-en { color:var(--muted); font-size:.85rem; }
+  .mono { font-family:'JetBrains Mono',monospace; }
+</style>
+{% endblock %}
+
+{% block qc_content %}
+<p class="sh-sub"><a href="{% url 'qc_review:station_health' %}">← Kesehatan Stasiun · Station Health</a></p>
+<div class="sd-head">
+  <h1>{{ network }}.{{ station }}</h1>
+  {% if not empty %}<span class="sh-sub">Data terakhir / latest day: <strong class="mono">{{ latest|date:"Y-m-d" }}</strong> UTC</span>{% endif %}
+</div>
+
+{% if empty %}
+<div class="card" style="padding:1.5rem;">Belum ada data QC untuk stasiun ini. <span class="sh-sub">No QC data for this station.</span></div>
+{% else %}
+
+<section class="card">
+  <h2>Metrik terakhir per kanal <span class="sh-sub">· Latest metrics per channel</span></h2>
+  <div class="tbl-wrap">
+  <table class="m">
+    <thead>
+      <tr>
+        <th>Kanal</th><th>Status</th><th>30 hari / days</th>
+        <th title="Data availability">Ketersediaan %</th><th>Gap</th>
+        <th title="Mean GPS timing quality">Timing %</th><th title="Records with clock-locked flag">GPS lock %</th>
+        <th title="Median 10-min RMS after 1 Hz high-pass (counts)">Noise RMS</th>
+        <th>Flatline %</th><th>Spike</th><th>Clip</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c in channels %}
+      <tr>
+        <td class="mono">{% if c.location %}{{ c.location }}.{% endif %}{{ c.channel }}</td>
+        <td class="l"><span class="pill {{ c.status }}">{{ c.status }}</span></td>
+        <td class="l"><div class="strip">{% for d, s in c.strip %}<span class="{{ s }}" title="{{ d|date:'Y-m-d' }}: {{ s }}"></span>{% endfor %}</div></td>
+        {% with m=c.latest %}
+        {% if m %}
+        <td>{{ m.availability_pct|floatformat:1 }}</td>
+        <td>{{ m.n_gaps|default_if_none:"–" }}</td>
+        <td>{{ m.timing_quality_mean|floatformat:0|default:"–" }}</td>
+        <td>{{ m.clock_locked_pct|floatformat:0|default:"–" }}</td>
+        <td>{{ m.noise_rms|floatformat:1|default:"–" }}</td>
+        <td>{{ m.flatline_pct|floatformat:1|default:"–" }}</td>
+        <td>{{ m.n_spikes|default_if_none:"–" }}</td>
+        <td>{{ m.n_clip_runs|default_if_none:"–" }}</td>
+        {% else %}
+        <td colspan="8" class="l sh-sub">tidak ada data hari ini · no data on the latest day</td>
+        {% endif %}
+        {% endwith %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Riwayat temuan (30 hari) <span class="sh-sub">· Findings history (30 days)</span></h2>
+  {% for d in diagnoses %}
+  <div class="diag">
+    <span class="mono">{{ d.day|date:"Y-m-d" }}</span>
+    <span class="pill {{ d.severity }}">{{ d.severity }}</span>
+    <span class="mono">{% if d.channel %}{{ d.channel }}{% else %}stasiun{% endif %}</span>
+    <div><div>{{ d.message_id }}</div><div class="msg-en">{{ d.message_en }}</div></div>
+  </div>
+  {% empty %}
+  <div class="diag"><span></span><span class="pill green">ok</span><span></span><div><div>Tidak ada temuan dalam 30 hari.</div><div class="msg-en">No findings in the last 30 days.</div></div></div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

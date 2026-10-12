@@ -266,3 +266,82 @@ class StationResult(models.Model):
     def event(self):
         """Convenience accessor used by templates."""
         return self.run.event
+
+
+# ---------------------------------------------------------------------------
+# Station waveform health (daily, per channel)
+# ---------------------------------------------------------------------------
+
+SEVERITY_CHOICES = [
+    ("green", "Green"),
+    ("yellow", "Yellow"),
+    ("red", "Red"),
+    ("unknown", "Unknown"),
+]
+
+
+class StationDailyQC(models.Model):
+    """Waveform metrics of one channel for one UTC day.
+
+    Computed on the SeisComP host (scproc) by the daily station-QC job from
+    the SDS archive and POSTed to /qc/api/station-daily/. `metrics` keeps the
+    raw numbers (availability, gaps, timing quality, noise RMS, flatline,
+    spikes, clipping, future-dated files); `status` is the worst severity of
+    the diagnoses evaluated for this channel on ingest.
+    """
+    network = models.CharField(max_length=4)
+    station = models.CharField(max_length=8)
+    location = models.CharField(max_length=4, blank=True, default="")
+    channel = models.CharField(max_length=4)
+    day = models.DateField(db_index=True)
+    sampling_rate = models.FloatField(null=True, blank=True)
+    metrics = models.JSONField(default=dict)
+    status = models.CharField(max_length=8, choices=SEVERITY_CHOICES,
+                              default="unknown")
+    received_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["network", "station", "location", "channel", "-day"]
+        unique_together = [("network", "station", "location", "channel", "day")]
+        indexes = [models.Index(fields=["network", "station", "day"])]
+
+    def __str__(self) -> str:
+        return f"{self.nslc} {self.day} [{self.status}]"
+
+    @property
+    def nslc(self) -> str:
+        return f"{self.network}.{self.station}.{self.location}.{self.channel}"
+
+    @property
+    def component(self) -> str:
+        """Last letter of the channel code: Z, N, E (or 1, 2, ...)."""
+        return self.channel[-1:]
+
+
+class StationDiagnosis(models.Model):
+    """One plain-language finding for a channel (or a whole station) on a day.
+
+    Produced by qc_review.station_rules when a StationDailyQC batch is
+    ingested. Messages are stored in Indonesian and English so the pages
+    can show both; `evidence` keeps the numbers the verdict is based on.
+    """
+    network = models.CharField(max_length=4)
+    station = models.CharField(max_length=8)
+    location = models.CharField(max_length=4, blank=True, default="")
+    channel = models.CharField(max_length=4, blank=True, default="",
+                               help_text="Blank = applies to the whole station")
+    day = models.DateField(db_index=True)
+    code = models.CharField(max_length=32)
+    severity = models.CharField(max_length=8, choices=SEVERITY_CHOICES)
+    message_id = models.TextField()
+    message_en = models.TextField()
+    evidence = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-day", "network", "station", "channel", "code"]
+        indexes = [models.Index(fields=["network", "station", "day"])]
+
+    def __str__(self) -> str:
+        return (f"{self.network}.{self.station}.{self.location}.{self.channel or '*'} "
+                f"{self.day} {self.code} [{self.severity}]")

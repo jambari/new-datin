@@ -1,0 +1,121 @@
+{% extends "qc_review/base.html" %}
+
+{% block seo_title %}Kesehatan Stasiun · Station Health{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
+
+{% block qc_extra_head %}
+<style>
+  .sh-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:.5rem 1.5rem; margin-bottom:1rem; }
+  .sh-head h1 { font-size:1.4rem; font-weight:700; margin:0; }
+  .sh-sub { color:var(--muted); font-size:.85rem; }
+  .sh-counts { display:flex; gap:.5rem; flex-wrap:wrap; }
+  .sh-legend { display:flex; gap:1rem; font-size:.78rem; color:var(--muted); align-items:center; flex-wrap:wrap; }
+  .sh-legend span::before { content:""; display:inline-block; width:.8rem; height:.8rem; border-radius:2px; margin-right:.3rem; vertical-align:-1px; }
+  .sh-legend .l-green::before  { background:var(--green); }
+  .sh-legend .l-yellow::before { background:var(--yellow); }
+  .sh-legend .l-red::before    { background:var(--red); }
+  .sh-legend .l-none::before   { background:var(--grid); border:1px solid var(--line); }
+
+  .issues { margin-bottom:1.5rem; }
+  .issue { display:grid; grid-template-columns:auto 9rem 1fr; gap:.25rem 1rem; padding:.6rem .8rem; border-bottom:1px solid var(--line); align-items:start; }
+  .issue:last-child { border-bottom:none; }
+  .issue .where { font-family:'JetBrains Mono',monospace; font-size:.85rem; }
+  .issue .msg-id { font-weight:500; }
+  .issue .msg-en { color:var(--muted); font-size:.85rem; }
+
+  .grid-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:6px; }
+  table.sh { border-collapse:collapse; font-size:.78rem; min-width:100%; }
+  table.sh th, table.sh td { padding:0; border-bottom:1px solid var(--grid); }
+  table.sh thead th { position:sticky; top:0; background:var(--paper-2); font-weight:500; color:var(--muted); padding:.3rem .15rem; font-family:'JetBrains Mono',monospace; }
+  table.sh td.sta, table.sh th.sta { padding:.2rem .6rem; white-space:nowrap; font-family:'JetBrains Mono',monospace; position:sticky; left:0; background:var(--paper); }
+  table.sh td.cha { padding:.2rem .5rem; white-space:nowrap; font-family:'JetBrains Mono',monospace; color:var(--muted); }
+  table.sh tr.first td { border-top:1px solid var(--line); }
+  .c { display:block; width:1.35rem; height:1rem; margin:1px auto; border-radius:2px; }
+  .c.green  { background:var(--green); }
+  .c.yellow { background:var(--yellow); }
+  .c.red    { background:var(--red); }
+  .c.unknown, .c.none { background:var(--grid); }
+  .days-form { font-size:.85rem; }
+</style>
+{% endblock %}
+
+{% block qc_content %}
+<div class="sh-head">
+  <h1>Kesehatan Stasiun <span class="sh-sub">· Station Health</span></h1>
+  {% if not empty %}
+  <span class="sh-sub">Data hingga / data up to <strong class="mono">{{ latest|date:"Y-m-d" }}</strong> UTC · {{ n_stations }} stasiun / stations</span>
+  <div class="sh-counts">
+    {% if counts.red %}<span class="pill red">{{ counts.red }} merah · red</span>{% endif %}
+    {% if counts.yellow %}<span class="pill yellow">{{ counts.yellow }} kuning · yellow</span>{% endif %}
+    {% if counts.green %}<span class="pill green">{{ counts.green }} baik · ok</span>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if empty %}
+<div class="card" style="padding:1.5rem;">
+  Belum ada data QC stasiun. Job harian di scproc belum mengirim hasil.<br>
+  <span class="sh-sub">No station QC data yet — the daily job on scproc has not posted any results.</span>
+</div>
+{% else %}
+
+<section class="issues card">
+  <div style="padding:.7rem .8rem;border-bottom:1px solid var(--line);font-weight:600;">
+    Temuan {{ latest|date:"Y-m-d" }} <span class="sh-sub">· Findings</span>
+  </div>
+  {% for d in issues %}
+  <div class="issue">
+    <span class="pill {{ d.severity }}">{{ d.severity }}</span>
+    <a class="where" href="{% url 'qc_review:station_health_detail' network=d.network station=d.station %}">{{ d.network }}.{{ d.station }}{% if d.channel %}.{{ d.location }}.{{ d.channel }}{% endif %}</a>
+    <div>
+      <div class="msg-id">{{ d.message_id }}</div>
+      <div class="msg-en">{{ d.message_en }}</div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="issue"><span class="pill green">ok</span><span></span><div><div class="msg-id">Tidak ada masalah terdeteksi.</div><div class="msg-en">No issues detected.</div></div></div>
+  {% endfor %}
+</section>
+
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem;">
+  <div class="sh-legend">
+    <span class="l-green">baik · ok</span><span class="l-yellow">perhatian · warning</span>
+    <span class="l-red">masalah · problem</span><span class="l-none">tidak ada data QC · no QC data</span>
+  </div>
+  <form method="get" class="days-form">
+    <label>Rentang / range
+      <select name="days" onchange="this.form.submit()">
+        <option value="7"  {% if n_days == 7 %}selected{% endif %}>7 hari</option>
+        <option value="14" {% if n_days == 14 %}selected{% endif %}>14 hari</option>
+        <option value="30" {% if n_days == 30 %}selected{% endif %}>30 hari</option>
+        <option value="60" {% if n_days == 60 %}selected{% endif %}>60 hari</option>
+      </select>
+    </label>
+  </form>
+</div>
+
+<div class="grid-wrap">
+<table class="sh">
+  <thead>
+    <tr>
+      <th class="sta">Stasiun</th><th>Kanal</th>
+      {% for d in days %}<th title="{{ d|date:'Y-m-d' }}">{{ d|date:"d" }}</th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for st in grid %}
+    {% for row in st.rows %}
+    <tr{% if forloop.first %} class="first"{% endif %}>
+      {% if forloop.first %}
+      <td class="sta" rowspan="{{ st.rows|length }}"><a href="{% url 'qc_review:station_health_detail' network=st.network station=st.station %}">{{ st.network }}.{{ st.station }}</a></td>
+      {% endif %}
+      <td class="cha">{% if row.location %}{{ row.location }}.{% endif %}{{ row.channel }}</td>
+      {% for c in row.cells %}<td><span class="c {{ c }}" title="{{ row.channel }}"></span></td>{% endfor %}
+    </tr>
+    {% endfor %}
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

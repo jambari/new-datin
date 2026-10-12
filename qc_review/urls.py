@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import station_views, views
 
 app_name = 'qc_review'
 
@@ -11,12 +11,19 @@ urlpatterns = [
     path("station/<int:station_id>/review/",
          views.station_review, name="station_review"),
 
+    # Station waveform health (daily, per channel)
+    path("stations/", station_views.station_health, name="station_health"),
+    path("stations/<str:network>.<str:station>/",
+         station_views.station_health_detail, name="station_health_detail"),
+
     # Export
     path("export/csv/", views.export_csv, name="export_csv"),
     path("export/pdf/", views.export_pdf, name="export_pdf"),
 
     # API
     path("api/qc-events/", views.ingest_event, name="ingest_event"),
+    path("api/station-daily/", station_views.ingest_station_daily,
+         name="ingest_station_daily"),
     path("api/event/<str:public_id>/map.json",
          views.event_map_json, name="event_map_json"),
 ]
