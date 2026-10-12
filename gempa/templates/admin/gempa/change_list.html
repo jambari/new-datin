@@ -155,13 +155,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
   </form>
 </div>
-{% comment %}
-Tombol "Gempa Susulan" & "Laporan Bulanan" tidak ikut diport: halaman
-/gempa-susulan/ dan /laporan-bulanan/ di luar scope tahap ini.
-
-Catatan: komentar Django satu-baris saja yang aman; komentar multi-baris
-harus memakai tag comment seperti ini, kalau tidak teksnya ikut tercetak
-ke halaman.
-{% endcomment %}
+{% if report_links_source %}
+<div style="margin-left:auto;display:inline-flex;gap:8px;align-items:center;">
+  <a href="{% url 'gempa:gempa-susulan' %}?source={{ report_links_source }}{% if date_from %}&date_from={{ date_from|urlencode }}{% endif %}{% if date_to %}&date_to={{ date_to|urlencode }}{% endif %}" target="_blank"
+     style="display:inline-block;padding:4px 12px;background:#b45309;color:#fff;border-radius:3px;font-size:13px;font-weight:600;text-decoration:none;">
+    🔁 Gempa Susulan
+  </a>
+  <a href="{% url 'gempa:laporan-bulanan' %}?source={{ report_links_source }}{% if date_from %}&date_from={{ date_from|urlencode }}{% endif %}{% if date_to %}&date_to={{ date_to|urlencode }}{% endif %}" target="_blank"
+     style="display:inline-block;padding:4px 12px;background:#1a6b3a;color:#fff;border-radius:3px;font-size:13px;font-weight:600;text-decoration:none;">
+    📊 Laporan Bulanan
+  </a>
+</div>
+{% endif %}
 {{ block.super }}
 {% endblock %}

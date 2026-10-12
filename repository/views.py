@@ -1711,9 +1711,7 @@ def push_events_api(request):
 
 
 # ── Laporan Bulanan API ────────────────────────────────────────────────────────
-def gempa_laporan_bulanan_api(request):
-    from datetime import date
-    from .models import EventBrowser
+def _api_year_month(request):
     today = date.today()
     try:
         year  = int(request.GET.get('year',  today.year))
@@ -1722,7 +1720,15 @@ def gempa_laporan_bulanan_api(request):
             month = today.month
     except (ValueError, TypeError):
         year, month = today.year, today.month
+    return year, month
 
+
+def laporan_bulanan_events(year, month):
+    """Event integrasi (EventBrowser) satu bulan, format laporan bulanan.
+
+    Dipakai API di bawah dan langsung oleh halaman gempa/laporan-bulanan.
+    """
+    from .models import EventBrowser
     qs = EventBrowser.objects.filter(
         origin_time__year=year,
         origin_time__month=month,
@@ -1745,23 +1751,16 @@ def gempa_laporan_bulanan_api(request):
             })
         except Exception:
             continue
-
-    resp = JsonResponse(events, safe=False)
-    resp['Access-Control-Allow-Origin'] = '*'
-    return resp
+    return events
 
 
-def gempa_dirasakan_api(request):
-    from .models import FeltEarthquake
-    today = date.today()
-    try:
-        year  = int(request.GET.get('year',  today.year))
-        month = int(request.GET.get('month', today.month))
-        if not (1 <= month <= 12):
-            month = today.month
-    except (ValueError, TypeError):
-        year, month = today.year, today.month
+def dirasakan_events(year, month, build_absolute_uri):
+    """Gempa dirasakan satu bulan beserta URL gambar shakemap-nya.
 
+    `build_absolute_uri` biasanya `request.build_absolute_uri`.
+    Dipakai API di bawah dan langsung oleh halaman gempa/laporan-bulanan
+    dan gempa/gempa-susulan.
+    """
     qs = FeltEarthquake.objects.filter(
         event_datetime__year=year,
         event_datetime__month=month,
@@ -1777,7 +1776,7 @@ def gempa_dirasakan_api(request):
             shk = ShakemapEvent.objects.filter(event_id=wib_ts).first()
             shakemap_url = ''
             if shk and shk.shakemap_image:
-                shakemap_url = request.build_absolute_uri(shk.shakemap_image.url)
+                shakemap_url = build_absolute_uri(shk.shakemap_image.url)
 
             events.append({
                 'lat':       float(obj.latitude),
@@ -1792,8 +1791,19 @@ def gempa_dirasakan_api(request):
             })
         except Exception:
             continue
+    return events
 
-    resp = JsonResponse(events, safe=False)
+
+def gempa_laporan_bulanan_api(request):
+    year, month = _api_year_month(request)
+    resp = JsonResponse(laporan_bulanan_events(year, month), safe=False)
+    resp['Access-Control-Allow-Origin'] = '*'
+    return resp
+
+
+def gempa_dirasakan_api(request):
+    year, month = _api_year_month(request)
+    resp = JsonResponse(dirasakan_events(year, month, request.build_absolute_uri), safe=False)
     resp['Access-Control-Allow-Origin'] = '*'
     return resp
 

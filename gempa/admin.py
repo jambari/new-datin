@@ -93,6 +93,7 @@ class TopFilterMixin:
     change_list_template = 'admin/gempa/change_list.html'
     list_filter = ()
     report_source = None  # Laporan Bulanan source code (JAY/NBPI/PGR5/SWI); None hides the button
+    report_links = True   # False: sembunyikan tombol Gempa Susulan/Laporan Bulanan walau report_source diisi
 
     # Per-page dropdown (10/15/25/50). Honors ?per_page=N from the filter bar.
     PER_PAGE_OPTIONS = (10, 15, 25, 50)
@@ -189,6 +190,7 @@ class TopFilterMixin:
             'filter_lon_min': g('lon_min', ''),
             'filter_lon_max': g('lon_max', ''),
             'report_source':  self.report_source,
+            'report_links_source': self.report_source if self.report_links else None,
         })
         return super().changelist_view(request, extra_context=extra_context)
 
@@ -895,6 +897,7 @@ class GempanganjukAdmin(TopFilterMixin, ExportMixin, VersionAdmin):
 @admin.register(Significant, site=gempa_admin_site)
 class SignificantAdmin(GmtMapMixin, TopFilterMixin, VersionAdmin):
     report_source = 'JAY'          # template significant memakai peta JAY
+    report_links = False           # seperti .188: tanpa tombol laporan di katalog signifikan
 
     def gmt_event_args(self, obj):
         """Significant menyimpan tanggal/jam sebagai teks, bukan date + origin."""

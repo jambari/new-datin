@@ -1,0 +1,1116 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laporan Bulanan Gempabumi – {{ formatted_bulan }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="{% static 'gjson/indofaults.js' %}"></script>
+<script src="{% static 'gjson/patahan.js' %}"></script>
+<script src="{% static 'gjson/subduksi.js' %}"></script>
+<script src="{% static 'repository/js/garis_pantai_papua.js' %}"></script>
+<script src="{% static 'gjson/png.js' %}"></script>
+<script src="{% static 'gjson/batasinapng.js' %}"></script>
+<style>
+  body { background:#f1f5f9; font-family:'Segoe UI',sans-serif; font-size:0.85rem; color:#000; }
+  .navbar-top { background:#1e293b; padding:0.6rem 1rem; display:flex; align-items:center; justify-content:space-between; }
+  .navbar-top .brand { color:#fff; font-weight:700; font-size:1rem; text-decoration:none; }
+  .formal-frame { background:#fff; border:2.5px solid #000; padding:20px; width:100%; }
+  .header-grid { display:grid; grid-template-columns:220px 1fr 80px; align-items:center; border-bottom:2.5px solid #000; padding-bottom:12px; margin-bottom:12px; gap:15px; }
+  .title-box { text-align:center; }
+  .t-main { font-weight:900; font-size:1.2rem; text-transform:uppercase; line-height:1.1; display:block; }
+  .t-sub  { font-weight:400; font-style:italic; font-size:0.9rem; margin-top:4px; display:block; color:#333; }
+  
+  /* --- STRUKTUR ABSOLUT BARU (DIJAMIN TIDAK TERPOTONG/HILANG) --- */
+  .map-wrapper {
+    position: relative;
+    height: 640px;
+    width: 100%;
+    min-height: 320px;
+    min-width: 360px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    background: #fff;
+    overflow: hidden; /* Mencegah elemen keluar dari box utama */
+  }
+
+  
+  #map { 
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1; /* Peta ada di bawah */
+  }
+  
+  #gridCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 999; /* Canvas HANYA ADA DI ATAS peta */
+    pointer-events: none; /* Klik tembus ke peta */
+  }
+  
+  /* Geser tombol Zoom (+/-) Leaflet ke dalam area peta aktif */
+  .leaflet-top { top: 45px !important; }
+  .leaflet-left { left: 45px !important; }
+  .leaflet-bottom { bottom: 45px !important; }
+  .leaflet-right { right: 45px !important; }
+
+  .legend-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; border:2px solid #000; border-top:none; background:#fff; }
+  .legend-box { border-right:1px solid #000; padding:6px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:0.75rem; }
+  .legend-box:last-child { border-right:none; }
+  .legend-t { font-weight:bold; font-size:0.65rem; border-bottom:1px solid #000; width:100%; margin-bottom:6px; text-transform:uppercase; padding-bottom:2px; display:block; }
+  .stat-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; }
+  .stat-card .label { font-size:0.7rem; text-transform:uppercase; color:#64748b; font-weight:600; }
+  .stat-card .value { font-size:1.6rem; font-weight:800; line-height:1; }
+  .src-badge { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; }
+  .chart-wrap { height:220px; position:relative; }
+  .tab-content { display:block !important; }
+  .tab-pane { display:none; }
+  .tab-pane.show { display:block; }
+  .shp-label { background:transparent; border:none; box-shadow:none; font-size:9px; font-weight:bold; color:#1e293b; }
+  @media print {
+    .no-print { display:none !important; }
+    body { background:#fff; }
+    .formal-frame { border:none; }
+  }
+  .shakemap-gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; margin-top:16px; } .shakemap-card { background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.12); overflow:hidden; } .shakemap-card img { width:100%; height:auto; display:block; } .shakemap-card .info { padding:8px 10px; font-size:0.72rem; color:#475569; } .shakemap-empty { text-align:center; color:#94a3b8; padding:20px; } 
+  .lightbox-modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,.92); cursor:zoom-out; }
+  .lightbox-modal img { max-width:95vw; max-height:95vh; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); object-fit:contain; border-radius:4px; }
+  .lightbox-modal .close-btn { position:absolute; top:20px; right:30px; color:#fff; font-size:36px; cursor:pointer; z-index:10000; }
+  .lightbox-modal .caption { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); color:#fff; font-size:14px; text-align:center; }
+  .lightbox-card { cursor:zoom-in; }
+  .lightbox-card:hover { opacity:.9; }
+  /* ── Night mode ─────────────────────────────────────────── */
+  body.night-mode { background:#0f172a; color:#e2e8f0; }
+  body.night-mode .navbar-top { background:#0b1220; }
+  body.night-mode .formal-frame { background:#0f172a; border-color:#334155; }
+  body.night-mode .stat-card { background:#1e293b; border-color:#334155; color:#e2e8f0; }
+  body.night-mode .stat-card .label { color:#94a3b8; }
+  body.night-mode .legend-grid { background:#1e293b; border-color:#334155; }
+  body.night-mode .legend-box { border-color:#334155; }
+  body.night-mode .legend-t { border-color:#334155; }
+  body.night-mode .table { background:#1e293b; color:#e2e8f0; }
+  body.night-mode .table td, body.night-mode .table th { background:transparent; color:#e2e8f0; border-color:#334155; }
+  body.night-mode .nav-pills .nav-link { color:#cbd5e1; }
+  body.night-mode .nav-pills .nav-link.active { background:#334155; color:#fff; }
+  body.night-mode .text-muted { color:#94a3b8 !important; }
+  body.night-mode .form-control, body.night-mode .form-select { background:#1e293b; color:#e2e8f0; border-color:#334155; }
+  body.night-mode .shakemap-card { background:#1e293b; color:#e2e8f0; }
+  body.night-mode .shakemap-card .info { color:#94a3b8; }
+  body.night-mode h1, body.night-mode h2, body.night-mode h3, body.night-mode h4, body.night-mode h5, body.night-mode h6 { color:#f1f5f9; }
+  body.night-mode .modal-content { background:#1e293b; color:#e2e8f0; }
+</style>
+<script src="{% static 'js/shakemap_gallery.js' %}"></script>
+</head>
+<body>
+
+<div class="navbar-top no-print">
+  <a class="brand" href="/gempa-admin/"><i class="bi bi-arrow-left me-2"></i>Admin</a>
+  <span class="text-white fw-bold">Laporan Bulanan Gempabumi</span>
+  <div class="d-flex gap-2">
+    <button type="button" id="nightModeBtn" class="btn btn-sm btn-outline-light" onclick="toggleNightMode()"><i class="bi bi-moon-stars me-1"></i>Night Mode</button>
+    <button onclick="window.print()" class="btn btn-sm btn-outline-light"><i class="bi bi-printer me-1"></i>Cetak PDF</button>
+  </div>
+</div>
+
+<div class="container-fluid py-3 px-3">
+
+  <form method="get" class="d-flex align-items-center gap-2 mb-3 no-print">
+    <label style="font-size:13px;color:#fff;font-weight:600">Dari</label>
+    <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm" style="width:160px;">
+    <label style="font-size:13px;color:#fff;font-weight:600">Sampai</label>
+    <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm" style="width:160px;">
+    <select name="source" class="form-select form-select-sm" style="width:130px;">
+      <option value="JAY"{% if source == "JAY" %} selected{% endif %}>JAY</option>
+      <option value="NBPI"{% if source == "NBPI" %} selected{% endif %}>NBPI</option>
+      <option value="PGR5"{% if source == "PGR5" %} selected{% endif %}>PGR5</option>
+      <option value="SWI"{% if source == "SWI" %} selected{% endif %}>SWI</option>
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Tampilkan</button>
+    <span class="fw-bold text-muted">Laporan Gempabumi {{ date_from }} s.d {{ date_to }}</span>
+  </form>
+
+  <ul class="nav nav-pills mb-3 no-print" id="reportTabs">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pane-map" id="tab-map-btn">
+        <i class="bi bi-geo me-1"></i>Peta Seismisitas
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-stats" id="tab-stats-btn">
+        <i class="bi bi-bar-chart me-1"></i>Statistik & Rekap
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-table" id="tab-table-btn">
+        <i class="bi bi-table me-1"></i>Daftar Kejadian
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+
+    <div class="tab-pane fade show active" id="pane-map">
+      <div class="row">
+        <div class="col-lg-3 mb-3 no-print">
+          <div class="stat-card">
+            <h6 class="fw-bold border-bottom pb-2 mb-3">Overlay</h6>
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label small mb-0" for="mapHeightRange">Tinggi Peta</label>
+                    <span class="small text-muted" id="mapHeightLabel">640 px</span>
+                  </div>
+                  <input type="range" class="form-range" id="mapHeightRange" min="320" max="1400" step="20" value="640" oninput="changeMapHeight(this.value)">
+                </div>
+                <div class="form-check mb-1">
+                  <input class="form-check-input" type="checkbox" id="swFaults" checked onchange="toggleLayer('faults')">
+                  <label class="form-check-label" for="swFaults">Patahan / Sesar</label>
+                </div>
+                <div class="form-check mb-1">
+                  <input class="form-check-input" type="checkbox" id="swSlab" checked onchange="toggleLayer('slab')">
+                  <label class="form-check-label" for="swSlab">Slab (Subduksi Depth)</label>
+                </div>
+                <div class="form-check mb-1">
+                  <input class="form-check-input" type="checkbox" id="swFelt" onchange="refreshMarkers()">
+                  <label class="form-check-label" for="swFelt">Hanya Dirasakan</label>
+                </div>
+                <div class="form-check mb-1">
+                  <input class="form-check-input" type="checkbox" id="swStarFelt" checked onchange="toggleFeltStars()">
+                  <label class="form-check-label" for="swStarFelt"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="#FF0000" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Gempa Dirasakan</label>
+                  <input type="color" id="feltColor" value="#FF0000" title="Warna icon" class="p-0 border-0 rounded ms-1" style="width:20px;height:18px;cursor:pointer;vertical-align:middle;" onchange="updateFeltColor()">
+                </div>
+
+            <h6 class="fw-bold border-bottom pb-2 mb-2">Kab/Kota</h6>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+              <input class="form-check-input m-0" type="checkbox" id="swKabupaten" onchange="toggleShpLayer()">
+              <label class="small mb-0" for="swKabupaten">Tampilkan</label>
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+              <label class="small mb-0 text-muted">Isi</label>
+              <input type="color" id="fillKabupaten" value="#3182ce" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
+              <label class="small mb-0 text-muted">Garis</label>
+              <input type="color" id="outlineKabupaten" value="#1e40af" title="Warna garis" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updateShpStyle()">
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <label class="small mb-0 text-muted">Opacity</label>
+              <input type="range" id="opacityKabupaten" min="0" max="100" value="20" style="width:70px;" oninput="updateShpStyle(); document.getElementById('opacityVal').textContent=this.value+'%'">
+              <span class="small text-muted" id="opacityVal">20%</span>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="swShpLabel" onchange="toggleShpLabels()">
+              <label class="form-check-label small" for="swShpLabel">Label nama</label>
+            </div>
+
+            <h6 class="fw-bold border-bottom pb-2 mb-2">Papua Nugini</h6>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+              <label class="small mb-0 text-muted">Isi</label>
+              <input type="color" id="fillPng" value="#0aa53e" title="Warna isi" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updatePngStyle()">
+              <label class="small mb-0 text-muted">Garis</label>
+              <input type="color" id="outlinePng" value="#d31b1b" title="Warna garis" class="p-0 border-0 rounded" style="width:22px;height:20px;cursor:pointer;" oninput="updatePngStyle()">
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <label class="small mb-0 text-muted">Opacity</label>
+              <input type="range" id="opacityPng" min="0" max="100" value="25" style="width:70px;" oninput="updatePngStyle(); document.getElementById('opacityPngVal').textContent=this.value+'%'">
+              <span class="small text-muted" id="opacityPngVal">25%</span>
+            </div>
+
+            <h6 class="fw-bold border-bottom pb-2 mb-2">Basemap</h6>
+            <select id="selBasemap" class="form-select form-select-sm mb-2" onchange="changeBasemap()">
+              <option value="ocean">🌊 Ocean (Default)</option>
+              <option value="topo">🏔️ Topography</option>
+              <option value="street">🗺️ Street</option>
+              <option value="imagery">🛰️ Imagery</option>
+              <option value="osm">🌍 OpenStreetMap</option>
+              <option value="opentopo">⛰️ OpenTopoMap</option>
+              <option value="terrain">⛰️ Terrain</option>
+              <option value="cartolight">🗺️ Carto Light</option>
+              <option value="cartodark">🌙 Carto Dark</option>
+              <option value="hot">🔥 HOT</option>
+            </select>
+
+            <h6 class="fw-bold border-bottom pb-2 mb-2">Parameter Cetak</h6>
+            <label class="form-label small">Judul</label>
+            <input type="text" id="inTitle" class="form-control form-control-sm mb-2" value="PETA SEISMISITAS" oninput="updatePrintTitle()">
+            <label class="form-label small">Periode</label>
+            <input type="text" id="inPeriode" class="form-control form-control-sm mb-2" value="{{ formatted_bulan }}" oninput="updatePrintTitle()">
+          </div>
+        </div>
+
+        <div class="col-lg-9">
+          <div class="formal-frame shadow-sm">
+            <div class="header-grid">
+              <div style="text-align:center;">
+                <img src="{% static 'repository/images/logo-bmkg.png' %}" style="height:65px;display:block;margin:0 auto;">
+                <div style="font-size:0.55rem;line-height:1.2;font-weight:700;color:#333;margin-top:4px;white-space:nowrap;">BADAN METEOROLOGI KLIMATOLOGI DAN GEOFISIKA</div>
+              </div>
+              <div class="title-box">
+                <span id="outTitle" class="t-main">PETA SEISMISITAS PAPUA DAN SEKITARNYA</span>
+                <span id="outPeriode" class="t-sub">PERIODE {{ formatted_bulan }}</span>
+                <div style="font-size:0.6rem;font-weight:700;color:#555;margin-bottom:2px;">Skala</div>
+                <div id="scaleCont" class="d-flex justify-content-center" style="font-size:11px;"></div>
+              </div>
+              <div class="text-end">
+                <img src="{% static 'repository/images/north-arrow-2.jpg' %}" style="height:70px;width:auto;" alt="North Arrow">
+              </div>
+            </div>
+            
+            <div class="map-wrapper" id="mapWrapperBox">
+              <div id="map"></div>
+              <canvas id="gridCanvas"></canvas>
+            </div>
+            
+            <div class="legend-grid" style="grid-template-columns:auto 1fr 1fr 1fr;">
+              <div class="legend-box">
+                <img src="{% static 'repository/images/legenda.png' %}" style="max-height:160px;width:auto;" alt="Legenda">
+              </div>
+              <div class="legend-box">
+                <img src="{% static 'repository/images/keterangan-slab.png' %}" style="max-height:160px;width:auto;" alt="Slab">
+              </div>
+              <div class="legend-box">
+                <span class="legend-t">Sumber Data</span>
+                <div style="font-size:0.5rem;line-height:1.15;text-align:left;padding:1px 0;">
+                  <strong>Data Analisis Seiscomp</strong> <span id="uptSumber" style="font-weight:600;">{{ upt_name }}</span><br>
+                  <strong>Batas Lempeng Tektonik</strong> Peter Bird, 2003, An updated digital model of plate boundaries, G3<br>
+                  <strong>Data Patahan</strong> Pusat Survey Geologi (PSG) Bandung<br>
+                  <strong>Slab</strong> Hayes, G., 2018, Slab2 - A Comprehensive Subduction Zone Geometry Model: U.S. Geological Survey<br>
+                  <strong>Garis Pantai Indonesia 2021</strong> Badan Informasi Geospasial (BIG)<br>
+                  <strong>Batas Negara 2017, Wilayah Administrasi Provinsi 2021</strong> Badan Informasi Geospasial (BIG)<br>
+                  <strong>Peta Dasar</strong> Esri, GEBCO, NOAA, National Geographic, DeLorme, HERE, Geonames.org<br>
+                  <br><span id="tahunDibuat" style="font-weight:700;display:block;text-align:center;font-size:0.5rem;"></span>
+                </div>
+              </div>
+              <div class="legend-box" style="padding:4px;">
+                <div id="insetMap" style="width:100%;height:130px;border-radius:3px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="pane-stats">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="stat-card">
+            <h6 class="fw-bold border-bottom pb-2 mb-3">Distribusi Magnitudo</h6>
+            <div class="row g-1">
+              <div class="col-6"><div class="chart-wrap"><canvas id="cMB"></canvas></div></div>
+              <div class="col-6"><div class="chart-wrap"><canvas id="cMP"></canvas></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="stat-card">
+            <h6 class="fw-bold border-bottom pb-2 mb-3">Distribusi Kedalaman</h6>
+            <div class="row g-1">
+              <div class="col-6"><div class="chart-wrap"><canvas id="cDB"></canvas></div></div>
+              <div class="col-6"><div class="chart-wrap"><canvas id="cDP"></canvas></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="d-flex justify-content-center align-items-center gap-3 py-2">
+            <label class="small fw-bold text-muted mb-0" style="font-size:12px;letter-spacing:.04em;text-transform:uppercase;">Color Scheme</label>
+            <select id="colorSchemeSelect" class="form-select form-select-sm" style="width:auto;min-width:200px;" onchange="applyColorScheme()">
+              <option value="semaphore">Semaphore (Hijau-Kuning-Merah)</option>
+              <option value="viridis">Viridis</option>
+              <option value="plasma">Plasma</option>
+              <option value="cool">Cool (Biru-Ungu)</option>
+              <option value="warm">Warm (Merah-Jingga)</option>
+              <option value="rainbow">Rainbow</option>
+              <option value="magma">Magma</option>
+              <option value="inferno">Inferno</option>
+              <option value="cividis">Cividis (Colorblind-friendly)</option>
+              <option value="ocean">Ocean (Biru)</option>
+              <option value="sunset">Sunset (Jingga-Ungu)</option>
+              <option value="forest">Forest (Hijau)</option>
+              <option value="pastel">Pastel (Soft)</option>
+              <option value="neon">Neon (Terang)</option>
+              <option value="monoBlue">Mono Blue</option>
+              <option value="burgundy">Burgundy (Merah Tua)</option>
+              <option value="teal">Teal (Hijau Kebiruan)</option>
+              <option value="amber">Amber (Kuning Tua)</option>
+              <option value="lavender">Lavender (Ungu Muda)</option>
+              <option value="mint">Mint (Hijau Segar)</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="d-flex justify-content-center gap-4 py-2 flex-wrap">
+            <span><strong>Total Gempa:</strong> {{ all_events|length|default:"0" }}</span>
+            <span><strong>Dirasakan:</strong> {{ felt_count }}</span>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="row g-3">
+            <div class="col-lg-6">
+              <div class="stat-card h-100">
+                <h6 class="fw-bold border-bottom pb-2 mb-3">Frekuensi Kejadian Harian</h6>
+                <div class="table-responsive">
+                  <table class="table table-bordered table-sm text-center align-middle" style="font-size:0.78rem;background:white;">
+                    <thead class="table-light">
+                      <tr>
+                        <th rowspan="2" style="background:#e2e8f0;width:30px;">No</th>
+                        <th rowspan="2" style="background:#e2e8f0;width:62px;">Tanggal</th>
+                        <th rowspan="2" style="background:#e2e8f0;width:36px;">Tot</th>
+                        <th colspan="3" style="background:#dbeafe;">Magnitudo</th>
+                        <th colspan="3" style="background:#fee2e2;">Kedalaman (km)</th>
+                      </tr>
+                      <tr>
+                        <th style="background:#dbeafe;color:#16a34a;width:38px;">M&lt;3</th>
+                        <th style="background:#dbeafe;color:#ca8a04;width:44px;">3-5</th>
+                        <th style="background:#dbeafe;color:#dc2626;width:38px;">≥5</th>
+                        <th style="background:#fee2e2;color:#dc2626;width:38px;">&lt;60</th>
+                        <th style="background:#fee2e2;color:#ca8a04;width:44px;">60-300</th>
+                        <th style="background:#fee2e2;color:#16a34a;width:38px;">&gt;300</th>
+                      </tr>
+                    </thead>
+                    <tbody id="freqTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="stat-card h-100">
+                <h6 class="fw-bold border-bottom pb-2 mb-3">Tabel Gempa Dirasakan</h6>
+                <div class="table-responsive" style="max-height:240px;overflow-y:auto;">
+                  <table class="table table-bordered table-sm text-center align-middle" style="font-size:0.7rem;">
+                    <thead class="table-secondary" style="position:sticky;top:0;">
+                      <tr><th>No</th><th>Waktu Kejadian (UTC)</th><th>Lintang</th><th>Bujur</th><th>Mag</th><th>Kedalaman (km)</th><th>Keterangan / Lokasi</th><th>Intensitas (MMI)</th></tr>
+                    </thead>
+                    <tbody id="feltTableBody"></tbody>
+                  </table>
+                </div>
+                <h6 class="fw-bold border-bottom pb-2 mt-4 mb-3">Galeri Peta Intensitas (Shakemap)</h6>
+                <div class="shakemap-gallery" id="shakemapGallery">
+                  <div class="shakemap-empty">Memuat gambar shakemap...</div>
+                </div>
+                <div class="d-none">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="pane-table">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+          <h6 class="fw-bold mb-0">Daftar Kejadian Gempabumi – {{ formatted_bulan }}</h6>
+          <div class="d-flex gap-2 align-items-center no-print">
+            <span class="badge bg-secondary align-self-center" id="evCountBadge"></span>
+            <button class="btn btn-sm btn-outline-success" onclick="exportCSV()"><i class="bi bi-download me-1"></i>Export CSV</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm text-center align-middle" style="font-size:0.78rem;">
+            <thead class="table-dark">
+              <tr>
+                <th>#</th><th>Tanggal</th><th>Waktu (UTC)</th>
+                <th>Lintang</th><th>Bujur</th><th>Mag</th><th>Kedalaman (km)</th>
+                <th>Keterangan</th><th>Dirasakan</th>
+              </tr>
+            </thead>
+            <tbody id="eventsTableBody"></tbody>
+          </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-2 no-print">
+          <span class="small text-muted" id="evPageInfo"></span>
+          <div class="d-flex gap-1 align-items-center">
+            <button class="btn btn-sm btn-outline-secondary" id="evPrevBtn" onclick="evChangePage(-1)">‹ Prev</button>
+            <span class="small" id="evPageNum"></span>
+            <button class="btn btn-sm btn-outline-secondary" id="evNextBtn" onclick="evChangePage(1)">Next ›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div></div><script>
+Chart.register(ChartDataLabels);
+
+const ALL_EVENTS      = {{ all_events|safe }};
+const FELT_EVENTS     = {{ dirasakan_events|safe }};
+
+// ── MAP ────────────────────────────────────────────────────────────────────
+let mapInstance = null, baseLayer, markersLayer, faultsLayer, subduksiLayer, slabLayer;
+let feltStarsLayer = null;
+
+var feltColor = '#FF0000';
+function _makeStarIcon(c) {
+  return L.divIcon({
+    html: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="' + c + '" stroke="#000" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+    className: 'star-marker', iconSize: [22, 22], iconAnchor: [11, 11]
+  });
+}
+var starIcon = _makeStarIcon(feltColor);
+
+const BASEMAPS = {
+  ocean:   'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+  topo:    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+  street:  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  imagery: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  osm:     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  opentopo: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  terrain:  'https://{s}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=69e9628c9dff4ee8be9da68a543fbca6',
+  cartolight: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  cartodark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  hot:        'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+};
+
+const shpData = { data: null, layer: null };
+
+function _shpStyle() {
+  const fill    = document.getElementById('fillKabupaten').value;
+  const outline = document.getElementById('outlineKabupaten').value;
+  const opacity = parseInt(document.getElementById('opacityKabupaten').value) / 100;
+  return { color: outline, weight: 1, fillColor: fill, fillOpacity: opacity, opacity: 0.9 };
+}
+
+function _buildShpLayer() {
+  const showLabel = document.getElementById('swShpLabel').checked;
+  return L.geoJSON(shpData.data, {
+    pane: 'pKabupaten',
+    style: _shpStyle(),
+    onEachFeature: function(feature, layer) {
+      const name = feature.properties['KAB_KOTA'] || feature.properties['KABKOTA'] || feature.properties['name'] || '';
+      layer.bindTooltip(name, { permanent: showLabel, sticky: !showLabel, className: 'shp-label', direction: 'center' });
+    }
+  });
+}
+
+async function toggleShpLayer() {
+  if (!mapInstance) return;
+  const checked = document.getElementById('swKabupaten').checked;
+  if (checked) {
+    if (!shpData.data) {
+      try {
+        const res = await fetch('{% static 'repository/js/batas_kabupaten_indo.geojson' %}');
+        shpData.data = await res.json();
+      } catch(e) { console.error('Failed to load kabupaten', e); return; }
+    }
+    if (shpData.layer) mapInstance.removeLayer(shpData.layer);
+    shpData.layer = _buildShpLayer().addTo(mapInstance);
+  } else {
+    if (shpData.layer) { mapInstance.removeLayer(shpData.layer); shpData.layer = null; }
+  }
+}
+
+function updateShpStyle() {
+  if (shpData.layer) shpData.layer.setStyle(_shpStyle());
+}
+
+function toggleShpLabels() {
+  if (shpData.layer && shpData.data) {
+    mapInstance.removeLayer(shpData.layer);
+    shpData.layer = _buildShpLayer().addTo(mapInstance);
+  }
+}
+
+// ===================================================================================
+// FUNGSI UTAMA: GAMBAR OVERLAY GRID, LAYOUT FRAME, & LABEL TAHAN WORLD WRAP
+// ===================================================================================
+function drawOverlayGridLayout() {
+  if (!mapInstance) return;
+  var canvas = document.getElementById('gridCanvas');
+  var wrapper = document.getElementById('mapWrapperBox');
+  if (!canvas || !wrapper) return;
+  
+  // Sinkronisasi Ukuran Canvas dengan Map Wrapper
+  var rect = wrapper.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  var pad = 40; // Ruang Margin diperbesar agar teks bernapas nyaman
+  var padLeft = 60; // Padding kiri tambahan agar label lintang tidak terpotong
+  var thick = 8; // Ketebalan Checkered Border
+  var GRID_STEP = 2; // Interval derajat garis & label grid (ubah ke 1, 2, atau 5)
+  
+  var bounds = mapInstance.getBounds();
+  var center = mapInstance.getCenter();
+  var sw = bounds.getSouthWest();
+  var ne = bounds.getNorthEast();
+  
+  var latMin = Math.floor(sw.lat);
+  var latMax = Math.ceil(ne.lat);
+  var lngMin = Math.floor(sw.lng);
+  var lngMax = Math.ceil(ne.lng);
+  
+  // 1. Gambar Bingkai Putih Kertas (Masking untuk menutup Basemap yang meluber)
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, pad);                               // Atas
+  ctx.fillRect(0, canvas.height - pad, canvas.width, pad);             // Bawah
+  ctx.fillRect(0, 0, padLeft, canvas.height);                              // Kiri
+  ctx.fillRect(canvas.width - pad, 0, pad, canvas.height);             // Kanan
+  
+  // 2. Gambar Border Checkered Segmen Hitam-Putih
+  var blockLen = 15;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  
+  // Sisi Horizontal
+  for (var x = padLeft; x < canvas.width - pad; x += blockLen) {
+    var w = Math.min(blockLen, (canvas.width - pad) - x);
+    ctx.fillStyle = (Math.floor((x - pad) / blockLen) % 2 === 0) ? '#000000' : '#ffffff';
+    
+    // Atas
+    ctx.fillRect(x, pad - thick, w, thick);
+    ctx.strokeRect(x, pad - thick, w, thick);
+    // Bawah
+    ctx.fillRect(x, canvas.height - pad, w, thick);
+    ctx.strokeRect(x, canvas.height - pad, w, thick);
+  }
+  
+  // Sisi Vertikal
+  for (var y = pad; y < canvas.height - pad; y += blockLen) {
+    var h = Math.min(blockLen, (canvas.height - pad) - y);
+    ctx.fillStyle = (Math.floor((y - pad) / blockLen) % 2 === 0) ? '#000000' : '#ffffff';
+    
+    // Kiri
+    ctx.fillRect(padLeft - thick, y, thick, h);
+    ctx.strokeRect(padLeft - thick, y, thick, h);
+    // Kanan
+    ctx.fillRect(canvas.width - pad, y, thick, h);
+    ctx.strokeRect(canvas.width - pad, y, thick, h);
+  }
+  
+  // 3. Grid Garis dan Label Derajat (EKSKLUSIF KIRI DAN ATAS)
+  ctx.font = 'bold 11px Arial, sans-serif';
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  
+  // LINTANG (Horizontal Lines, KIRI Labels)
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (var lat = Math.ceil(latMin / GRID_STEP) * GRID_STEP; lat <= latMax; lat += GRID_STEP) {
+    // Proyeksi berdasarkan center longitude agar aman dari world wrap off-screen
+    var point = mapInstance.latLngToContainerPoint([lat, center.lng]);
+    var y = Math.round(point.y);
+    
+    if (y > pad && y < canvas.height - pad) {
+      // Garis putus-putus
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(canvas.width - pad, y);
+      ctx.stroke();
+      
+      // Label Koordinat KIRI
+      var latLabel = Math.abs(lat) + '° ' + (lat > 0 ? 'LU' : lat < 0 ? 'LS' : '');
+      ctx.fillText(latLabel, padLeft - thick - 6, y);
+    }
+  }
+  
+  // BUJUR (Vertical Lines, ATAS Labels)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  for (var lng = Math.ceil(lngMin / GRID_STEP) * GRID_STEP; lng <= lngMax; lng += GRID_STEP) {
+    // Proyeksi berdasarkan center latitude agar aman dari world wrap
+    var point = mapInstance.latLngToContainerPoint([center.lat, lng]);
+    var x = Math.round(point.x);
+    
+    if (x > pad && x < canvas.width - pad) {
+      // Garis putus-putus
+      ctx.beginPath();
+      ctx.moveTo(x, pad);
+      ctx.lineTo(x, canvas.height - pad);
+      ctx.stroke();
+      
+      // Label Koordinat ATAS
+      var normLng = lng % 360;
+      if (normLng < -180) normLng += 360;
+      if (normLng > 180) normLng -= 360;
+      var lngLabel = Math.abs(normLng) + '° ' + (normLng >= 0 ? 'BT' : 'BB');
+      
+      ctx.fillText(lngLabel, x, pad - thick - 6);
+    }
+  }
+  
+  ctx.setLineDash([]);
+}
+
+function initMap() {
+  if (mapInstance) { mapInstance.invalidateSize(); return; }
+  
+  mapInstance = L.map('map', { 
+    zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2,
+    zoomControl: false // Kita disable default, panggil manual agar styling top-left teraplikasi
+  }).setView([-2.5, 137.5], 5.5);
+
+  L.control.zoom({ position: 'topleft' }).addTo(mapInstance);
+
+  mapInstance.createPane('pKabupaten'); mapInstance.getPane('pKabupaten').style.zIndex = 260;
+  mapInstance.createPane('pFaults');    mapInstance.getPane('pFaults').style.zIndex    = 270;
+  mapInstance.createPane('pSubduksi');  mapInstance.getPane('pSubduksi').style.zIndex  = 280;
+  mapInstance.createPane('pEvents');    mapInstance.getPane('pEvents').style.zIndex    = 500;
+
+  baseLayer = L.tileLayer(BASEMAPS.ocean, { attribution: 'Tiles &copy; Esri' });
+  baseLayer.addTo(mapInstance);
+  if (document.body.classList.contains('night-mode') && typeof changeBasemap === 'function') changeBasemap();
+
+  // Daftarkan listener pergerakan peta untuk sinkronisasi render Canvas Absolute
+  mapInstance.on('move moveend zoom zoomend resize viewreset', drawOverlayGridLayout);
+  setTimeout(drawOverlayGridLayout, 200);
+
+  if (typeof indoFaults !== 'undefined') {
+    faultsLayer = L.layerGroup().addTo(mapInstance);
+    L.geoJSON(indoFaults, { pane: 'pFaults', style: { color:'#000', weight:0.8, opacity:0.7 }}).addTo(faultsLayer);
+  }
+  if (typeof subduksi !== 'undefined') {
+    subduksiLayer = L.layerGroup().addTo(mapInstance);
+    L.geoJSON(subduksi, { pane: 'pSubduksi', style: { color:'#8b5cf6', weight:1.5, opacity:0.8, dashArray:'4,3' }}).addTo(subduksiLayer);
+  }
+  initPngLayers();
+
+  var statsDiv = L.control({ position: 'bottomleft' });
+  statsDiv.onAdd = function() {
+    var div = L.DomUtil.create('div');
+    div.style.cssText = "background:rgba(255,255,255,.88);border:1px solid #ccc;border-radius:4px;padding:6px 10px;font-size:11px;line-height:1.5;box-shadow:0 1px 4px rgba(0,0,0,.15);margin-bottom:4px;";
+    var allData = JSON.parse('{{ all_events|safe }}' || '[]');
+    var total = allData.length;
+    var magLt3 = allData.filter(function(e){ return e.mag < 3; }).length;
+    var mag35 = allData.filter(function(e){ return e.mag >= 3 && e.mag < 5; }).length;
+    var magGe5 = allData.filter(function(e){ return e.mag >= 5; }).length;
+    var felt = {{ felt_count }};
+    div.innerHTML = "<strong>Total Gempa:</strong> " + total + " | <strong>M&lt;3:</strong> " + magLt3 + " <strong>3-5:</strong> " + mag35 + " <strong>M≥5:</strong> " + magGe5 + " | <strong>Dirasakan:</strong> " + felt;
+    return div;
+  };
+  statsDiv.addTo(mapInstance);
+  document.getElementById("tahunDibuat").textContent = "Dibuat tahun " + new Date().getFullYear();
+
+  var insetMap = L.map('insetMap', {
+    zoomControl: false,
+    attributionControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    touchZoom: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd',
+    attribution: ''
+  }).addTo(insetMap);
+  var insetRect = null;
+  function updateInsetMap() {
+    if (insetRect) insetMap.removeLayer(insetRect);
+    insetRect = L.rectangle(mapInstance.getBounds(), { color: '#e74c3c', weight: 2, fill: false }).addTo(insetMap);
+    insetMap.fitBounds(insetRect.getBounds(), { padding: [50, 50], maxZoom: 10 });
+  }
+  setTimeout(updateInsetMap, 200);
+  mapInstance.on('moveend', updateInsetMap);
+
+  markersLayer = L.layerGroup({ pane: 'pEvents' }).addTo(mapInstance);
+  feltStarsLayer = L.layerGroup({ pane: 'pEvents' }).addTo(mapInstance);
+
+  refreshMarkers();
+  loadFeltStars();
+
+  slabLayer = L.layerGroup().addTo(mapInstance);
+  var slabColors = [[0,20,'rgb(245,0,0)'],[20,40,'rgb(250,75,0)'],[40,60,'rgb(252,118,0)'],[60,80,'rgb(253,160,0)'],[80,100,'rgb(250,160,0)'],[100,120,'rgb(245,245,0)'],[120,200,'rgb(210,247,0)'],[200,300,'rgb(169,247,0)'],[300,400,'rgb(128,247,0)'],[400,500,'rgb(86,247,0)'],[500,660,'rgb(0,245,0)']];
+  fetch('{% static 'repository/js/slab_indonesia_usgs.json' %}')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data) L.geoJSON(data, { style: function(f) {
+        var d = f.properties.DEPTH || 0; var c = 'transparent';
+        for (var r of slabColors) { if (d >= r[0] && d <= r[1]) { c = r[2]; break; } }
+        return { color: c, weight: 1.5, opacity: 0.8, fillOpacity: 0 };
+      }}).addTo(slabLayer);
+    })
+    .catch(function(){ if(slabLayer){ mapInstance.removeLayer(slabLayer); slabLayer = null; } });
+
+  var sc = L.control.scale({ imperial: false, metric: true, position: 'bottomright' });
+  sc.addTo(mapInstance);
+  var scContainer = document.getElementById('scaleCont');
+  if (scContainer) scContainer.appendChild(sc.getContainer());
+}
+
+function changeMapHeight(val) {
+  var wrapper = document.querySelector(".map-wrapper");
+  if (wrapper) { wrapper.style.height = val + "px"; }
+  document.getElementById("mapHeightLabel").textContent = val + "px";
+  if (mapInstance) { setTimeout(function(){ mapInstance.invalidateSize(); drawOverlayGridLayout(); }, 50); }
+}
+
+function changeMapWidth(val) {
+  var wrapper = document.querySelector(".map-wrapper");
+  if (wrapper) wrapper.style.width = val + '%';
+  document.getElementById("mapWidthLabel").textContent = val + "%";
+  if (mapInstance) setTimeout(function(){ mapInstance.invalidateSize(); drawOverlayGridLayout(); }, 50);
+}
+
+
+var pngLayer = null, batasInaLayer = null;
+function initPngLayers() {
+  if (typeof png !== "undefined" && !pngLayer) {
+    pngLayer = L.geoJSON(png, { style: _pngStyle() });
+    pngLayer.addTo(mapInstance);
+  }
+  if (typeof GarisPantaiPapua !== "undefined" && !window._coastLayer) {
+    window._coastLayer = L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } });
+    window._coastLayer.addTo(mapInstance);
+  }
+  if (typeof batasInapng !== "undefined" && !batasInaLayer) {
+    batasInaLayer = L.geoJSON(batasInapng, { style: _batasInaStyle() });
+    batasInaLayer.addTo(mapInstance);
+  }
+}
+function _pngStyle() {
+  var fill = document.getElementById("fillPng").value;
+  var opacity = parseInt(document.getElementById("opacityPng").value) / 100;
+  return { fillColor: fill, weight: 1, color: fill, fillOpacity: opacity };
+}
+function _batasInaStyle() {
+  var outline = document.getElementById("outlinePng").value;
+  return { color: outline, weight: 1.5, fillOpacity: 0 };
+}
+function updatePngStyle() {
+  if (pngLayer) pngLayer.setStyle(_pngStyle());
+  if (batasInaLayer) batasInaLayer.setStyle(_batasInaStyle());
+}
+
+var SOURCE_UPT = {
+  'JAY': 'STASIUN GEOFISIKA JAYAPURA',
+  'NBPI': 'STASIUN GEOFISIKA NABIRE',
+  'PGR5': 'PUSAT GEMPABUMI REGIONAL V',
+  'SWI': 'STASIUN GEOFISIKA SORONG'
+};
+function updateUptFromSource(val) {
+  var uptName = SOURCE_UPT[val] || '{{ upt_name }}';
+  var inp = document.getElementById('inUPT');
+  var disp = document.getElementById('uptDisplay');
+  var sum = document.getElementById('uptSumber');
+  if (inp) inp.value = uptName;
+  if (disp) disp.textContent = uptName;
+  if (sum) sum.textContent = uptName;
+}
+var sourceSelect = document.querySelector('select[name="source"]');
+if (sourceSelect) {
+  sourceSelect.addEventListener('change', function() {
+    updateUptFromSource(this.value);
+  });
+}
+document.addEventListener('DOMContentLoaded', function() {
+  if (sourceSelect) updateUptFromSource(sourceSelect.value);
+});
+
+function changeBasemap() {
+  if (!mapInstance) return;
+  mapInstance.removeLayer(baseLayer);
+  const key = document.getElementById('selBasemap').value;
+  baseLayer = L.tileLayer(BASEMAPS[key] || BASEMAPS.ocean, { attribution: '&copy; Esri / OSM' });
+  baseLayer.addTo(mapInstance);
+}
+
+function toggleLayer(which) {
+  if (!mapInstance) return;
+  if (which === 'faults' && faultsLayer) {
+    document.getElementById('swFaults').checked ? mapInstance.addLayer(faultsLayer) : mapInstance.removeLayer(faultsLayer);
+  }
+  if (which === 'subduksi' && subduksiLayer) {
+    document.getElementById('swSubduksi').checked ? mapInstance.addLayer(subduksiLayer) : mapInstance.removeLayer(subduksiLayer);
+  }
+  if (which === 'slab' && slabLayer) {
+    document.getElementById('swSlab').checked ? mapInstance.addLayer(slabLayer) : mapInstance.removeLayer(slabLayer);
+  }
+}
+
+function refreshMarkers() {
+  if (!mapInstance || !markersLayer) return;
+  markersLayer.clearLayers();
+  const feltOnly = document.getElementById('swFelt')?.checked;
+  let total = 0, mge5 = 0, felt = 0;
+
+  ALL_EVENTS.forEach(ev => {
+    if (!ev.lat || !ev.lon || ev.depth === 0) return;
+    if (feltOnly && !ev.terasa) return;
+    total++;
+    if (ev.mag >= 5) mge5++;
+    if (ev.terasa) felt++;
+
+    const c = ev.depth <= 60 ? '#ff0000' : ev.depth <= 300 ? '#ffff00' : '#00cc00';
+    const r = ev.mag <= 5 ? 5 : ev.mag <= 7 ? 9 : 14;
+    const circle = L.circleMarker([ev.lat, ev.lon], {
+      pane: 'pEvents', radius: r, fillColor: c, color: '#333',
+      weight: 1, opacity: 1, fillOpacity: 0.85
+    }).bindPopup(
+      `<b>Integrasi</b> M${ev.mag}<br>${ev.tanggal} ${ev.origin} UTC<br>` +
+      `Lat: ${ev.lat.toFixed(3)}, Lon: ${ev.lon.toFixed(3)}<br>` +
+      `Kedalaman: ${ev.depth} km<br>${ev.ket || ''}`
+    );
+    markersLayer.addLayer(circle);
+  });
+
+  const eL = document.getElementById('legTotal');
+  const eM = document.getElementById('legMge5');
+  const eF = document.getElementById('legFelt');
+  if (eL) eL.textContent = total;
+  if (eM) eM.textContent = mge5;
+  if (eF) eF.textContent = FELT_EVENTS.filter(ev => ev.depth !== 0 && ev.lat && ev.lon).length;
+}
+
+function updateFeltColor() {
+  feltColor = document.getElementById('feltColor').value || '#FF0000';
+  starIcon = _makeStarIcon(feltColor);
+  feltStarsLayer.clearLayers();
+  loadFeltStars();
+}
+
+function loadFeltStars() {
+  if (!mapInstance || !feltStarsLayer) return;
+  feltStarsLayer.clearLayers();
+  FELT_EVENTS.forEach(ev => {
+    if (!ev.lat || !ev.lon || ev.depth === 0) return;
+    L.marker([ev.lat, ev.lon], { icon: starIcon, pane: 'pEvents' })
+      .bindPopup(
+        `<b>⭐ Dirasakan</b> M${ev.mag}<br>${ev.tanggal} ${ev.origin} UTC<br>` +
+        `${ev.wilayah}<br>${ev.dirasakan}`
+      )
+      .addTo(feltStarsLayer);
+  });
+}
+
+function toggleFeltStars() {
+  if (!mapInstance || !feltStarsLayer) return;
+  document.getElementById('swStarFelt').checked
+    ? mapInstance.addLayer(feltStarsLayer)
+    : mapInstance.removeLayer(feltStarsLayer);
+}
+
+function updatePrintTitle() {
+  document.getElementById('outTitle').textContent   = document.getElementById('inTitle').value   || 'PETA SEISMISITAS';
+  document.getElementById('outPeriode').textContent  = 'PERIODE ' + (document.getElementById('inPeriode').value  || '');
+  document.getElementById('uptDisplay').textContent  = document.getElementById('inUPT').value    || '{{ upt_name }}';
+  document.getElementById('uptSumber').textContent = document.getElementById('inUPT').value    || '{{ upt_name }}';
+}
+
+const COLOR_SCHEMES = {
+  semaphore: { mag: ['#22c55e', '#eab308', '#ef4444'], depth: ['#ef4444', '#eab308', '#22c55e'] },
+  viridis:   { mag: ['#440154', '#21918c', '#fde725'], depth: ['#fde725', '#21918c', '#440154'] },
+  plasma:    { mag: ['#0d0887', '#f48849', '#f0f921'], depth: ['#f0f921', '#f48849', '#0d0887'] },
+  cool:      { mag: ['#3b82f6', '#8b5cf6', '#ec4899'], depth: ['#ec4899', '#8b5cf6', '#3b82f6'] },
+  warm:      { mag: ['#f97316', '#eab308', '#ef4444'], depth: ['#ef4444', '#eab308', '#f97316'] },
+  rainbow:   { mag: ['#06b6d4', '#22c55e', '#ef4444'], depth: ['#ef4444', '#f59e0b', '#06b6d4'] },
+  magma:     { mag: ['#1a0b2e', '#b63679', '#fef0b4'], depth: ['#fef0b4', '#b63679', '#1a0b2e'] },
+  inferno:   { mag: ['#0c0a3e', '#bb3754', '#fcffa4'], depth: ['#fcffa4', '#bb3754', '#0c0a3e'] },
+  cividis:   { mag: ['#00204d', '#7a7c78', '#fefebf'], depth: ['#fefebf', '#7a7c78', '#00204d'] },
+  ocean:     { mag: ['#08306b', '#4292c6', '#deebf7'], depth: ['#deebf7', '#4292c6', '#08306b'] },
+  sunset:    { mag: ['#ffedd5', '#f97316', '#7c2d12'], depth: ['#7c2d12', '#f97316', '#ffedd5'] },
+  forest:    { mag: ['#ecfdf5', '#22c55e', '#14532d'], depth: ['#14532d', '#22c55e', '#ecfdf5'] },
+  pastel:    { mag: ['#a7f3d0', '#fde68a', '#fca5a5'], depth: ['#fca5a5', '#fde68a', '#a7f3d0'] },
+  neon:      { mag: ['#22d3ee', '#a855f7', '#f43f5e'], depth: ['#f43f5e', '#a855f7', '#22d3ee'] },
+  monoBlue:  { mag: ['#dbeafe', '#3b82f6', '#1e3a5f'], depth: ['#1e3a5f', '#3b82f6', '#dbeafe'] },
+  burgundy:  { mag: ['#fce4ec', '#e91e63', '#4a0024'], depth: ['#4a0024', '#e91e63', '#fce4ec'] },
+  teal:      { mag: ['#ccfbf1', '#14b8a6', '#134e4a'], depth: ['#134e4a', '#14b8a6', '#ccfbf1'] },
+  amber:     { mag: ['#fef3c7', '#f59e0b', '#78350f'], depth: ['#78350f', '#f59e0b', '#fef3c7'] },
+  lavender:  { mag: ['#ede9fe', '#8b5cf6', '#3b0764'], depth: ['#3b0764', '#8b5cf6', '#ede9fe'] },
+  mint:      { mag: ['#d1fae5', '#10b981', '#064e3b'], depth: ['#064e3b', '#10b981', '#d1fae5'] },
+};
+function getCurrentColors() {
+  var sel = document.getElementById('colorSchemeSelect');
+  var key = sel ? sel.value : 'semaphore';
+  return COLOR_SCHEMES[key] || COLOR_SCHEMES.semaphore;
+}
+
+let cMBinst, cDBinst, cMPinst, cDPinst;
+
+function renderCharts() {
+  if (cMBinst) cMBinst.destroy();
+  if (cDBinst) cDBinst.destroy();
+  if (cMPinst) cMPinst.destroy();
+  if (cDPinst) cDPinst.destroy();
+
+  const mags   = ALL_EVENTS.map(e => e.mag);
+  const depths = ALL_EVENTS.map(e => e.depth);
+  const mCats = [mags.filter(m => m < 3).length, mags.filter(m => m >= 3 && m < 5).length, mags.filter(m => m >= 5).length];
+  const dCats = [depths.filter(d => d < 60).length, depths.filter(d => d >= 60 && d < 300).length, depths.filter(d => d >= 300).length];
+
+  const barOpt = {
+    responsive: true, maintainAspectRatio: false, layout: { padding: { top: 25 } }, animation: { duration: 0 },
+    plugins: {
+      datalabels: { anchor:'end', align:'top', font:{ size:9, weight:'bold' } },
+      legend: { display:false }
+    },
+    scales: { x:{ grid:{ display:false } }, y:{ display:false } }
+  };
+
+  var colors = getCurrentColors();
+
+  const pieOpt = {
+    responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+    plugins: {
+      datalabels: { font:{ size:8, weight:'bold' }, color:'#fff', formatter: function(v,t) { return v ? v : ''; } },
+      legend: { position:'bottom', labels: { boxWidth:8, font:{ size:8 } } }
+    }
+  };
+
+  cMBinst = new Chart('cMB', { type:'bar', data: {
+    labels: ['M<3', 'M 3–5', 'M≥5'],
+    datasets: [{ data: mCats, backgroundColor: colors.mag }]
+  }, options: barOpt });
+
+  cMPinst = new Chart('cMP', { type:'doughnut', data: {
+    labels: ['M<3', 'M 3–5', 'M≥5'],
+    datasets: [{ data: mCats, backgroundColor: colors.mag }]
+  }, options: pieOpt });
+
+  cDBinst = new Chart('cDB', { type:'bar', data: {
+    labels: ['Dangkal <60km', 'Menengah 60–300km', 'Dalam >300km'],
+    datasets: [{ data: dCats, backgroundColor: colors.depth }]
+  }, options: barOpt });
+
+  cDPinst = new Chart('cDP', { type:'doughnut', data: {
+    labels: ['Dangkal <60km', 'Menengah 60–300km', 'Dalam >300km'],
+    datasets: [{ data: dCats, backgroundColor: colors.depth }]
+  }, options: pieOpt });
+}
+
+function applyColorScheme() {
+  renderCharts();
+}
+
+function renderFeltTable() {
+  var tbody = document.getElementById('feltTableBody');
+  if (!tbody) return;
+  var valid = FELT_EVENTS.filter(function(ev) { return ev.lat && ev.lon && ev.depth !== 0; });
+  valid.sort(function(a,b) { return (a.tanggal + a.origin) < (b.tanggal + b.origin) ? -1 : 1; });
+  tbody.innerHTML = valid.map(function(ev, i) {
+    var latStr = (ev.lat < 0 ? (-ev.lat).toFixed(2) + ' LS' : ev.lat.toFixed(2) + ' LU');
+    var lonStr = (ev.lon < 0 ? (-ev.lon).toFixed(2) + ' BB' : ev.lon.toFixed(2) + ' BT');
+    var waktu = (ev.tanggal || '') + ' ' + (ev.origin || '');
+    return '<tr><td>' + (i + 1) + '</td><td>' + waktu + '</td><td>' + latStr + '</td><td>' + lonStr + '</td><td>' + ev.mag + '</td><td>' + ev.depth + '</td><td style="text-align:left;">' + (ev.wilayah || '') + '</td><td>' + (ev.dirasakan || '-') + '</td></tr>';
+  }).join('');
+}
+
+function renderFreqTable() {
+  const daily = {};
+  ALL_EVENTS.forEach(ev => {
+    const d = ev.tanggal;
+    if (!daily[d]) daily[d] = { total:0, m_lt3:0, m_35:0, m_gte5:0, d_shallow:0, d_mid:0, d_deep:0 };
+    daily[d].total++;
+    if (ev.mag < 3) daily[d].m_lt3++; else if (ev.mag < 5) daily[d].m_35++; else daily[d].m_gte5++;
+    if (ev.depth <= 60) daily[d].d_shallow++; else if (ev.depth <= 300) daily[d].d_mid++; else daily[d].d_deep++;
+  });
+  const tbody = document.getElementById('freqTableBody');
+  if (!tbody) return;
+  const dates = Object.keys(daily).sort();
+  tbody.innerHTML = dates.map((d, i) => {
+    const r = daily[d];
+    return '<tr><td>' + (i+1) + '</td><td>' + d + '</td><td><strong>' + r.total + '</strong></td><td>' + r.m_lt3 + '</td><td>' + r.m_35 + '</td><td>' + r.m_gte5 + '</td><td>' + r.d_shallow + '</td><td>' + r.d_mid + '</td><td>' + r.d_deep + '</td></tr>';
+  }).join('');
+}
+
+const EV_PER_PAGE = 30;
+let evPage = 1;
+
+function renderEventsPage(page) {
+  ALL_EVENTS.sort(function(a,b){return a.tanggal.localeCompare(b.tanggal) || a.origin.localeCompare(b.origin);});
+  const data = ALL_EVENTS;
+  const totalPages = Math.max(1, Math.ceil(data.length / EV_PER_PAGE));
+  evPage = Math.min(Math.max(1, page), totalPages);
+  const start = (evPage - 1) * EV_PER_PAGE;
+  const slice = data.slice(start, start + EV_PER_PAGE);
+
+  const tbody = document.getElementById('eventsTableBody');
+  tbody.innerHTML = '';
+  slice.forEach((ev, i) => {
+    tbody.innerHTML += `<tr>
+      <td>${start + i + 1}</td>
+      <td>${ev.tanggal}</td><td>${ev.origin}</td>
+      <td>${(ev.lat||0).toFixed(3)}</td><td>${(ev.lon||0).toFixed(3)}</td>
+      <td style="font-weight:bold;color:${ev.mag>=5?'#dc2626':ev.mag>=3?'#ca8a04':'#16a34a'}">${(ev.mag||0).toFixed(1)}</td>
+      <td>${ev.depth}</td>
+      <td class="text-start" style="max-width:200px;word-wrap:break-word;">${ev.ket||''}</td>
+      <td>${ev.terasa ? '<span class="badge bg-warning text-dark">Dirasakan</span>' : ''}</td>
+    </tr>`;
+  });
+
+  const badge = document.getElementById('evCountBadge');
+  if (badge) badge.textContent = data.length + ' kejadian';
+  const pi = document.getElementById('evPageInfo'), pn = document.getElementById('evPageNum');
+  const pb = document.getElementById('evPrevBtn'), nb = document.getElementById('evNextBtn');
+  if (pi) pi.textContent = `${start + 1}–${Math.min(start + EV_PER_PAGE, data.length)} dari ${data.length}`;
+  if (pn) pn.textContent = `${evPage} / ${totalPages}`;
+  if (pb) pb.disabled = evPage <= 1;
+  if (nb) nb.disabled = evPage >= totalPages;
+}
+
+function evChangePage(delta) { renderEventsPage(evPage + delta); }
+
+function exportCSV() {
+  const headers = ['No','Tanggal','Waktu (UTC)','Lintang','Bujur','Mag','Kedalaman (km)','Keterangan'];
+  const rows = ALL_EVENTS.map((ev, i) => [
+    i + 1,
+    ev.tanggal,
+    ev.origin,
+    (ev.lat || 0).toFixed(3),
+    (ev.lon || 0).toFixed(3),
+    (ev.mag || 0).toFixed(1),
+    ev.depth,
+    '"' + (ev.ket || '').replace(/"/g, '""') + '"',
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'laporan_bulanan_{{ current_year }}_{{ current_month|stringformat:"02d" }}.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => { if(mapInstance) { mapInstance.invalidateSize(); drawOverlayGridLayout(); } else { initMap(); } });
+document.getElementById('tab-stats-btn').addEventListener('shown.bs.tab', () => { renderCharts(); renderFreqTable(); renderFeltTable(); renderShakemapGallery(); });
+document.getElementById('tab-table-btn').addEventListener('shown.bs.tab', () => renderEventsPage(1));
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderEventsPage(1); renderShakemapGallery();
+  if (document.getElementById('tab-map-btn').classList.contains('active')) initMap();
+});
+</script>
+
+<div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox()">
+  <span class="close-btn">&times;</span>
+  <img id="lightboxImg" src="" alt="">
+  <div class="caption" id="lightboxCaption"></div>
+</div>
+<script>
+(function () {
+  function applyNightMode(on) {
+    document.body.classList.toggle('night-mode', on);
+    var btn = document.getElementById('nightModeBtn');
+    if (btn) btn.innerHTML = on ? '<i class="bi bi-sun me-1"></i>Day Mode' : '<i class="bi bi-moon-stars me-1"></i>Night Mode';
+    try { localStorage.setItem('datin_night_mode', on ? '1' : '0'); } catch (e) {}
+    var sel = document.getElementById('selBasemap');
+    if (sel && typeof BASEMAPS !== 'undefined') {
+      if (on) {
+        if (!window._prevBasemap) window._prevBasemap = sel.value;
+        sel.value = 'cartodark';
+      } else {
+        if (window._prevBasemap) sel.value = window._prevBasemap;
+      }
+      if (typeof mapInstance !== 'undefined' && mapInstance && typeof changeBasemap === 'function') changeBasemap();
+    }
+  }
+  window.toggleNightMode = function () {
+    applyNightMode(!document.body.classList.contains('night-mode'));
+  };
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      if (localStorage.getItem('datin_night_mode') === '1') applyNightMode(true);
+    } catch (e) {}
+  });
+})();
+</script>
+
+</body>
+</html>

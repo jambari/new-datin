@@ -625,7 +625,6 @@ class GempaStaticAssetsTest(TestCase):
 
         body = self.client.get('/gempa-admin/gempa/gempa/').content.decode()
         self.assertNotIn('tidak ikut diport', body)
-        self.assertNotIn('/laporan-bulanan/', body)
 
     def test_no_multiline_hash_comments_in_gempa_templates(self):
         """{#' #} Django hanya berlaku satu baris — multi-baris bocor ke halaman."""
@@ -1210,3 +1209,149 @@ class StaticVersionTagTest(TestCase):
                 html = (base / name).read_text()
                 self.assertIn('{% load static_v %}', html)
                 self.assertIn("{% static_v 'js/peta_copy_info.js' %}", html)
+
+
+# ── Laporan Bulanan & Gempa Susulan (port views.py .188) ─────────────────────
+
+class LaporanSusulanTest(TestCase):
+    """Tombol & halaman "Laporan Bulanan" / "Gempa Susulan" dari changelist."""
+
+    def setUp(self):
+        from repository.models import EventBrowser, FeltEarthquake
+        self.staff = User.objects.create_user('lapbul', password='pass12345',
+                                              is_staff=True, is_superuser=True)
+        self.client.force_login(self.staff)
+
+        utc = datetime.timezone.utc
+        self.main = make_event(Gempa, event_id='main', magnitudo='5.6',
+                               tanggal=datetime.date(2026, 10, 5), origin='03:00:00',
+                               lintang='-2.50', bujur='140.70')
+        # Susulan di dalam & di luar poligon uji; satu lagi sebelum gempa utama.
+        make_event(Gempa, event_id='after-in', magnitudo='3.1',
+                   tanggal=datetime.date(2026, 10, 6), origin='01:00:00',
+                   lintang='-2.60', bujur='140.80')
+        make_event(Gempa, event_id='after-out', magnitudo='3.0',
+                   tanggal=datetime.date(2026, 10, 7), origin='01:00:00',
+                   lintang='-5.00', bujur='138.00')
+        make_event(Gempa, event_id='before', magnitudo='2.5',
+                   tanggal=datetime.date(2026, 10, 1), origin='01:00:00')
+        EventBrowser.objects.create(
+            event_id='eb1', origin_time=datetime.datetime(2026, 10, 3, tzinfo=utc),
+            magnitude=4.1, latitude=-3.0, longitude=139.0, depth_km=20)
+        FeltEarthquake.objects.create(
+            event_datetime=datetime.datetime(2026, 10, 6, 2, tzinfo=utc),
+            latitude=-2.55, longitude=140.75, magnitude=4.0, depth_km=10,
+            wilayah='Jayapura', dirasakan='III MMI')
+
+        # Jangan pernah menghubungi USGS saat test.
+        patcher = mock.patch('gempa.views._usgs_focal_mechanism', return_value=None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _events(self, response, key='all_events'):
+        return json.loads(response.context[key])
+
+    def test_changelist_shows_buttons_for_station_catalogs(self):
+        for url, source in [('/gempa-admin/gempa/gempa/', 'JAY'),
+                            ('/gempa-admin/gempa/balaigempa/', 'PGR5'),
+                            ('/gempa-admin/gempa/gempasorong/', 'SWI'),
+                            ('/gempa-admin/gempa/gempanabire/', 'NBPI')]:
+            with self.subTest(url=url):
+                body = self.client.get(url).content.decode()
+                self.assertIn(f'/gempa-susulan/?source={source}', body)
+                self.assertIn(f'/laporan-bulanan/?source={source}', body)
+
+    def test_changelist_buttons_hidden_like_188(self):
+        for url in ('/gempa-admin/gempa/significant/',
+                    '/gempa-admin/gempa/satudatagempa/'):
+            with self.subTest(url=url):
+                body = self.client.get(url).content.decode()
+                self.assertNotIn('/gempa-susulan/', body)
+                self.assertNotIn('/laporan-bulanan/', body)
+
+    def test_buttons_carry_the_date_filter(self):
+        body = self.client.get('/gempa-admin/gempa/gempa/',
+                               {'date_from': '2026-10-01', 'date_to': '2026-10-31'}).content.decode()
+        self.assertIn('/laporan-bulanan/?source=JAY&date_from=2026-10-01&date_to=2026-10-31', body)
+
+    def test_pages_require_catalog_login(self):
+        self.client.logout()
+        for url in ('/laporan-bulanan/?source=JAY', '/gempa-susulan/?source=JAY'):
+            with self.subTest(url=url):
+                r = self.client.get(url)
+                self.assertEqual(r.status_code, 302)
+                self.assertTrue(r['Location'].startswith('/gempa-admin/login/'))
+
+    def test_laporan_bulanan_station_source(self):
+        r = self.client.get('/laporan-bulanan/', {'source': 'JAY', 'date_from': '2026-10-01',
+                                                   'date_to': '2026-10-31'})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context['formatted_bulan'], 'OKTOBER 2026')
+        self.assertEqual({e['event_id'] for e in self._events(r)},
+                         {'main', 'after-in', 'after-out', 'before'})
+        # Gempa dirasakan dibaca langsung dari repository (di .188 lewat API .189).
+        felt = self._events(r, 'dirasakan_events')
+        self.assertEqual(len(felt), 1)
+        self.assertEqual(felt[0]['wilayah'], 'Jayapura')
+
+    def test_laporan_bulanan_integrasi_source_reads_eventbrowser(self):
+        r = self.client.get('/laporan-bulanan/', {'source': 'Integrasi', 'year': 2026, 'month': 10})
+        self.assertEqual(r.status_code, 200)
+        events = self._events(r)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['source'], 'Integrasi')
+
+    def test_laporan_bulanan_bad_date_falls_back_to_month(self):
+        r = self.client.get('/laporan-bulanan/', {'source': 'JAY', 'date_from': 'kemarin',
+                                                   'date_to': '2026-10-31', 'year': 2026, 'month': 10})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context['date_from'], '2026-10-01')
+
+    def test_gempa_susulan_lists_aftershocks_of_selected_mainshock(self):
+        r = self.client.get('/gempa-susulan/', {'source': 'JAY', 'event_pk': self.main.pk,
+                                                 'date_to': '2026-10-31T23:59', 'polygon': '[]'})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context['selected_event_pk'], str(self.main.pk))
+        self.assertEqual({e['event_id'] for e in self._events(r)},
+                         {'main', 'after-in', 'after-out'})
+        self.assertEqual(r.context['felt_count'], 1)
+        self.assertIn('gempa-susulan/focal/save/', r.content.decode())
+
+    def test_gempa_susulan_polygon_filter(self):
+        poly = json.dumps([[-2.0, 140.0], [-2.0, 141.5], [-3.5, 141.5], [-3.5, 140.0]])
+        r = self.client.get('/gempa-susulan/', {'source': 'JAY', 'event_pk': self.main.pk,
+                                                 'date_to': '2026-10-31T23:59', 'polygon': poly})
+        self.assertEqual({e['event_id'] for e in self._events(r)}, {'main', 'after-in'})
+
+    def test_focal_save_and_position(self):
+        url = reverse('gempa:focal-save')
+        r = self.client.post(url, {'source': 'JAY', 'event_pk': self.main.pk, 'strike': 120,
+                                   'dip': 30, 'rake': 90, 'next': '/gempa-susulan/?source=JAY'})
+        self.assertRedirects(r, '/gempa-susulan/?source=JAY', fetch_redirect_response=False)
+        fm = FocalMechanism.objects.get(source='JAY', event_pk=self.main.pk)
+        self.assertFalse(fm.is_auto)
+        self.assertEqual(fm.origin_label, '2026-10-05 03:00:00')
+
+        r = self.client.post(reverse('gempa:focal-position-save'),
+                             {'source': 'JAY', 'event_pk': self.main.pk,
+                              'offset_lat': '-1.5', 'offset_lon': '141.2'})
+        self.assertEqual(r.json(), {'ok': True})
+        fm.refresh_from_db()
+        self.assertEqual((fm.offset_lat, fm.offset_lon), (-1.5, 141.2))
+
+        r = self.client.get('/gempa-susulan/', {'source': 'JAY', 'event_pk': self.main.pk})
+        self.assertEqual(json.loads(r.context['focal_json'])['strike'], 120)
+
+    def test_focal_save_rejects_offsite_next_and_get(self):
+        r = self.client.post(reverse('gempa:focal-save'),
+                             {'source': 'JAY', 'event_pk': self.main.pk, 'strike': 1,
+                              'dip': 1, 'rake': 1, 'next': 'https://evil.example/'})
+        self.assertEqual(r['Location'], reverse('gempa:gempa-susulan'))
+        self.assertEqual(self.client.get(reverse('gempa:focal-save')).status_code, 405)
+        self.assertEqual(self.client.get(reverse('gempa:focal-position-save')).status_code, 405)
+
+    def test_repository_apis_unchanged(self):
+        r = self.client.get('/api/gempa/laporan-bulanan/', {'year': 2026, 'month': 10})
+        self.assertEqual(len(r.json()), 1)
+        r = self.client.get('/api/gempa/dirasakan/', {'year': 2026, 'month': 10})
+        self.assertEqual(r.json()[0]['dirasakan'], 'III MMI')
