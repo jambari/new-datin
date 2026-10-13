@@ -9,7 +9,7 @@ plain-language findings in Indonesian and English. Page: `/qc/stations/`
 
 ```
 scproc (192.168.1.5)                                 .189 new-datin (qc_review)
-cron 10:40 WIT (01:40 UTC)                           POST /qc/api/station-daily/  (DRF token)
+cron 08:40 WIB (01:40 UTC)                           POST /qc/api/station-daily/  (DRF token)
 ~/station_qc/station_qc.py --day yesterday --post ─▶ StationDailyQC  (metrics per channel-day)
   reads SDS ~/seiscomp/var/lib/archive                station_rules.evaluate(today, last 14 days)
   ObsPy 1.5 from /opt/seiscomp_qc/.venv           ─▶ StationDiagnosis (ID + EN message, evidence)
