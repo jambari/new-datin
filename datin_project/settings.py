@@ -304,7 +304,12 @@ CELERY_BEAT_SCHEDULE = {
     # (station_qc.py) pukul 01:40 UTC; laporan dibuat setelahnya.
     'send-station-qc-report-daily': {
         'task': 'qc_review.tasks.send_station_qc_report_task',
-        'schedule': crontab(minute=30, hour=2),  # 02:30 UTC = 11:30 WIT
+        'schedule': crontab(minute=30, hour=2),  # 02:30 UTC = 09:30 WIB / 11:30 WIT
+    },
+    # Cek ulang: kirim laporan kalau data scproc terlambat masuk (tanpa pesan ganda).
+    'retry-station-qc-report': {
+        'task': 'qc_review.tasks.retry_station_qc_report_task',
+        'schedule': crontab(minute=30, hour='4,6'),  # 04:30 & 06:30 UTC = 11:30 & 13:30 WIB
     },
 
     # INDEKS MAGNETBUMI K & A: ambil citra dari dataweb.bmkg.go.id, simpan, kirim Telegram

@@ -358,3 +358,74 @@ class StationReportGroupingTest(TestCase):
         row = station_report.report_data(DAY)["finding_rows"][0]
         self.assertTrue(row["message_en"].startswith("No data on channel SHZ/SHN/SHE for the whole day."))
         self.assertTrue(row["message_id"].startswith("Tidak ada data pada kanal SHZ/SHN/SHE sepanjang hari."))
+
+
+class StationReportRetryTest(TestCase):
+    """Late data: one warning, then the report once the data arrives — never twice."""
+
+    def setUp(self):
+        from unittest import mock
+        from django.test import override_settings
+        user = User.objects.create_user("qcworker", password="x")
+        self.auth = {"HTTP_AUTHORIZATION": f"Token {Token.objects.create(user=user).key}"}
+        ov = override_settings(TELEGRAM_BOT_TOKEN="T", TELEGRAM_CHAT_ID="-100",
+                               STATION_QC_TELEGRAM_CHAT_ID="")
+        ov.enable()
+        self.addCleanup(ov.disable)
+        p = mock.patch("theme.telegram.requests.post")
+        self.post = p.start()
+        self.addCleanup(p.stop)
+        self.post.return_value.status_code = 200
+
+    def deliver(self):
+        self.client.post(URL, {"day": DAY.isoformat(), "stations": [
+            {"network": "IA", "station": "JAY", "channels": zne()}]},
+            content_type="application/json", **self.auth)
+
+    def sent(self):
+        return [c.args[0].rsplit("/", 1)[1] for c in self.post.call_args_list]
+
+    def test_late_data_flow(self):
+        from . import station_report
+        from .models import StationQCReport
+        station_report.send_daily_report(DAY)                 # 02:30: no data -> warning
+        station_report.send_daily_report(DAY, retry=True)     # 04:30: still none -> quiet
+        self.assertEqual(self.sent(), ["sendMessage"])
+        self.assertIn("13:30 WIB", self.post.call_args.kwargs["data"]["text"])
+        self.assertEqual(StationQCReport.objects.get(day=DAY).status, "warned")
+
+        self.deliver()
+        station_report.send_daily_report(DAY, retry=True)     # 06:30: data -> report
+        self.assertEqual(self.sent(), ["sendMessage", "sendDocument"])
+        self.assertIn("terlambat", self.post.call_args.kwargs["data"]["caption"])
+        self.assertEqual(StationQCReport.objects.get(day=DAY).status, "sent")
+
+        station_report.send_daily_report(DAY, retry=True)     # nothing more
+        station_report.send_daily_report(DAY)
+        self.assertEqual(len(self.sent()), 2)
+
+    def test_on_time_report_is_not_repeated_by_retries(self):
+        from . import station_report
+        self.deliver()
+        station_report.send_daily_report(DAY)
+        station_report.send_daily_report(DAY, retry=True)
+        station_report.send_daily_report(DAY, retry=True)
+        self.assertEqual(self.sent(), ["sendDocument"])
+        self.assertNotIn("terlambat", self.post.call_args.kwargs["data"]["caption"])
+
+    def test_failed_send_is_retried(self):
+        from . import station_report
+        self.deliver()
+        self.post.return_value.status_code = 500
+        self.assertFalse(station_report.send_daily_report(DAY))
+        self.post.return_value.status_code = 200
+        self.assertTrue(station_report.send_daily_report(DAY, retry=True))
+        self.assertEqual(self.sent(), ["sendDocument", "sendDocument"])
+
+    def test_manual_command_always_resends(self):
+        from django.core.management import call_command
+        from . import station_report
+        self.deliver()
+        station_report.send_daily_report(DAY)
+        call_command("send_station_qc_report", day=DAY.isoformat(), stdout=open(os.devnull, "w"))
+        self.assertEqual(self.sent(), ["sendDocument", "sendDocument"])

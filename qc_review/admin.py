@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Event, QCRun, StationDailyQC, StationDiagnosis, StationResult
+from .models import Event, QCRun, StationDailyQC, StationDiagnosis, StationQCReport, StationResult
 
 
 @admin.register(Event)
@@ -38,3 +38,9 @@ class StationDiagnosisAdmin(admin.ModelAdmin):
     list_filter = ("severity", "code", "day")
     search_fields = ("station", "message_id", "message_en")
     date_hierarchy = "day"
+
+
+@admin.register(StationQCReport)
+class StationQCReportAdmin(admin.ModelAdmin):
+    list_display = ("day", "status", "sent_at", "updated_at")
+    list_filter = ("status",)

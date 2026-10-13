@@ -64,11 +64,16 @@ module constants — tune after a few weeks of data.
 
 ## Daily PDF report (Telegram)
 
-Celery beat `send-station-qc-report-daily` at 02:30 UTC (11:30 WIT) runs
+Celery beat `send-station-qc-report-daily` at 02:30 UTC (09:30 WIB / 11:30 WIT) runs
 `manage.py send_station_qc_report` for yesterday (UTC): a PDF (summary, all red/yellow
 findings in ID + EN, 7-day station grid) is sent with `sendDocument` to
 `STATION_QC_TELEGRAM_CHAT_ID`, or `TELEGRAM_CHAT_ID` when that is empty. If scproc has not
-delivered the day, a warning message is sent instead.
+delivered the day, a warning message is sent instead (once).
+
+Re-checks `retry-station-qc-report` at 04:30 and 06:30 UTC (11:30 / 13:30 WIB): if the data
+arrived late and the report has not gone out, it is sent with a "data masuk terlambat" note.
+`StationQCReport` (one row per day: warned/sent) prevents duplicates. The manual command
+always sends (resend).
 
 - Preview: `manage.py send_station_qc_report --day 2026-10-11 --out /tmp/r.pdf`
 - Resend: `manage.py send_station_qc_report --day 2026-10-11`

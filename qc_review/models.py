@@ -345,3 +345,24 @@ class StationDiagnosis(models.Model):
     def __str__(self) -> str:
         return (f"{self.network}.{self.station}.{self.location}.{self.channel or '*'} "
                 f"{self.day} {self.code} [{self.severity}]")
+
+
+class StationQCReport(models.Model):
+    """Delivery state of the daily station-health Telegram report.
+
+    One row per data day, so the scheduled send and its later re-checks
+    never post the same report twice: 'warned' = data was missing and the
+    warning went out; 'sent' = the PDF report was delivered.
+    """
+    STATUS_CHOICES = [("warned", "Warning sent"), ("sent", "Report sent")]
+
+    day = models.DateField(unique=True)
+    status = models.CharField(max_length=8, choices=STATUS_CHOICES)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-day"]
+
+    def __str__(self) -> str:
+        return f"{self.day} {self.status}"

@@ -232,20 +232,47 @@ def build_caption(data: dict) -> str:
     return caption if len(caption) <= 1024 else caption[:1000] + "\n…"
 
 
-def send_daily_report(day: date | None = None) -> bool:
-    """Send the report for `day` (default: yesterday UTC). Never raises."""
+def send_daily_report(day: date | None = None, retry: bool = False, force: bool = False) -> bool:
+    """Send the report for `day` (default: yesterday UTC). Never raises.
+
+    - First scheduled run (retry=False): sends the PDF, or — if scproc has
+      not delivered the day — a single warning.
+    - Re-checks (retry=True): send the PDF only if the data has arrived in
+      the meantime and the report has not gone out yet; otherwise stay quiet.
+    - force=True (manual command) always sends, e.g. to resend a report.
+    """
+    from .models import StationQCReport
+
     day = day or (timezone.now().date() - timedelta(days=1))   # TIME_ZONE is UTC
     try:
+        state = StationQCReport.objects.filter(day=day).first()
+        if state and state.status == "sent" and not force:
+            return True
+
         data = report_data(day)
         if not data["n_channels"]:
-            return send_telegram_message(
+            if retry or (state and state.status == "warned" and not force):
+                return False
+            ok = send_telegram_message(
                 f"⚠️ <b>Laporan Kesehatan Stasiun {day.strftime('%d-%m-%Y')}</b>: data QC belum masuk "
-                f"dari scproc (job harian station_qc). Periksa ~/logs/station_qc.log di 192.168.1.5.\n"
-                f"Station health data for this day has not arrived from scproc.",
+                f"dari scproc (job harian station_qc). Periksa ~/logs/station_qc.log di 192.168.1.5. "
+                f"Laporan akan dikirim otomatis bila data masuk sebelum 13:30 WIB.\n"
+                f"Station health data for this day has not arrived from scproc yet.",
                 chat_id=_chat_id())
-        pdf = build_pdf(day, data)
-        return send_telegram_document(pdf, f"kesehatan-stasiun-{day.isoformat()}.pdf",
-                                      caption=build_caption(data), chat_id=_chat_id())
+            if ok:
+                StationQCReport.objects.update_or_create(day=day, defaults={"status": "warned"})
+            return ok
+
+        caption = build_caption(data)
+        if state and state.status == "warned" and not force:
+            caption = ("ℹ️ <i>Data masuk terlambat — laporan menyusul. / Data arrived late.</i>\n"
+                       + caption)[:1024]
+        ok = send_telegram_document(build_pdf(day, data), f"kesehatan-stasiun-{day.isoformat()}.pdf",
+                                    caption=caption, chat_id=_chat_id())
+        if ok:
+            StationQCReport.objects.update_or_create(
+                day=day, defaults={"status": "sent", "sent_at": timezone.now()})
+        return ok
     except Exception:
         log.exception("station health report for %s failed", day)
         return False

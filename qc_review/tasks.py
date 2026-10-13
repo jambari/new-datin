@@ -1,8 +1,15 @@
 from celery import shared_task
-from django.core.management import call_command
+
+from . import station_report
 
 
 @shared_task
 def send_station_qc_report_task():
-    """Celery wrapper for the send_station_qc_report management command."""
-    call_command('send_station_qc_report')
+    """Daily station-health report (02:30 UTC): PDF, or a warning if data is missing."""
+    station_report.send_daily_report()
+
+
+@shared_task
+def retry_station_qc_report_task():
+    """Re-check (04:30 and 06:30 UTC): send the report if the data arrived late."""
+    station_report.send_daily_report(retry=True)

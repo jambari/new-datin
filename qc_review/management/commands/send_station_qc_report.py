@@ -35,5 +35,6 @@ class Command(BaseCommand):
             self.stdout.write(f"wrote {opts['out']} ({len(data['findings'])} findings)")
             return
 
-        ok = station_report.send_daily_report(day)
+        # A manual run always sends (resend), unlike the scheduled task.
+        ok = station_report.send_daily_report(day, force=True)
         self.stdout.write(f"report {day}: {'sent' if ok else 'NOT sent (see log)'}")
