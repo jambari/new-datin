@@ -231,3 +231,45 @@ class EventBrowserViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         resp = self.client.get(reverse('event_browser_edit', args=[self.ev.pk]))
         self.assertEqual(resp.status_code, 200)
+
+
+class ComputeSeismicAvailabilityTest(TestCase):
+    """Seismic availability comes from the SDS archive, not accelero samples."""
+
+    def _qc(self, sta, cha, pct, loc='', net='IA', day=datetime.date(2026, 10, 13)):
+        from qc_review.models import StationDailyQC
+        StationDailyQC.objects.create(network=net, station=sta, location=loc, channel=cha,
+                                      day=day, metrics={'availability_pct': pct})
+
+    def _run(self, day='2026-10-13'):
+        from io import StringIO
+        from django.core.management import call_command
+        call_command('compute_seismic_availability', date=day, stdout=StringIO())
+
+    def _pct(self, sta, day=datetime.date(2026, 10, 13)):
+        return DataAvailability.objects.get(station=sta, channel='SLINKTOOL', date=day).percentage
+
+    def test_station_availability_ignores_accelerograph_channels(self):
+        from repository.management.commands.compute_seismic_availability import station_availability
+        rows = [('00', 'HHZ', {'availability_pct': 85.0}), ('00', 'HHN', {'availability_pct': 85.0}),
+                ('00', 'HHE', {'availability_pct': 85.0}), ('', 'HNZ', {'availability_pct': 0.0})]
+        self.assertEqual(station_availability(rows), 85.0)
+        self.assertIsNone(station_availability([('', 'HNZ', {'availability_pct': 100.0})]))
+
+    def test_best_group_wins(self):
+        from repository.management.commands.compute_seismic_availability import station_availability
+        rows = [('', 'BHZ', {'availability_pct': 100.0}), ('00', 'BHZ', {'availability_pct': 80.0})]
+        self.assertEqual(station_availability(rows), 100.0)
+
+    def test_writes_sds_value_and_zero_for_absent_station(self):
+        for c in ('HHZ', 'HHN', 'HHE'):
+            self._qc('WAMI', c, 85.05, loc='00')
+        self._run()
+        self.assertEqual(self._pct('WAMI'), 85.05)
+        self.assertEqual(self._pct('DYPI'), 0.0)
+
+    def test_day_not_posted_is_skipped(self):
+        DataAvailability.objects.create(station='WAMI', channel='SLINKTOOL',
+                                        date=datetime.date(2026, 10, 12), percentage=42.0)
+        self._run('2026-10-12')
+        self.assertEqual(self._pct('WAMI', datetime.date(2026, 10, 12)), 42.0)

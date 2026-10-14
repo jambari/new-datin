@@ -1,10 +1,10 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from .models import Station, StationStatus, StationAvailabilitySample
+from .models import Station, StationStatus
 from .constants import ACCELEROGRAPH_STATIONS, SEISMIC_STATIONS
 
 
@@ -86,7 +86,6 @@ def api_push_seismic_status(request):
         return JsonResponse({'error': 'invalid JSON'}, status=400)
 
     updated = skipped = 0
-    now = datetime.now(timezone.utc)
 
     for item in stations_data:
         try:
@@ -114,10 +113,10 @@ def api_push_seismic_status(request):
         obj.last_packet_time = last_packet
         obj.channel_info    = item.get('channel', '')
         obj.save()
-
-        StationAvailabilitySample.objects.create(
-            station=station, sampled_at=now, status=status
-        )
+        # No StationAvailabilitySample here: those samples drive the
+        # accelerograph availability, and colocated stations share one
+        # Station row. Seismic availability comes from the SDS archive
+        # (repository compute_seismic_availability).
         updated += 1
 
     return JsonResponse({'updated': updated, 'skipped': skipped})
