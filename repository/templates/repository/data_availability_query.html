@@ -30,85 +30,7 @@
   .filter-btn-green { background:#10b981; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:13px; font-weight:600; cursor:pointer; }
   .filter-btn-green:hover { background:#059669; }
 
-  /* ── Latency Map panel ── */
-  #panel-latency {
-    --bg:#0a0e14; --surface:#111720; --border:#1e2d45; --accent:#00c2ff;
-    --text:#e2eaf5; --muted:#5a7a9e; --on:#00e676; --gap:#ffd600; --off:#546e7a;
-    background:var(--bg); border-radius:8px; overflow:hidden;
-  }
-  .lat-topbar {
-    background:linear-gradient(90deg,#060c14,#0d1829,#050c18);
-    border-bottom:1px solid var(--border);
-    display:flex; align-items:center; padding:10px 18px; gap:14px;
-    color:var(--text);
-  }
-  .lat-stat { display:flex; flex-direction:column; align-items:center; gap:1px; }
-  .lat-stat .lv { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:600; }
-  .lat-stat .ll { font-size:.6rem; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
-  .lat-stat.on .lv  { color:var(--on); }
-  .lat-stat.gap .lv { color:var(--gap); }
-  .lat-stat.off .lv { color:#78909c; }
-  .lat-hdiv { width:1px; height:30px; background:var(--border); margin:0 6px; }
-  .lat-btn {
-    display:flex; align-items:center; gap:7px; padding:5px 12px;
-    background:var(--surface); border:1px solid var(--border); border-radius:6px;
-    cursor:pointer; font-size:.72rem; color:var(--muted);
-    letter-spacing:.07em; text-transform:uppercase;
-    font-family:'IBM Plex Mono',monospace; transition:all .2s; margin-left:auto;
-  }
-  .lat-btn:hover { border-color:var(--accent); color:var(--accent); }
-  .rdot { width:7px; height:7px; border-radius:50%; background:var(--on); animation:rdotpulse 2s infinite; }
-  @keyframes rdotpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
-  #latency-map { height:calc(100vh - 290px); min-height:400px; }
-
-  /* Leaflet overrides inside our panel */
-  #panel-latency .leaflet-control-zoom { border:1px solid var(--border) !important; border-radius:8px !important; overflow:hidden; box-shadow:none !important; }
-  #panel-latency .leaflet-control-zoom a { background:rgba(10,14,20,.95) !important; color:var(--muted) !important; border-color:var(--border) !important; }
-  #panel-latency .leaflet-control-zoom a:hover { background:#1a2233 !important; color:var(--accent) !important; }
-  #panel-latency .leaflet-control-attribution { background:rgba(10,14,20,.8) !important; color:var(--muted) !important; font-size:9px !important; }
-  #panel-latency .leaflet-popup-content-wrapper {
-    background:rgba(8,12,18,.97) !important; border:1px solid var(--border) !important;
-    border-radius:10px !important; box-shadow:0 8px 30px rgba(0,0,0,.8) !important; padding:0 !important;
-  }
-  #panel-latency .leaflet-popup-tip-container { display:none; }
-  #panel-latency .leaflet-popup-content { margin:0 !important; width:auto !important; }
-  .lat-legend {
-    background:rgba(10,14,20,.93); border:1px solid var(--border);
-    border-radius:8px; padding:11px 15px; backdrop-filter:blur(8px); min-width:155px;
-    color:var(--text);
-  }
-  .lat-legend-title { font-size:.65rem; font-weight:700; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
-  .lat-legend-item { display:flex; align-items:center; gap:9px; margin-bottom:7px; font-size:.76rem; }
-  .lat-legend-item:last-child { margin-bottom:0; }
-  .tri { width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; flex-shrink:0; }
-  .tri.on  { border-bottom:13px solid #00e676; }
-  .tri.gap { border-bottom:13px solid #ffd600; }
-  .tri.off { border-bottom:13px solid #546e7a; }
-  .lat-range { margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:.62rem; color:var(--muted); }
-  .lat-infobox {
-    background:rgba(10,14,20,.93); border:1px solid var(--border);
-    border-radius:8px; padding:9px 13px; backdrop-filter:blur(8px);
-    font-family:'IBM Plex Mono',monospace; font-size:.68rem; color:var(--muted); text-align:right;
-  }
-  .lat-infobox .il { font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; margin-bottom:2px; }
-  .lat-infobox .iv { color:var(--accent); font-size:.73rem; }
-  .pu { padding:14px 17px; min-width:220px; color:var(--text); }
-  .pu-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:9px; }
-  .pu-sta { font-size:1.05rem; font-weight:700; color:#fff; letter-spacing:.04em; }
-  .pu-name { font-size:.7rem; color:var(--muted); margin-top:1px; }
-  .pu-badge { padding:3px 9px; border-radius:20px; font-size:.75rem; font-weight:700; letter-spacing:.1em; flex-shrink:0; }
-  .pu-badge.on  { background:rgba(0,230,118,.12); color:#00e676; border:1px solid rgba(0,230,118,.35); }
-  .pu-badge.gap { background:rgba(255,214,0,.12);  color:#ffd600; border:1px solid rgba(255,214,0,.35); }
-  .pu-badge.off { background:rgba(84,110,122,.2);  color:#78909c; border:1px solid rgba(84,110,122,.4); }
-  .pu-div { height:1px; background:var(--border); margin-bottom:9px; }
-  .pu-rows { display:flex; flex-direction:column; gap:5px; }
-  .pu-row { display:flex; justify-content:space-between; font-size:.72rem; }
-  .pu-row .k { color:var(--muted); }
-  .pu-row .v { font-family:'IBM Plex Mono',monospace; color:var(--text); font-size:.69rem; }
-  .pu-row .v.hi { color:var(--accent); }
 </style>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <div class="flex h-screen bg-gray-100">
   {% include 'partials/_sidebar.html' %}
@@ -143,19 +65,17 @@
 
         <!-- TAB NAVIGATION -->
         <div class="tab-bar mb-0 bg-white rounded-t-lg px-4 pt-3 shadow-sm">
-          <button class="tab-btn {% if request.GET.tab != 'ola' and request.GET.tab != 'latency' %}active{% endif %}"
+          <button class="tab-btn {% if request.GET.tab != 'ola' %}active{% endif %}"
                   onclick="switchTab('sla')">SLA</button>
           <button class="tab-btn {% if request.GET.tab == 'ola' %}active{% endif %}"
                   onclick="switchTab('ola')">OLA</button>
-          <button class="tab-btn {% if request.GET.tab == 'latency' %}active{% endif %}"
-                  onclick="switchTab('latency')">Latency Map</button>
         </div>
 
         <!-- ═══════════════════════════════════════════════════════ -->
         <!-- TAB 1 – SLA (Percentage Matrix) -->
         <!-- ═══════════════════════════════════════════════════════ -->
         <div id="panel-sla" class="tab-panel bg-white shadow rounded-b-lg rounded-tr-lg p-0 mb-4"
-             {% if request.GET.tab == 'ola' or request.GET.tab == 'latency' %}style="display:none"{% endif %}>
+             {% if request.GET.tab == 'ola' %}style="display:none"{% endif %}>
 
           <!-- Percentage matrix -->
           <div class="overflow-x-auto p-1">
@@ -260,31 +180,6 @@
           </div>
         </div><!-- /panel-ola -->
 
-        <!-- ═══════════════════════════════════════════════════════ -->
-        <!-- TAB 3 – Latency Map -->
-        <!-- ═══════════════════════════════════════════════════════ -->
-        <div id="panel-latency" class="tab-panel mb-4"
-             {% if request.GET.tab != 'latency' %}style="display:none"{% endif %}>
-
-          <!-- Stats topbar -->
-          <div class="lat-topbar rounded-t-lg">
-            <div class="lat-stat on"><span class="lv" id="cnt-on">–</span><span class="ll">ON</span></div>
-            <div class="lat-hdiv"></div>
-            <div class="lat-stat gap"><span class="lv" id="cnt-gap">–</span><span class="ll">GAP</span></div>
-            <div class="lat-hdiv"></div>
-            <div class="lat-stat off"><span class="lv" id="cnt-off">–</span><span class="ll">OFF</span></div>
-            <div class="lat-hdiv"></div>
-            <span style="font-size:.75rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;">
-              {% if sensor_type == 'accelero' %}SeedLink: 202.90.199.206:18123{% else %}SeisComP Push: 202.90.198.101{% endif %} · Auto-refresh 10 menit
-            </span>
-            <button class="lat-btn" id="btn-refresh" onclick="loadStations()">
-              <span class="rdot" id="rdot"></span><span>Refresh</span>
-            </button>
-          </div>
-
-          <!-- Map -->
-          <div id="latency-map"></div>
-        </div><!-- /panel-latency -->
 
       </div><!-- /container -->
     </main>
@@ -296,16 +191,11 @@
 <!-- ══════════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 const currentSensorType = "{{ sensor_type }}";
 const updateApiUrl = "{% url 'update_availability_cell' %}";
 let myChart = null;
-let mapInitialized = false;
-let latMap = null;
-let latMarkers = null;
-let latInterval = null;
 
 // ── Tab switching ────────────────────────────────────────────────────
 function switchTab(name) {
@@ -314,11 +204,6 @@ function switchTab(name) {
   document.getElementById('panel-' + name).style.display = '';
   event.currentTarget.classList.add('active');
   document.getElementById('hidden-tab').value = name;
-
-  if (name === 'latency' && !mapInitialized) {
-    mapInitialized = true;
-    setTimeout(initLatencyMap, 50); // slight delay ensures div is visible
-  }
   if (name === 'sla' && myChart) {
     myChart.resize();
   }
@@ -437,113 +322,6 @@ function renderChart() {
   });
 }
 
-// ── Latency Map ──────────────────────────────────────────────────────
-function makeMarkerIcon(status) {
-  const c = { on:'#00e676', gap:'#ffd600', off:'#546e7a' }[status] || '#546e7a';
-  const s = status === 'on' ? 20 : 17;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
-    <polygon points="${s/2},1 1,${s-1} ${s-1},${s-1}"
-      fill="${c}" stroke="${c==='#546e7a'?'#78909c':c}" stroke-width="1"
-      opacity="${status==='off'?0.55:1}"/>
-  </svg>`;
-  return L.divIcon({ html:svg, className:'', iconSize:[s,s], iconAnchor:[s/2,s], popupAnchor:[0,-s] });
-}
-function fmtLat(v) {
-  if (v === null || v === undefined) return 'N/A';
-  if (v < 60) return v.toFixed(1) + ' s';
-  if (v < 3600) return (v/60).toFixed(1) + ' menit';
-  return (v/3600).toFixed(1) + ' jam';
-}
-function fmtDt(iso) {
-  if (!iso) return 'N/A';
-  try {
-    return new Date(iso).toLocaleString('id-ID',{
-      timeZone:'Asia/Jayapura', day:'2-digit', month:'2-digit',
-      year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'
-    }) + ' WIT';
-  } catch { return iso; }
-}
-function buildPopup(s) {
-  return `<div class="pu">
-    <div class="pu-head">
-      <div><div class="pu-sta">${s.network}.${s.code}</div><div class="pu-name">${s.name}</div></div>
-      <div class="pu-badge ${s.status}">${s.status.toUpperCase()}</div>
-    </div>
-    <div class="pu-div"></div>
-    <div class="pu-rows">
-      <div class="pu-row"><span class="k">Channel</span><span class="v hi">${s.channel||'–'}</span></div>
-      <div class="pu-row"><span class="k">Latency</span><span class="v">${fmtLat(s.latency)}</span></div>
-      <div class="pu-row"><span class="k">Paket Terakhir</span><span class="v">${fmtDt(s.last_packet)}</span></div>
-      <div class="pu-row"><span class="k">Sensor</span><span class="v">${s.sensor||'–'}</span></div>
-      <div class="pu-row"><span class="k">Digitizer</span><span class="v">${s.digitizer||'–'}</span></div>
-      <div class="pu-row"><span class="k">Kota</span><span class="v">${s.kota||'–'}</span></div>
-      <div class="pu-row"><span class="k">Koordinat</span><span class="v">${s.latitude.toFixed(4)}°, ${s.longitude.toFixed(4)}°</span></div>
-      <div class="pu-row"><span class="k">Diperbarui</span><span class="v">${fmtDt(s.last_updated)}</span></div>
-    </div>
-  </div>`;
-}
-
-function initLatencyMap() {
-  latMap = L.map('latency-map', { center:[-4.5, 138.5], zoom:6 });
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-    attribution:'&copy; Esri', maxZoom:16
-  }).addTo(latMap);
-
-  const legendCtrl = L.control({ position:'bottomleft' });
-  legendCtrl.onAdd = () => {
-    const d = L.DomUtil.create('div','lat-legend');
-    d.innerHTML = `<div class="lat-legend-title">Status Stasiun</div>
-      <div class="lat-legend-item"><div class="tri on"></div><span>ON</span><span class="lat-range">≤ 1800 s</span></div>
-      <div class="lat-legend-item"><div class="tri gap"></div><span>GAP</span><span class="lat-range">1800–3600 s</span></div>
-      <div class="lat-legend-item"><div class="tri off"></div><span>OFF</span><span class="lat-range">&gt; 3600 s</span></div>`;
-    return d;
-  };
-  legendCtrl.addTo(latMap);
-
-  const infoCtrl = L.control({ position:'bottomright' });
-  infoCtrl.onAdd = () => {
-    const d = L.DomUtil.create('div','lat-infobox');
-    d.innerHTML = `<div class="il">Last Updated</div><div class="iv" id="lat-lasttime">–</div>`;
-    return d;
-  };
-  infoCtrl.addTo(latMap);
-
-  latMarkers = L.layerGroup().addTo(latMap);
-  loadStations();
-  latInterval = setInterval(loadStations, 10 * 60 * 1000);
-}
-
-async function loadStations() {
-  const dot = document.getElementById('rdot');
-  if (dot) dot.style.background = '#ffd600';
-  try {
-    const stationType = currentSensorType === 'accelero' ? 'accelero' : 'seismic';
-    const res = await fetch("{% url 'api_stations' %}?type=" + stationType);
-    const data = await res.json();
-    latMarkers.clearLayers();
-    let on=0, gap=0, off=0;
-    data.stations.forEach(s => {
-      if (s.status==='on') on++;
-      else if (s.status==='gap') gap++;
-      else off++;
-      L.marker([s.latitude, s.longitude], { icon:makeMarkerIcon(s.status) })
-        .bindPopup(buildPopup(s), { maxWidth:270 })
-        .addTo(latMarkers);
-    });
-    document.getElementById('cnt-on').textContent  = on;
-    document.getElementById('cnt-gap').textContent = gap;
-    document.getElementById('cnt-off').textContent = off;
-    const el = document.getElementById('lat-lasttime');
-    if (el) el.textContent = new Date().toLocaleString('id-ID',{
-      timeZone:'Asia/Jayapura', hour:'2-digit', minute:'2-digit', second:'2-digit'
-    }) + ' WIT';
-    if (dot) dot.style.background = '#00e676';
-  } catch(e) {
-    if (dot) dot.style.background = '#ff5252';
-    console.error(e);
-  }
-}
-
 // ── Init ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Sidebar toggle
@@ -556,12 +334,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Chart (SLA tab)
   renderChart();
-
-  // If latency tab is active on load, init map
-  if ("{{ request.GET.tab|default:'sla' }}" === 'latency' && !mapInitialized) {
-    mapInitialized = true;
-    setTimeout(initLatencyMap, 50);
-  }
 });
 </script>
 {% endblock %}
