@@ -75,7 +75,10 @@
   }
   btnWave.addEventListener('click', function () { mode('wave'); });
   btnPgv.addEventListener('click', function () { mode('pgv'); });
-  show(0);
+  // Start on a frame where the waves are already visible (~20 s after origin).
+  var start = 0;
+  while (start < n - 1 && d.frame_times[start] < 20) start++;
+  show(start);
 
   // Seismograms: Z, N, E velocity traces per station, sorted by distance.
   var box = document.getElementById('ws-seis');
