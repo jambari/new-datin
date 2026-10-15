@@ -181,7 +181,7 @@ table.info td:first-child { color:var(--soft); width:150px; }
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-{% if wavesim %}<script src="{% static 'repository/js/wavesim_viewer.js' %}"></script>{% endif %}
+{% if wavesim %}<script src="{% static 'repository/js/wavesim_viewer.js' %}?v=2"></script>{% endif %}
 {% if object.strike is not None and object.dip is not None and object.rake is not None %}
 <script src="{% static 'theme/js/beachball.umd.min.js' %}"></script>
 <script>

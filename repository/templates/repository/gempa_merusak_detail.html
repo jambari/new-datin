@@ -190,7 +190,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') document.getEle
 {% block extra_scripts %}
 {% if object.latitude and object.longitude %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-{% if wavesim %}<script src="{% static 'repository/js/wavesim_viewer.js' %}"></script>{% endif %}
+{% if wavesim %}<script src="{% static 'repository/js/wavesim_viewer.js' %}?v=2"></script>{% endif %}
 <script>
 (function () {
   var lat = {{ object.latitude }};
