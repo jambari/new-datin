@@ -1,0 +1,48 @@
+{% load static %}
+{# Wave-propagation result viewer. Context from repository.wavesim.public_context;
+   the page loads repository/js/wavesim_viewer.js after Leaflet. #}
+<style>
+  .ws-map { height:460px; border-radius:8px; z-index:0; background:#e5e7eb; }
+  .ws-bar { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin:.7rem 0 .3rem; font-size:.8rem; }
+  .ws-bar button { border:1px solid #cbd5e1; background:#fff; color:#1e293b; border-radius:6px; padding:.3rem .7rem; cursor:pointer; font-size:.78rem; font-weight:600; }
+  .ws-bar button.on { background:#0369a1; border-color:#0369a1; color:#fff; }
+  .ws-bar input[type=range] { flex:1; min-width:140px; }
+  .ws-time { font-variant-numeric:tabular-nums; min-width:5.5rem; text-align:right; font-weight:600; }
+  .ws-legend { display:flex; align-items:center; gap:.5rem; font-size:.7rem; color:#64748b; margin-top:.2rem; }
+  .ws-legend[hidden] { display:none; }
+  .ws-legend .ramp { height:10px; flex:0 0 160px; border-radius:3px; }
+  .ws-seis { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:.8rem; margin-top:1rem; }
+  .ws-seis figure { margin:0; border:1px solid #e2e8f0; border-radius:8px; padding:.5rem .6rem; background:#fff; }
+  .ws-seis figcaption { font-size:.72rem; color:#475569; margin-bottom:.2rem; font-weight:600; }
+  .ws-seis canvas { width:100%; height:110px; display:block; }
+  .ws-note { font-size:.72rem; color:#64748b; line-height:1.55; margin-top:.8rem; }
+</style>
+
+<div id="ws-map" class="ws-map"></div>
+<div class="ws-bar">
+  <button type="button" id="ws-play">▶ Putar</button>
+  <input type="range" id="ws-slider" min="0" max="{{ wavesim_data.frame_times|length|add:'-1' }}" value="0">
+  <span class="ws-time" id="ws-time">0.0 s</span>
+  <button type="button" id="ws-mode-wave" class="on">Gelombang</button>
+  <button type="button" id="ws-mode-pgv">PGV</button>
+</div>
+<div class="ws-legend" id="ws-legend-wave">
+  <span>turun</span><span class="ramp" style="background:linear-gradient(90deg,#00004c,#0000ff,#ffffff00,#ff0000,#800000)"></span><span>naik</span>
+  <span style="margin-left:.6rem;">kecepatan vertikal permukaan (skala asinh)</span>
+</div>
+<div class="ws-legend" id="ws-legend-pgv" hidden>
+  <span id="ws-pgv-min"></span><span class="ramp" style="background:linear-gradient(90deg,#30123b,#4686fb,#1ae4b6,#a2fc3c,#fabb39,#e4460a,#7a0403)"></span><span id="ws-pgv-max"></span>
+  <span style="margin-left:.6rem;">PGV puncak (skala log)</span>
+</div>
+
+<div class="ws-seis" id="ws-seis"></div>
+
+<p class="ws-note">
+  Simulasi numerik SPECFEM3D (metode elemen spektral, GPU) dari sumber titik
+  M{{ object.magnitude }} dengan mekanisme strike/dip/rake {{ object.strike|floatformat:0 }}/{{ object.dip|floatformat:0 }}/{{ object.rake|floatformat:0 }},
+  model kecepatan 1D (kerak AK135), domain {% widthratio wavesim_mesh.half_width_km|default:150 1 2 %} × {% widthratio wavesim_mesh.half_width_km|default:150 1 2 %} km, tanpa topografi{% if wavesim_mesh.min_period_s %}, periode terpendek yang terselesaikan ±{{ wavesim_mesh.min_period_s|floatformat:1 }} s{% endif %}.
+  Karena hanya gelombang periode panjang yang dimodelkan, nilai kecepatan/PGV jauh lebih kecil daripada guncangan
+  sebenarnya. Hasil ini ilustrasi penjalaran gelombang, bukan rekaman nyata maupun peta guncangan resmi.
+  Dijalankan {{ wavesim.finished_at|date:"d-m-Y H:i" }} UTC.
+</p>
+{{ wavesim_data|json_script:"wavesim-data" }}

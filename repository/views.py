@@ -1247,8 +1247,14 @@ def gempa_merusak_list(request):
 
 @login_required
 def gempa_merusak_detail(request, pk):
+    from . import wavesim
     obj = get_object_or_404(GempaMemusak, pk=pk)
-    return render(request, 'repository/gempa_merusak_detail.html', {'object': obj})
+    return render(request, 'repository/gempa_merusak_detail.html', {
+        'object': obj,
+        'simulations': obj.wave_simulations.all()[:5],
+        'wavesim_missing': wavesim.missing_fields(obj),
+        **wavesim.public_context(obj),
+    })
 
 
 @login_required

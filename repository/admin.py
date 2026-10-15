@@ -8,6 +8,7 @@ from .models import (
     FeltEarthquake,
     GempaMemusak,
     GempaMemusakMedia,
+    WaveSimulation,
     ShakemapEvent,
     SiaranPress,
     Station,
@@ -141,3 +142,11 @@ class SiaranPressAdmin(admin.ModelAdmin):
     list_filter   = ('author',)
     search_fields = ('title', 'author')
     ordering      = ('-created_at',)
+
+
+@admin.register(WaveSimulation)
+class WaveSimulationAdmin(admin.ModelAdmin):
+    list_display  = ('id', 'event', 'status', 'stage', 'requested_by', 'requested_at', 'finished_at')
+    list_filter   = ('status',)
+    raw_id_fields = ('event', 'requested_by')
+    readonly_fields = ('requested_at',)

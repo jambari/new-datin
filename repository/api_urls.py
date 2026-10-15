@@ -2,6 +2,7 @@
 from django.urls import path
 from .views import DataAvailabilityReportView, station_search_api, AcceleroDataAvailabilityView, push_events_api, gempa_laporan_bulanan_api, gempa_dirasakan_api, psa5_upload_api, spectrum_json_api, waveform_upload_api, yolo_state_upload_api, yolo_snapshot_upload_api, event_mseed_zip_api
 from wrsng.views import WRSNGStatusUpdateAPI
+from . import wavesim
 
 urlpatterns = [
     path('availability/report/', DataAvailabilityReportView.as_view(), name='availability_report'),
@@ -24,4 +25,9 @@ urlpatterns = [
     path('yolo/state/', yolo_state_upload_api, name='yolo_state_upload_api'),
     # YOLO weight snapshot push (best.pt / last.pt)
     path('yolo/snapshot/', yolo_snapshot_upload_api, name='yolo_snapshot_upload_api'),
+    # SPECFEM3D wave-simulation worker (172.21.63.51) — bearer WAVESIM_WORKER_TOKEN
+    path('wavesim/claim/', wavesim.api_claim, name='wavesim_api_claim'),
+    path('wavesim/<int:pk>/progress/', wavesim.api_progress, name='wavesim_api_progress'),
+    path('wavesim/<int:pk>/result/', wavesim.api_result, name='wavesim_api_result'),
+    path('wavesim/<int:pk>/fail/', wavesim.api_fail, name='wavesim_api_fail'),
 ]

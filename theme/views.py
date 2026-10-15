@@ -457,8 +457,11 @@ def public_gempa_merusak(request):
 
 def public_gempa_merusak_detail(request, pk):
     from repository.models import GempaMemusak
+    from repository.wavesim import public_context
     obj = get_object_or_404(GempaMemusak, pk=pk)
-    return render(request, 'public_gempa_merusak_detail.html', {'object': obj})
+    return render(request, 'public_gempa_merusak_detail.html', {
+        'object': obj, **public_context(obj),
+    })
 
 
 def public_skala_mmi(request):

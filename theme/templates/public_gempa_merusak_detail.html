@@ -143,6 +143,13 @@ table.info td:first-child { color:var(--soft); width:150px; }
     </div>
   </div>
 
+  {% if wavesim %}
+  <div class="card">
+    <h2>Simulasi Penjalaran Gelombang</h2>
+    {% include 'repository/partials/_wavesim_viewer.html' %}
+  </div>
+  {% endif %}
+
   {% with media=object.media.all %}
   <div class="card">
     <h2>Galeri Foto ({{ media.count }})</h2>
@@ -174,6 +181,7 @@ table.info td:first-child { color:var(--soft); width:150px; }
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% if wavesim %}<script src="{% static 'repository/js/wavesim_viewer.js' %}"></script>{% endif %}
 {% if object.strike is not None and object.dip is not None and object.rake is not None %}
 <script src="{% static 'theme/js/beachball.umd.min.js' %}"></script>
 <script>

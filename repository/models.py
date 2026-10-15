@@ -243,6 +243,49 @@ class GempaMemusakMedia(models.Model):
         return f"{self.event} — {self.media_type} ({self.file.name})"
 
 
+class WaveSimulation(models.Model):
+    """SPECFEM3D wave-propagation run for one damaging earthquake.
+
+    Queued by staff from the Gempa Merusak page; the worker on the SPECFEM
+    host (172.21.63.51) claims queued runs through the API, runs the
+    simulation and uploads the web assets (overlay frames, PGV map,
+    result.json) into MEDIA_ROOT/wavesim/<id>/.
+    """
+    STATUS_QUEUED = 'queued'
+    STATUS_RUNNING = 'running'
+    STATUS_DONE = 'done'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_QUEUED, 'Antre'),
+        (STATUS_RUNNING, 'Berjalan'),
+        (STATUS_DONE, 'Selesai'),
+        (STATUS_FAILED, 'Gagal'),
+    ]
+
+    event        = models.ForeignKey(GempaMemusak, on_delete=models.CASCADE, related_name='wave_simulations')
+    status       = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_QUEUED, db_index=True)
+    stage        = models.CharField(max_length=60, blank=True, default='')
+    params       = models.JSONField(default=dict, blank=True)
+    result       = models.JSONField(default=dict, blank=True)
+    log          = models.TextField(blank=True, default='')
+    requested_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    started_at   = models.DateTimeField(null=True, blank=True)
+    finished_at  = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+        verbose_name = 'Simulasi Gelombang'
+        verbose_name_plural = 'Simulasi Gelombang'
+
+    def __str__(self):
+        return f"WaveSimulation #{self.pk} {self.event} [{self.status}]"
+
+    @property
+    def asset_dir(self):
+        return f'wavesim/{self.pk}'
+
+
 class EventBrowser(models.Model):
     event_id     = models.CharField(max_length=50, unique=True, db_index=True)
     origin_time  = models.DateTimeField(db_index=True)

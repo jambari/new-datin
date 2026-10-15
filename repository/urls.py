@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, wavesim
 from .views import ShakemapListView, ShakemapDetailView, ShakemapEventDeleteView# Make sure to import the delete view
 
 urlpatterns = [
@@ -45,6 +45,7 @@ urlpatterns = [
     path('gempa-merusak/<int:pk>/', views.gempa_merusak_detail, name='gempa_merusak_detail'),
     path('gempa-merusak/<int:pk>/edit/', views.gempa_merusak_update, name='gempa_merusak_update'),
     path('gempa-merusak/<int:pk>/hapus/', views.gempa_merusak_delete, name='gempa_merusak_delete'),
+    path('gempa-merusak/<int:pk>/simulasi/', wavesim.wavesim_request, name='gempa_merusak_wavesim'),
 
     # ── Bulletin CRUD ─────────────────────────────────────────────────────────────
     path('bulletin/', views.bulletin_list, name='bulletin_list'),

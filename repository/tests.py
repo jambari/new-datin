@@ -273,3 +273,90 @@ class ComputeSeismicAvailabilityTest(TestCase):
                                         date=datetime.date(2026, 10, 12), percentage=42.0)
         self._run('2026-10-12')
         self.assertEqual(self._pct('WAMI', datetime.date(2026, 10, 12)), 42.0)
+
+
+@__import__('django').test.override_settings(WAVESIM_WORKER_TOKEN='tok')
+class WaveSimulationTest(TestCase):
+    """Queueing by staff and the worker claim/result/fail API."""
+
+    def setUp(self):
+        import tempfile
+        from repository.models import GempaMemusak
+        self.media = tempfile.mkdtemp()
+        self.ev = GempaMemusak.objects.create(
+            no=9001, tanggal_text='16 Oktober 2025', tanggal=datetime.date(2025, 10, 16),
+            wilayah='Sarmi', latitude=-2.18, longitude=138.94, depth_km=16.0, magnitude=6.4,
+            strike=149.15, dip=38.39, rake=70.37)
+        self.user = User.objects.create_user('staf', password='x')
+        self.auth = {'HTTP_AUTHORIZATION': 'Bearer tok'}
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.media, ignore_errors=True)
+
+    def _queue(self):
+        self.client.force_login(self.user)
+        return self.client.post(reverse('gempa_merusak_wavesim', args=[self.ev.pk]))
+
+    def _archive(self, names):
+        import io, tarfile
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode='w:gz') as tar:
+            for name in names:
+                data = b'png'
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+        buf.seek(0)
+        buf.name = 'assets.tar.gz'
+        return buf
+
+    def test_queue_once(self):
+        from repository.models import WaveSimulation
+        self._queue()
+        self._queue()
+        self.assertEqual(WaveSimulation.objects.filter(event=self.ev).count(), 1)
+
+    def test_event_without_mechanism_is_refused(self):
+        from repository.models import WaveSimulation
+        self.ev.strike = None
+        self.ev.save()
+        self._queue()
+        self.assertFalse(WaveSimulation.objects.exists())
+
+    def test_claim_requires_token(self):
+        r = self.client.post('/api/wavesim/claim/', HTTP_AUTHORIZATION='Bearer wrong')
+        self.assertEqual(r.status_code, 401)
+
+    def test_claim_and_result(self):
+        import os
+        from django.test import override_settings
+        from repository.models import WaveSimulation
+        self._queue()
+        job = self.client.post('/api/wavesim/claim/', **self.auth).json()['job']
+        self.assertEqual(job['event']['magnitude'], 6.4)
+        self.assertEqual(job['event']['origin'], '2025-10-16T00:00:00')
+        self.assertIsNone(self.client.post('/api/wavesim/claim/', **self.auth).json()['job'])
+
+        with override_settings(MEDIA_ROOT=self.media):
+            r = self.client.post(f"/api/wavesim/{job['id']}/result/", **self.auth, data={
+                'archive': self._archive(['pgv.png', 'frames/f000.png', '../evil.png', 'x.sh']),
+                'result': '{"bounds": [[-3, 137], [-1, 140]], "frame_times": [0.0]}'})
+            self.assertEqual(r.json()['files'], 2)
+            sim = WaveSimulation.objects.get(pk=job['id'])
+            self.assertEqual(sim.status, 'done')
+            self.assertTrue(os.path.exists(os.path.join(self.media, sim.asset_dir, 'frames', 'f000.png')))
+            self.assertFalse(os.path.exists(os.path.join(self.media, 'wavesim', 'evil.png')))
+
+            page = self.client.get(reverse('public_gempa_merusak_detail', args=[self.ev.pk]),
+                                   HTTP_HOST='localhost')
+            self.assertContains(page, 'Simulasi Penjalaran Gelombang')
+            self.assertContains(page, f'/media/wavesim/{sim.pk}/frames/')
+
+    def test_fail(self):
+        from repository.models import WaveSimulation
+        self._queue()
+        job = self.client.post('/api/wavesim/claim/', **self.auth).json()['job']
+        self.client.post(f"/api/wavesim/{job['id']}/fail/", **self.auth, data={'log': 'boom'})
+        sim = WaveSimulation.objects.get(pk=job['id'])
+        self.assertEqual((sim.status, sim.log), ('failed', 'boom'))

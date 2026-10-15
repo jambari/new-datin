@@ -41,6 +41,50 @@
       </div>
       {% endif %}
 
+      {% if messages %}
+      {% for m in messages %}
+      <div style="padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:13px;{% if m.tags == 'error' %}background:#fef2f2;color:#991b1b;{% else %}background:#ecfdf5;color:#065f46;{% endif %}">{{ m }}</div>
+      {% endfor %}
+      {% endif %}
+
+      <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <h2 style="font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin:0;">Simulasi Penjalaran Gelombang (SPECFEM3D)</h2>
+          {% if wavesim_missing %}
+            <span style="font-size:12px;color:#9ca3af;">Butuh data: {{ wavesim_missing|join:", " }}</span>
+          {% else %}
+          <form method="post" action="{% url 'gempa_merusak_wavesim' object.pk %}">
+            {% csrf_token %}
+            <button type="submit" style="background:#4f46e5;color:#fff;padding:8px 16px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">
+              {% if wavesim %}Jalankan ulang simulasi{% else %}Jalankan simulasi{% endif %}
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        {% if simulations %}
+        <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:12px;">
+          <tr style="color:#9ca3af;text-align:left;"><th style="padding:4px 0;">#</th><th>Status</th><th>Tahap</th><th>Diminta</th><th>Selesai (UTC)</th></tr>
+          {% for s in simulations %}
+          <tr style="border-top:1px solid #f3f4f6;">
+            <td style="padding:4px 0;">{{ s.pk }}</td>
+            <td>{{ s.get_status_display }}</td>
+            <td>{{ s.stage|default:"-" }}</td>
+            <td>{{ s.requested_at|date:"d-m-Y H:i" }}{% if s.requested_by %} · {{ s.requested_by.username }}{% endif %}</td>
+            <td>{{ s.finished_at|date:"d-m-Y H:i"|default:"-" }}</td>
+          </tr>
+          {% if s.status == 'failed' and s.log %}
+          <tr><td></td><td colspan="4"><pre style="white-space:pre-wrap;font-size:11px;color:#991b1b;max-height:120px;overflow:auto;">{{ s.log|truncatechars:1500 }}</pre></td></tr>
+          {% endif %}
+          {% endfor %}
+        </table>
+        {% endif %}
+        {% if wavesim %}
+          {% include 'repository/partials/_wavesim_viewer.html' %}
+        {% elif not simulations %}
+          <p style="font-size:13px;color:#9ca3af;">Belum ada simulasi untuk kejadian ini.</p>
+        {% endif %}
+      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;">
           <h2 style="font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;">Informasi Gempa</h2>
@@ -146,6 +190,7 @@ document.addEventListener('keydown', e => { if(e.key==='Escape') document.getEle
 {% block extra_scripts %}
 {% if object.latitude and object.longitude %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% if wavesim %}<script src="{% static 'repository/js/wavesim_viewer.js' %}"></script>{% endif %}
 <script>
 (function () {
   var lat = {{ object.latitude }};

@@ -387,6 +387,7 @@ QUAKELINK_PUSH_TOKEN    = config('QUAKELINK_PUSH_TOKEN',    default='')
 LEMI_MONITOR_TOKEN      = config('LEMI_MONITOR_TOKEN',      default='')
 SEISMIC_STATUS_TOKEN    = config('SEISMIC_STATUS_TOKEN',    default='')
 PSA5_API_TOKEN          = config('PSA5_API_TOKEN',          default='')
+WAVESIM_WORKER_TOKEN    = config('WAVESIM_WORKER_TOKEN',    default='')  # SPECFEM worker on 172.21.63.51
 
 # SEO / Analytics
 GA_MEASUREMENT_ID = config('GA_MEASUREMENT_ID', default='')
