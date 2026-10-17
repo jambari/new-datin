@@ -75,6 +75,7 @@
 <h2 class="pb">VII. Catatan Kualitas Data dan Tindak Lanjut</h2>
 <ol>
   {% for p in petir %}{% if p.zero_rain %}<li><b>Petir {{ p.label }}:</b> tidak ada sambaran tercatat pada hari hujan (tgl {% for d in p.zero_rain %}{{ d.day }}{% if not forloop.last %}, {% endif %}{% endfor %}); perlu dicek status operasional detektor.</li>{% endif %}{% endfor %}
+  {% for p in petir %}{% if p.map_mismatch %}<li><b>Petir {{ p.label }}:</b> jumlah sambaran unik pada peta ({{ p.map_points|idn:0 }}) berbeda lebih dari 5% dari total ringkasan harian ({{ p.total|idn:0 }}). Kemungkinan ada berkas data yang terproses ganda atau ringkasan harian yang belum lengkap; perlu dicek pada pengolahan data petir.</li>{% endif %}{% endfor %}
   {% if magnet_empty_months %}<li><b>Magnetbumi absolut:</b> tidak ada record observasi pada {{ magnet_empty_months|join:", " }}.</li>{% endif %}
   {% if magnet_dim %}{% with n=magnet_dim|length %}<li><b>Sesi DIM:</b> sesi yang belum direduksi ditandai pada Tabel 3; reduksi D dan I memerlukan azimuth patok acuan.</li>{% endwith %}{% endif %}
   {% for r in magnet_mislabel %}<li><b>Kemungkinan salah label sesi:</b> record tereduksi {{ r.0|date:"d/m/Y" }} berlabel {{ r.1 }} memiliki F identik dengan pembacaan {{ r.2 }}.</li>{% endfor %}

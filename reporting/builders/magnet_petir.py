@@ -263,6 +263,8 @@ def build(period, include_maps=True):
         month["chart"] = _petir_chart(month)
         n, pts, step = _strikes(y, m) if include_maps else (0, [], 1)
         month["map_points"] = n
+        month["map_mismatch"] = bool(include_maps and month["total"]
+                                     and abs(n - month["total"]) > 0.05 * month["total"])
         month["map"] = _map(month["label"], pts, n, step, bbox) if pts else None
 
     reduced, dim_raw, mislabel = _magnet(period)

@@ -119,6 +119,8 @@ class ReportingTest(TestCase):
         self.assertEqual(c["petir_total"], 18)
         self.assertEqual(c["petir"][0]["map_points"], 60)
         self.assertIsNotNone(c["petir"][0]["map"])
+        self.assertTrue(c["petir"][0]["map_mismatch"])  # 60 unique points vs 18 in the summary
+        self.assertContains(r, "berbeda lebih dari 5%")
         self.assertEqual(len(c["magnet_reduced"]), 1)
         self.assertEqual(len(c["magnet_dim"]), 1)
         self.assertEqual(c["magnet_empty_months"], ["Februari 2026"])
