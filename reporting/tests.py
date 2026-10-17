@@ -98,7 +98,12 @@ class ReportingTest(TestCase):
                                           cg_minus_count=5, ic_count=3, total_count=18)
         for i in range(60):
             Strike.objects.create(epoch_ms=i, timestamp=datetime.datetime(2026, 1, 2, 3, i % 60, tzinfo=UTC),
-                                  latitude=-2.5 - i * 0.005, longitude=140.6 + i * 0.005, strike_type=i % 3)
+                                  latitude=-2.3 - i * 0.005, longitude=140.5 + i * 0.005, strike_type=i % 3)
+        for i in range(10):  # duplicate rows (same file ingested twice) count once
+            Strike.objects.create(epoch_ms=i, timestamp=datetime.datetime(2026, 1, 2, 3, i % 60, tzinfo=UTC),
+                                  latitude=-2.3 - i * 0.005, longitude=140.5 + i * 0.005, strike_type=i % 3)
+        Strike.objects.create(epoch_ms=999, timestamp=datetime.datetime(2026, 1, 2, 4, 0, tzinfo=UTC),
+                              latitude=-5.0, longitude=138.0, strike_type=0)  # outside the summary box
         MagneticObservation.objects.create(observation_date=datetime.date(2026, 3, 25), observer="Juan",
                                            session="Session 1", declination=2.79, inclination=-22.1,
                                            total_intensity=39263.08)

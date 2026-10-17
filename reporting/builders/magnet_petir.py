@@ -19,6 +19,10 @@ WIT = ZoneInfo("Asia/Jayapura")
 C_POS, C_NEG, C_IC, C_RAIN = "#d97706", "#b91c1c", "#9ca3af", "#0284c7"
 MAP_MAX_POINTS = 150_000
 JAYAPURA = (-2.5333, 140.7167)
+# Kotak yang sama dengan ringkasan harian (lightning.tasks): peta menampilkan
+# sambaran yang juga dihitung pada statistik.
+SUMMARY_BOX = (-3.014833, -2.014833, 140.204667, 141.204667)
+MAP_PAD = 0.06
 COMPONENTS = [("declination", "Deklinasi D (°)", 4), ("inclination", "Inklinasi I (°)", 4),
               ("total_intensity", "Total intensitas F (nT)", 1), ("horizontal_intensity", "Komponen H (nT)", 1),
               ("vertical_intensity", "Komponen Z (nT)", 1), ("north_component", "Komponen X (nT)", 1),
@@ -86,15 +90,17 @@ def _petir_chart(month):
 
 
 def _strikes(y, m):
+    """Titik sambaran unik (tabel Strike bisa berisi duplikat) di dalam kotak ringkasan."""
     start, end = _month_bounds(y, m)
     t0 = datetime.datetime.combine(start, datetime.time.min, tzinfo=WIT)
     t1 = datetime.datetime.combine(end + datetime.timedelta(days=1), datetime.time.min, tzinfo=WIT)
-    qs = (Strike.objects.filter(timestamp__gte=t0, timestamp__lt=t1, latitude__isnull=False, longitude__isnull=False)
-          .values_list("latitude", "longitude", "strike_type"))
-    n = qs.count()
-    step = max(1, -(-n // MAP_MAX_POINTS))
-    pts = list(qs.order_by("id")[::step]) if step > 1 else list(qs)
-    return n, pts, step
+    lat0, lat1, lon0, lon1 = SUMMARY_BOX
+    qs = (Strike.objects.filter(timestamp__gte=t0, timestamp__lt=t1, latitude__range=(lat0, lat1),
+                                longitude__range=(lon0, lon1))
+          .values_list("epoch_ms", "latitude", "longitude", "strike_type").distinct())
+    rows = list(qs)
+    step = max(1, -(-len(rows) // MAP_MAX_POINTS))
+    return len(rows), [(la, lo, t) for _e, la, lo, t in rows[::step]], step
 
 
 def _map(month_label, pts, n_total, step, bbox):
@@ -133,15 +139,6 @@ def _map(month_label, pts, n_total, step, bbox):
             bbox=dict(fc="white", ec="none", alpha=0.8, pad=1.5))
     ax.set_title(f"Peta Sebaran Sambaran Petir – {month_label}", loc="left")
     return to_data_uri(fig, dpi=150)
-
-
-def _bbox(all_pts):
-    lats = sorted(p[0] for p in all_pts)
-    lons = sorted(p[1] for p in all_pts)
-    k = max(1, len(lats) // 200)
-    la0, la1, lo0, lo1 = lats[k], lats[-k], lons[k], lons[-k]
-    pad = max(la1 - la0, lo1 - lo0) * 0.06 + 0.02
-    return la0 - pad, la1 + pad, lo0 - pad, lo1 + pad
 
 
 # ---------------------------------------------------------------- magnet abs
@@ -260,17 +257,13 @@ def _kindex_chart(month):
 # --------------------------------------------------------------------- build
 def build(period, include_maps=True):
     petir = [_petir_month(y, m) for y, m in period.months]
-    strikes = {}
-    if include_maps:
-        for y, m in period.months:
-            strikes[(y, m)] = _strikes(y, m)
-        all_pts = [p for n, pts, step in strikes.values() for p in pts]
-        bbox = _bbox(all_pts) if len(all_pts) > 50 else None
+    lat0, lat1, lon0, lon1 = SUMMARY_BOX
+    bbox = (lat0 - MAP_PAD, lat1 + MAP_PAD, lon0 - MAP_PAD, lon1 + MAP_PAD)
     for (y, m), month in zip(period.months, petir):
         month["chart"] = _petir_chart(month)
-        n, pts, step = strikes.get((y, m), (0, [], 1))
+        n, pts, step = _strikes(y, m) if include_maps else (0, [], 1)
         month["map_points"] = n
-        month["map"] = _map(month["label"], pts, n, step, bbox) if include_maps and bbox and pts else None
+        month["map"] = _map(month["label"], pts, n, step, bbox) if pts else None
 
     reduced, dim_raw, mislabel = _magnet(period)
     magnet_months = []
