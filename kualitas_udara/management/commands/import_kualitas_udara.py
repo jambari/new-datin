@@ -51,18 +51,41 @@ class Command(BaseCommand):
             default=os.path.expanduser("~/Documents/bukti-skp/spm_series_data.csv"),
             help="Lokasi file spm_series_data.csv",
         )
+        parser.add_argument(
+            "--skip-existing",
+            action="store_true",
+            help="Lewati data yang sudah ada di database (tidak ditimpa); hanya data baru yang diimpor.",
+        )
 
     def handle(self, *args, **options):
+        self.skip_existing = options["skip_existing"]
         self.import_kah(options["kah_path"])
         self.import_spm(options["spm_path"])
+
+    def save_row(self, model, lookup, defaults):
+        """Simpan satu baris; kembalikan 'created', 'updated' atau 'skipped'."""
+        if self.skip_existing:
+            if model.objects.filter(**lookup).exists():
+                return "skipped"
+            model.objects.create(**lookup, **defaults)
+            return "created"
+        _obj, was_created = model.objects.update_or_create(**lookup, defaults=defaults)
+        return "created" if was_created else "updated"
+
+    def report(self, label, counts):
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"{label} selesai: {counts['created']} data baru, {counts['updated']} data diperbarui, "
+                f"{counts['skipped']} dilewati (sudah ada)."
+            )
+        )
 
     def import_kah(self, path):
         if not os.path.exists(path):
             self.stderr.write(self.style.WARNING(f"File KAH tidak ditemukan: {path}"))
             return
 
-        created = 0
-        updated = 0
+        counts = {"created": 0, "updated": 0, "skipped": 0}
         with open(path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -73,37 +96,20 @@ class Command(BaseCommand):
                     continue
 
                 defaults = {
-                    "stasiun": stasiun,
-                    "bulan": bulan,
-                    "minggu": minggu,
+                    field_name: parse_float(row.get(csv_col))
+                    for csv_col, field_name in KAH_FIELD_MAP.items()
                 }
-                for csv_col, field_name in KAH_FIELD_MAP.items():
-                    defaults[field_name] = parse_float(row.get(csv_col))
+                lookup = {"stasiun": stasiun, "bulan": bulan, "minggu": minggu}
+                counts[self.save_row(KAHSeriesData, lookup, defaults)] += 1
 
-                obj, was_created = KAHSeriesData.objects.update_or_create(
-                    stasiun=stasiun,
-                    bulan=bulan,
-                    minggu=minggu,
-                    defaults=defaults,
-                )
-                if was_created:
-                    created += 1
-                else:
-                    updated += 1
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"KAH selesai: {created} data baru, {updated} data diperbarui."
-            )
-        )
+        self.report("KAH", counts)
 
     def import_spm(self, path):
         if not os.path.exists(path):
             self.stderr.write(self.style.WARNING(f"File SPM tidak ditemukan: {path}"))
             return
 
-        created = 0
-        updated = 0
+        counts = {"created": 0, "updated": 0, "skipped": 0}
         with open(path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -119,22 +125,8 @@ class Command(BaseCommand):
                     )
                     continue
 
-                obj, was_created = SPMSeriesData.objects.update_or_create(
-                    stasiun=stasiun,
-                    timestamp=timestamp,
-                    defaults={
-                        "stasiun": stasiun,
-                        "timestamp": timestamp,
-                        "spm": parse_float(row.get("SPM")),
-                    },
-                )
-                if was_created:
-                    created += 1
-                else:
-                    updated += 1
+                lookup = {"stasiun": stasiun, "timestamp": timestamp}
+                defaults = {"spm": parse_float(row.get("SPM"))}
+                counts[self.save_row(SPMSeriesData, lookup, defaults)] += 1
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"SPM selesai: {created} data baru, {updated} data diperbarui."
-            )
-        )
+        self.report("SPM", counts)
