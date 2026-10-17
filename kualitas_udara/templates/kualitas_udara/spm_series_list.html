@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+            <p class="mt-1 text-sm text-gray-500">
+              Ambang batas SPM: {{ spm_threshold_label }}.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'kualitas_udara:spm_export' 'excel' %}{% if filter_query %}?{{ filter_query }}{% endif %}"
+               class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-green-700">
+              Export Excel
+            </a>
+            <a href="{% url 'kualitas_udara:spm_export' 'pdf' %}{% if filter_query %}?{{ filter_query }}{% endif %}"
+               class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700">
+              Export PDF
+            </a>
+            <a href="{% url 'kualitas_udara:spm_create' %}"
+               class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700">
+              Tambah SPM
+            </a>
+          </div>
+        </div>
+
+        <div class="mb-6 rounded-xl bg-white p-5 shadow">
+          <form method="get" class="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <div class="w-full lg:max-w-xs">
+              <label for="start" class="mb-2 block text-sm font-medium text-gray-700">Dari Tanggal</label>
+              <input type="date" name="start" id="start" value="{{ f_start }}"
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            </div>
+            <div class="w-full lg:max-w-xs">
+              <label for="end" class="mb-2 block text-sm font-medium text-gray-700">Sampai Tanggal</label>
+              <input type="date" name="end" id="end" value="{{ f_end }}"
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            </div>
+            <div class="w-full lg:max-w-xs">
+              <label for="stasiun" class="mb-2 block text-sm font-medium text-gray-700">Stasiun</label>
+              <input type="text" name="stasiun" id="stasiun" value="{{ f_stasiun }}" placeholder="Nama stasiun..."
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            </div>
+            <div class="flex gap-3">
+              <button type="submit" class="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900">Terapkan</button>
+              <a href="{% url 'kualitas_udara:spm_list' %}" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Reset</a>
+            </div>
+          </form>
+        </div>
+
+        <div class="overflow-hidden rounded-xl bg-white shadow">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Stasiun</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Tanggal</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">SPM (µg/m³)</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Remark</th>
+                  <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                {% for row in rows %}
+                  <tr>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ row.obj.stasiun }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ row.obj.timestamp|date:"Y-m-d" }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">
+                      <div>{{ row.value|default_if_none:"-" }}</div>
+                      {% if row.remark.status == 'exceed' %}
+                        <span class="mt-1 inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{{ row.remark.text }}</span>
+                      {% elif row.remark.status == 'normal' %}
+                        <span class="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">{{ row.remark.text }}</span>
+                      {% else %}
+                        <span class="mt-1 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">{{ row.remark.text }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ row.remark_summary }}</td>
+                    <td class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
+                      <a href="{% url 'kualitas_udara:spm_update' row.obj.id %}" class="mr-4 text-indigo-600 hover:underline">Edit</a>
+                      <a href="{% url 'kualitas_udara:spm_delete' row.obj.id %}" class="text-red-600 hover:underline">Hapus</a>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-500">
+                      Tidak ada data SPM{% if has_filters %} untuk filter ini{% endif %}.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% include 'kualitas_udara/partials/_pagination.html' with page_obj=page_obj %}
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+      <div class="mx-auto max-w-xl rounded-lg bg-white p-8 shadow-md">
+        <h2 class="mb-4 text-2xl font-bold text-gray-800">Hapus {{ type_name }}</h2>
+        <p class="mb-6 text-sm text-gray-600">
+          Anda yakin ingin menghapus data berikut?
+        </p>
+        <div class="mb-6 rounded-lg bg-gray-50 p-4 text-sm text-gray-800">
+          {{ object }}
+        </div>
+
+        <form method="POST">
+          {% csrf_token %}
+          <div class="flex justify-end gap-2">
+            <a href="{% url back_url %}" class="rounded bg-gray-200 px-4 py-2 font-bold text-gray-700 hover:bg-gray-300">
+              Batal
+            </a>
+            <button type="submit" class="rounded bg-red-600 px-4 py-2 font-bold text-white hover:bg-red-700">
+              Ya, Hapus
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function() {
+  var btn = document.getElementById('sidebar-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var el = document.getElementById('sidebar');
+    if (el) el.classList.toggle('hidden');
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+      <div class="mx-auto max-w-5xl rounded-lg bg-white p-8 shadow-md">
+        <h2 class="mb-6 text-2xl font-bold text-gray-800">{{ title }}</h2>
+
+        {% if form.errors %}
+          <div class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+            Periksa kembali input Anda.
+          </div>
+        {% endif %}
+
+        <form method="POST" novalidate>
+          {% csrf_token %}
+
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">Stasiun</label>
+              {{ form.stasiun }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">Bulan</label>
+              {{ form.bulan }}
+              <p class="mt-1 text-xs text-gray-500">Format YYYY-MM</p>
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">Minggu</label>
+              {{ form.minggu }}
+            </div>
+          </div>
+
+          <hr class="my-6">
+
+          <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">pH</label>
+              {{ form.ph }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">DHL (µS/cm)</label>
+              {{ form.dh }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">Ca (mg/L)</label>
+              {{ form.ca }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">Mg (mg/L)</label>
+              {{ form.mg }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">Na (mg/L)</label>
+              {{ form.na }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">K (mg/L)</label>
+              {{ form.k }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">NH₄ (mg/L)</label>
+              {{ form.nh4 }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">Cl (mg/L)</label>
+              {{ form.cl }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">SO₄ (mg/L)</label>
+              {{ form.so4 }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">NO₃ (mg/L)</label>
+              {{ form.no3 }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">KT</label>
+              {{ form.kt }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">AC</label>
+              {{ form.ac }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">AL</label>
+              {{ form.al }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">CH</label>
+              {{ form.ch }}
+            </div>
+            <div>
+              <label class="mb-2 block font-bold text-gray-700">OX</label>
+              {{ form.ox }}
+            </div>
+          </div>
+
+          <div class="mt-8 flex justify-end gap-2">
+            <a href="{% url 'kualitas_udara:kah_list' %}" class="rounded px-4 py-2 font-bold text-white" style="background-color: orange;">
+              Batal
+            </a>
+            <button type="submit" class="rounded bg-green-600 px-4 py-2 font-bold text-white hover:bg-green-700">
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function() {
+  var btn = document.getElementById('sidebar-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    var el = document.getElementById('sidebar');
+    if (el) el.classList.toggle('hidden');
+  });
+})();
+</script>
+{% endblock %}

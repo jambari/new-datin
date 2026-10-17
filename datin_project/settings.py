@@ -83,7 +83,8 @@ INSTALLED_APPS = [
     'layanan.apps.LayananConfig',
     'guests.apps.GuestsConfig',
     'pengaduan.apps.PengaduanConfig',
-    'monitoring_pm'
+    'monitoring_pm',
+    'kualitas_udara.apps.KualitasUdaraConfig',
 ]
 
 SEEDLINK_HOST = '202.90.199.206'   # Accelerometer SeedLink
