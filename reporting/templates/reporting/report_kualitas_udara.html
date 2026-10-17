@@ -1,0 +1,83 @@
+{% extends "reporting/report_base.html" %}
+{% load reporting_extras %}
+{% block body %}
+<h2>I. Pendahuluan</h2>
+<p>Stasiun Geofisika Kelas I Jayapura melaksanakan pengamatan kualitas udara di titik pengamatan ANGKASAPURA. Pengamatan ini mencakup <b>Kimia Air Hujan (KAH)</b>, yaitu sampel air hujan mingguan yang dianalisis untuk pH, daya hantar listrik (DHL), dan ion utama, serta <b>partikulat tersuspensi (SPM)</b> dari sampling 24 jam. Laporan ini menjadi bukti capaian kinerja berupa tersedianya data kualitas udara yang terkumpul, terdokumentasi, dan terkendali mutunya untuk periode {{ period.short_label }}.</p>
+
+<h2>II. Sumber Data dan Metode</h2>
+<ol>
+  <li><b>Sumber data:</b> Database Kualitas Udara BMKG (Data Lab, <i>Series data</i>), stasiun ANGKASAPURA, yang ditarik otomatis setiap awal bulan ke sistem informasi stasiun (menu <i>Kualitas Udara</i>).</li>
+  <li><b>KAH:</b> data mingguan berisi pH, DHL, ion utama, dan parameter tambahan (Tabel A). Ambang hujan asam adalah pH &lt; 5,6.</li>
+  <li><b>SPM:</b> konsentrasi partikulat (µg/m³) per sampel 24 jam, sekitar 6 hari sekali. Baku mutu: {{ spm_threshold|idn:0 }} µg/m³ (TSP 24 jam, PP No. 41 Tahun 1999).</li>
+  <li><b>Kontrol kualitas:</b> (a) baris KAH yang semua parameternya 0 dianggap minggu tanpa sampel; (b) pH harus dalam rentang fisis 3–9; (c) sampel dengan DHL atau Mg lebih dari 5 kali median periode ditandai <i>perlu verifikasi</i> dan tidak dipakai dalam statistik; (d) konsistensi antarparameter (KT = Ca + Mg, asiditas sesuai pH); (e) SPM dibandingkan dengan baku mutu.</li>
+</ol>
+<div class="avoid">
+<h3>Tabel A. Keterangan parameter KAH</h3>
+<table><thead><tr><th>Kode</th><th>Parameter</th><th>Satuan</th><th>Catatan</th></tr></thead><tbody>
+{% for p in param_info %}<tr><td class="c">{{ p.code }}</td><td>{{ p.name }}</td><td class="c">{{ p.unit|default:"–" }}</td><td>{{ p.note|default:"–" }}</td></tr>{% endfor %}
+</tbody></table>
+</div>
+
+<h2>III. Ringkasan Capaian</h2>
+<div class="kpi">
+  <div><b>{{ valid|length }}</b><span>sampel KAH terukur ({{ ok|length }} lolos QC)</span></div>
+  <div><b>{{ spm|length }}{% if spm_expected %}/{{ spm_expected }}{% endif %}</b><span>sampel SPM{% if spm_expected %} sesuai jadwal 6-harian{% endif %}</span></div>
+  <div><b>{{ acid }}/{{ ok|length }}</b><span>sampel KAH dengan pH &lt; 5,6</span></div>
+  <div><b>{{ spm_max|idn:1 }}</b><span>SPM maksimum (µg/m³); baku mutu {{ spm_threshold|idn:0 }}</span></div>
+</div>
+<div class="avoid">
+<h3>Tabel 1. Ringkasan bulanan</h3>
+<table><thead><tr><th rowspan="2">Bulan</th><th colspan="5">Kimia Air Hujan</th><th colspan="3">SPM (µg/m³)</th></tr>
+<tr><th>Sampel</th><th>Lolos QC</th><th>pH rata-rata</th><th>pH min–maks</th><th>pH &lt; 5,6</th><th>Sampel</th><th>Rata-rata</th><th>Maks.</th></tr></thead><tbody>
+{% for m in monthly %}<tr><td>{{ m.label }}</td><td class="c">{{ m.n }}</td><td class="c">{{ m.nok }}</td><td class="c">{{ m.ph_mean|idn }}</td><td class="c">{{ m.ph_min|idn }}–{{ m.ph_max|idn }}</td><td class="c">{{ m.acid }}</td><td class="c">{{ m.spm_n }}</td><td class="c">{{ m.spm_mean|idn:1 }}</td><td class="c">{{ m.spm_max|idn:1 }}</td></tr>{% endfor %}
+<tr><td><b>Periode</b></td><td class="c"><b>{{ valid|length }}</b></td><td class="c"><b>{{ ok|length }}</b></td><td class="c"><b>{{ ph_mean|idn }}</b></td><td class="c"><b>{{ ph_min|idn }}–{{ ph_max|idn }}</b></td><td class="c"><b>{{ acid }}</b></td><td class="c"><b>{{ spm|length }}</b></td><td class="c"><b>{{ spm_mean|idn:1 }}</b></td><td class="c"><b>{{ spm_max|idn:1 }}</b></td></tr>
+</tbody></table>
+</div>
+
+<h2>IV. Data Kimia Air Hujan (KAH)</h2>
+{% if valid %}
+<p>Tersedia <b>{{ valid|length }} sampel KAH terukur</b>; {{ empty|length }} slot minggu lainnya tidak memiliki sampel. Dari {{ ok|length }} sampel lolos QC, <b>{{ acid }} sampel ({{ acid_pct|idn:0 }}%) bersifat asam</b>, dengan pH rata-rata {{ ph_mean|idn }} dan pH terendah {{ ph_min|idn }}.</p>
+<img class="fig" src="{{ chart_ph }}" alt="Grafik pH"><div class="cap">Gambar 1. pH air hujan mingguan.</div>
+<img class="fig" src="{{ chart_ion }}" alt="Grafik ion"><div class="cap">Gambar 2. Komposisi ion utama dan DHL per sampel.</div>
+{% else %}<div class="warn">Tidak ada sampel KAH terukur pada periode ini.</div>{% endif %}
+<h3>Tabel 2. Data KAH (ion dalam mg/L)</h3>
+<table><thead><tr><th>Bulan</th><th>Mg.</th><th>pH</th><th>DHL</th><th>Ca²⁺</th><th>Mg²⁺</th><th>Na⁺</th><th>K⁺</th><th>NH₄⁺</th><th>Cl⁻</th><th>SO₄²⁻</th><th>NO₃⁻</th><th>Status QC</th></tr></thead><tbody>
+{% for r in kah %}
+  {% if r.is_empty %}<tr class="emp"><td class="c">{{ r.bulan }}</td><td class="c">{{ r.minggu }}</td><td colspan="10" class="c">– semua parameter 0 –</td><td>Tidak ada sampel</td></tr>
+  {% else %}<tr{% if r.qc != "Lolos QC" %} class="ver"{% endif %}><td class="c">{{ r.bulan }}</td><td class="c">{{ r.minggu }}</td><td class="n{% if r.ph < 5.6 %} red{% endif %}">{{ r.ph|idn }}</td><td class="n">{{ r.dh|idn:1 }}</td><td class="n">{{ r.ca|idn:3 }}</td><td class="n">{{ r.mg|idn:3 }}</td><td class="n">{{ r.na|idn:3 }}</td><td class="n">{{ r.k|idn:3 }}</td><td class="n">{{ r.nh4|idn:3 }}</td><td class="n">{{ r.cl|idn:3 }}</td><td class="n">{{ r.so4|idn:3 }}</td><td class="n">{{ r.no3|idn:3 }}</td><td>{{ r.qc }}</td></tr>{% endif %}
+{% empty %}<tr><td colspan="13" class="c">Tidak ada data KAH.</td></tr>{% endfor %}
+</tbody></table>
+<p class="note">pH &lt; 5,6 dicetak merah; baris kuning perlu verifikasi. DHL dalam µS/cm.</p>
+{% if valid %}
+<h3>Tabel 2b. Parameter tambahan KAH</h3>
+<table><thead><tr><th>Bulan</th><th>Mg.</th><th>pH</th><th>KT (mg/L)</th><th>Ca + Mg</th><th>AC (µeq/L)</th><th>H⁺ dari pH (µeq/L)</th><th>AL</th><th>CH (mm)</th><th>OX</th></tr></thead><tbody>
+{% for r in valid %}<tr{% if r.ac_inconsistent or r.qc != "Lolos QC" %} class="ver"{% endif %}><td class="c">{{ r.bulan }}</td><td class="c">{{ r.minggu }}</td><td class="n">{{ r.ph|idn }}</td><td class="n">{{ r.kt|idn:3 }}</td><td class="n">{{ r.ca_mg|idn:3 }}</td><td class="n">{{ r.ac|idn:1 }}</td><td class="n">{{ r.h_plus|idn:1 }}</td><td class="n">{{ r.al|idn:1 }}</td><td class="n">{{ r.ch|idn:1 }}</td><td class="n">{{ r.ox|idn:1 }}</td></tr>{% endfor %}
+</tbody></table>
+{% endif %}
+
+<h2>V. Data Partikulat Tersuspensi (SPM)</h2>
+{% if spm %}
+<p>Tersedia <b>{{ spm|length }} sampel SPM</b> dengan rata-rata {{ spm_mean|idn:1 }} µg/m³ (rentang {{ spm_min|idn:1 }}–{{ spm_max|idn:1 }} µg/m³).
+{% if spm_exceed %}<b>{{ spm_exceed }} sampel melebihi baku mutu.</b>{% else %}<b>Semua sampel di bawah baku mutu {{ spm_threshold|idn:0 }} µg/m³</b> (tertinggi sekitar {{ spm_max_pct|idn:0 }}% dari baku mutu).{% endif %}</p>
+<img class="fig" src="{{ chart_spm }}" alt="Grafik SPM"><div class="cap">Gambar 3. Konsentrasi SPM per sampel dan perbandingannya dengan baku mutu.</div>
+<h3>Tabel 3. Data SPM</h3>
+<table><thead><tr><th>No</th><th>Tanggal</th><th>SPM (µg/m³)</th><th>% baku mutu</th><th>Status</th></tr></thead><tbody>
+{% for r in spm %}<tr><td class="c">{{ forloop.counter }}</td><td class="c">{{ r.timestamp|date:"d/m/Y" }}</td><td class="n">{{ r.spm|idn }}</td><td class="n">{{ r.pct|idn:1 }}%</td><td>{% if r.spm > spm_threshold %}Melebihi baku mutu{% else %}Di bawah baku mutu{% endif %}</td></tr>{% endfor %}
+</tbody></table>
+{% else %}<div class="warn">Tidak ada data SPM pada periode ini.</div>{% endif %}
+
+<h2>VI. Catatan Kualitas Data dan Tindak Lanjut</h2>
+<ol>
+  {% if empty %}<li><b>Slot KAH tanpa sampel:</b> {{ empty|length }} baris dengan semua parameter 0 ({% for r in empty %}{{ r.bulan }} M{{ r.minggu }}{% if not forloop.last %}, {% endif %}{% endfor %}). Baris ini bukan hasil ukur.</li>{% endif %}
+  {% for r in verify %}<li><b>Sampel KAH {{ r.bulan }} minggu {{ r.minggu }}:</b> pH {{ r.ph|idn }}, DHL {{ r.dh|idn:0 }} µS/cm, Mg²⁺ {{ r.mg|idn }} mg/L, Ca²⁺ {{ r.ca|idn }} mg/L, jauh di atas sampel lain (median DHL {{ median.dh|idn:1 }} µS/cm, Mg²⁺ {{ median.mg|idn:3 }} mg/L). Perlu verifikasi ke laboratorium; tidak dipakai dalam statistik.</li>{% endfor %}
+  {% if ac_bad %}<li><b>Asiditas tidak konsisten dengan pH:</b> {% for r in ac_bad %}{{ r.bulan }} M{{ r.minggu }} (pH {{ r.ph|idn }}, setara H⁺ {{ r.h_plus|idn:1 }} µeq/L, AC = 0){% if not forloop.last %}; {% endif %}{% endfor %}. Perlu dicek apakah asiditas tidak dianalisis atau salah entri.</li>{% endif %}
+  {% if spm_missing %}<li><b>SPM:</b> menurut pola sampling 6-harian, tidak ada data sekitar tanggal {% for d in spm_missing %}{{ d|date:"d/m" }}{% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
+  <li><b>Ketersediaan data:</b> data pusat diperbarui sekitar setiap 3 bulan; penarikan otomatis bulanan menjangkau 6 bulan ke belakang sehingga data yang terlambat tetap masuk.</li>
+</ol>
+
+<h2>VII. Kesimpulan</h2>
+<p>Selama periode {{ period.label }} telah tersedia data kualitas udara Stasiun Geofisika Jayapura berupa <b>{{ valid|length }} sampel Kimia Air Hujan</b> ({{ ok|length }} lolos kontrol kualitas) dan <b>{{ spm|length }} sampel SPM</b>.
+{% if ph_mean %}pH rata-rata air hujan {{ ph_mean|idn }}{% if acid %}, dengan {{ acid }} sampel bersifat asam{% endif %}.{% endif %}
+{% if spm %}Konsentrasi partikulat rata-rata {{ spm_mean|idn:1 }} µg/m³{% if not spm_exceed %}, seluruhnya di bawah baku mutu{% endif %}.{% endif %}
+Data telah tersimpan di basis data stasiun, diperiksa mutunya, dan anomali telah diidentifikasi untuk ditindaklanjuti. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah tercapai.</p>
+{% endblock %}

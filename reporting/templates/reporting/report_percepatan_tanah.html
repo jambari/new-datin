@@ -1,0 +1,70 @@
+{% extends "reporting/report_base.html" %}
+{% load reporting_extras %}
+{% block body %}
+<h2>I. Pendahuluan</h2>
+<p>Data percepatan tanah (<i>strong motion</i>) dipakai untuk analisis guncangan gempabumi, pembuatan peta guncangan (ShakeMap), dan evaluasi respons struktur terhadap SNI 1726. Laporan ini menjadi bukti tersedianya data percepatan tanah yang terkoreksi, terproses, dan terkendali mutunya untuk gempabumi di wilayah Papua selama periode {{ period.short_label }}.</p>
+
+<h2>II. Sumber Data dan Metode</h2>
+<ol>
+  <li><b>Sumber data:</b> spektrum respons (<code>.psa5</code>) dan peta intensitas ShakeMap yang dikirim dari server pengolahan ShakeMap ke sistem informasi stasiun.</li>
+  <li><b>Nilai spectral acceleration:</b> PGA dan Sa pada periode 0,3 s, 1,0 s, dan 3,0 s (redaman 5%, satuan g) untuk <b>{{ nearest_n }} stasiun terdekat dari episenter</b>, semua komponen.</li>
+  <li><b>Nilai rekap per event</b> adalah nilai maksimum komponen horizontal yang lolos QC.</li>
+  <li><b>Kontrol kualitas:</b> (a) nilai &gt; 3 g dianggap di luar rentang fisis; (b) PGA atau Sa bernilai 0 dianggap tidak ada data; (c) PGA &lt; 0,1 × Sa(1,0 s) atau Sa(0,3 s) &lt; 0,05 × PGA dianggap tidak konsisten (spike); (d) bila satu komponen stasiun anomali, seluruh stasiun pada event itu tidak dipakai.</li>
+  <li>Waktu dalam UTC (WIT = UTC + 9 jam).</li>
+</ol>
+
+<h2>III. Ringkasan Capaian</h2>
+<div class="kpi">
+  <div><b>{{ n_events }}</b><span>event dengan spektrum respons</span></div>
+  <div><b>{{ n_stations }}</b><span>stasiun akselerograf terpakai</span></div>
+  <div><b>{{ n_ok }}/{{ n_records }}</b><span>rekaman lolos QC ({{ ok_pct|idn:1 }}%)</span></div>
+  <div><b>{{ mag_min|idn:1 }}–{{ mag_max|idn:1 }}</b><span>rentang magnitudo</span></div>
+</div>
+<div class="avoid">
+<h3>Tabel 1. Jumlah event per bulan</h3>
+<table><thead><tr><th>Bulan</th><th>Event</th></tr></thead><tbody>
+{% for y, m, n in per_month %}<tr><td>{{ m }}/{{ y }}</td><td class="n">{{ n }}</td></tr>{% endfor %}
+</tbody></table>
+</div>
+{% if reasons %}
+<h3>Kontrol kualitas rekaman</h3>
+<p><b>{{ n_ok }} dari {{ n_records }} rekaman ({{ ok_pct|idn:1 }}%) lolos QC</b>; {{ n_bad }} rekaman anomali tidak dipakai pada rekap, tetapi tetap ditandai merah pada lampiran.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<table><thead><tr><th>Alasan anomali</th><th>Rekaman</th></tr></thead><tbody>
+{% for reason, n in reasons %}<tr><td>{{ reason }}</td><td class="n">{{ n }}</td></tr>{% endfor %}
+</tbody></table>
+<table><thead><tr><th>Stasiun dengan anomali</th><th>Rekaman</th></tr></thead><tbody>
+{% for code, n in bad_stations %}<tr><td>{{ code }}</td><td class="n">{{ n }}</td></tr>{% endfor %}
+</tbody></table>
+</div>
+<p class="note">Nilai anomali yang berulang pada stasiun yang sama mengindikasikan gangguan instrumen atau rekaman; disarankan pemeriksaan stasiun terkait.</p>
+{% endif %}
+{% if top_pga %}<p><b>PGA horizontal tertinggi</b> {{ top_pga.pga.pga|idn:4 }} g di stasiun {{ top_pga.pga.station }} ({{ top_pga.pga.dist|idn:1 }} km) saat gempabumi M{{ top_pga.mag|idn:1 }} {{ top_pga.location }}, {{ top_pga.time|date:"d/m/Y H:i" }} UTC. <b>Sa(0,3 s) tertinggi</b> {{ top_sa.sa03.sa03|idn:4 }} g di stasiun {{ top_sa.sa03.station }}.</p>{% endif %}
+{% if chart_pga %}<img class="fig" src="{{ chart_pga }}" alt="PGA vs jarak"><div class="cap">Gambar 1. PGA horizontal terhadap jarak episenter.</div>{% endif %}
+
+<h2 class="pb">IV. Rekapitulasi Spectral Acceleration per Event</h2>
+<table><thead><tr><th>No</th><th>Waktu (UTC)</th><th>M</th><th>Depth</th><th>Lokasi</th><th>Stasiun terdekat (km)</th><th>PGA</th><th>Sa 0,3 s</th><th>Sa 1,0 s</th><th>Sa 3,0 s</th></tr></thead><tbody>
+{% for e in events %}<tr><td class="c">{{ forloop.counter }}</td><td class="c">{{ e.time|date:"d/m/Y" }}<br>{{ e.time|date:"H:i:s" }}</td><td class="c">{{ e.mag|idn:1 }}</td><td class="n">{{ e.depth|idn:0 }}</td><td>{{ e.location|default:e.event_id }}</td><td>{% if e.nearest %}{{ e.nearest.station }}{% if e.nearest.dist is not None %} ({{ e.nearest.dist|idn:1 }}){% endif %}{% endif %}</td>
+<td class="n">{% if e.pga %}{{ e.pga.pga|idn:4 }}{% else %}–*{% endif %}</td><td class="n">{% if e.sa03 %}{{ e.sa03.sa03|idn:4 }}{% else %}–*{% endif %}</td><td class="n">{% if e.sa10 %}{{ e.sa10.sa10|idn:4 }}{% else %}–*{% endif %}</td><td class="n">{% if e.sa30 %}{{ e.sa30.sa30|idn:4 }}{% else %}–*{% endif %}</td></tr>
+{% empty %}<tr><td colspan="10" class="c">Tidak ada event dengan spektrum respons pada periode ini.</td></tr>{% endfor %}
+</tbody></table>
+<p class="note">Satuan g, redaman 5%. * tidak ada rekaman horizontal yang lolos QC pada {{ nearest_n }} stasiun terdekat.{% if events_without_shakemap %} {{ events_without_shakemap }} event tidak memiliki data ShakeMap (lokasi/magnitudo), sehingga stasiun diurutkan tanpa jarak.{% endif %}</p>
+
+<h2>V. Kesimpulan</h2>
+<p>Selama periode {{ period.label }} tersedia <b>{{ n_events }} event gempabumi</b> wilayah Papua dengan spektrum respons dari data akselerograf terkoreksi. Dari {{ n_records }} rekaman komponen pada {{ nearest_n }} stasiun terdekat, {{ n_ok }} rekaman ({{ ok_pct|idn:1 }}%) lolos kontrol kualitas, dan {{ events_valid }} event memiliki nilai spektra horizontal yang valid. Rekaman anomali telah diidentifikasi untuk ditindaklanjuti. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah tercapai.</p>
+
+<h2 class="pb">LAMPIRAN. Peta Intensitas dan Nilai Spectral Acceleration per Event</h2>
+{% for e in events %}
+<div class="ev">
+  {% if e.image %}<img src="{{ e.image.url }}" alt="Intensitas {{ e.event_id }}">{% else %}<div class="note">Peta intensitas tidak tersedia.</div>{% endif %}
+  <div>
+    <div class="hd">{{ forloop.counter }}. M{{ e.mag|idn:1 }} – {{ e.location|default:e.event_id }}</div>
+    <div class="mt">{{ e.time|date:"d/m/Y H:i:s" }} UTC · kedalaman {{ e.depth|idn:0 }} km · ID {{ e.event_id }} · {{ e.n_stations }} stasiun</div>
+    <table><thead><tr><th>Stasiun</th><th>Jarak (km)</th><th>Komp.</th><th>PGA</th><th>Sa 0,3 s</th><th>Sa 1,0 s</th><th>Sa 3,0 s</th></tr></thead><tbody>
+    {% for r in e.records %}<tr{% if r.qc %} class="bad"{% endif %}><td>{{ r.station }}</td><td class="n">{{ r.dist|idn:1 }}</td><td class="c">{{ r.component }}</td><td class="n">{{ r.pga|idn:4 }}</td><td class="n">{{ r.sa03|idn:4 }}</td><td class="n">{{ r.sa10|idn:4 }}</td><td class="n">{{ r.sa30|idn:4 }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% for r in e.records %}{% if r.qc %}<div class="note red">Anomali {{ r.station }}/{{ r.component }}: {{ r.qc }}.</div>{% endif %}{% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

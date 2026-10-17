@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-5xl">
+        <h1 class="text-3xl font-bold text-gray-800">Reporting</h1>
+        <p class="mt-1 mb-6 text-sm text-gray-500">
+          Laporan Bukti SKP per periode, disusun otomatis dari data di server. Hasilnya bisa dicetak atau disimpan sebagai PDF dari browser.
+        </p>
+
+        {% for message in messages %}
+          <div class="mb-4 rounded-lg px-4 py-3 text-sm
+            {% if message.tags == 'error' %}bg-red-100 text-red-800{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-green-100 text-green-800{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+
+        <form method="get" action="{% url 'reporting:report' %}" target="_blank" class="mb-6 rounded-xl bg-white p-6 shadow">
+          <h2 class="mb-4 text-lg font-semibold text-gray-800">Buat laporan</h2>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ form.jenis.id_for_label }}">{{ form.jenis.label }}</label>
+              {{ form.jenis }}
+            </div>
+            <div>
+              <span class="mb-1 block text-sm font-medium text-gray-700">Dari bulan</span>
+              <div class="flex gap-2">{{ form.start_bulan }}{{ form.start_tahun }}</div>
+            </div>
+            <div>
+              <span class="mb-1 block text-sm font-medium text-gray-700">Sampai bulan</span>
+              <div class="flex gap-2">{{ form.end_bulan }}{{ form.end_tahun }}</div>
+            </div>
+            {% for field in form %}
+              {% if field.name in "nama nip unit_kerja atasan_nama atasan_nip tempat_tanggal" %}
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <p class="mt-4 text-xs text-gray-500">Periode maksimal 12 bulan. Laporan terbuka di tab baru; laporan dengan peta petir butuh beberapa detik.</p>
+          <button type="submit" class="mt-4 rounded-lg bg-gray-800 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-900">Buat laporan</button>
+        </form>
+
+        <div class="rounded-xl bg-white p-6 shadow">
+          <h2 class="mb-1 text-lg font-semibold text-gray-800">Data indeks K (untuk laporan Magnetbumi)</h2>
+          <p class="mb-4 text-sm text-gray-500">
+            {% if kindex_count %}
+              Tersimpan {{ kindex_count }} hari, {{ kindex_first|date:"d/m/Y" }} s.d. {{ kindex_last|date:"d/m/Y" }}.
+            {% else %}
+              Belum ada data indeks K tersimpan.
+            {% endif %}
+            Unggah berkas pengolahan stasiun <code>grafik_kindeks &lt;tahun&gt;.xlsx</code> (satu sheet per bulan).
+            Data hari yang sama akan diperbarui.
+          </p>
+          <form method="post" action="{% url 'reporting:upload_kindex' %}" enctype="multipart/form-data" class="grid gap-4 md:grid-cols-3 md:items-end">
+            {% csrf_token %}
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ upload_form.berkas.id_for_label }}">{{ upload_form.berkas.label }}</label>
+              {{ upload_form.berkas }}
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ upload_form.tahun.id_for_label }}">{{ upload_form.tahun.label }}</label>
+              {{ upload_form.tahun }}
+            </div>
+            <div>
+              <button type="submit" class="rounded-lg border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Unggah &amp; impor</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

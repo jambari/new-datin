@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import FmiIndicesImage
+from .models import FmiIndicesImage, KIndexDaily
 
 
 @admin.register(FmiIndicesImage)
@@ -11,3 +11,10 @@ class FmiIndicesImageAdmin(admin.ModelAdmin):
     ordering = ('-tanggal', 'jenis')
     readonly_fields = ('fetched_at', 'updated_at', 'sha256', 'size_bytes')
     date_hierarchy = 'tanggal'
+
+
+@admin.register(KIndexDaily)
+class KIndexDailyAdmin(admin.ModelAdmin):
+    list_display = ('tanggal', 'k_values', 'a_index', 'a_index_source', 'keterangan')
+    date_hierarchy = 'tanggal'
+    readonly_fields = ('a_index', 'updated_at')

@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     'pengaduan.apps.PengaduanConfig',
     'monitoring_pm',
     'kualitas_udara.apps.KualitasUdaraConfig',
+    'reporting.apps.ReportingConfig',
 ]
 
 SEEDLINK_HOST = '202.90.199.206'   # Accelerometer SeedLink

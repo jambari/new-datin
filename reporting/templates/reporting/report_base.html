@@ -1,0 +1,92 @@
+{% load reporting_extras %}<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bukti SKP – {{ report_label }} – {{ period.short_label }}</title>
+<style>
+@page { size: A4; margin: 18mm 16mm; }
+:root { --ink:#111827; --muted:#4b5563; --line:#d1d5db; --soft:#f3f4f6; --acc:#1f3864; }
+* { box-sizing: border-box; }
+body { font-family: "Liberation Sans", Arial, sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.45; margin: 0; background: #e5e7eb; }
+.sheet { max-width: 210mm; margin: 0 auto; background: #fff; padding: 18mm 16mm; }
+.toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 8px; justify-content: center; padding: 10px; background: #1f2937; }
+.toolbar a, .toolbar button { font: 600 13px Arial, sans-serif; padding: 7px 14px; border-radius: 6px; border: 0; cursor: pointer; text-decoration: none; }
+.toolbar button { background: #fff; color: #111827; } .toolbar a { background: #374151; color: #fff; }
+h1 { font-size: 15pt; margin: 0; text-align: center; letter-spacing: .02em; text-transform: uppercase; }
+h2 { font-size: 11.5pt; color: var(--acc); border-bottom: 1.5px solid var(--acc); padding-bottom: 3px; margin: 18px 0 8px; break-after: avoid; }
+h3 { font-size: 10.5pt; margin: 10px 0 4px; break-after: avoid; }
+p { margin: 4px 0 6px; text-align: justify; }
+.kop { text-align: center; border-bottom: 3px double var(--acc); padding-bottom: 8px; margin-bottom: 14px; }
+.kop .t1 { font-size: 11pt; font-weight: bold; letter-spacing: .08em; color: var(--acc); }
+.kop .t2 { font-size: 9pt; color: var(--muted); }
+.per { text-align: center; color: var(--muted); margin: 2px 0 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 8.3pt; font-variant-numeric: tabular-nums; }
+th, td { border: 1px solid var(--line); padding: 3px 4px; vertical-align: top; }
+th { background: var(--acc); color: #fff; font-weight: bold; text-align: center; }
+td.n { text-align: right; white-space: nowrap; } td.c { text-align: center; white-space: nowrap; }
+tr:nth-child(even) td { background: #fafafa; }
+thead { display: table-header-group; } tr { break-inside: avoid; }
+table.info td { border: none; padding: 1px 6px 1px 0; font-size: 10pt; background: none !important; }
+.kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+.kpi div { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: var(--soft); }
+.kpi b { display: block; font-size: 15pt; color: var(--acc); }
+.kpi span { font-size: 8.5pt; color: var(--muted); }
+.fig { width: 100%; margin: 6px 0 4px; border: 1px solid var(--line); border-radius: 4px; break-inside: avoid; }
+.mapfig { width: 86%; display: block; margin: 6px auto 2px; border: 1px solid var(--line); break-inside: avoid; }
+.cap { font-size: 8.3pt; color: var(--muted); margin: 0 0 10px; text-align: center; }
+.note { font-size: 8.5pt; color: var(--muted); }
+.warn { border-left: 3px solid #d97706; background: #fffbeb; padding: 6px 9px; margin: 8px 0; font-size: 9pt; }
+.bad td { background: #fee2e2 !important; color: #991b1b; } .ver td { background: #fef3c7 !important; } .emp td { color: #9ca3af; font-style: italic; }
+.red { color: #b91c1c; font-weight: bold; }
+.avoid { break-inside: avoid; } .pb { break-before: page; }
+.sign { display: grid; grid-template-columns: 1fr 1fr; margin-top: 26px; text-align: center; break-inside: avoid; }
+.sign .sp { height: 62px; }
+ol { margin: 4px 0 6px 18px; padding: 0; }
+.ev { break-inside: avoid; border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin: 0 0 10px; display: grid; grid-template-columns: 58mm 1fr; gap: 10px; }
+.ev img { width: 100%; border: 1px solid var(--line); }
+.ev .hd { font-weight: bold; color: var(--acc); font-size: 9.5pt; }
+.ev .mt { font-size: 8.3pt; color: var(--muted); margin-bottom: 5px; }
+table.k td, table.k th { padding: 1px 3px; font-size: 7.3pt; text-align: center; }
+td.k0 { background: #dcfce7 !important; } td.k4 { background: #fef9c3 !important; } td.k5 { background: #ffedd5 !important; }
+td.k7 { background: #fee2e2 !important; } td.k8 { background: #fae8ff !important; } td.k9 { background: #ede9fe !important; }
+@media print {
+  body { background: #fff; }
+  .toolbar { display: none; }
+  .sheet { max-width: none; margin: 0; padding: 0; }
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+  <a href="{{ back_url }}">Kembali ke Reporting</a>
+</div>
+<div class="sheet">
+  <div class="kop">
+    <div class="t1">BUKTI CAPAIAN SASARAN KINERJA PEGAWAI (SKP)</div>
+    <div class="t2">{{ report_label }} – Stasiun Geofisika Kelas I Jayapura</div>
+  </div>
+  <h1>{{ title }}</h1>
+  <div class="per">Periode {{ period.label }}</div>
+  <table class="info">
+    <tr><td style="width:34mm">Rencana Hasil Kerja</td><td>: {{ title }}</td></tr>
+    <tr><td>Periode</td><td>: {{ period.label }}</td></tr>
+    <tr><td>Nama Pegawai</td><td>: {{ identity.nama }}</td></tr>
+    <tr><td>NIP</td><td>: {{ identity.nip|default:"...................................." }}</td></tr>
+    <tr><td>Unit Kerja</td><td>: {{ identity.unit_kerja }}</td></tr>
+  </table>
+
+  {% block body %}{% endblock %}
+
+  <div class="sign">
+    <div>Mengetahui,<br>Atasan Langsung<div class="sp"></div>
+      {% if identity.atasan_nama %}<b><u>{{ identity.atasan_nama }}</u></b>{% else %}(..............................................){% endif %}<br>
+      NIP. {{ identity.atasan_nip|default:"...................................." }}</div>
+    <div>{{ identity.tempat_tanggal|default:"Jayapura, ..................." }}<br>Yang Membuat<div class="sp"></div>
+      <b><u>{{ identity.nama }}</u></b><br>NIP. {{ identity.nip|default:"...................................." }}</div>
+  </div>
+  <p class="note" style="margin-top:18px">Dibuat otomatis dari sistem informasi Stasiun Geofisika Jayapura pada {{ generated_at|date:"d/m/Y H:i" }}.</p>
+</div>
+</body>
+</html>

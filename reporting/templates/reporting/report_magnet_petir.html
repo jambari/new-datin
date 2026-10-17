@@ -1,0 +1,89 @@
+{% extends "reporting/report_base.html" %}
+{% load reporting_extras %}
+{% block body %}
+<h2>I. Pendahuluan</h2>
+<p>Stasiun Geofisika Kelas I Jayapura mengamati listrik udara (sambaran petir) dan magnetbumi di wilayah Papua. Data petir dipakai untuk memantau aktivitas cuaca konvektif dan bahaya sambaran. Data magnetbumi, baik observasi absolut maupun indeks K/A, dipakai untuk memantau aktivitas dan badai geomagnet. Laporan ini menjadi bukti tersedianya data tersebut yang terolah dan terkendali mutunya untuk periode {{ period.short_label }}.</p>
+
+<h2>II. Sumber Data dan Metode</h2>
+<ol>
+  <li><b>Listrik udara:</b> ringkasan sambaran harian (CG+, CG−, IC; tanggal WIT) dan lokasi tiap sambaran dari basis data detektor petir stasiun; curah hujan harian dari data hujan stasiun.</li>
+  <li><b>Peta sebaran:</b> diplot per bulan di atas basemap OpenStreetMap (© OpenStreetMap contributors).</li>
+  <li><b>Magnetbumi absolut:</b> observasi absolut Stasiun Jayapura (JYP), yaitu D, I, F, H, Z, X, dan Y. Sesi DIM (MinGeo) yang belum direduksi ditampilkan terpisah dengan F rata-rata dari proton magnetometer.</li>
+  <li><b>Indeks K/A:</b> indeks K per 3 jam (UTC) dari berkas pengolahan stasiun. Indeks A dihitung dari K dengan konversi standar (0, 3, 7, 15, 27, 48, 80, 140, 240, 400). Kriteria: Tenang (A &lt; 30), Badai Kecil (30–49), Badai Menengah (50–99), Badai Besar (≥ 100).</li>
+</ol>
+
+<h2>III. Ringkasan Capaian</h2>
+<div class="kpi">
+  <div><b>{{ petir_total|idn:0 }}</b><span>sambaran petir tercatat</span></div>
+  <div><b>{{ petir_active }}/{{ ndays }}</b><span>hari dengan sambaran tercatat</span></div>
+  <div><b>{{ magnet_sessions }}</b><span>sesi observasi absolut ({{ magnet_reduced|length }} tereduksi)</span></div>
+  <div><b>{{ kdays }}/{{ ndays }}</b><span>hari data indeks K ({{ kdays_pct|idn:1 }}%)</span></div>
+</div>
+<div class="avoid">
+<h3>Tabel 1. Statistik sambaran petir per bulan</h3>
+<table><thead><tr><th>Bulan</th><th>Total</th><th>CG+</th><th>CG−</th><th>IC</th><th>Rata-rata/hari</th><th>Hari puncak</th><th>Hari tanpa sambaran</th><th>Hujan (mm)</th></tr></thead><tbody>
+{% for p in petir %}<tr><td>{{ p.label }}</td><td class="n">{{ p.total|idn:0 }}</td><td class="n">{{ p.pos|idn:0 }}</td><td class="n">{{ p.neg|idn:0 }}</td><td class="n">{{ p.ic|idn:0 }}</td><td class="n">{{ p.mean|idn:0 }}</td><td class="c">{{ p.peak.date|date:"d/m" }} ({{ p.peak.total|idn:0 }})</td><td class="c">{{ p.zero|length }}</td><td class="n">{{ p.rain|idn:1 }}</td></tr>{% endfor %}
+<tr><td><b>Periode</b></td><td class="n"><b>{{ petir_total|idn:0 }}</b></td><td class="n"><b>{{ petir_pos|idn:0 }}</b></td><td class="n"><b>{{ petir_neg|idn:0 }}</b></td><td class="n"><b>{{ petir_ic|idn:0 }}</b></td><td></td><td></td><td class="c"><b>{{ petir_zero }}</b></td><td class="n"><b>{{ petir_rain|idn:1 }}</b></td></tr>
+</tbody></table>
+</div>
+
+<h2 class="pb">IV. Data Listrik Udara (Petir)</h2>
+{% for p in petir %}
+  <h3{% if not forloop.first %} class="pb"{% endif %}>IV.{{ forloop.counter }} {{ p.label }}</h3>
+  <p>Tercatat <b>{{ p.total|idn:0 }} sambaran</b> (CG+ {{ p.pos|idn:0 }}, CG− {{ p.neg|idn:0 }}, IC {{ p.ic|idn:0 }}), dengan puncak pada {{ p.peak.date|date:"d/m/Y" }} sebanyak {{ p.peak.total|idn:0 }} sambaran.</p>
+  <img class="fig" src="{{ p.chart }}" alt="Grafik petir {{ p.label }}"><div class="cap">Sambaran petir harian dan curah hujan, {{ p.label }}.</div>
+  {% if p.map %}<img class="mapfig" src="{{ p.map }}" alt="Peta petir {{ p.label }}"><div class="cap">Peta sebaran sambaran petir {{ p.label }} ({{ p.map_points|idn:0 }} titik; basemap © OpenStreetMap contributors).</div>
+  {% else %}<div class="warn">Tidak ada titik sambaran untuk dipetakan pada {{ p.label }}.</div>{% endif %}
+{% endfor %}
+
+<h2 class="pb">V. Data Magnetbumi – Nilai Absolut</h2>
+<h3>Tabel 2. Observasi absolut tereduksi</h3>
+<table><thead><tr><th>Tanggal</th><th>Sesi</th><th>D (°)</th><th>I (°)</th><th>F (nT)</th><th>H (nT)</th><th>Z (nT)</th><th>X (nT)</th><th>Y (nT)</th></tr></thead><tbody>
+{% for o in magnet_reduced %}<tr><td class="c">{{ o.observation_date|date:"d/m/Y" }}</td><td class="c">{{ o.session }}</td><td class="n">{{ o.declination|floatformat:4 }}</td><td class="n">{{ o.inclination|floatformat:4 }}</td><td class="n">{{ o.total_intensity|floatformat:2 }}</td><td class="n">{{ o.horizontal_intensity|floatformat:2 }}</td><td class="n">{{ o.vertical_intensity|floatformat:2 }}</td><td class="n">{{ o.north_component|floatformat:2 }}</td><td class="n">{{ o.east_component|floatformat:2 }}</td></tr>
+{% empty %}<tr class="emp"><td colspan="9" class="c">Tidak ada observasi tereduksi pada periode ini.</td></tr>{% endfor %}
+</tbody></table>
+{% if magnet_dim %}
+<h3>Tabel 3. Sesi observasi DIM (MinGeo)</h3>
+<table><thead><tr><th>Tanggal</th><th>Sesi</th><th>Pengamat</th><th>Waktu baca D (UTC)</th><th>F rata-rata (nT)</th><th>Status reduksi</th></tr></thead><tbody>
+{% for d in magnet_dim %}<tr><td class="c">{{ d.obj.observation_date|date:"d/m/Y" }}</td><td class="c">{{ d.obj.session }}</td><td>{{ d.obj.observer }}</td><td class="c">{{ d.window }}</td><td class="n">{{ d.f|idn:2 }}</td><td>{% if d.reduced %}Tereduksi (lihat Tabel 2){% else %}<span class="red">Belum direduksi (D, I)</span>{% endif %}</td></tr>{% endfor %}
+</tbody></table>
+{% endif %}
+{% for mm in magnet_months %}
+  <div class="avoid"><h3>V.{{ forloop.counter }} Grafik nilai absolut – {{ mm.label }}</h3>
+  <img class="fig" src="{{ mm.chart }}" alt="Grafik magnet {{ mm.label }}"></div>
+{% endfor %}
+
+<h2 class="pb">VI. Data Magnetbumi – Indeks K dan A</h2>
+<div class="avoid">
+<h3>Tabel 4. Ringkasan indeks K dan A per bulan</h3>
+<table><thead><tr><th>Bulan</th><th>Hari berdata</th><th>Tanggal tanpa data</th><th>K maks. (tgl)</th><th>A rata-rata</th><th>A maks. (tgl)</th><th>Tenang</th><th>Badai Kecil</th><th>Badai Menengah</th><th>Badai Besar</th></tr></thead><tbody>
+{% for k in kmonths %}<tr><td>{{ k.label }}</td><td class="c">{{ k.n }}/{{ k.ndays }}</td><td class="c">{{ k.missing|join:", "|default:"–" }}</td><td class="c">{% if k.kmax is not None %}{{ k.kmax }} ({{ k.kmax_days|join:", " }}){% else %}–{% endif %}</td><td class="c">{{ k.amean|idn:1 }}</td><td class="c">{% if k.amax %}{{ k.amax.a_index|idn:1 }} ({{ k.amax.tanggal.day }}){% else %}–{% endif %}</td><td class="c">{{ k.criteria|get_item:"Tenang"|default:0 }}</td><td class="c">{{ k.criteria|get_item:"Badai Kecil"|default:0 }}</td><td class="c">{{ k.criteria|get_item:"Badai Menengah"|default:0 }}</td><td class="c">{{ k.criteria|get_item:"Badai Besar"|default:0 }}</td></tr>{% endfor %}
+</tbody></table>
+</div>
+{% for k in kmonths %}
+  <h3 class="pb">VI.{{ forloop.counter }} Indeks K – {{ k.label }}</h3>
+  {% if k.chart %}<img class="fig" style="width:80%;display:block;margin:4px auto" src="{{ k.chart }}" alt="Indeks K {{ k.label }}">
+  <table class="k"><thead><tr><th>Tgl</th><th>00–03</th><th>03–06</th><th>06–09</th><th>09–12</th><th>12–15</th><th>15–18</th><th>18–21</th><th>21–24</th><th>A</th><th>Kriteria</th></tr></thead><tbody>
+  {% for x in k.days %}{% with o=x.obj %}
+    {% if o and o.has_data %}<tr><td>{{ x.date.day }}</td>{% for v in o.k_values %}<td class="{% if v <= 3 %}k0{% elif v == 4 %}k4{% elif v <= 6 %}k5{% elif v == 7 %}k7{% elif v == 8 %}k8{% else %}k9{% endif %}">{{ v }}</td>{% endfor %}<td>{{ o.a_index|idn:2 }}</td><td>{{ o.criteria }}</td></tr>
+    {% else %}<tr class="emp"><td>{{ x.date.day }}</td><td colspan="10">{{ o.keterangan|default:"Tidak ada data" }}</td></tr>{% endif %}
+  {% endwith %}{% endfor %}
+  </tbody></table>
+  {% else %}<div class="warn">Belum ada data indeks K untuk {{ k.label }}. Unggah berkas Excel indeks K di halaman Reporting.</div>{% endif %}
+{% endfor %}
+
+<h2 class="pb">VII. Catatan Kualitas Data dan Tindak Lanjut</h2>
+<ol>
+  {% for p in petir %}{% if p.zero_rain %}<li><b>Petir {{ p.label }}:</b> tidak ada sambaran tercatat pada hari hujan (tgl {% for d in p.zero_rain %}{{ d.day }}{% if not forloop.last %}, {% endif %}{% endfor %}); perlu dicek status operasional detektor.</li>{% endif %}{% endfor %}
+  {% if magnet_empty_months %}<li><b>Magnetbumi absolut:</b> tidak ada record observasi pada {{ magnet_empty_months|join:", " }}.</li>{% endif %}
+  {% if magnet_dim %}{% with n=magnet_dim|length %}<li><b>Sesi DIM:</b> sesi yang belum direduksi ditandai pada Tabel 3; reduksi D dan I memerlukan azimuth patok acuan.</li>{% endwith %}{% endif %}
+  {% for r in magnet_mislabel %}<li><b>Kemungkinan salah label sesi:</b> record tereduksi {{ r.0|date:"d/m/Y" }} berlabel {{ r.1 }} memiliki F identik dengan pembacaan {{ r.2 }}.</li>{% endfor %}
+  {% for k in kmonths %}{% if k.missing and k.n %}<li><b>Indeks K {{ k.label }}:</b> tanpa data pada tanggal {{ k.missing|join:", " }}.</li>{% elif not k.n %}<li><b>Indeks K {{ k.label }}:</b> belum ada data.</li>{% endif %}{% endfor %}
+  {% if k_diffs %}<li><b>Indeks A berkas sumber berbeda dari hasil hitung K:</b> {% for o in k_diffs %}{{ o.tanggal|date:"d/m" }} ({{ o.a_index_source|idn:2 }} → {{ o.a_index|idn:2 }}){% if not forloop.last %}; {% endif %}{% endfor %}. Laporan memakai nilai hasil hitung.</li>{% endif %}
+</ol>
+
+<h2>VIII. Kesimpulan</h2>
+<p>Selama periode {{ period.label }} telah tersedia data listrik udara berupa <b>{{ petir_total|idn:0 }} sambaran petir</b> beserta statistik harian dan peta sebaran bulanan, serta data magnetbumi berupa <b>{{ magnet_sessions }} sesi observasi absolut</b> dan <b>indeks K/A untuk {{ kdays }} dari {{ ndays }} hari</b>.
+{% if k_storms %}Tercatat {{ k_storms|length }} hari dengan aktivitas badai geomagnet ({% for o, c in k_storms %}{{ o.tanggal|date:"d/m" }} {{ c }}{% if not forloop.last %}, {% endif %}{% endfor %}).{% endif %}
+Data telah diperiksa mutunya dan kekurangannya diidentifikasi untuk ditindaklanjuti. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah tercapai.</p>
+{% endblock %}
