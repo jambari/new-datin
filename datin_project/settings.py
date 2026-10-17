@@ -363,6 +363,14 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 # --- Telegram Configuration ---
 TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
 
+# Jaringan kantor yang boleh mengisi logbook (CIDR IPv4/IPv6, dipisah koma).
+# IP WiFi kantor (IndiHome) dinamis: bila berganti, tambahkan di .env.production.
+LOGBOOK_ALLOWED_NETWORKS = config(
+    'LOGBOOK_ALLOWED_NETWORKS',
+    default='36.91.166.184/29,127.0.0.1/32,::1/128',
+    cast=Csv(),
+)
+
 # Token API impor Kualitas Udara (/kualitas-udara/api/import/); kosong = API nonaktif.
 KUALITAS_UDARA_API_TOKEN = config('KUALITAS_UDARA_API_TOKEN', default='')
 TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default='')

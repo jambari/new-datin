@@ -371,8 +371,7 @@ class SirineCheckViewTest(TestCase):
         self.assertEqual(self.client.get(self.url).status_code, 405)
 
     def test_ip_outside_office_is_refused(self):
-        with mock.patch('logbook.views.get_client_ip', return_value='8.8.8.8'):
-            resp = self.client.post(self.url)
+        resp = self.client.post(self.url, REMOTE_ADDR='8.8.8.8')
         self.assertEqual(resp.status_code, 403)
 
     def test_double_click_is_rate_limited(self):
@@ -436,3 +435,45 @@ class SireneOffModalTest(TestCase):
         """Aturan cetak menyembunyikan semua .reminder-overlay."""
         resp = self.client.get(self.URL, REMOTE_ADDR='127.0.0.1')
         self.assertContains(resp, '.reminder-overlay { display: none !important; }')
+
+
+class OfficeAccessTest(TestCase):
+    """Logbook hanya untuk jaringan kantor; IP asli diambil dari Cloudflare, bukan X-Forwarded-For."""
+
+    CF_EDGE = '104.22.66.2'
+
+    def get(self, **meta):
+        return self.client.get(reverse('logbook:logbook_list'), **meta)
+
+    def authorized(self, resp):
+        return resp.context['is_authorized']
+
+    def test_office_ipv4_via_cloudflare(self):
+        resp = self.get(HTTP_X_REAL_IP=self.CF_EDGE, HTTP_CF_CONNECTING_IP='36.91.166.186')
+        self.assertTrue(self.authorized(resp))
+
+    def test_outside_ip_via_cloudflare_is_denied(self):
+        resp = self.get(HTTP_X_REAL_IP=self.CF_EDGE, HTTP_CF_CONNECTING_IP='8.8.8.8')
+        self.assertFalse(self.authorized(resp))
+        self.assertContains(resp, '8.8.8.8')
+
+    def test_spoofed_x_forwarded_for_is_ignored(self):
+        resp = self.get(HTTP_X_REAL_IP=self.CF_EDGE, HTTP_CF_CONNECTING_IP='8.8.8.8',
+                        HTTP_X_FORWARDED_FOR='36.91.166.186, 8.8.8.8')
+        self.assertFalse(self.authorized(resp))
+
+    def test_forged_cloudflare_header_from_non_cloudflare_peer_is_ignored(self):
+        resp = self.get(HTTP_X_REAL_IP='8.8.8.8', HTTP_CF_CONNECTING_IP='36.91.166.186')
+        self.assertFalse(self.authorized(resp))
+
+    def test_office_ipv6_prefix_from_settings(self):
+        with self.settings(LOGBOOK_ALLOWED_NETWORKS=['36.91.166.184/29', '2001:448a:e040:12d2::/64']):
+            ok = self.get(HTTP_X_REAL_IP=self.CF_EDGE, HTTP_CF_CONNECTING_IP='2001:448a:e040:12d2:d1d0:633a:45e9:f42d')
+            other = self.get(HTTP_X_REAL_IP=self.CF_EDGE, HTTP_CF_CONNECTING_IP='2001:448a:e040:c7c5::1')
+        self.assertTrue(self.authorized(ok))
+        self.assertFalse(self.authorized(other))
+
+    def test_sirine_check_denied_outside_office(self):
+        resp = self.client.post(reverse('logbook:sirine_check'),
+                                HTTP_X_REAL_IP=self.CF_EDGE, HTTP_CF_CONNECTING_IP='8.8.8.8')
+        self.assertEqual(resp.status_code, 403)

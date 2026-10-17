@@ -18,20 +18,12 @@ from .sirine import SirineClient, SirineError, SirineSafetyError, SirineAuthErro
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_IPS = ['36.91.166.189', '36.91.166.186', '127.0.0.1', '192.168.1.7', '192.168.1.5']
+from .access import client_ip, is_office_request
 
-def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
 
 def index(request):
-    # 1. PROTEKSI IP: Identifikasi User
-    user_ip = get_client_ip(request)
-    is_authorized = user_ip in ALLOWED_IPS
+    # 1. PROTEKSI IP: hanya dari jaringan kantor (lihat logbook/access.py)
+    is_authorized, user_ip = is_office_request(request)
     
     # Konfigurasi Waktu Jayapura
     tz_jayapura = zoneinfo.ZoneInfo("Asia/Jayapura")
@@ -137,7 +129,7 @@ SIRINE_COOLDOWN_KEY = 'logbook:sirine_ping_cooldown'
 @require_POST
 def sirine_check(request):
     """Ping sirene, balas JSON {ok, status, transmitted, received, loss_percent, message}."""
-    if get_client_ip(request) not in ALLOWED_IPS:
+    if not is_office_request(request)[0]:
         return JsonResponse(
             {'ok': False, 'error': 'Cek sirene hanya bisa dari jaringan kantor.'},
             status=403)
@@ -177,7 +169,7 @@ def sirine_check(request):
 
     logger.info(
         'SIRINE ping dari %s: %s (%s/%s, %s%% loss)',
-        get_client_ip(request), result.status, result.received,
+        client_ip(request), result.status, result.received,
         result.transmitted, result.loss_percent)
 
     return JsonResponse({'ok': True, **result.as_dict()})
