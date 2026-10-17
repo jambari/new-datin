@@ -22,7 +22,7 @@ def fake_tile(z, x, y):
 
 def report_url(jenis, start=(1, 2026), end=(3, 2026), **extra):
     params = {"jenis": jenis, "start_bulan": start[0], "start_tahun": start[1], "end_bulan": end[0],
-              "end_tahun": end[1], "nama": "Jambari, S.Tr, M.Si", "nip": "199202062012101001",
+              "end_tahun": end[1], "nip": "199202062012101001",
               "unit_kerja": "Stasiun Geofisika Jayapura", **extra}
     return "/reporting/laporan/?" + "&".join(f"{k}={v}" for k, v in params.items())
 
@@ -172,3 +172,29 @@ class ReportingTest(TestCase):
         self.assertAlmostEqual(ev["pga"]["pga"], 0.02)
         self.assertAlmostEqual(ev["sa03"]["sa03"], 0.04)
         self.assertContains(r, "nilai &gt; 3 g")
+
+
+class OfficerIdentityTest(TestCase):
+    def test_name_and_nip_come_from_logged_in_pegawai(self):
+        from jadwal.models import Pegawai
+        user = get_user_model().objects.create_user("jambari", password="x", first_name="Jambari")
+        Pegawai.objects.create(user=user, nama="Jambari, S.Tr, M.Si", nip="199202062012101001",
+                               pangkat="Penata", jabatan="PMG")
+        self.client.force_login(user)
+        index = self.client.get("/reporting/")
+        self.assertContains(index, "Jambari, S.Tr, M.Si")
+        self.assertNotContains(index, 'name="nama"')
+        self.assertNotContains(index, "atasan")
+        r = self.client.get(report_url("kualitas_udara", nip="000", nama="Orang Lain"))
+        self.assertEqual(r.context["identity"]["nama"], "Jambari, S.Tr, M.Si")
+        self.assertEqual(r.context["identity"]["nip"], "199202062012101001")
+        self.assertNotContains(r, "Orang Lain")
+        self.assertNotContains(r, "Mengetahui")
+
+    def test_user_without_pegawai_uses_account_name_and_manual_nip(self):
+        user = get_user_model().objects.create_user("tamu", password="x", first_name="Budi", last_name="Santoso")
+        self.client.force_login(user)
+        self.assertContains(self.client.get("/reporting/"), 'name="nip"')
+        r = self.client.get(report_url("kualitas_udara", nip="123456"))
+        self.assertEqual(r.context["identity"]["nama"], "Budi Santoso")
+        self.assertEqual(r.context["identity"]["nip"], "123456")

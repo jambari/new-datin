@@ -36,14 +36,29 @@
               <span class="mb-1 block text-sm font-medium text-gray-700">Sampai bulan</span>
               <div class="flex gap-2">{{ form.end_bulan }}{{ form.end_tahun }}</div>
             </div>
-            {% for field in form %}
-              {% if field.name in "nama nip unit_kerja atasan_nama atasan_nip tempat_tanggal" %}
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                  {{ field }}
-                </div>
+            <div>
+              <span class="mb-1 block text-sm font-medium text-gray-700">Nama pegawai</span>
+              <div class="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-700">{{ officer_nama }}</div>
+              <p class="mt-1 text-xs text-gray-500">Otomatis dari akun yang login.</p>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ form.nip.id_for_label }}">NIP</label>
+              {% if officer_nip %}
+                <div class="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-700">{{ officer_nip }}</div>
+                <p class="mt-1 text-xs text-gray-500">Dari data pegawai.</p>
+              {% else %}
+                {{ form.nip }}
+                <p class="mt-1 text-xs text-gray-500">Akun ini belum terhubung ke data pegawai; NIP bisa diisi manual.</p>
               {% endif %}
-            {% endfor %}
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ form.unit_kerja.id_for_label }}">{{ form.unit_kerja.label }}</label>
+              {{ form.unit_kerja }}
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ form.tempat_tanggal.id_for_label }}">{{ form.tempat_tanggal.label }}</label>
+              {{ form.tempat_tanggal }}
+            </div>
           </div>
           <p class="mt-4 text-xs text-gray-500">Periode maksimal 12 bulan. Laporan terbuka di tab baru; laporan dengan peta petir butuh beberapa detik.</p>
           <button type="submit" class="mt-4 rounded-lg bg-gray-800 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-900">Buat laporan</button>

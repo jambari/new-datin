@@ -80,9 +80,7 @@ td.k7 { background: #fee2e2 !important; } td.k8 { background: #fae8ff !important
   {% block body %}{% endblock %}
 
   <div class="sign">
-    <div>Mengetahui,<br>Atasan Langsung<div class="sp"></div>
-      {% if identity.atasan_nama %}<b><u>{{ identity.atasan_nama }}</u></b>{% else %}(..............................................){% endif %}<br>
-      NIP. {{ identity.atasan_nip|default:"...................................." }}</div>
+    <div></div>
     <div>{{ identity.tempat_tanggal|default:"Jayapura, ..................." }}<br>Yang Membuat<div class="sp"></div>
       <b><u>{{ identity.nama }}</u></b><br>NIP. {{ identity.nip|default:"...................................." }}</div>
   </div>

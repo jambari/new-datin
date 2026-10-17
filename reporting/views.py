@@ -23,15 +23,21 @@ BUILDERS = {
 }
 
 
+def officer(user):
+    """Nama dan NIP pegawai yang login, dari profil jadwal.Pegawai bila terhubung."""
+    pegawai = getattr(user, "pegawai", None)
+    if pegawai is not None:
+        return pegawai.nama, pegawai.nip
+    return user.get_full_name() or user.get_username(), ""
+
+
 def _initial(request):
     today = datetime.date.today()
     last_quarter_end = (today.month - 1) // 3 * 3 or 12
     year = today.year if last_quarter_end != 12 else today.year - 1
-    user = request.user
     return {
         "start_bulan": last_quarter_end - 2, "start_tahun": year,
         "end_bulan": last_quarter_end, "end_tahun": year,
-        "nama": user.get_full_name() or user.get_username(),
         "unit_kerja": "Stasiun Geofisika Jayapura",
     }
 
@@ -39,9 +45,12 @@ def _initial(request):
 @login_required
 def index(request):
     form = ReportForm(initial=_initial(request))
+    nama, nip = officer(request.user)
     kindex_range = KIndexDaily.objects.order_by("tanggal").values_list("tanggal", flat=True)
     context = {
         "form": form,
+        "officer_nama": nama,
+        "officer_nip": nip,
         "upload_form": KIndexUploadForm(initial={"tahun": datetime.date.today().year}),
         "report_types": REPORT_TYPES,
         "kindex_first": kindex_range.first(),
@@ -61,7 +70,10 @@ def report(request):
             if name != "__all__":
                 messages.error(request, f"{form.fields[name].label}: {'; '.join(errs)}")
         return redirect("reporting:index")
-    data = form.cleaned_data
+    data = dict(form.cleaned_data)
+    nama, nip = officer(request.user)
+    data["nama"] = nama
+    data["nip"] = nip or data.get("nip", "")
     period = Period(data["start_tahun"], data["start_bulan"], data["end_tahun"], data["end_bulan"])
     module, template = BUILDERS[data["jenis"]]
     context = {
