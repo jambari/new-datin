@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 
 from .models import KAHSeriesData, SPMSeriesData
@@ -30,11 +32,13 @@ class KAHSeriesDataForm(forms.ModelForm):
         ]
         widgets = {
             "stasiun": forms.TextInput(attrs={"class": "border rounded w-full p-2"}),
+            # Teks biasa (bukan type="month") agar bisa diisi di Firefox.
             "bulan": forms.TextInput(
                 attrs={
-                    "type": "month",
                     "class": "border rounded w-full p-2",
-                    "placeholder": "YYYY-MM",
+                    "placeholder": "YYYY-MM, contoh 2026-01",
+                    "pattern": r"\d{4}-(0[1-9]|1[0-2])",
+                    "title": "Format YYYY-MM, contoh 2026-01",
                 }
             ),
             "minggu": forms.TextInput(attrs={"class": "border rounded w-full p-2", "maxlength": "2"}),
@@ -58,7 +62,7 @@ class KAHSeriesDataForm(forms.ModelForm):
     def clean_bulan(self):
         value = self.cleaned_data.get("bulan", "")
         value = value.strip() if value else ""
-        if value and len(value) != 7:
+        if value and not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", value):
             raise forms.ValidationError("Format bulan harus YYYY-MM, contoh 2005-01.")
         return value
 

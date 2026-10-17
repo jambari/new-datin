@@ -1,5 +1,7 @@
 import io
+import re
 from datetime import datetime
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -28,6 +30,12 @@ from .models import (
 PER_PAGE_OPTIONS = (10, 25, 50, 100)
 DEFAULT_PER_PAGE = 10
 
+MONTH_CHOICES = [
+    ("01", "Januari"), ("02", "Februari"), ("03", "Maret"), ("04", "April"),
+    ("05", "Mei"), ("06", "Juni"), ("07", "Juli"), ("08", "Agustus"),
+    ("09", "September"), ("10", "Oktober"), ("11", "November"), ("12", "Desember"),
+]
+
 
 # ---------------------------------------------------------------------------
 # Helper umum
@@ -50,9 +58,7 @@ def build_preserved_params(request, exclude=None):
 
 
 def build_filter_query(request, exclude=None):
-    return "&".join(
-        f"{key}={value}" for key, value in build_preserved_params(request, exclude).items()
-    )
+    return urlencode(build_preserved_params(request, exclude))
 
 
 def paginate_queryset(request, queryset, per_page=DEFAULT_PER_PAGE):
@@ -75,32 +81,46 @@ def get_page_range(page_obj):
 # ---------------------------------------------------------------------------
 # Filter queryset
 # ---------------------------------------------------------------------------
+def get_month_param(request, prefix, default_month):
+    """Baca filter bulan sebagai 'YYYY-MM'.
+
+    Dari dropdown <prefix>_bulan + <prefix>_tahun (berfungsi di semua browser,
+    termasuk Firefox yang tidak mendukung <input type="month">), atau dari
+    parameter lama <prefix>=YYYY-MM.
+    """
+    year = request.GET.get(f"{prefix}_tahun", "").strip()
+    month = request.GET.get(f"{prefix}_bulan", "").strip() or default_month
+    if re.fullmatch(r"\d{4}", year) and re.fullmatch(r"\d{2}", month):
+        return f"{year}-{month}"
+    raw = request.GET.get(prefix, "").strip()
+    return raw if re.fullmatch(r"\d{4}-\d{2}", raw) else ""
+
+
+def get_kah_year_options():
+    years = {bulan[:4] for bulan in KAHSeriesData.objects.values_list("bulan", flat=True).distinct()}
+    return sorted((y for y in years if y.isdigit()), reverse=True)
+
+
 def filter_kah(request):
     queryset = KAHSeriesData.objects.all().order_by("-bulan", "-minggu", "-id")
-    start = request.GET.get("start", "").strip()
-    end = request.GET.get("end", "").strip()
-    stasiun = request.GET.get("stasiun", "").strip()
+    start = get_month_param(request, "start", "01")
+    end = get_month_param(request, "end", "12")
     if start:
         queryset = queryset.filter(bulan__gte=start)
     if end:
         queryset = queryset.filter(bulan__lte=end)
-    if stasiun:
-        queryset = queryset.filter(stasiun__icontains=stasiun)
-    return queryset, start, end, stasiun
+    return queryset, start, end
 
 
 def filter_spm(request):
     queryset = SPMSeriesData.objects.all().order_by("-timestamp", "-id")
     start = request.GET.get("start", "").strip()
     end = request.GET.get("end", "").strip()
-    stasiun = request.GET.get("stasiun", "").strip()
     if start:
         queryset = queryset.filter(timestamp__gte=start)
     if end:
         queryset = queryset.filter(timestamp__lte=end)
-    if stasiun:
-        queryset = queryset.filter(stasiun__icontains=stasiun)
-    return queryset, start, end, stasiun
+    return queryset, start, end
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +177,7 @@ def build_spm_rows(records):
 # ---------------------------------------------------------------------------
 @login_required
 def kah_list(request):
-    queryset, start, end, stasiun = filter_kah(request)
+    queryset, start, end = filter_kah(request)
     per_page = get_per_page_value(request)
     page_obj = paginate_queryset(request, queryset, per_page=per_page)
     rows = build_kah_rows(page_obj.object_list)
@@ -172,10 +192,13 @@ def kah_list(request):
         "per_page_options": PER_PAGE_OPTIONS,
         "preserved_params": build_preserved_params(request, exclude={"page"}),
         "filter_query": build_filter_query(request, exclude={"page"}),
-        "f_start": start,
-        "f_end": end,
-        "f_stasiun": stasiun,
-        "has_filters": any([start, end, stasiun]),
+        "f_start_bulan": start[5:7],
+        "f_start_tahun": start[:4],
+        "f_end_bulan": end[5:7],
+        "f_end_tahun": end[:4],
+        "month_choices": MONTH_CHOICES,
+        "year_options": get_kah_year_options(),
+        "has_filters": any([start, end]),
         "threshold_notes": {
             key: KAH_THRESHOLDS[key]["label"]
             for key in KAH_THRESHOLDS
@@ -235,7 +258,7 @@ def kah_delete(request, pk):
 
 @login_required
 def kah_export(request, export_format):
-    queryset, _start, _end, _stasiun = filter_kah(request)
+    queryset, _start, _end = filter_kah(request)
 
     headers = ["Stasiun", "Bulan", "Minggu"] + [
         f"{KAH_FIELD_LABELS[f]}{' (' + KAH_THRESHOLDS[f]['unit'] + ')' if f in KAH_THRESHOLDS and KAH_THRESHOLDS[f]['unit'] else ''}"
@@ -268,7 +291,7 @@ def kah_export(request, export_format):
 # ---------------------------------------------------------------------------
 @login_required
 def spm_list(request):
-    queryset, start, end, stasiun = filter_spm(request)
+    queryset, start, end = filter_spm(request)
     per_page = get_per_page_value(request)
     page_obj = paginate_queryset(request, queryset, per_page=per_page)
     rows = build_spm_rows(page_obj.object_list)
@@ -284,8 +307,7 @@ def spm_list(request):
         "filter_query": build_filter_query(request, exclude={"page"}),
         "f_start": start,
         "f_end": end,
-        "f_stasiun": stasiun,
-        "has_filters": any([start, end, stasiun]),
+        "has_filters": any([start, end]),
         "spm_threshold": SPM_THRESHOLD,
         "spm_threshold_label": SPM_THRESHOLD_LABEL,
     }
@@ -343,7 +365,7 @@ def spm_delete(request, pk):
 
 @login_required
 def spm_export(request, export_format):
-    queryset, _start, _end, _stasiun = filter_spm(request)
+    queryset, _start, _end = filter_spm(request)
     headers = ["Stasiun", "Tanggal", "SPM (µg/m³)", "Remark"]
 
     def iter_rows():

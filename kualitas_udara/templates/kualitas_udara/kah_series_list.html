@@ -36,20 +36,39 @@
 
         <div class="mb-6 rounded-xl bg-white p-5 shadow">
           <form method="get" class="flex flex-col gap-4 lg:flex-row lg:items-end">
-            <div class="w-full lg:max-w-xs">
-              <label for="start" class="mb-2 block text-sm font-medium text-gray-700">Dari Bulan</label>
-              <input type="month" name="start" id="start" value="{{ f_start }}"
-                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            <div class="w-full lg:max-w-sm">
+              <span class="mb-2 block text-sm font-medium text-gray-700">Dari Bulan</span>
+              <div class="flex gap-2">
+                <select name="start_bulan" id="start_bulan" aria-label="Dari Bulan - bulan" class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                  <option value="">Januari</option>
+                  {% for value, name in month_choices %}
+                    <option value="{{ value }}" {% if value == f_start_bulan %}selected{% endif %}>{{ name }}</option>
+                  {% endfor %}
+                </select>
+                <select name="start_tahun" id="start_tahun" aria-label="Dari Bulan - tahun" class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                  <option value="">Tahun</option>
+                  {% for year in year_options %}
+                    <option value="{{ year }}" {% if year == f_start_tahun %}selected{% endif %}>{{ year }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
-            <div class="w-full lg:max-w-xs">
-              <label for="end" class="mb-2 block text-sm font-medium text-gray-700">Sampai Bulan</label>
-              <input type="month" name="end" id="end" value="{{ f_end }}"
-                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-            </div>
-            <div class="w-full lg:max-w-xs">
-              <label for="stasiun" class="mb-2 block text-sm font-medium text-gray-700">Stasiun</label>
-              <input type="text" name="stasiun" id="stasiun" value="{{ f_stasiun }}" placeholder="Nama stasiun..."
-                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            <div class="w-full lg:max-w-sm">
+              <span class="mb-2 block text-sm font-medium text-gray-700">Sampai Bulan</span>
+              <div class="flex gap-2">
+                <select name="end_bulan" id="end_bulan" aria-label="Sampai Bulan - bulan" class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                  <option value="">Desember</option>
+                  {% for value, name in month_choices %}
+                    <option value="{{ value }}" {% if value == f_end_bulan %}selected{% endif %}>{{ name }}</option>
+                  {% endfor %}
+                </select>
+                <select name="end_tahun" id="end_tahun" aria-label="Sampai Bulan - tahun" class="w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                  <option value="">Tahun</option>
+                  {% for year in year_options %}
+                    <option value="{{ year }}" {% if year == f_end_tahun %}selected{% endif %}>{{ year }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
             <div class="flex gap-3">
               <button type="submit" class="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900">Terapkan</button>
