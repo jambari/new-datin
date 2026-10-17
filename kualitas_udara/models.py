@@ -45,6 +45,29 @@ KAH_FIELD_LABELS = {
 
 KAH_FIELDS = list(KAH_FIELD_LABELS.keys())
 
+# Keterangan parameter KAH (Database Kualitas Udara BMKG). Catatan berisi
+# hasil pencocokan dengan data bila keterangan sumber tidak sesuai.
+KAH_PARAM_INFO = {
+    "PH": {"name": "Derajat keasaman", "unit": "", "note": "Hujan asam bila pH < 5,6."},
+    "DH": {"name": "Daya hantar listrik (DHL)", "unit": "µS/cm",
+           "note": "Di daftar parameter sumber disebut derajat kekerasan; besarnya nilai sesuai daya hantar listrik."},
+    "CA": {"name": "Kalsium (Ca²⁺)", "unit": "mg/L", "note": ""},
+    "MG": {"name": "Magnesium (Mg²⁺)", "unit": "mg/L", "note": ""},
+    "NA": {"name": "Natrium (Na⁺)", "unit": "mg/L", "note": ""},
+    "K": {"name": "Kalium (K⁺)", "unit": "mg/L", "note": ""},
+    "NH4": {"name": "Amonium (NH₄⁺)", "unit": "mg/L", "note": ""},
+    "CL": {"name": "Klorida (Cl⁻)", "unit": "mg/L", "note": ""},
+    "SO4": {"name": "Sulfat (SO₄²⁻)", "unit": "mg/L", "note": ""},
+    "NO3": {"name": "Nitrat (NO₃⁻)", "unit": "mg/L", "note": ""},
+    "KT": {"name": "Kekerasan total", "unit": "mg/L", "note": "Sama dengan Ca + Mg."},
+    "AC": {"name": "Asiditas (kapasitas menetralkan basa)", "unit": "µeq/L",
+           "note": "Di daftar sumber tertulis meq/L; besarnya nilai sesuai µeq/L (setara H⁺ dari pH)."},
+    "AL": {"name": "Alkalinitas (kapasitas menetralkan asam)", "unit": "meq/L", "note": ""},
+    "CH": {"name": "CH (di sumber: kesadahan karbonat)", "unit": "mm",
+           "note": "Nilai dalam mm sesuai jumlah curah hujan mingguan saat sampel dikumpulkan."},
+    "OX": {"name": "Oksigen terlarut / daya oksidasi", "unit": "mg/L", "note": ""},
+}
+
 
 def evaluate_threshold(value, spec):
     """Kembalikan status ambang untuk satu nilai pengukuran."""
@@ -96,14 +119,22 @@ class KAHSeriesData(models.Model):
     def __str__(self):
         return f"KAH {self.stasiun} {self.bulan} minggu {self.minggu}"
 
+    @property
+    def is_empty(self):
+        """True bila semua parameter 0/kosong: slot minggu tanpa sampel, bukan hasil ukur."""
+        return all(not getattr(self, field.lower()) for field in KAH_FIELDS)
+
     def get_remark(self, field_name):
         """Kembalikan dict status remark untuk satu kolom.
 
-        status: 'exceed' -> melebihi ambang batas polusi udara,
-                'normal' -> masih di bawah ambang,
-                'na'     -> tidak ada ambang/nilai kosong.
+        status: 'exceed'   -> melebihi ambang batas polusi udara,
+                'normal'   -> masih di bawah ambang,
+                'na'       -> tidak ada ambang/nilai kosong,
+                'nosample' -> minggu tanpa sampel (semua parameter 0).
         """
         spec = KAH_THRESHOLDS.get(field_name)
+        if self.is_empty:
+            return {"status": "nosample", "text": "Tidak ada sampel", "label": spec["label"] if spec else ""}
         value = getattr(self, field_name.lower(), None)
         status = evaluate_threshold(value, spec)
         if status == "exceed":
@@ -127,6 +158,8 @@ class KAHSeriesData(models.Model):
         return exceeded
 
     def get_remark_summary(self):
+        if self.is_empty:
+            return "Tidak ada sampel"
         exceeded = self.get_exceeded_fields()
         if exceeded:
             return "Melebihi ambang: " + ", ".join(exceeded)

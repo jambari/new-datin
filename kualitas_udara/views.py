@@ -27,6 +27,7 @@ from .importer import CSVFormatError, import_kah, import_spm
 from .models import (
     KAH_FIELD_LABELS,
     KAH_FIELDS,
+    KAH_PARAM_INFO,
     KAH_THRESHOLDS,
     KAHSeriesData,
     SPM_THRESHOLD,
@@ -148,6 +149,7 @@ def build_kah_rows(records):
             {
                 "obj": record,
                 "cells": cells,
+                "empty": record.is_empty,
                 "remark_summary": record.get_remark_summary(),
             }
         )
@@ -158,12 +160,16 @@ def build_kah_field_defs():
     defs = []
     for field_key in KAH_FIELDS:
         spec = KAH_THRESHOLDS.get(field_key)
+        info = KAH_PARAM_INFO[field_key]
         defs.append(
             {
                 "key": field_key,
                 "label": KAH_FIELD_LABELS[field_key],
-                "unit": spec["unit"] if spec else "",
+                "name": info["name"],
+                "unit": info["unit"],
+                "note": info["note"],
                 "threshold_label": spec["label"] if spec else "",
+                "threshold": f"{spec['op']} {spec['limit']:g}" if spec else "",
             }
         )
     return defs
@@ -270,7 +276,7 @@ def kah_export(request, export_format):
     queryset, _start, _end = filter_kah(request)
 
     headers = ["Stasiun", "Bulan", "Minggu"] + [
-        f"{KAH_FIELD_LABELS[f]}{' (' + KAH_THRESHOLDS[f]['unit'] + ')' if f in KAH_THRESHOLDS and KAH_THRESHOLDS[f]['unit'] else ''}"
+        f"{KAH_FIELD_LABELS[f]}{' (' + KAH_PARAM_INFO[f]['unit'] + ')' if KAH_PARAM_INFO[f]['unit'] else ''}"
         for f in KAH_FIELDS
     ] + ["Remark"]
 

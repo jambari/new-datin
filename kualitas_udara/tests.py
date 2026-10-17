@@ -88,3 +88,40 @@ class FilterTest(TestCase):
         html = self.client.get("/kualitas-udara/kah/").content.decode()
         self.assertNotIn('type="month"', html)
         self.assertNotIn('name="stasiun"', html)
+
+
+class EmptyRowAndParameterInfoTest(TestCase):
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("t", password="x"))
+        self.empty = KAHSeriesData.objects.create(
+            stasiun="ANGKASAPURA", bulan="2026-01", minggu="05",
+            **{f: 0.0 for f in ("ph", "dh", "ca", "mg", "na", "k", "nh4", "cl", "so4", "no3", "kt", "ac", "al", "ch", "ox")},
+        )
+        self.acid = KAHSeriesData.objects.create(stasiun="ANGKASAPURA", bulan="2026-01", minggu="01", ph=4.5, ch=12.0)
+
+    def test_all_zero_row_is_no_sample_not_exceedance(self):
+        self.assertTrue(self.empty.is_empty)
+        self.assertFalse(self.acid.is_empty)
+        self.assertEqual(self.empty.get_remark("PH")["status"], "nosample")
+        self.assertEqual(self.empty.get_exceeded_fields(), [])
+        self.assertEqual(self.empty.get_remark_summary(), "Tidak ada sampel")
+        self.assertEqual(self.acid.get_remark("PH")["status"], "exceed")
+
+    def test_list_page_shows_no_sample_and_parameter_legend(self):
+        html = self.client.get("/kualitas-udara/kah/").content.decode()
+        self.assertIn("Tidak ada sampel", html)
+        self.assertEqual(html.count("Melebihi ambang"), 1)  # only the real pH 4.5 sample
+        self.assertIn("Keterangan parameter KAH", html)
+        self.assertIn("Kekerasan total", html)
+        self.assertIn("µeq/L", html)
+
+    def test_export_uses_units_and_no_sample_remark(self):
+        import io
+        from openpyxl import load_workbook
+        r = self.client.get("/kualitas-udara/kah/export/excel/")
+        ws = load_workbook(io.BytesIO(r.content)).active
+        header = [c.value for c in ws[1]]
+        self.assertIn("AC (µeq/L)", header)
+        self.assertIn("CH (mm)", header)
+        remarks = [row[-1] for row in ws.iter_rows(min_row=2, values_only=True)]
+        self.assertIn("Tidak ada sampel", remarks)
