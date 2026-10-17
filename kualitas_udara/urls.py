@@ -15,6 +15,8 @@ urlpatterns = [
         views.kah_export,
         name="kah_export",
     ),
+    # API impor (token, dipakai cron penarik data dari Database Kualitas Udara BMKG)
+    path("kualitas-udara/api/import/", views.api_import, name="api_import"),
     # SPM (Suspended Particulate Matter)
     path("kualitas-udara/spm/", views.spm_list, name="spm_list"),
     path("kualitas-udara/spm/tambah/", views.spm_create, name="spm_create"),

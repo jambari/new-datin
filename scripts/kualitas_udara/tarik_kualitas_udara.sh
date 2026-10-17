@@ -1,34 +1,34 @@
 #!/bin/bash
 # Tarik data Kualitas Udara (KAH & SPM, "Series data") dari Database Kualitas
-# Udara BMKG Jakarta lalu impor ke server produksi.
+# Udara BMKG Jakarta lalu kirim ke API impor di server produksi.
 #
-# Dijalankan dari scproc (server data center 172.19.1.32 hanya terjangkau dari
-# jaringan ini, tidak dari produksi). Cron: setiap tanggal 1, lihat README.md.
+# Dijalankan dari PC di jaringan kantor yang menjangkau data center 172.19.1.32
+# (produksi tidak menjangkaunya). Cron: setiap tanggal 1, lihat README.md.
 #
 # Data di pusat diperbarui ±3 bulan sekali (menunggu kiriman sampel), jadi tiap
 # kali jalan ditarik MONTHS_BACK bulan ke belakang (default 6) s.d. bulan lalu.
-# Di produksi diimpor dengan --skip-existing: data yang sudah ada dilewati,
-# hanya minggu/tanggal yang belum ada yang dimasukkan.
+# API hanya menambah data baru: data yang sudah ada dilewati, tidak ditimpa.
 #
-# Kredensial dibaca dari $KU_CONF (default ~/.config/kualitas_udara/datacenter.env,
+# Konfigurasi dibaca dari $KU_CONF (default ~/.config/kualitas_udara/datacenter.env,
 # chmod 600) berisi:
-#   DC_USER=...
+#   DC_USER=...      # akun Database Kualitas Udara
 #   DC_PASS=...
+#   API_TOKEN=...    # sama dengan KUALITAS_UDARA_API_TOKEN di .env.production
+#   API_URL=https://stageof-jayapura.bmkg.go.id/kualitas-udara/api/import/   (opsional)
 set -euo pipefail
 
 KU_CONF=${KU_CONF:-$HOME/.config/kualitas_udara/datacenter.env}
 MONTHS_BACK=${MONTHS_BACK:-6}
 DC_BASE=${DC_BASE:-http://172.19.1.32:89}
 DC_STATION_ID=${DC_STATION_ID:-5051}          # ANGKASAPURA
-PROD=${PROD:-sysop@36.91.166.189}
-PROD_DIR=${PROD_DIR:-/var/www/html}
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
 [ -r "$KU_CONF" ] || { log "ERROR: file kredensial $KU_CONF tidak ada"; exit 1; }
 # shellcheck disable=SC1090
 source "$KU_CONF"
-: "${DC_USER:?DC_USER kosong di $KU_CONF}" "${DC_PASS:?DC_PASS kosong di $KU_CONF}"
+: "${DC_USER:?DC_USER kosong di $KU_CONF}" "${DC_PASS:?DC_PASS kosong di $KU_CONF}" "${API_TOKEN:?API_TOKEN kosong di $KU_CONF}"
+API_URL=${API_URL:-https://stageof-jayapura.bmkg.go.id/kualitas-udara/api/import/}
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
@@ -67,9 +67,13 @@ for param in kah spm; do
     log "Unduh $param: $(( $(wc -l < "$out") - 1 )) baris"
 done
 
-remote=$(ssh -o BatchMode=yes "$PROD" 'mktemp -d /tmp/ku_sync.XXXXXX')
-scp -q -o BatchMode=yes "$WORK/kah_series_data.csv" "$WORK/spm_series_data.csv" "$PROD:$remote/"
-ssh -o BatchMode=yes "$PROD" "cd '$PROD_DIR' && ENVIRONMENT=production venv/bin/python manage.py import_kualitas_udara \
-    --kah '$remote/kah_series_data.csv' --spm '$remote/spm_series_data.csv' --skip-existing 2>&1 \
-    | grep -v 'objects imported'; status=\${PIPESTATUS[0]}; rm -rf '$remote'; exit \$status"
+# Kirim ke API (token lewat file header agar tidak terlihat di daftar proses).
+printf 'Authorization: Token %s\n' "$API_TOKEN" > "$WORK/auth_header"
+http=$(curl -sS -m 300 -o "$WORK/response.json" -w '%{http_code}' \
+    -H @"$WORK/auth_header" -A "kualitas-udara-sync/1.0 (Stasiun Geofisika Jayapura)" \
+    -F "kah=@$WORK/kah_series_data.csv;type=text/csv" \
+    -F "spm=@$WORK/spm_series_data.csv;type=text/csv" \
+    "$API_URL")
+log "API HTTP $http: $(cat "$WORK/response.json")"
+[ "$http" = "200" ] || { log "ERROR: impor ke API gagal"; exit 1; }
 log "Selesai"

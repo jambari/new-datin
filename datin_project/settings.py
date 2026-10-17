@@ -361,6 +361,9 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 # --- Telegram Configuration ---
 TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
+
+# Token API impor Kualitas Udara (/kualitas-udara/api/import/); kosong = API nonaktif.
+KUALITAS_UDARA_API_TOKEN = config('KUALITAS_UDARA_API_TOKEN', default='')
 TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default='')
 # Grup khusus laporan kesehatan stasiun (opsional; kosong = TELEGRAM_CHAT_ID).
 STATION_QC_TELEGRAM_CHAT_ID = config('STATION_QC_TELEGRAM_CHAT_ID', default='')

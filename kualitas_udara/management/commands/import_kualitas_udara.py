@@ -1,38 +1,8 @@
-import csv
 import os
-from datetime import datetime
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
-from kualitas_udara.models import KAHSeriesData, SPMSeriesData
-
-KAH_FIELD_MAP = {
-    "PH": "ph",
-    "DH": "dh",
-    "CA": "ca",
-    "MG": "mg",
-    "NA": "na",
-    "K": "k",
-    "NH4": "nh4",
-    "CL": "cl",
-    "SO4": "so4",
-    "NO3": "no3",
-    "KT": "kt",
-    "AC": "ac",
-    "AL": "al",
-    "CH": "ch",
-    "OX": "ox",
-}
-
-
-def parse_float(value):
-    value = (value or "").strip()
-    if value == "":
-        return None
-    try:
-        return float(value)
-    except ValueError:
-        return None
+from kualitas_udara.importer import CSVFormatError, import_kah, import_spm
 
 
 class Command(BaseCommand):
@@ -58,75 +28,21 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        self.skip_existing = options["skip_existing"]
-        self.import_kah(options["kah_path"])
-        self.import_spm(options["spm_path"])
-
-    def save_row(self, model, lookup, defaults):
-        """Simpan satu baris; kembalikan 'created', 'updated' atau 'skipped'."""
-        if self.skip_existing:
-            if model.objects.filter(**lookup).exists():
-                return "skipped"
-            model.objects.create(**lookup, **defaults)
-            return "created"
-        _obj, was_created = model.objects.update_or_create(**lookup, defaults=defaults)
-        return "created" if was_created else "updated"
-
-    def report(self, label, counts):
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"{label} selesai: {counts['created']} data baru, {counts['updated']} data diperbarui, "
-                f"{counts['skipped']} dilewati (sudah ada)."
-            )
-        )
-
-    def import_kah(self, path):
-        if not os.path.exists(path):
-            self.stderr.write(self.style.WARNING(f"File KAH tidak ditemukan: {path}"))
-            return
-
-        counts = {"created": 0, "updated": 0, "skipped": 0}
-        with open(path, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                bulan = (row.get("bulan") or "").strip()
-                minggu = (row.get("minggu") or "").strip()
-                stasiun = (row.get("stasiun") or "").strip()
-                if not stasiun or not bulan or not minggu:
-                    continue
-
-                defaults = {
-                    field_name: parse_float(row.get(csv_col))
-                    for csv_col, field_name in KAH_FIELD_MAP.items()
-                }
-                lookup = {"stasiun": stasiun, "bulan": bulan, "minggu": minggu}
-                counts[self.save_row(KAHSeriesData, lookup, defaults)] += 1
-
-        self.report("KAH", counts)
-
-    def import_spm(self, path):
-        if not os.path.exists(path):
-            self.stderr.write(self.style.WARNING(f"File SPM tidak ditemukan: {path}"))
-            return
-
-        counts = {"created": 0, "updated": 0, "skipped": 0}
-        with open(path, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                stasiun = (row.get("stasiun") or "").strip()
-                timestamp_raw = (row.get("timestamp") or "").strip()
-                if not stasiun or not timestamp_raw:
-                    continue
+        for label, path, importer in (
+            ("KAH", options["kah_path"], import_kah),
+            ("SPM", options["spm_path"], import_spm),
+        ):
+            if not os.path.exists(path):
+                self.stderr.write(self.style.WARNING(f"File {label} tidak ditemukan: {path}"))
+                continue
+            with open(path, newline="", encoding="utf-8") as f:
                 try:
-                    timestamp = datetime.strptime(timestamp_raw, "%Y-%m-%d").date()
-                except ValueError:
-                    self.stderr.write(
-                        self.style.WARNING(f"Lewati baris SPM tanggal invalid: {timestamp_raw}")
-                    )
-                    continue
-
-                lookup = {"stasiun": stasiun, "timestamp": timestamp}
-                defaults = {"spm": parse_float(row.get("SPM"))}
-                counts[self.save_row(SPMSeriesData, lookup, defaults)] += 1
-
-        self.report("SPM", counts)
+                    counts = importer(f, skip_existing=options["skip_existing"])
+                except CSVFormatError as exc:
+                    raise CommandError(str(exc))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"{label} selesai: {counts['created']} data baru, {counts['updated']} data diperbarui, "
+                    f"{counts['skipped']} dilewati (sudah ada), {counts['invalid']} baris tidak valid."
+                )
+            )

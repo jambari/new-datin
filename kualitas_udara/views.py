@@ -1,15 +1,21 @@
+import hmac
 import io
+import logging
 import re
 from datetime import datetime
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.http import HttpResponse
+from django.db import transaction
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
@@ -17,6 +23,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from .forms import KAHSeriesDataForm, SPMSeriesDataForm
+from .importer import CSVFormatError, import_kah, import_spm
 from .models import (
     KAH_FIELD_LABELS,
     KAH_FIELDS,
@@ -26,6 +33,8 @@ from .models import (
     SPM_THRESHOLD_LABEL,
     SPMSeriesData,
 )
+
+logger = logging.getLogger(__name__)
 
 PER_PAGE_OPTIONS = (10, 25, 50, 100)
 DEFAULT_PER_PAGE = 10
@@ -457,3 +466,53 @@ def export_table_pdf(doc_title, headers, row_iterator, filename_prefix):
     response = HttpResponse(output.getvalue(), content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+# ---------------------------------------------------------------------------
+# API impor (dipanggil cron di scclient setelah menarik CSV dari
+# Database Kualitas Udara BMKG). Hanya menambah data baru; data yang sudah
+# ada tidak pernah ditimpa.
+# ---------------------------------------------------------------------------
+API_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+API_IMPORTERS = (("kah", import_kah), ("spm", import_spm))
+
+
+def _client_ip(request):
+    return request.headers.get("CF-Connecting-IP") or request.META.get("REMOTE_ADDR", "")
+
+
+@csrf_exempt
+@require_POST
+def api_import(request):
+    token = getattr(settings, "KUALITAS_UDARA_API_TOKEN", "")
+    if not token:
+        return JsonResponse({"ok": False, "error": "API impor kualitas udara belum diaktifkan."}, status=503)
+
+    auth = request.headers.get("Authorization", "")
+    given = auth[len("Token "):].strip() if auth.startswith("Token ") else ""
+    if not given or not hmac.compare_digest(given.encode(), token.encode()):
+        logger.warning("Kualitas udara API: token tidak valid dari %s", _client_ip(request))
+        return JsonResponse({"ok": False, "error": "Token tidak valid."}, status=401)
+
+    uploads = {key: request.FILES.get(key) for key, _ in API_IMPORTERS}
+    if not any(uploads.values()):
+        return JsonResponse({"ok": False, "error": "Kirim file CSV pada field 'kah' dan/atau 'spm'."}, status=400)
+
+    results = {}
+    for key, importer in API_IMPORTERS:
+        upload = uploads[key]
+        if upload is None:
+            continue
+        if upload.size > API_MAX_UPLOAD_BYTES:
+            return JsonResponse({"ok": False, "error": f"File {key} terlalu besar."}, status=413)
+        try:
+            lines = upload.read().decode("utf-8-sig").splitlines()
+            with transaction.atomic():
+                results[key] = importer(lines, skip_existing=True)
+        except UnicodeDecodeError:
+            return JsonResponse({"ok": False, "error": f"File {key} bukan teks UTF-8."}, status=400)
+        except CSVFormatError as exc:
+            return JsonResponse({"ok": False, "error": str(exc), "results": results}, status=400)
+
+    logger.info("Kualitas udara API: impor dari %s: %s", _client_ip(request), results)
+    return JsonResponse({"ok": True, "results": results})
