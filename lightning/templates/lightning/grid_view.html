@@ -129,6 +129,7 @@ body { margin:0; font-family:system-ui,sans-serif; }
           <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('matrix')">📊 Matriks Total Kerapatan</button>
             <button class="tab-btn" onclick="switchTab('map-tab')">🗺️ Peta Kerapatan Sambaran Petir {{ selected_month_name }} {{ selected_year }}</button>
+            <button class="tab-btn" onclick="switchTab('layout')">🖼️ Layout Peta Kota Jayapura</button>
           </div>
 
           {# ── TAB 1: MATRIX ── #}
@@ -183,7 +184,6 @@ body { margin:0; font-family:system-ui,sans-serif; }
                   <input type="checkbox" id="clipToggle" checked onchange="renderOverlay()">
                   <span>Potong ke batas Kota Jayapura</span>
                 </label>
-                <a href="{% url 'lightning:lightning-grid-layout' %}?year={{ selected_year }}&month={{ selected_month }}" class="btn btn-gray btn-sm" title="Layout peta Kota Jayapura untuk laporan bulanan">⬇ Layout Peta (PNG)</a>
                 <label style="font-size:12px;color:#4b5563;display:flex;align-items:center;gap:6px">
                   <span>Opacity:</span>
                   <input type="range" id="opacitySlider" min="10" max="100" value="80" style="width:80px;cursor:pointer" oninput="setOpacity(this.value/100)">
@@ -212,6 +212,26 @@ body { margin:0; font-family:system-ui,sans-serif; }
               {% endif %}
             </div>
           </div>
+
+          {# ── TAB 3: LAYOUT PETA ── #}
+          <div id="tab-layout" class="tab-content">
+            <div class="card-header">
+              <span class="font-bold text-gray-700">🖼️ Layout Peta Kerapatan Sambaran Petir Kota Jayapura — {{ selected_month_name }} {{ selected_year }}</span>
+              <div class="toolbar">
+                <a href="{% url 'lightning:lightning-grid-layout' %}?year={{ selected_year }}&month={{ selected_month }}&download=1" class="btn btn-gray btn-sm">⬇ Unduh PNG</a>
+              </div>
+            </div>
+            <div class="card-body">
+              {% if cells %}
+              <div id="layoutLoading" class="p-8 text-center text-gray-400">Membuat layout peta…</div>
+              <img id="layoutImg" alt="Layout peta kerapatan sambaran petir Kota Jayapura {{ selected_month_name }} {{ selected_year }}"
+                   data-src="{% url 'lightning:lightning-grid-layout' %}?year={{ selected_year }}&month={{ selected_month }}"
+                   style="display:none;width:100%;max-width:1100px;height:auto;margin:0 auto;border:1px solid #e5e7eb;border-radius:6px">
+              {% else %}
+              <div class="p-8 text-center text-gray-400">Belum ada data.</div>
+              {% endif %}
+            </div>
+          </div>
         </div>
 
         {% if api_data_url %}
@@ -235,6 +255,16 @@ function switchTab(name) {
   event.target.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'map-tab') setTimeout(initMap, 100);
+  if (name === 'layout') loadLayout();
+}
+
+// Layout peta dibuat di server (PNG); dimuat saat tab dibuka pertama kali.
+function loadLayout() {
+  var img = document.getElementById('layoutImg');
+  if (!img || img.getAttribute('src')) return;
+  img.onload = function(){ document.getElementById('layoutLoading').style.display = 'none'; img.style.display = 'block'; };
+  img.onerror = function(){ document.getElementById('layoutLoading').textContent = 'Gagal membuat layout peta.'; };
+  img.setAttribute('src', img.dataset.src);
 }
 
 // ── Sidebar toggle ──

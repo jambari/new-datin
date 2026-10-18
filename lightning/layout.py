@@ -140,7 +140,7 @@ def _render(year, month, cells):
     ax.set_xticklabels([_dms(v, "BT", "BB") for v in lon_t], fontsize=7)
     ax.set_yticks([smap.project(v, cx)[1] for v in lat_t])
     ax.set_yticklabels([_dms(v, "LU", "LS") for v in lat_t], fontsize=7, rotation=90, va="center")
-    ax.tick_params(top=True, right=True, labeltop=True, labelright=True, length=3)
+    ax.tick_params(top=True, right=True, labeltop=False, labelright=False, length=3)
     for lab in ax.get_xticklabels(which="both"):
         lab.set_fontsize(7)
     ax.grid(color="#6b7280", lw=0.3, ls="--", alpha=0.6)
@@ -156,12 +156,12 @@ def _render(year, month, cells):
         s.set_linewidth(1.2)
     pw = 0.985 - px0 - 0.01
     if LOGO.exists():
-        lax = fig.add_axes([px0 + pw / 2 - 0.04, 0.86, 0.08, 0.095])
+        lax = fig.add_axes([px0 + pw / 2 - 0.04, 0.825, 0.08, 0.095])
         lax.imshow(Image.open(LOGO)), lax.axis("off")
-    pax.text(0.5, 0.815, "STASIUN GEOFISIKA\nKELAS I JAYAPURA", ha="center", va="center", fontsize=11,
+    pax.text(0.5, 0.79, "STASIUN GEOFISIKA\nKELAS I JAYAPURA", ha="center", va="center", fontsize=11,
              fontweight="bold", linespacing=1.3)
-    pax.text(0.5, 0.748, "U", ha="center", fontsize=11, fontweight="bold")
-    pax.add_patch(FancyArrow(0.5, 0.665, 0, 0.045, width=0.02, head_width=0.07, head_length=0.03, color="#111"))
+    pax.text(0.5, 0.722, "U", ha="center", fontsize=11, fontweight="bold")
+    pax.add_patch(FancyArrow(0.5, 0.645, 0, 0.042, width=0.02, head_width=0.07, head_length=0.03, color="#111"))
 
     # Skala batang (km)
     km_per_px = (2 * half * 111.32 * math.cos(math.radians(cy))) / smap.width

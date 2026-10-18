@@ -560,7 +560,8 @@ def lightning_grid_layout(request):
     cells = list(LightningMonthlyGrid.objects.filter(year=year, month=month))
     png = render_layout(year, month, cells)
     resp = HttpResponse(png, content_type='image/png')
-    resp['Content-Disposition'] = f'attachment; filename="peta_kerapatan_petir_kota_jayapura_{year}_{month:02d}.png"'
+    disposition = 'attachment' if request.GET.get('download') else 'inline'
+    resp['Content-Disposition'] = f'{disposition}; filename="peta_kerapatan_petir_kota_jayapura_{year}_{month:02d}.png"'
     return resp
 
 
