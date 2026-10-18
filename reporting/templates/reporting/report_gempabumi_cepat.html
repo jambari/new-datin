@@ -1,0 +1,49 @@
+{% extends "reporting/report_base.html" %}
+{% load reporting_extras %}
+{% block body %}
+<h2>I. Pendahuluan</h2>
+<p>Informasi gempabumi harus sampai kepada masyarakat dan pemangku kepentingan secepat mungkin. Untuk gempabumi dengan magnitudo kurang dari 5,0, informasi ditargetkan sudah disampaikan dalam waktu kurang dari {{ target_min|idn:0 }} menit sejak waktu kejadian. Laporan ini menjadi bukti capaian kinerja berupa kecepatan penyampaian informasi gempabumi M &lt; 5,0 selama periode {{ period.short_label }}.</p>
+
+<h2>II. Sumber Data dan Metode</h2>
+<ol>
+  <li><b>Sumber data:</b> kejadian gempabumi M &lt; 5,0 hasil analisis petugas yang telah di-<i>commit</i> ke Repositori Angkasa (sistem informasi Stasiun Geofisika Jayapura).</li>
+  <li><b>Delta waktu</b> = waktu informasi tersimpan dan tersedia di Repositori Angkasa − waktu kejadian (<i>origin time</i>), dalam menit:detik.</li>
+  <li><b>Kriteria:</b> <span style="color:#15803d;font-weight:700">Tepat waktu</span> bila delta &lt; {{ target_min|idn:0 }} menit; <span style="color:#b91c1c;font-weight:700">Terlambat</span> bila delta ≥ {{ target_min|idn:0 }} menit.</li>
+  <li><b>Petugas:</b> petugas operasional yang bertugas saat kejadian menurut jadwal dinas; pada jam serah terima kejadian dikreditkan ke dinas sebelumnya.{% if per_officer %} Laporan ini memuat kejadian saat <b>{{ officer.nama }}</b> bertugas.{% endif %}</li>
+  <li>Waktu penyimpanan tercatat sejak {{ cutoff|date:"d/m/Y" }}; kejadian sebelum tanggal tersebut (hasil impor susulan) ditampilkan tanpa delta dan tidak dihitung dalam persentase.</li>
+</ol>
+
+<h2>III. Ringkasan Capaian</h2>
+<div class="kpi">
+  <div><b>{{ n }}</b><span>kejadian M &lt; 5,0{% if per_officer %} saat bertugas{% endif %}</span></div>
+  <div><b style="color:#15803d">{{ pct_on|idn:1 }}%</b><span>tepat waktu ({{ n_on }} kejadian)</span></div>
+  <div><b style="color:#b91c1c">{{ pct_late|idn:1 }}%</b><span>terlambat ({{ n_late }} kejadian)</span></div>
+  <div><b>{% if delta_median is not None %}{{ delta_median|idn:1 }}{% else %}–{% endif %}</b><span>median delta (menit)</span></div>
+</div>
+{% if n_untimed %}<p class="note">{{ n_untimed }} kejadian tanpa catatan waktu penyimpanan (sebelum {{ cutoff|date:"d/m/Y" }}) tidak dihitung dalam persentase.</p>{% endif %}
+<div class="avoid">
+<h3>Tabel 1. Ketepatan waktu penyampaian per bulan</h3>
+<table><thead><tr><th>Bulan</th><th>Jumlah kejadian</th><th>Dihitung</th><th>Tepat waktu</th><th>%</th><th>Terlambat</th><th>%</th><th>Median delta (menit)</th></tr></thead><tbody>
+{% for m in monthly %}<tr><td>{{ m.label }}</td><td class="n">{{ m.n }}</td><td class="n">{{ m.timed }}</td><td class="n">{{ m.on }}</td><td class="n">{% if m.pct_on is not None %}{{ m.pct_on|idn:1 }}{% else %}–{% endif %}</td><td class="n">{{ m.late }}</td><td class="n">{% if m.pct_late is not None %}{{ m.pct_late|idn:1 }}{% else %}–{% endif %}</td><td class="n">{% if m.median is not None %}{{ m.median|idn:1 }}{% else %}–{% endif %}</td></tr>{% endfor %}
+<tr><td><b>Periode</b></td><td class="n"><b>{{ n }}</b></td><td class="n"><b>{{ n_timed }}</b></td><td class="n"><b>{{ n_on }}</b></td><td class="n"><b>{% if pct_on is not None %}{{ pct_on|idn:1 }}{% else %}–{% endif %}</b></td><td class="n"><b>{{ n_late }}</b></td><td class="n"><b>{% if pct_late is not None %}{{ pct_late|idn:1 }}{% else %}–{% endif %}</b></td><td class="n"><b>{% if delta_median is not None %}{{ delta_median|idn:1 }}{% else %}–{% endif %}</b></td></tr>
+</tbody></table>
+</div>
+{% if chart %}<img class="fig" src="{{ chart }}" alt="Grafik ketepatan waktu"><div class="cap">Gambar 1. Jumlah kejadian tepat waktu dan terlambat per bulan, persentase periode, dan sebaran delta waktu.</div>{% endif %}
+
+{% if events %}
+<h2 class="pb">IV. Daftar Kejadian dan Delta Waktu Penyampaian</h2>
+<table class="k"><thead><tr><th>No</th><th>Tanggal</th><th>Waktu (UTC)</th><th>Waktu (WIT)</th><th>Lintang</th><th>Bujur</th><th>Kedalaman (km)</th><th>Mag.</th><th>Wilayah</th><th>Disampaikan (WIT)</th><th>Delta</th><th>Status</th></tr></thead><tbody>
+{% for e in events %}<tr><td>{{ forloop.counter }}</td><td>{{ e.time_utc|date:"d/m/Y" }}</td><td>{{ e.time_utc|date:"H:i:s" }}</td><td>{{ e.time_wit|date:"H:i:s" }}</td><td>{{ e.lat|idn:2 }}</td><td>{{ e.lon|idn:2 }}</td><td>{{ e.depth|idn:0 }}</td><td>{{ e.mag|idn:1 }}</td><td style="text-align:left">{{ e.region }}</td><td>{% if e.sent_wit %}{{ e.sent_wit|date:"H:i:s" }}{% else %}–{% endif %}</td><td>{{ e.delta_text }}</td><td>{% if e.delta_min is None %}–{% elif e.on_time %}<span style="color:#15803d;font-weight:700">Tepat waktu</span>{% else %}<span style="color:#b91c1c;font-weight:700">Terlambat</span>{% endif %}</td></tr>{% endfor %}
+</tbody></table>
+<p class="note">Delta dalam menit:detik (jam:menit:detik bila ≥ 1 jam). Lintang negatif = Lintang Selatan; bujur dalam derajat Bujur Timur. Tanggal mengikuti UTC.</p>
+{% else %}
+<div class="warn">Tidak ada kejadian gempabumi M &lt; 5,0 pada periode ini{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %}.</div>
+{% endif %}
+
+<h2>{% if events %}V{% else %}IV{% endif %}. Kesimpulan</h2>
+{% if n_timed %}
+<p>Selama periode {{ period.label }} terdapat <b>{{ n }} kejadian gempabumi M &lt; 5,0</b>{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %}. Dari {{ n_timed }} kejadian yang tercatat waktu penyampaiannya, <b>{{ n_on }} kejadian ({{ pct_on|idn:1 }}%) disampaikan dalam waktu kurang dari {{ target_min|idn:0 }} menit</b> dan {{ n_late }} kejadian ({{ pct_late|idn:1 }}%) terlambat, dengan median delta {{ delta_median|idn:1 }} menit.</p>
+{% else %}
+<p>Selama periode {{ period.label }} terdapat {{ n }} kejadian gempabumi M &lt; 5,0{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %}, namun belum ada kejadian dengan catatan waktu penyampaian sehingga persentase ketepatan waktu belum dapat dihitung.</p>
+{% endif %}
+{% endblock %}

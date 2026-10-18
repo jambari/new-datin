@@ -345,3 +345,35 @@ class GempabumiReportTest(TestCase):
         anon = get_user_model().objects.create_user("tamu", password="x")
         self.client.force_login(anon)
         self.assertEqual(self.client.get(report_url("gempabumi")).context["n"], 3)
+
+
+class GempabumiCepatReportTest(TestCase):
+    def test_delta_and_percentages(self):
+        from jadwal.models import Pegawai
+        from qc_review.models import Event, QCRun
+        user = get_user_model().objects.create_user("jambari", password="x")
+        me = Pegawai.objects.create(user=user, nama="JAMBARI, S.Tr, M.Si", nip="1", pangkat="-", jabatan="-")
+        def ev(pid, when, mag, delay_s, who=(me,)):
+            e = Event.objects.create(public_id=pid, origin_time=when, latitude=-3.0, longitude=139.5,
+                                     depth_km=10, magnitude=mag, region="Jayapura")
+            Event.objects.filter(pk=e.pk).update(created_at=when + datetime.timedelta(seconds=delay_s))
+            QCRun.objects.create(event=e, run_number=1)
+            e.petugas.set(who)
+        ev("old", datetime.datetime(2026, 5, 20, 2, tzinfo=UTC), 3.0, 900000)        # sebelum cutoff: tanpa delta
+        ev("fast", datetime.datetime(2026, 6, 5, 2, tzinfo=UTC), 3.5, 161)           # 02:41 tepat waktu
+        ev("edge", datetime.datetime(2026, 6, 6, 2, tzinfo=UTC), 3.5, 180)           # tepat 3 menit = terlambat
+        ev("slow", datetime.datetime(2026, 7, 6, 2, tzinfo=UTC), 4.9, 3725)          # 1:02:05 terlambat
+        ev("big", datetime.datetime(2026, 6, 7, 2, tzinfo=UTC), 5.0, 60)             # M ≥ 5: tidak termasuk
+        self.client.force_login(user)
+        r = self.client.get(report_url("gempabumi_cepat", start=(5, 2026), end=(7, 2026)))
+        self.assertEqual(r.status_code, 200)
+        c = r.context
+        self.assertEqual([e["id"] for e in c["events"]], ["old", "fast", "edge", "slow"])
+        self.assertEqual((c["n_timed"], c["n_on"], c["n_late"]), (3, 1, 2))
+        self.assertAlmostEqual(c["pct_on"], 100 / 3)
+        self.assertEqual([m["timed"] for m in c["monthly"]], [0, 2, 1])
+        self.assertEqual([e["delta_text"] for e in c["events"]], ["–", "02:41", "03:00", "1:02:05"])
+        self.assertIsNotNone(c["chart"])
+        self.assertContains(r, "kurang dari 3 menit")
+        self.assertContains(r, "33,3")
+        self.assertContains(r, "<td>02:00:00</td><td>11:00:00</td>", html=False)
