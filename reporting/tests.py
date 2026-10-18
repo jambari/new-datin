@@ -3,13 +3,13 @@ import io
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from openpyxl import Workbook
 from PIL import Image
 
 from kualitas_udara.models import KAHSeriesData, SPMSeriesData
 from lightning.models import DailyStrikeSummary, Strike
+from magnet.kindex_import import import_kindex_workbook
 from magnet.models import KIndexDaily, MagneticObservation
 from repository.models import EventResponseSpectrum, ShakemapEvent, Station
 
@@ -111,8 +111,7 @@ class ReportingTest(TestCase):
                                            session="Session 1",
                                            deklinasi_readings={"WU": {"hh": "0", "mm": "47", "ss": "1", "circ": "303.5"}},
                                            inklinasi_readings={k: {"ftotal": "39273.0"} for k in ("NU", "SD", "ND", "SU")})
-        self.client.post("/reporting/indeks-k/upload/",
-                         {"berkas": SimpleUploadedFile("grafik_kindeks 2026.xlsx", kindex_workbook()), "tahun": 2026})
+        import_kindex_workbook(io.BytesIO(kindex_workbook()), 2026, "grafik_kindeks 2026.xlsx")
         r = self.client.get(report_url("magnet_petir"))
         self.assertEqual(r.status_code, 200)
         c = r.context
@@ -129,11 +128,9 @@ class ReportingTest(TestCase):
         self.assertContains(r, "OpenStreetMap")
 
     def test_kindex_import(self):
-        r = self.client.post("/reporting/indeks-k/upload/",
-                             {"berkas": SimpleUploadedFile("k.xlsx", kindex_workbook(sheet_year=2025)), "tahun": 2026},
-                             follow=True)
-        self.assertContains(r, "tahun di judul sheet 2025")
-        self.assertContains(r, "30 hari berdata")
+        summary, warnings = import_kindex_workbook(io.BytesIO(kindex_workbook(sheet_year=2025)), 2026, "k.xlsx")
+        self.assertTrue(any("tahun di judul sheet 2025" in w for w in warnings))
+        self.assertEqual(summary["2026-01"]["data"], 30)
         lost = KIndexDaily.objects.get(tanggal=datetime.date(2026, 1, 20))
         self.assertFalse(lost.has_data)
         self.assertEqual(lost.keterangan, "Lost Data")
@@ -141,9 +138,13 @@ class ReportingTest(TestCase):
         self.assertEqual(storm.a_index, (240 + 400 + 27 + 15 + 7 + 7 + 3 + 3) / 8)
         self.assertEqual(storm.criteria, "Badai Menengah")
         self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 1, 5)).a_index_source, 999)
-        r = self.client.post("/reporting/indeks-k/upload/",
-                             {"berkas": SimpleUploadedFile("k.txt", b"x"), "tahun": 2026}, follow=True)
-        self.assertContains(r, "harus berformat .xlsx")
+
+    def test_no_kindex_upload_on_reporting_page(self):
+        r = self.client.get("/reporting/")
+        self.assertNotContains(r, 'type="file"')
+        self.assertNotContains(r, "Unggah")
+        self.assertContains(r, "Indeks K tersimpan")
+        self.assertEqual(self.client.post("/reporting/indeks-k/upload/").status_code, 404)
 
     def test_percepatan_tanah_report(self):
         Station.objects.create(code="JAY", network="IA", latitude=-2.51, longitude=140.70)

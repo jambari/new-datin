@@ -60,33 +60,11 @@
           <button type="submit" class="mt-4 rounded-lg bg-gray-800 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-900">Buat laporan</button>
         </form>
 
-        <div class="rounded-xl bg-white p-6 shadow">
-          <h2 class="mb-1 text-lg font-semibold text-gray-800">Data indeks K (untuk laporan Magnetbumi)</h2>
-          <p class="mb-4 text-sm text-gray-500">
-            {% if kindex_count %}
-              Tersimpan {{ kindex_count }} hari, {{ kindex_first|date:"d/m/Y" }} s.d. {{ kindex_last|date:"d/m/Y" }}.
-            {% else %}
-              Belum ada data indeks K tersimpan.
-            {% endif %}
-            Mulai {{ kindex_fmi_start|date:"d/m/Y" }} indeks K diurai otomatis setiap hari dari citra FMI BMKG.
-            Untuk tanggal sebelumnya, unggah berkas pengolahan stasiun <code>grafik_kindeks &lt;tahun&gt;.xlsx</code>
-            (satu sheet per bulan); data hari yang sama akan diperbarui.
-          </p>
-          <form method="post" action="{% url 'reporting:upload_kindex' %}" enctype="multipart/form-data" class="grid gap-4 md:grid-cols-3 md:items-end">
-            {% csrf_token %}
-            <div class="md:col-span-2">
-              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ upload_form.berkas.id_for_label }}">{{ upload_form.berkas.label }}</label>
-              {{ upload_form.berkas }}
-            </div>
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ upload_form.tahun.id_for_label }}">{{ upload_form.tahun.label }}</label>
-              {{ upload_form.tahun }}
-            </div>
-            <div>
-              <button type="submit" class="rounded-lg border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Unggah &amp; impor</button>
-            </div>
-          </form>
-        </div>
+        <p class="text-sm text-gray-500">
+          Indeks K tersimpan:
+          {% if kindex_count %}{{ kindex_count }} hari, {{ kindex_first|date:"d/m/Y" }} s.d. {{ kindex_last|date:"d/m/Y" }}{% else %}belum ada{% endif %}.
+          Sebelum {{ kindex_fmi_start|date:"d/m/Y" }} dari Excel stasiun; mulai tanggal itu diurai otomatis setiap hari dari citra FMI BMKG.
+        </p>
       </div>
     </main>
   </div>

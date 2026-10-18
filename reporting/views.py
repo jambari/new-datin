@@ -1,21 +1,16 @@
 import datetime
-import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_POST
 
 from magnet.fmi_kindex import fmi_start_date
-from magnet.kindex_import import import_kindex_workbook
 from magnet.models import KIndexDaily
 
 from .builders import kualitas_udara, magnet_petir, percepatan_tanah
 from .common import Period
-from .forms import REPORT_TYPES, KIndexUploadForm, ReportForm
-
-logger = logging.getLogger(__name__)
+from .forms import REPORT_TYPES, ReportForm
 
 UNIT_KERJA = "Stasiun Geofisika Jayapura"
 
@@ -54,7 +49,6 @@ def index(request):
         "officer_nama": nama,
         "officer_nip": nip,
         "unit_kerja": UNIT_KERJA,
-        "upload_form": KIndexUploadForm(initial={"tahun": datetime.date.today().year}),
         "report_types": REPORT_TYPES,
         "kindex_first": kindex_range.first(),
         "kindex_last": kindex_range.last(),
@@ -91,29 +85,3 @@ def report(request):
         **module.build(period),
     }
     return render(request, template, context)
-
-
-@login_required
-@require_POST
-def upload_kindex(request):
-    form = KIndexUploadForm(request.POST, request.FILES)
-    if not form.is_valid():
-        for errs in form.errors.values():
-            for e in errs:
-                messages.error(request, e)
-        return redirect("reporting:index")
-    upload = form.cleaned_data["berkas"]
-    try:
-        summary, warnings = import_kindex_workbook(upload, form.cleaned_data["tahun"], upload.name)
-    except Exception as exc:  # berkas rusak / format lain
-        logger.exception("Impor indeks K gagal")
-        messages.error(request, f"Berkas tidak bisa dibaca sebagai Excel indeks K: {exc}")
-        return redirect("reporting:index")
-    for w in warnings:
-        messages.warning(request, w)
-    if summary:
-        total = sum(c["data"] for c in summary.values())
-        messages.success(request, f"Indeks K diimpor: {len(summary)} bulan, {total} hari berdata.")
-    else:
-        messages.warning(request, "Tidak ada sheet bulan (Januari–Desember) yang ditemukan di berkas.")
-    return redirect("reporting:index")

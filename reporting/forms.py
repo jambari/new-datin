@@ -44,18 +44,3 @@ class ReportForm(forms.Form):
         if n > MAX_MONTHS:
             raise forms.ValidationError(f"Periode laporan maksimal {MAX_MONTHS} bulan.")
         return data
-
-
-class KIndexUploadForm(forms.Form):
-    berkas = forms.FileField(label="Berkas Excel indeks K (.xlsx)",
-                             widget=forms.ClearableFileInput(attrs={"class": INPUT, "accept": ".xlsx"}))
-    tahun = forms.TypedChoiceField(choices=_years, coerce=int, label="Tahun data",
-                                   widget=forms.Select(attrs={"class": INPUT}))
-
-    def clean_berkas(self):
-        f = self.cleaned_data["berkas"]
-        if not f.name.lower().endswith(".xlsx"):
-            raise forms.ValidationError("Berkas harus berformat .xlsx.")
-        if f.size > 10 * 1024 * 1024:
-            raise forms.ValidationError("Ukuran berkas maksimal 10 MB.")
-        return f
