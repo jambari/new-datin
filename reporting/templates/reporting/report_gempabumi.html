@@ -1,0 +1,55 @@
+{% extends "reporting/report_base.html" %}
+{% load reporting_extras %}
+{% block body %}
+<h2>I. Pendahuluan</h2>
+<p>Stasiun Geofisika Kelas I Jayapura melaksanakan pengamatan, analisis, dan penyebaran informasi gempabumi di wilayah Papua. Setiap kejadian dianalisis petugas operasional (penentuan parameter waktu kejadian, episenter, kedalaman, dan magnitudo) lalu disebarkan sebagai informasi gempabumi. Laporan ini menjadi bukti capaian kinerja berupa tersedianya informasi gempabumi yang dianalisis dan disebarkan selama periode {{ period.short_label }}.</p>
+
+<h2>II. Sumber Data dan Metode</h2>
+<ol>
+  <li><b>Sumber data:</b> kejadian gempabumi hasil analisis dan QC petugas pada Repositori Angkasa (sistem informasi Stasiun Geofisika Jayapura), yaitu kejadian yang telah di-<i>commit</i> dan disebarkan.</li>
+  <li><b>Parameter:</b> waktu kejadian (UTC dan WIT), lintang, bujur, kedalaman, magnitudo, dan keterangan wilayah, sesuai hasil analisis terakhir.</li>
+  <li><b>Petugas:</b> petugas operasional yang bertugas saat kejadian menurut jadwal dinas; pada jam serah terima kejadian dikreditkan ke dinas sebelumnya.{% if per_officer %} Laporan ini memuat kejadian yang dianalisis saat <b>{{ officer.nama }}</b> bertugas.{% endif %}</li>
+  <li><b>Klasifikasi kedalaman:</b> dangkal (&lt; 70 km), menengah (70–300 km), dalam (≥ 300 km).</li>
+</ol>
+
+<h2>III. Ringkasan Capaian</h2>
+<div class="kpi">
+  <div><b>{{ n }}</b><span>kejadian gempabumi dianalisis &amp; disebarkan{% if per_officer %} saat bertugas{% endif %}</span></div>
+  <div><b>{{ mag_min|idn:1 }}–{{ mag_max|idn:1 }}</b><span>rentang magnitudo</span></div>
+  <div><b>{{ n_m5 }}</b><span>kejadian M ≥ 5,0</span></div>
+  <div><b>{{ mag_mean|idn:1 }}</b><span>magnitudo rata-rata</span></div>
+</div>
+<div class="avoid">
+<h3>Tabel 1. Jumlah kejadian per bulan</h3>
+<table><thead><tr><th>Bulan</th><th>Jumlah kejadian</th><th>Magnitudo maksimum</th><th>Kejadian M ≥ 5,0</th></tr></thead><tbody>
+{% for m in monthly %}<tr><td>{{ m.label }}</td><td class="n">{{ m.n }}</td><td class="n">{{ m.mag_max|idn:1 }}</td><td class="n">{{ m.n_m5 }}</td></tr>{% endfor %}
+<tr><td><b>Periode</b></td><td class="n"><b>{{ n }}</b></td><td class="n"><b>{{ mag_max|idn:1 }}</b></td><td class="n"><b>{{ n_m5 }}</b></td></tr>
+</tbody></table>
+</div>
+{% if events %}
+<div class="avoid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<table><thead><tr><th>Magnitudo</th><th>Jumlah</th></tr></thead><tbody>{% for lab, c in mag_counts %}<tr><td>{{ lab }}</td><td class="n">{{ c }}</td></tr>{% endfor %}</tbody></table>
+<table><thead><tr><th>Kedalaman</th><th>Jumlah</th></tr></thead><tbody>{% for lab, c in depth_counts %}<tr><td>{{ lab }}</td><td class="n">{{ c }}</td></tr>{% endfor %}</tbody></table>
+</div>
+<h3>Tabel 2. Kejadian dengan magnitudo terbesar</h3>
+<table><thead><tr><th>Waktu (WIT)</th><th>Mag.</th><th>Kedalaman (km)</th><th>Wilayah</th></tr></thead><tbody>
+{% for e in biggest %}<tr><td class="c">{{ e.time_wit|date:"d/m/Y H:i:s" }}</td><td class="c">{{ e.mag|idn:1 }}</td><td class="n">{{ e.depth|idn:0 }}</td><td>{{ e.region }}</td></tr>{% endfor %}
+</tbody></table>
+
+<h2 class="pb">IV. Sebaran Episenter</h2>
+<img class="mapfig" src="{{ map }}" alt="Peta sebaran episenter"><div class="cap">Gambar 1. Sebaran episenter gempabumi {{ period.short_label }} (warna = kedalaman, ukuran = magnitudo; basemap © OpenStreetMap contributors).</div>
+<img class="fig" src="{{ chart }}" alt="Grafik statistik"><div class="cap">Gambar 2. Jumlah kejadian per bulan, sebaran magnitudo, dan kedalaman.</div>
+{% if per_officer and partners %}<p class="note">Rekan dinas pada kejadian-kejadian ini: {% for nm, c in partners %}{{ nm }} ({{ c }}){% if not forloop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
+
+<h2 class="pb">V. Daftar Kejadian Gempabumi yang Disebarkan</h2>
+<table class="k"><thead><tr><th>No</th><th>Tanggal</th><th>Waktu (UTC)</th><th>Waktu (WIT)</th><th>Lintang</th><th>Bujur</th><th>Kedalaman (km)</th><th>Mag.</th><th>Wilayah</th><th>Petugas</th></tr></thead><tbody>
+{% for e in events %}<tr><td>{{ forloop.counter }}</td><td>{{ e.time_utc|date:"d/m/Y" }}</td><td>{{ e.time_utc|date:"H:i:s" }}</td><td>{{ e.time_wit|date:"H:i:s" }}</td><td>{{ e.lat|idn:2 }}</td><td>{{ e.lon|idn:2 }}</td><td>{{ e.depth|idn:0 }}</td><td>{{ e.mag|idn:1 }}</td><td style="text-align:left">{{ e.region }}</td><td style="text-align:left">{% for o in e.officers %}{{ o }}{% if not forloop.last %}; {% endif %}{% empty %}–{% endfor %}</td></tr>{% endfor %}
+</tbody></table>
+<p class="note">Lintang negatif = Lintang Selatan; bujur dalam derajat Bujur Timur. Tanggal mengikuti UTC.</p>
+{% else %}
+<div class="warn">Tidak ada kejadian gempabumi pada periode ini{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %}.</div>
+{% endif %}
+
+<h2>VI. Kesimpulan</h2>
+<p>Selama periode {{ period.label }} telah dianalisis dan disebarkan <b>{{ n }} informasi kejadian gempabumi</b>{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %} di wilayah Papua dan sekitarnya, dengan magnitudo {{ mag_min|idn:1 }}–{{ mag_max|idn:1 }}{% if n_m5 %} termasuk {{ n_m5 }} kejadian M ≥ 5,0{% endif %}. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah tercapai.</p>
+{% endblock %}

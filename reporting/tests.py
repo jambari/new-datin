@@ -305,3 +305,41 @@ class HujanCreditTest(TestCase):
         self.client.force_login(self.juan_user)
         c = self.client.get(report_url("hujan", start=(1, 2026), end=(1, 2026))).context
         self.assertEqual([d["date"].day for m in c["months"] for d in m["days"]], [5, 10])
+
+
+class GempabumiReportTest(TestCase):
+    @mock.patch("reporting.osm._tile", side_effect=fake_tile)
+    def test_per_officer_events_map_and_list(self, _tile):
+        from jadwal.models import Pegawai
+        from qc_review.models import Event, QCRun
+        user = get_user_model().objects.create_user("jambari", password="x")
+        me = Pegawai.objects.create(user=user, nama="JAMBARI, S.Tr, M.Si", nip="1", pangkat="-", jabatan="-")
+        other = Pegawai.objects.create(nama="ANAS", nip="2", pangkat="-", jabatan="-")
+        def ev(pid, when, mag, depth, who):
+            e = Event.objects.create(public_id=pid, origin_time=when, latitude=-3.0, longitude=139.5,
+                                     depth_km=depth, magnitude=mag, region="Jayapura")
+            QCRun.objects.create(event=e, run_number=1)
+            e.petugas.set(who)
+            return e
+        ev("a", datetime.datetime(2026, 1, 5, 2, tzinfo=UTC), 4.4, 10, [me, other])
+        ev("b", datetime.datetime(2026, 2, 7, 2, tzinfo=UTC), 5.4, 133, [me])
+        ev("c", datetime.datetime(2026, 2, 8, 2, tzinfo=UTC), 3.0, 20, [other])
+        ev("d", datetime.datetime(2026, 4, 1, 2, tzinfo=UTC), 3.1, 20, [me])        # di luar periode
+        Event.objects.create(public_id="norun", origin_time=datetime.datetime(2026, 1, 9, tzinfo=UTC),
+                             latitude=-3, longitude=139, depth_km=10, magnitude=3)  # belum di-commit
+        self.client.force_login(user)
+        r = self.client.get(report_url("gempabumi"))
+        self.assertEqual(r.status_code, 200)
+        c = r.context
+        self.assertEqual([e["id"] for e in c["events"]], ["a", "b"])
+        self.assertEqual(c["n_m5"], 1)
+        self.assertEqual([m["n"] for m in c["monthly"]], [1, 1, 0])
+        self.assertIsNotNone(c["map"])
+        self.assertContains(r, "Tersedianya Informasi Gempabumi dan Tsunami yang dianalisis dan disebarkan")
+        self.assertNotContains(r, "Delta")
+        self.assertNotContains(r, "ON TIME")
+        self.assertEqual(c["partners"], [("ANAS", 1)])
+
+        anon = get_user_model().objects.create_user("tamu", password="x")
+        self.client.force_login(anon)
+        self.assertEqual(self.client.get(report_url("gempabumi")).context["n"], 3)

@@ -9,6 +9,7 @@ REPORT_TYPES = [
     ("magnet_petir", "Magnetbumi & Listrik Udara"),
     ("percepatan_tanah", "Percepatan Tanah (Spectra Acceleration)"),
     ("hujan", "Hujan (Curah Hujan Harian)"),
+    ("gempabumi", "Gempabumi (Informasi yang Dianalisis & Disebarkan)"),
 ]
 MONTHS = [(i, BULAN[i]) for i in range(1, 13)]
 INPUT = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
