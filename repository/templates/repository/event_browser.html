@@ -105,12 +105,6 @@
             <span class="text-muted no-print">|</span>
             <div class="d-flex align-items-center gap-3 no-print">
               <div class="form-check form-check-inline m-0">
-                <input class="form-check-input" type="checkbox" id="swSrcExisting" onchange="refreshMarkers()">
-                <label class="form-check-label small" for="swSrcExisting">
-                  <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:2px;"></span>Integrasi
-                </label>
-              </div>
-              <div class="form-check form-check-inline m-0">
                 <input class="form-check-input" type="checkbox" id="swSrcQC" checked onchange="refreshMarkers()">
                 <label class="form-check-label small" for="swSrcQC">
                   <span style="display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #000;background:#6ee7b7;vertical-align:middle;margin-right:2px;"></span>JAY
@@ -802,7 +796,7 @@
       var div = L.DomUtil.create('div');
       div.style.cssText = "background:rgba(255,255,255,.88);border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:10px;line-height:1.5;box-shadow:0 1px 4px rgba(0,0,0,.15);margin-bottom:4px;";
       function updateStats() {
-        var showExisting = document.getElementById('swSrcExisting')?.checked ?? true;
+        var showExisting = false  /* sumber Integrasi tidak ditampilkan */;
         var showQC = document.getElementById('swSrcQC')?.checked ?? true;
         var active = [];
         if (showExisting) active = active.concat(mapData);
@@ -820,7 +814,6 @@
     statsDiv.addTo(mapInstance);
 
     // Also update stats when sources change
-    document.getElementById('swSrcExisting')?.addEventListener('change', function() { statsDiv.remove(); statsDiv.addTo(mapInstance); });
     document.getElementById('swSrcQC')?.addEventListener('change', function() { statsDiv.remove(); statsDiv.addTo(mapInstance); });
 
     document.getElementById('tahunDibuat').textContent = "Dibuat tahun " + new Date().getFullYear();
@@ -844,7 +837,7 @@
   function refreshMarkers() {
     if (!mapInstance || !markersLayer) return;
     markersLayer.clearLayers();
-    const showExisting = document.getElementById('swSrcExisting')?.checked ?? true;
+    const showExisting = false  /* sumber Integrasi tidak ditampilkan */;
     const showQC       = document.getElementById('swSrcQC')?.checked ?? true;
     var filterVal = document.getElementById('selFilter')?.value || 'all';
     if (showExisting && filterVal !== 'felt') {
@@ -1153,7 +1146,7 @@
 
   // --- SOURCE FILTER HELPER ---
   function getActiveData() {
-    const showExisting = document.getElementById('swSrcExisting')?.checked ?? true;
+    const showExisting = false  /* sumber Integrasi tidak ditampilkan */;
     const showQC       = document.getElementById('swSrcQC')?.checked ?? true;
     return [
       ...(showExisting ? mapData    : []),
