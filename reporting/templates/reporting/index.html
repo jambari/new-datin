@@ -68,8 +68,9 @@
             {% else %}
               Belum ada data indeks K tersimpan.
             {% endif %}
-            Unggah berkas pengolahan stasiun <code>grafik_kindeks &lt;tahun&gt;.xlsx</code> (satu sheet per bulan).
-            Data hari yang sama akan diperbarui.
+            Mulai {{ kindex_fmi_start|date:"d/m/Y" }} indeks K diurai otomatis setiap hari dari citra FMI BMKG.
+            Untuk tanggal sebelumnya, unggah berkas pengolahan stasiun <code>grafik_kindeks &lt;tahun&gt;.xlsx</code>
+            (satu sheet per bulan); data hari yang sama akan diperbarui.
           </p>
           <form method="post" action="{% url 'reporting:upload_kindex' %}" enctype="multipart/form-data" class="grid gap-4 md:grid-cols-3 md:items-end">
             {% csrf_token %}

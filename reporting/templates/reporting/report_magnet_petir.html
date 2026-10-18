@@ -9,7 +9,7 @@
   <li><b>Listrik udara:</b> ringkasan sambaran harian (CG+, CG−, IC; tanggal WIT) dan lokasi tiap sambaran dari basis data detektor petir stasiun; curah hujan harian dari data hujan stasiun.</li>
   <li><b>Peta sebaran:</b> diplot per bulan di atas basemap OpenStreetMap (© OpenStreetMap contributors).</li>
   <li><b>Magnetbumi absolut:</b> observasi absolut Stasiun Jayapura (JYP), yaitu D, I, F, H, Z, X, dan Y. Sesi DIM (MinGeo) yang belum direduksi ditampilkan terpisah dengan F rata-rata dari proton magnetometer.</li>
-  <li><b>Indeks K/A:</b> indeks K per 3 jam (UTC) dari berkas pengolahan stasiun. Indeks A dihitung dari K dengan konversi standar (0, 3, 7, 15, 27, 48, 80, 140, 240, 400). Kriteria: Tenang (A &lt; 30), Badai Kecil (30–49), Badai Menengah (50–99), Badai Besar (≥ 100).</li>
+  <li><b>Indeks K/A:</b> indeks K per 3 jam (UTC); sebelum {{ k_fmi_start|date:"d/m/Y" }} dari berkas pengolahan stasiun (Excel), mulai tanggal itu diurai otomatis dari citra FMI K-Indices BMKG yang diunduh harian. Indeks A dihitung dari K dengan konversi standar (0, 3, 7, 15, 27, 48, 80, 140, 240, 400). Kriteria: Tenang (A &lt; 30), Badai Kecil (30–49), Badai Menengah (50–99), Badai Besar (≥ 100).</li>
 </ol>
 
 <h2>III. Ringkasan Capaian</h2>
@@ -65,10 +65,11 @@
   {% if k.chart %}<img class="fig" style="width:80%;display:block;margin:4px auto" src="{{ k.chart }}" alt="Indeks K {{ k.label }}">
   <table class="k"><thead><tr><th>Tgl</th><th>00–03</th><th>03–06</th><th>06–09</th><th>09–12</th><th>12–15</th><th>15–18</th><th>18–21</th><th>21–24</th><th>A</th><th>Kriteria</th></tr></thead><tbody>
   {% for x in k.days %}{% with o=x.obj %}
-    {% if o and o.has_data %}<tr><td>{{ x.date.day }}</td>{% for v in o.k_values %}<td class="{% if v <= 3 %}k0{% elif v == 4 %}k4{% elif v <= 6 %}k5{% elif v == 7 %}k7{% elif v == 8 %}k8{% else %}k9{% endif %}">{{ v }}</td>{% endfor %}<td>{{ o.a_index|idn:2 }}</td><td>{{ o.criteria }}</td></tr>
+    {% if o and o.has_data %}<tr><td>{{ x.date.day }}</td>{% for v in o.k_values %}{% if v is None %}<td class="emp">–</td>{% else %}<td class="{% if v <= 3 %}k0{% elif v == 4 %}k4{% elif v <= 6 %}k5{% elif v == 7 %}k7{% elif v == 8 %}k8{% else %}k9{% endif %}">{{ v }}</td>{% endif %}{% endfor %}<td>{{ o.a_index|idn:2 }}</td><td>{{ o.criteria }}</td></tr>
     {% else %}<tr class="emp"><td>{{ x.date.day }}</td><td colspan="10">{{ o.keterangan|default:"Tidak ada data" }}</td></tr>{% endif %}
   {% endwith %}{% endfor %}
   </tbody></table>
+  <p class="note">Sumber: {{ k.sources|join:", " }}.{% if k.partial %} Hari dengan slot tidak lengkap (–): {{ k.partial|join:", " }}; indeks A dihitung dari slot yang tersedia.{% endif %}</p>
   {% else %}<div class="warn">Belum ada data indeks K untuk {{ k.label }}. Unggah berkas Excel indeks K di halaman Reporting.</div>{% endif %}
 {% endfor %}
 

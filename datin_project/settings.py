@@ -363,6 +363,9 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 # --- Telegram Configuration ---
 TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
 
+# Indeks K: sebelum tanggal ini dari Excel stasiun, mulai tanggal ini dari citra FMI BMKG.
+KINDEX_FMI_START = config('KINDEX_FMI_START', default='2026-10-03')
+
 # Jaringan kantor yang boleh mengisi logbook (CIDR IPv4/IPv6, dipisah koma).
 # IP WiFi kantor (IndiHome) dinamis: bila berganti, tambahkan di .env.production.
 LOGBOOK_ALLOWED_NETWORKS = config(

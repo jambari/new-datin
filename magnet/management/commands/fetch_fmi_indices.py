@@ -1,6 +1,7 @@
 """
 Scrape citra indeks magnetbumi harian (K & A) Stasiun Geofisika Jayapura,
-simpan ke database, lalu kirim ke grup Telegram.
+simpan ke database, urai nilai indeks K dari citra K ke KIndexDaily, lalu kirim
+ke grup Telegram.
 
 Sumber citra:
     https://dataweb.bmkg.go.id/geofisika/magnet/FMI-K-Indices-JYP.png?ssl=1
@@ -15,6 +16,7 @@ Manual:
     python manage.py fetch_fmi_indices --jenis K             # hanya satu jenis
     python manage.py fetch_fmi_indices --no-telegram         # tanpa kirim Telegram
     python manage.py fetch_fmi_indices --force               # kirim ulang walau citra sama
+    python manage.py fetch_fmi_indices --no-parse            # simpan citra tanpa mengurai nilai K
 """
 
 import hashlib
@@ -29,6 +31,7 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
+from magnet.fmi_kindex import update_kindex_from_image
 from magnet.models import FmiIndicesImage
 
 _WIT = zoneinfo.ZoneInfo('Asia/Jayapura')
@@ -150,6 +153,11 @@ class Command(BaseCommand):
             action='store_true',
             help='Kirim ulang ke Telegram walaupun citra tidak berubah.',
         )
+        parser.add_argument(
+            '--no-parse',
+            action='store_true',
+            help='Jangan urai nilai indeks K dari citra K.',
+        )
 
     def handle(self, *args, **options):
         now_wit = timezone.now().astimezone(_WIT)
@@ -200,6 +208,16 @@ class Command(BaseCommand):
             self.stdout.write(
                 f'  {jenis}: {action} — {len(content)} byte, sha256={sha[:12]}…, file={obj.image.name}'
             )
+
+            if jenis == FmiIndicesImage.K and not options['no_parse']:
+                try:
+                    days = update_kindex_from_image(obj)
+                    self.stdout.write(
+                        f'  K: nilai indeks K diurai — {len(days)} hari diperbarui'
+                        + (f' ({days[0]:%d/%m} s.d. {days[-1]:%d/%m})' if days else '')
+                    )
+                except Exception as exc:  # citra tetap tersimpan & terkirim walau parsing gagal
+                    self.stderr.write(self.style.WARNING(f'  K: gagal mengurai nilai indeks K — {exc}'))
 
             if not send_telegram:
                 continue

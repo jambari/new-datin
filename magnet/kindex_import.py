@@ -4,12 +4,15 @@ Format per sheet (satu sheet per bulan, nama sheet = nama bulan Indonesia):
 baris 5 dst: kolom A = tanggal, B..I = K(00-03)..K(21-24), J = indeks A, K = kriteria.
 Hari tanpa data berisi teks (mis. "Lost Data") di kolom B atau kosong.
 Tahun diambil dari argumen, bukan dari judul sheet (judul sheet bisa keliru).
+Hanya tanggal sebelum KINDEX_FMI_START yang diimpor; mulai tanggal itu data diambil
+dari citra FMI (lihat fmi_kindex.py).
 """
 import calendar
 import datetime
 
 from openpyxl import load_workbook
 
+from .fmi_kindex import fmi_start_date
 from .models import KIndexDaily
 
 MONTHS = {
@@ -22,6 +25,8 @@ def import_kindex_workbook(fileobj, year, source_name="", months=None):
     """Impor sheet bulan dari workbook. Kembalikan (ringkasan per bulan, peringatan)."""
     wb = load_workbook(fileobj, data_only=True, read_only=True)
     summary, warnings = {}, []
+    cutoff = fmi_start_date()
+    skipped = 0
     for ws in wb.worksheets:
         month = MONTHS.get(ws.title.strip().lower())
         if not month or (months and month not in months):
@@ -38,6 +43,9 @@ def import_kindex_workbook(fileobj, year, source_name="", months=None):
                 continue
             ks = row[1:9]
             tanggal = datetime.date(year, month, int(day))
+            if tanggal >= cutoff:
+                skipped += 1
+                continue
             if all(isinstance(k, (int, float)) and 0 <= k <= 9 for k in ks):
                 values = [int(k) for k in ks]
                 keterangan = ""
@@ -52,6 +60,10 @@ def import_kindex_workbook(fileobj, year, source_name="", months=None):
             obj.a_index_source = source_a
             obj.keterangan = keterangan
             obj.source_file = source_name
+            obj.sumber = KIndexDaily.SUMBER_EXCEL
             obj.save()
-        summary[f"{year}-{month:02d}"] = counts
+        if counts["data"] or counts["kosong"]:
+            summary[f"{year}-{month:02d}"] = counts
+    if skipped:
+        warnings.append(f"{skipped} hari mulai {cutoff:%d/%m/%Y} dilewati: data indeks K sejak tanggal itu diambil dari citra FMI.")
     return summary, warnings

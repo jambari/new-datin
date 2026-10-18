@@ -7,6 +7,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from magnet.fmi_kindex import fmi_start_date
 from magnet.kindex_import import import_kindex_workbook
 from magnet.models import KIndexDaily
 
@@ -58,6 +59,7 @@ def index(request):
         "kindex_first": kindex_range.first(),
         "kindex_last": kindex_range.last(),
         "kindex_count": kindex_range.count(),
+        "kindex_fmi_start": fmi_start_date(),
     }
     return render(request, "reporting/index.html", context)
 

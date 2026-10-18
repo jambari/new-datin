@@ -350,15 +350,24 @@ def a_index_criteria(a_index):
 class KIndexDaily(models.Model):
     """Indeks K per 3 jam (UTC) Stasiun Jayapura, satu baris per hari.
 
-    Diimpor dari berkas pengolahan stasiun (grafik_kindeks <tahun>.xlsx).
-    Hari tanpa data disimpan dengan k_values kosong dan keterangan (mis. "Lost Data").
+    Sumber: berkas Excel pengolahan stasiun (grafik_kindeks <tahun>.xlsx) untuk tanggal
+    sebelum KINDEX_FMI_START, dan citra FMI K-Indices BMKG (diurai otomatis oleh
+    fetch_fmi_indices) mulai tanggal itu. k_values berisi 8 nilai; slot tanpa data = None.
     """
+
+    SUMBER_EXCEL = 'excel'
+    SUMBER_FMI = 'fmi'
+    SUMBER_CHOICES = [
+        (SUMBER_EXCEL, 'Excel pengolahan stasiun'),
+        (SUMBER_FMI, 'Citra FMI K-Indices BMKG'),
+    ]
 
     tanggal = models.DateField(unique=True, verbose_name="Tanggal (UTC)")
     k_values = models.JSONField(default=list, blank=True, verbose_name="Indeks K per 3 jam (8 nilai)")
     a_index = models.FloatField(null=True, blank=True, verbose_name="Indeks A (dihitung dari K)")
     a_index_source = models.FloatField(null=True, blank=True, verbose_name="Indeks A di berkas sumber")
     keterangan = models.CharField(max_length=100, blank=True, verbose_name="Keterangan")
+    sumber = models.CharField(max_length=10, choices=SUMBER_CHOICES, default=SUMBER_EXCEL, verbose_name="Sumber")
     source_file = models.CharField(max_length=255, blank=True, verbose_name="Berkas sumber")
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -371,20 +380,27 @@ class KIndexDaily(models.Model):
         return f"K {self.tanggal}: {self.k_values or self.keterangan}"
 
     @property
+    def valid_k(self):
+        return [k for k in (self.k_values or []) if k is not None]
+
+    @property
     def has_data(self):
-        return len(self.k_values or []) == 8
+        return bool(self.valid_k)
+
+    @property
+    def is_complete(self):
+        return len(self.k_values or []) == 8 and len(self.valid_k) == 8
 
     @property
     def k_max(self):
-        return max(self.k_values) if self.has_data else None
+        return max(self.valid_k) if self.has_data else None
 
     @property
     def criteria(self):
         return a_index_criteria(self.a_index)
 
     def save(self, *args, **kwargs):
-        if self.has_data:
-            self.a_index = sum(K_TO_A[int(k)] for k in self.k_values) / 8
-        else:
-            self.a_index = None
+        valid = self.valid_k
+        # Seperti berkas Excel stasiun: rata-rata dari slot yang tersedia.
+        self.a_index = sum(K_TO_A[int(k)] for k in valid) / len(valid) if valid else None
         super().save(*args, **kwargs)

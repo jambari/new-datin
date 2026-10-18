@@ -9,6 +9,7 @@ from matplotlib.patches import Patch
 
 from hujan.models import Hujan
 from lightning.models import DailyStrikeSummary, Strike
+from magnet.fmi_kindex import fmi_start_date
 from magnet.models import KIndexDaily, MagneticObservation, a_index_criteria
 from reporting.charts import NAVY, new_figure, thousands, to_data_uri
 from reporting.common import BULAN, fmt
@@ -216,6 +217,8 @@ def _kindex_month(y, m):
     return {
         "label": f"{BULAN[m]} {y}", "days": days, "n": len(with_data), "ndays": len(days),
         "missing": [x["date"].day for x in days if not (x["obj"] and x["obj"].has_data)],
+        "partial": [x["date"].day for x in days if x["obj"] and x["obj"].has_data and not x["obj"].is_complete],
+        "sources": sorted({o.get_sumber_display() for o in with_data}),
         "kmax": max((o.k_max for o in with_data), default=None),
         "kmax_days": [o.tanggal.day for o in with_data if o.k_max == max(p.k_max for p in with_data)] if with_data else [],
         "amean": st.mean(o.a_index for o in with_data) if with_data else None,
@@ -235,6 +238,9 @@ def _kindex_chart(month):
             ax.axvspan(day - 1, day, color="#f3f4f6", zorder=0)
             continue
         for j, k in enumerate(o.k_values):
+            if k is None:
+                ax.axvspan(day - 1 + j / 8, day - 1 + (j + 1) / 8, color="#f3f4f6", zorder=0)
+                continue
             ax.bar(day - 1 + j / 8 + 1 / 16, k, width=1 / 8, color=_kcolor(k), edgecolor="white", linewidth=0.15)
         a2.bar(day - 0.5, o.a_index, width=0.7,
                color=NAVY if o.a_index < 30 else "#f97316" if o.a_index < 50 else "#dc2626")
@@ -301,4 +307,5 @@ def build(period, include_maps=True):
         "kmonths": kmonths, "kdays": kdays, "kdays_pct": 100 * kdays / period.days,
         "k_storms": [(o, a_index_criteria(o.a_index)) for o in storms],
         "k_diffs": [o for k in kmonths for o in k["a_diff"]],
+        "k_fmi_start": fmi_start_date(),
     }

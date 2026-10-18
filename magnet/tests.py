@@ -510,3 +510,147 @@ class BartingtonTelegramNotifyTest(TestCase):
                     obs = make_observation(deklinasi_readings=self.READINGS)
         self.assertTrue(MagneticObservation.objects.filter(pk=obs.pk).exists())
         self.assertEqual(post.call_count, 0)
+
+
+# ── Indeks K: urai citra FMI & batas sumber Excel/FMI ────────────────────────
+
+import io
+import os
+
+from openpyxl import Workbook
+
+from .fmi_kindex import FmiLayoutError, parse_k_image, update_kindex_from_image
+from .kindex_import import import_kindex_workbook
+from .models import KIndexDaily
+
+_TESTDATA = os.path.join(os.path.dirname(__file__), 'testdata')
+UTC = datetime.timezone.utc
+
+
+def _testimage(name):
+    with open(os.path.join(_TESTDATA, name), 'rb') as f:
+        return f.read()
+
+
+def _by_day(slots):
+    days = {}
+    for t, k in slots:
+        days.setdefault(t.date(), [None] * 8)[t.hour // 3] = k
+    return days
+
+
+class FmiKIndexParseTest(TestCase):
+    """Nilai acuan dibaca manual dari citra BMKG asli di magnet/testdata."""
+
+    def test_parse_storm_image(self):
+        slots = parse_k_image(io.BytesIO(_testimage('FMI-K-Indices-JYP-20261017.png')), datetime.date(2026, 10, 17))
+        self.assertEqual(len(slots), 48)
+        self.assertEqual(slots[0][0], datetime.datetime(2026, 10, 11, 3))
+        days = _by_day(slots)
+        self.assertEqual(days[datetime.date(2026, 10, 11)], [None, 9, 9, 9, 9, 7, 7, 7])  # K 9 tertutup logo
+        self.assertEqual(days[datetime.date(2026, 10, 12)], [4, 4, 4, 1, 2, 2, 3, 3])
+        self.assertEqual(days[datetime.date(2026, 10, 13)], [None, 4, 3, 3, 3, 2, 3, 3])  # slot kosong
+        self.assertEqual(days[datetime.date(2026, 10, 17)][0], 3)
+
+    def test_parse_quiet_image_with_missing_day(self):
+        days = _by_day(parse_k_image(io.BytesIO(_testimage('FMI-K-Indices-JYP-20261003.png')), datetime.date(2026, 10, 3)))
+        self.assertEqual(days[datetime.date(2026, 9, 27)], [None, 3, 3, 1, 2, 1, 3, 3])
+        self.assertEqual(days[datetime.date(2026, 9, 28)], [None] * 8)
+        self.assertEqual(days[datetime.date(2026, 9, 30)], [4, 4, 3, 1, 2, 1, 3, 3])
+
+    def test_unexpected_layout_raises(self):
+        buf = io.BytesIO()
+        from PIL import Image
+        Image.new('RGB', (800, 400), 'white').save(buf, 'PNG')
+        buf.seek(0)
+        with self.assertRaises(FmiLayoutError):
+            parse_k_image(buf, datetime.date(2026, 10, 17))
+
+
+@override_settings(KINDEX_FMI_START='2026-10-03')
+class FmiKIndexUpdateTest(TestCase):
+    def setUp(self):
+        self.media_root = tempfile.mkdtemp(prefix='fmi-test-media-')
+        self.addCleanup(shutil.rmtree, self.media_root, True)
+        ctx = override_settings(MEDIA_ROOT=self.media_root)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    def _image(self, name, downloaded):
+        obj = FmiIndicesImage.objects.create(jenis='K', tanggal=downloaded.date(),
+                                             image=SimpleUploadedFile(name, _testimage(name)))
+        FmiIndicesImage.objects.filter(pk=obj.pk).update(updated_at=downloaded)
+        obj.refresh_from_db()
+        return obj
+
+    def test_only_days_from_cutoff_and_excel_days_untouched(self):
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 9, 30), k_values=[5, 5, 3, 1, 1, 0, 0, 4])
+        img = self._image('FMI-K-Indices-JYP-20261003.png', datetime.datetime(2026, 10, 3, 7, 0, tzinfo=UTC))
+        days = update_kindex_from_image(img)
+        self.assertEqual(days, [datetime.date(2026, 10, 3)])
+        sep30 = KIndexDaily.objects.get(tanggal=datetime.date(2026, 9, 30))
+        self.assertEqual(sep30.k_values, [5, 5, 3, 1, 1, 0, 0, 4])
+        self.assertEqual(sep30.sumber, KIndexDaily.SUMBER_EXCEL)
+        oct3 = KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 3))
+        self.assertEqual(oct3.sumber, KIndexDaily.SUMBER_FMI)
+        self.assertEqual(oct3.k_values[0], 4)  # batang terakhir citra (kuning)
+        self.assertEqual(oct3.k_values[1:], [None] * 7)
+        self.assertFalse(oct3.is_complete)
+        self.assertEqual(oct3.a_index, 27)  # rata-rata dari slot yang ada (K4 → 27)
+
+    def test_newer_image_overrides_but_blank_slots_do_not_erase(self):
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 10, 13), sumber='fmi',
+                                   k_values=[5, 1, 1, 1, 1, 1, 1, 1])
+        img = self._image('FMI-K-Indices-JYP-20261017.png', datetime.datetime(2026, 10, 17, 7, 0, tzinfo=UTC))
+        update_kindex_from_image(img)
+        oct13 = KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 13))
+        self.assertEqual(oct13.k_values, [5, 4, 3, 3, 3, 2, 3, 3])  # slot 0 kosong di citra → nilai lama tetap
+        oct11 = KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 11))
+        self.assertEqual(oct11.k_max, 9)
+        self.assertEqual(oct11.criteria, 'Badai Besar')
+
+    def test_fetch_command_parses_k_image(self):
+        resp = mock.Mock(status_code=200, content=_testimage('FMI-K-Indices-JYP-20261017.png'),
+                         headers={'ETag': '"e"'})
+        out = io.StringIO()
+        with mock.patch(f'{_CMD}.requests.get', return_value=resp), \
+                mock.patch('django.utils.timezone.now',
+                           return_value=datetime.datetime(2026, 10, 17, 7, 0, tzinfo=UTC)):
+            call_command('fetch_fmi_indices', '--jenis', 'K', '--no-telegram', stdout=out)
+        self.assertIn('nilai indeks K diurai', out.getvalue())
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 12)).k_values, [4, 4, 4, 1, 2, 2, 3, 3])
+
+    def test_fetch_command_survives_unparseable_image(self):
+        resp = mock.Mock(status_code=200, content=TINY_PNG, headers={'ETag': '"e"'})
+        err = io.StringIO()
+        with mock.patch(f'{_CMD}.requests.get', return_value=resp):
+            call_command('fetch_fmi_indices', '--jenis', 'K', '--no-telegram', stderr=err)
+        self.assertIn('gagal mengurai', err.getvalue())
+        self.assertEqual(FmiIndicesImage.objects.count(), 1)  # citra tetap tersimpan
+
+    def test_backfill_command_in_download_order(self):
+        self._image('FMI-K-Indices-JYP-20261003.png', datetime.datetime(2026, 10, 3, 7, 0, tzinfo=UTC))
+        self._image('FMI-K-Indices-JYP-20261017.png', datetime.datetime(2026, 10, 17, 7, 0, tzinfo=UTC))
+        out = io.StringIO()
+        call_command('parse_fmi_kindex', stdout=out)
+        self.assertIn('Selesai', out.getvalue())
+        self.assertTrue(KIndexDaily.objects.filter(tanggal=datetime.date(2026, 10, 3)).exists())
+        self.assertFalse(KIndexDaily.objects.filter(tanggal__lt=datetime.date(2026, 10, 3)).exists())
+
+    def test_excel_import_skips_days_from_cutoff(self):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Oktober'
+        ws['K2'] = 2026
+        for day in range(1, 32):
+            ws.cell(4 + day, 1, day)
+            for j in range(8):
+                ws.cell(4 + day, 2 + j, 2)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        summary, warnings = import_kindex_workbook(buf, 2026, 'k.xlsx')
+        self.assertEqual(summary['2026-10']['data'], 2)  # hanya 1–2 Oktober
+        self.assertTrue(any('dilewati' in w for w in warnings))
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 2)).sumber, 'excel')
+        self.assertFalse(KIndexDaily.objects.filter(tanggal=datetime.date(2026, 10, 3)).exists())
