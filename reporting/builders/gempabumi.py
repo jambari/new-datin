@@ -91,7 +91,11 @@ def _map(events, stations=None):
                     for lab, c in STATES.values()]
     else:
         handles.append(Line2D([], [], marker="^", ls="", mfc=NAVY, mec="white", ms=8, label="Stasiun JAY"))
-    ax.legend(handles=handles, loc="lower left", fontsize=7, framealpha=0.9, ncol=2)
+    if stations:
+        ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.06), fontsize=7, frameon=False,
+                  ncol=4)
+    else:
+        ax.legend(handles=handles, loc="lower left", fontsize=7, framealpha=0.9, ncol=2)
     ax.text(smap.width - 4, smap.height - 4, ATTRIBUTION, ha="right", va="bottom", fontsize=6.5,
             bbox=dict(fc="white", ec="none", alpha=0.8, pad=1.5))
     ax.set_title("Peta Sebaran Episenter Gempabumi", loc="left")
