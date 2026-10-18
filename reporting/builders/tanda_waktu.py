@@ -8,6 +8,7 @@ import statistics as st
 from collections import defaultdict
 
 from django.conf import settings
+from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FuncFormatter
 
 from almanac.models import SunMoonEvent
@@ -18,6 +19,7 @@ from reporting.osm import ATTRIBUTION, StaticMap
 TITLE = "Terlaksananya layanan informasi tanda waktu di Wilayah Papua dan Sekitarnya"
 WIT = datetime.timezone(datetime.timedelta(hours=9))
 HOME = "Jayapura"
+LABEL_LEFT = {"Sentani"}                        # hindari label bertumpuk dengan Jayapura
 PUBLIC_URL = "https://stageof-jayapura.bmkg.go.id/ttm/"
 
 
@@ -46,7 +48,9 @@ def _map(cities):
         home = c["name"] == HOME
         ax.plot(x, y, marker="*" if home else "o", ms=11 if home else 5.5, mfc="#f59e0b" if home else NAVY,
                 mec="white", mew=0.8, ls="")
-        ax.annotate(c["name"], (x, y), xytext=(4, 3), textcoords="offset points", fontsize=6.5,
+        left = c["name"] in LABEL_LEFT
+        ax.annotate(c["name"], (x, y), xytext=(-4 if left else 4, 3), textcoords="offset points", fontsize=6.5,
+                    ha="right" if left else "left",
                     fontweight="bold" if home else "normal",
                     bbox=dict(boxstyle="round,pad=.12", fc="white", ec="none", alpha=0.75))
     ax.set_xticks([])
@@ -75,6 +79,7 @@ def _chart(days, table):
         ax.plot(days, [v / 60 if v is not None else float("nan") for v in home], color=NAVY, lw=1.4, label=HOME)
         ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{int(v):02d}:{int(round(v % 1 * 60)) % 60:02d}"))
         ax.set_title(title, loc="left", fontsize=9)
+        ax.xaxis.set_major_formatter(DateFormatter("%d/%m"))
         ax.tick_params(axis="x", labelsize=6.5, rotation=30)
         ax.tick_params(axis="y", labelsize=7)
         ax.legend(fontsize=6.5, loc="upper right", framealpha=0.9)
