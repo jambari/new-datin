@@ -56,10 +56,24 @@
           {% endif %}
         </div>
 
+        <!-- Tab -->
+        <div style="display:flex;gap:4px;border-bottom:2px solid #e5e7eb;margin-bottom:20px;">
+          <a href="{% url 'fmi_indices_list' %}?tab=gambar{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}"
+             style="padding:10px 18px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:-2px;border-bottom:2px solid {% if tab == 'gambar' %}#4f46e5;color:#4f46e5{% else %}transparent;color:#6b7280{% endif %};">
+            Gambar Indeks K &amp; A
+          </a>
+          <a href="{% url 'fmi_indices_list' %}?tab=tabel{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}"
+             style="padding:10px 18px;font-size:14px;font-weight:600;text-decoration:none;margin-bottom:-2px;border-bottom:2px solid {% if tab == 'tabel' %}#4f46e5;color:#4f46e5{% else %}transparent;color:#6b7280{% endif %};">
+            Tabel Data Indeks K &amp; A
+          </a>
+        </div>
+
         <!-- Filter -->
         <form method="get" action="{% url 'fmi_indices_list' %}"
               style="background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);margin-bottom:24px;">
+          <input type="hidden" name="tab" value="{{ tab }}">
           <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+            {% if tab == 'gambar' %}
             <div style="display:flex;flex-direction:column;gap:4px;">
               <label for="jenis" style="font-size:13px;font-weight:500;color:#374151;">Jenis Indeks:</label>
               <select id="jenis" name="jenis"
@@ -69,6 +83,7 @@
                 {% endfor %}
               </select>
             </div>
+            {% endif %}
             <div style="display:flex;flex-direction:column;gap:4px;">
               <label for="start_date" style="font-size:13px;font-weight:500;color:#374151;">Dari Tanggal:</label>
               <input type="date" id="start_date" name="start_date" value="{{ start_date }}"
@@ -84,7 +99,7 @@
                       style="background:#4f46e5;color:#fff;padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">
                 Filter
               </button>
-              <a href="{% url 'fmi_indices_list' %}"
+              <a href="{% url 'fmi_indices_list' %}?tab={{ tab }}"
                  style="padding:8px 16px;background:#f3f4f6;color:#374151;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;border:1px solid #e5e7eb;">
                 Reset
               </a>
@@ -102,6 +117,59 @@
           {% endfor %}
         {% endif %}
 
+        {% if tab == 'tabel' %}
+        <!-- Tabel data indeks K per 3 jam & indeks A harian -->
+        <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;margin-bottom:20px;">
+          <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">
+            Indeks K per 3 jam (UTC) Stasiun Geofisika Jayapura (JYP) dan indeks A harian (rata-rata amplitudo ekuivalen dari nilai K).
+            Sumber: berkas Excel pengolahan stasiun{% if fmi_start %} sampai {{ fmi_start|date:"d/m/Y" }}, lalu hasil pembacaan otomatis citra FMI K-Indices pada tab Gambar{% endif %}.
+            {{ total_days }} hari tersimpan{% if latest_kindex %}, terakhir {{ latest_kindex.tanggal|date:"d/m/Y" }}{% endif %}.
+          </p>
+          <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:center;">
+            <thead>
+              <tr style="background:#1e3a8a;color:#fff;">
+                <th rowspan="2" style="padding:8px;border:1px solid #cbd5e1;">Tanggal (UTC)</th>
+                <th colspan="8" style="padding:6px;border:1px solid #cbd5e1;">Indeks K per 3 jam (UTC)</th>
+                <th rowspan="2" style="padding:8px;border:1px solid #cbd5e1;">ΣK</th>
+                <th rowspan="2" style="padding:8px;border:1px solid #cbd5e1;">K maks</th>
+                <th rowspan="2" style="padding:8px;border:1px solid #cbd5e1;">Indeks A</th>
+                <th rowspan="2" style="padding:8px;border:1px solid #cbd5e1;">Kriteria</th>
+                <th rowspan="2" style="padding:8px;border:1px solid #cbd5e1;">Sumber</th>
+              </tr>
+              <tr style="background:#1e40af;color:#fff;">
+                {% for s in slots %}<th style="padding:5px;border:1px solid #cbd5e1;font-weight:600;font-size:12px;">{{ s }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in table_rows %}
+              <tr style="background:{% cycle '#ffffff' '#f8fafc' %};">
+                <td style="padding:6px 10px;border:1px solid #e5e7eb;white-space:nowrap;font-weight:600;">{{ r.obj.tanggal|date:"d/m/Y" }}</td>
+                {% for k, lvl in r.cells %}
+                <td style="padding:6px;border:1px solid #e5e7eb;font-weight:700;{% if lvl == 'quiet' %}background:#dcfce7;color:#166534{% elif lvl == 'active' %}background:#fef9c3;color:#854d0e{% elif lvl == 'storm' %}background:#fee2e2;color:#991b1b{% else %}color:#9ca3af{% endif %};">{% if k is None %}–{% else %}{{ k }}{% endif %}</td>
+                {% endfor %}
+                <td style="padding:6px;border:1px solid #e5e7eb;">{{ r.sum_k|default_if_none:"–" }}</td>
+                <td style="padding:6px;border:1px solid #e5e7eb;">{{ r.obj.k_max|default_if_none:"–" }}</td>
+                <td style="padding:6px;border:1px solid #e5e7eb;font-weight:700;">
+                  {% if r.obj.a_index is not None %}{{ r.obj.a_index|floatformat:1 }}{% if r.n_valid < 8 %}<span style="font-weight:400;color:#b45309;font-size:11px;"> ({{ r.n_valid }}/8)</span>{% endif %}{% else %}–{% endif %}
+                </td>
+                <td style="padding:6px;border:1px solid #e5e7eb;">{{ r.obj.criteria|default:"–" }}</td>
+                <td style="padding:6px;border:1px solid #e5e7eb;font-size:12px;color:#6b7280;">{% if r.obj.sumber == 'fmi' %}Citra FMI{% else %}Excel stasiun{% endif %}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="14" style="padding:40px;color:#9ca3af;font-style:italic;">Belum ada data indeks K pada rentang ini.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+          <p style="font-size:11px;color:#9ca3af;margin-top:10px;">
+            Warna K: <span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;">0–3 tenang</span>
+            <span style="background:#fef9c3;color:#854d0e;padding:1px 6px;border-radius:4px;">4 aktif</span>
+            <span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;">≥ 5 badai</span>.
+            (n/8) = indeks A sementara, dihitung dari slot yang sudah tersedia.
+          </p>
+        </div>
+        {% else %}
         <!-- Galeri: satu kartu per tanggal -->
         {% for row in rows %}
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;margin-bottom:20px;">
@@ -160,18 +228,19 @@
           </p>
         </div>
         {% endfor %}
+        {% endif %}
 
         <!-- Pagination -->
         {% if is_paginated %}
         <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#374151;margin-top:8px;">
-          <span>Halaman {{ page_obj.number }} dari {{ paginator.num_pages }} ({{ paginator.count }} tanggal)</span>
+          <span>Halaman {{ page_obj.number }} dari {{ paginator.num_pages }} ({{ paginator.count }} {% if tab == "tabel" %}hari{% else %}tanggal{% endif %})</span>
           <div style="display:flex;gap:8px;">
             {% if page_obj.has_previous %}
-              <a href="?page={{ page_obj.previous_page_number }}{% if jenis_filter %}&jenis={{ jenis_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}"
+              <a href="?page={{ page_obj.previous_page_number }}&tab={{ tab }}{% if jenis_filter %}&jenis={{ jenis_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}"
                  style="padding:6px 14px;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none;">Sebelumnya</a>
             {% endif %}
             {% if page_obj.has_next %}
-              <a href="?page={{ page_obj.next_page_number }}{% if jenis_filter %}&jenis={{ jenis_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}"
+              <a href="?page={{ page_obj.next_page_number }}&tab={{ tab }}{% if jenis_filter %}&jenis={{ jenis_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}"
                  style="padding:6px 14px;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none;">Berikutnya</a>
             {% endif %}
           </div>

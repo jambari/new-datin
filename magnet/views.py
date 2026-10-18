@@ -1274,9 +1274,13 @@ def fmi_indices_list(request):
                 messages.error(request, f'Gagal menjadwalkan job: {detail}')
         return redirect('fmi_indices_list')
 
+    tab            = 'tabel' if request.GET.get('tab') == 'tabel' else 'gambar'
     jenis_filter   = request.GET.get('jenis', '')
     start_date_str = request.GET.get('start_date', '')
     end_date_str   = request.GET.get('end_date', '')
+
+    if tab == 'tabel':
+        return _kindex_table(request, start_date_str, end_date_str)
 
     qs = FmiIndicesImage.objects.all()
     if jenis_filter in (FmiIndicesImage.K, FmiIndicesImage.A):
@@ -1330,5 +1334,54 @@ def fmi_indices_list(request):
         'total_records':  FmiIndicesImage.objects.count(),
         'latest_record':  FmiIndicesImage.objects.order_by('-tanggal', 'jenis').first(),
         'telegram_ready': bool(settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID),
+        'tab':            'gambar',
     }
     return render(request, 'magnet/fmi_indices_list.html', context)
+
+
+KINDEX_SLOTS = ['00–03', '03–06', '06–09', '09–12', '12–15', '15–18', '18–21', '21–24']
+
+
+def _k_level(k):
+    """Kelas warna sel indeks K: tenang (0–3), aktif (4), badai (≥ 5)."""
+    if k is None:
+        return 'none'
+    return 'quiet' if k <= 3 else 'active' if k == 4 else 'storm'
+
+
+def _kindex_table(request, start_date_str, end_date_str):
+    """Tab "Tabel Data": indeks K per 3 jam dan indeks A harian (KIndexDaily)."""
+    from .fmi_kindex import fmi_start_date
+    from .models import KIndexDaily
+
+    qs = KIndexDaily.objects.order_by('-tanggal')
+    start, end = parse_date(start_date_str or ''), parse_date(end_date_str or '')
+    if start:
+        qs = qs.filter(tanggal__gte=start)
+    if end:
+        qs = qs.filter(tanggal__lte=end)
+    paginator = Paginator(qs, 31)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    rows = []
+    for r in page_obj.object_list:
+        ks = list(r.k_values or []) + [None] * (8 - len(r.k_values or []))
+        rows.append({
+            'obj': r,
+            'cells': [(k, _k_level(k)) for k in ks[:8]],
+            'sum_k': sum(r.valid_k) if r.has_data else None,
+            'n_valid': len(r.valid_k),
+        })
+    latest = KIndexDaily.objects.order_by('-tanggal').first()
+    return render(request, 'magnet/fmi_indices_list.html', {
+        'tab':           'tabel',
+        'table_rows':    rows,
+        'slots':         KINDEX_SLOTS,
+        'page_obj':      page_obj,
+        'paginator':     paginator,
+        'is_paginated':  page_obj.has_other_pages(),
+        'start_date':    start_date_str,
+        'end_date':      end_date_str,
+        'total_days':    KIndexDaily.objects.count(),
+        'latest_kindex': latest,
+        'fmi_start':     fmi_start_date(),
+    })

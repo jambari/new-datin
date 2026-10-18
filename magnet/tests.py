@@ -337,6 +337,29 @@ class FmiIndicesViewTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Gagal menjadwalkan job')
 
+    def test_tabs_and_kindex_table(self):
+        from .models import KIndexDaily
+        self._make(FmiIndicesImage.K)
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 10, 3), k_values=[1, 2, 3, 4, 5, 2, 1, 0],
+                                   sumber=KIndexDaily.SUMBER_FMI)
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 10, 4), k_values=[3, None, None, None, None, None, None, None],
+                                   sumber=KIndexDaily.SUMBER_FMI)
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 9, 1), k_values=[2] * 8)
+        resp = self.client.get(reverse('fmi_indices_list'))
+        self.assertContains(resp, 'Tabel Data Indeks K')
+        self.assertContains(resp, 'FMI-K-Indices-JYP-20261003.png')
+        self.assertNotContains(resp, 'Indeks K per 3 jam (UTC)</th>')
+
+        resp = self.client.get(reverse('fmi_indices_list'), {'tab': 'tabel', 'start_date': '2026-10-01'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'FMI-K-Indices-JYP-20261003.png')
+        rows = resp.context['table_rows']
+        self.assertEqual([r['obj'].tanggal.day for r in rows], [4, 3])      # terbaru dulu, filter tanggal
+        self.assertEqual(rows[1]['sum_k'], 18)
+        self.assertEqual([lvl for _k, lvl in rows[1]['cells']][3:5], ['active', 'storm'])
+        self.assertContains(resp, '(1/8)')                                  # indeks A sementara
+        self.assertContains(resp, 'Citra FMI')
+
 
 class FmiIndicesPublicPageTest(TestCase):
     """Halaman publik indeks K & A + /magnetbumi/ + submenu navbar landing."""
