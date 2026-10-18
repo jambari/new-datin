@@ -1,85 +1,73 @@
 # almanac/management/commands/fill_sunmoon.py
-from datetime import date, timedelta
-from django.core.management.base import BaseCommand
+"""Hitung terbit/terbenam Matahari dan Bulan serta fase Bulan untuk semua kota SUNMOON_CITIES.
+
+Satu baris SunMoonEvent = satu tanggal WIT (00:00–24:00 WIT = 15:00 UTC hari sebelumnya s.d.
+15:00 UTC). Waktu disimpan dalam UTC dan ditampilkan dalam WIT. Terbit/terbenam mengikuti definisi
+USNO (tepi atas piringan menyentuh horizon, refraksi 34′) bawaan Skyfield find_risings/find_settings.
+moon_phase = elongasi ekliptika Bulan−Matahari / 360° pada pukul 12:00 WIT
+(0 = bulan baru, 0,25 = kuartal pertama, 0,5 = purnama, 0,75 = kuartal ketiga).
+"""
+from collections import defaultdict
+from datetime import date, datetime, time, timedelta, timezone
+
 from django.conf import settings
-from almanac.models import SunMoonEvent
+from django.core.management.base import BaseCommand
+from django.db import transaction
+from skyfield import almanac
 from skyfield.api import load, wgs84
-from skyfield.almanac import find_discrete, risings_and_settings, phase_angle
-import pytz
+
+from almanac.models import SunMoonEvent
+
+WIT = timezone(timedelta(hours=9))
+EPHEMERIS = settings.BASE_DIR / "de421.bsp"
+
 
 class Command(BaseCommand):
-    help = "Compute Sun & Moon rise/set for all cities (except Jayapura) and store in DB"
+    help = "Hitung terbit/terbenam Matahari & Bulan dan fase Bulan per tanggal WIT (simpan UTC)."
 
-    def handle(self, *args, **options):
-        # Date span
-        START_DATE = date(2025, 9, 6)
-        END_DATE   = date(2037, 12, 31)
+    def add_arguments(self, parser):
+        parser.add_argument("--start", type=date.fromisoformat, default=date(2025, 9, 6))
+        parser.add_argument("--end", type=date.fromisoformat, default=date(2037, 12, 31))
+        parser.add_argument("--city", action="append", help="Hanya kota ini (boleh diulang)")
 
-        ts   = load.timescale()
-        eph  = load("de421.bsp")
-        sun  = eph["sun"]
-        moon = eph["moon"]
+    def handle(self, *args, start, end, city, **options):
+        ts = load.timescale()
+        eph = load(str(EPHEMERIS))
+        earth, sun, moon = eph["earth"], eph["sun"], eph["moon"]
+        t0 = ts.from_datetime(datetime.combine(start, time.min, tzinfo=WIT))
+        t1 = ts.from_datetime(datetime.combine(end + timedelta(days=1), time.min, tzinfo=WIT))
+        ndays = (end - start).days + 1
+        days = [start + timedelta(days=i) for i in range(ndays)]
+        noon = ts.from_datetimes([datetime.combine(d, time(12), tzinfo=WIT) for d in days])
+        phases = (almanac.moon_phase(eph, noon).degrees / 360.0).tolist()
 
-        total_rows = 0
-
-        # Loop over cities, skip Jayapura
-        for city in settings.SUNMOON_CITIES:
-            name, lat, lon = city["name"], city["lat"], city["lon"]
-            if name == "Jayapura":
-                self.stdout.write(f"Skipping {name} (already processed)")
-                continue
-
-            tz = pytz.timezone("Asia/Jayapura")  # All Papua/West Papua are UTC+9
-            observer = wgs84.latlon(lat, lon)
-
-            rows = []
-            current = START_DATE
-            while current <= END_DATE:
-                # midnight to midnight next day in UTC
-                t0 = ts.utc(current.year, current.month, current.day, 0)
-                t1 = ts.utc(current.year, current.month, current.day + 1, 0)
-
-                # Sun rise/set
-                sun_f = risings_and_settings(eph, sun, observer)
-                times_sun, events_sun = find_discrete(t0, t1, sun_f)
-                sun_rise, sun_set = None, None
-                for t, e in zip(times_sun, events_sun):
-                    dt_local = t.utc_datetime().astimezone(tz)
-                    if e == 1:
-                        sun_rise = dt_local
-                    else:
-                        sun_set = dt_local
-
-                # Moon rise/set
-                moon_f = risings_and_settings(eph, moon, observer)
-                times_moon, events_moon = find_discrete(t0, t1, moon_f)
-                moon_rise, moon_set = None, None
-                for t, e in zip(times_moon, events_moon):
-                    dt_local = t.utc_datetime().astimezone(tz)
-                    if e == 1:
-                        moon_rise = dt_local
-                    else:
-                        moon_set = dt_local
-
-                # Moon phase at midnight (approx)
-                ang   = phase_angle(eph, "moon", t0)
-                phase = ang.degrees / 180.0  # 0 new -> 1 full
-
-                rows.append(
-                    SunMoonEvent(
-                        date=current,
-                        city=name,
-                        sun_rise=sun_rise,
-                        sun_set=sun_set,
-                        moon_rise=moon_rise,
-                        moon_set=moon_set,
-                        moon_phase=phase,
-                    )
-                )
-                current += timedelta(days=1)
-
-            SunMoonEvent.objects.bulk_create(rows, ignore_conflicts=True)
-            total_rows += len(rows)
-            self.stdout.write(self.style.SUCCESS(f"{name}: inserted {len(rows)} rows"))
-
-        self.stdout.write(self.style.SUCCESS(f"Done. Inserted {total_rows} total rows."))
+        cities = [c for c in settings.SUNMOON_CITIES if not city or c["name"] in city]
+        for c in cities:
+            observer = earth + wgs84.latlon(c["lat"], c["lon"])
+            events = defaultdict(dict)
+            for key, finder, body in (("sun_rise", almanac.find_risings, sun), ("sun_set", almanac.find_settings, sun),
+                                      ("moon_rise", almanac.find_risings, moon),
+                                      ("moon_set", almanac.find_settings, moon)):
+                times, crosses = finder(observer, body, t0, t1)
+                for t, ok in zip(times, crosses):
+                    if not ok:
+                        continue
+                    utc = t.utc_datetime().replace(microsecond=0)
+                    events[utc.astimezone(WIT).date()].setdefault(key, utc)
+            existing = {e.date: e for e in SunMoonEvent.objects.filter(city=c["name"], date__gte=start, date__lte=end)}
+            update, create = [], []
+            for d, phase in zip(days, phases):
+                values = {"sun_rise": None, "sun_set": None, "moon_rise": None, "moon_set": None,
+                          **events.get(d, {}), "moon_phase": phase}
+                row = existing.get(d)
+                if row is None:
+                    create.append(SunMoonEvent(date=d, city=c["name"], **values))
+                else:
+                    for k, v in values.items():
+                        setattr(row, k, v)
+                    update.append(row)
+            with transaction.atomic():
+                SunMoonEvent.objects.bulk_update(update, ["sun_rise", "sun_set", "moon_rise", "moon_set", "moon_phase"],
+                                                 batch_size=1000)
+                SunMoonEvent.objects.bulk_create(create, batch_size=1000)
+            self.stdout.write(self.style.SUCCESS(f"{c['name']}: {len(update)} diperbarui, {len(create)} baru"))

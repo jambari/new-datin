@@ -426,22 +426,26 @@ class TandaWaktuReportTest(TestCase):
     @mock.patch("reporting.osm._tile", side_effect=fake_tile)
     def test_times_grouped_by_wit_date(self, _tile):
         from almanac.models import SunMoonEvent
-        # Baris per hari UTC: terbit 20:40 UTC tgl 14 = 05:40 WIT tgl 15.
-        for day in range(13, 18):
-            d = datetime.date(2026, 1, day)
+        # Satu baris per tanggal WIT, waktu UTC: terbit 20:40 UTC tgl 14 = 05:40 WIT tgl 15.
+        for day in range(14, 18):
             SunMoonEvent.objects.create(
-                date=d, city="Jayapura",
-                sun_rise=datetime.datetime(2026, 1, day, 20, 40, tzinfo=UTC),
-                sun_set=datetime.datetime(2026, 1, day, 8, 52, tzinfo=UTC))
+                date=datetime.date(2026, 1, day), city="Jayapura",
+                sun_rise=datetime.datetime(2026, 1, day - 1, 20, 40, tzinfo=UTC),
+                sun_set=datetime.datetime(2026, 1, day, 8, 52, tzinfo=UTC),
+                moon_rise=datetime.datetime(2026, 1, day, 3, 5, tzinfo=UTC) if day != 16 else None,
+                moon_set=datetime.datetime(2026, 1, day, 14, 30, tzinfo=UTC), moon_phase=0.5)
         self.client.force_login(get_user_model().objects.create_user("tamu", password="x"))
         r = self.client.get(report_url("tanda_waktu", start=(1, 2026), end=(1, 2026)))
         self.assertEqual(r.status_code, 200)
         c = r.context
         jan = {row["date"].day: row for row in c["home_months"][0]["rows"]}
         self.assertEqual((jan[15]["rise"], jan[15]["set"], jan[15]["len"]), ("05:40", "17:52", "12 j 12 m"))
-        self.assertEqual(jan[13]["rise"], "–")          # terbit 13/1 WIT ada di baris 12/1 (tidak dibuat)
+        self.assertEqual((jan[15]["mrise"], jan[15]["mset"]), ("12:05", "23:30"))
+        self.assertEqual(jan[16]["mrise"], "–")
+        self.assertIn("Purnama", jan[15]["phase"])
+        self.assertEqual(jan[13]["rise"], "–")
         jay = next(x for x in c["cities"] if x["name"] == "Jayapura")
-        self.assertEqual(jay["n"], 4)                     # 14–17 Jan lengkap
+        self.assertEqual(jay["n"], 4)
         self.assertEqual(c["n_days"], 31)
         self.assertIsNotNone(c["map"])
         self.assertIsNotNone(c["chart"])

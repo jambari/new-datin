@@ -1,7 +1,7 @@
-"""Laporan layanan informasi tanda waktu: terbit dan terbenam Matahari (almanac.SunMoonEvent).
+"""Laporan layanan informasi tanda waktu: terbit/terbenam Matahari dan Bulan serta fase Bulan.
 
-Baris SunMoonEvent dihitung per hari UTC (fill_sunmoon), sehingga terbit pada baris tanggal D
-jatuh pada pagi D+1 WIT. Di sini setiap waktu dikelompokkan menurut tanggal WIT-nya sendiri.
+Sumber almanac.SunMoonEvent: satu baris per tanggal WIT, waktu disimpan UTC (fill_sunmoon) dan
+ditampilkan di sini dalam WIT.
 """
 import datetime
 import statistics as st
@@ -12,6 +12,7 @@ from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FuncFormatter
 
 from almanac.models import SunMoonEvent
+from almanac.templatetags.almanac_extras import fase_bulan
 from reporting.charts import NAVY, new_figure, to_data_uri
 from reporting.common import BULAN
 from reporting.osm import ATTRIBUTION, StaticMap
@@ -97,16 +98,13 @@ def build(period):
         days.append(d)
         d += datetime.timedelta(days=1)
     day_set = set(days)
-    table = defaultdict(lambda: defaultdict(dict))         # kota -> tanggal WIT -> {rise, set}
-    qs = SunMoonEvent.objects.filter(date__gte=period.start - datetime.timedelta(days=1),
-                                     date__lte=period.end + datetime.timedelta(days=1), city__in=names)
-    for city, rise, sset in qs.values_list("city", "sun_rise", "sun_set"):
-        for key, t in (("rise", rise), ("set", sset)):
-            if t is None:
-                continue
-            local = t.astimezone(WIT)
-            if local.date() in day_set:
-                table[city][local.date()][key] = local.replace(tzinfo=None)
+    table = defaultdict(dict)                              # kota -> tanggal WIT -> waktu WIT
+    qs = SunMoonEvent.objects.filter(date__gte=period.start, date__lte=period.end, city__in=names)
+    for e in qs:
+        wit = {k: getattr(e, k).astimezone(WIT).replace(tzinfo=None) if getattr(e, k) else None
+               for k in ("sun_rise", "sun_set", "moon_rise", "moon_set")}
+        table[e.city][e.date] = {"rise": wit["sun_rise"], "set": wit["sun_set"], "mrise": wit["moon_rise"],
+                                 "mset": wit["moon_set"], "phase": e.moon_phase}
 
     summary = []
     for c in cities:
@@ -133,7 +131,9 @@ def build(period):
                 continue
             r = home_rows.get(d, {})
             length = (_minutes(r["set"]) - _minutes(r["rise"])) if r.get("rise") and r.get("set") else None
-            rows.append({"date": d, "rise": _hm(r.get("rise")), "set": _hm(r.get("set")), "len": _dur(length)})
+            rows.append({"date": d, "rise": _hm(r.get("rise")), "set": _hm(r.get("set")), "len": _dur(length),
+                         "mrise": _hm(r.get("mrise")), "mset": _hm(r.get("mset")),
+                         "phase": fase_bulan(r.get("phase")) if r else "–"})
         home_months.append({"label": f"{BULAN[m]} {y}", "rows": rows})
 
     # Lampiran: semua lokasi pada tanggal 1, 15, dan akhir tiap bulan.
@@ -142,10 +142,11 @@ def build(period):
         mdays = [d for d in days if (d.year, d.month) == (y, m)]
         picks = sorted({mdays[0], *(d for d in mdays if d.day == 15), mdays[-1]}) if mdays else []
         sample_months.append({
-            "label": f"{BULAN[m]} {y}", "dates": picks,
+            "label": f"{BULAN[m]} {y}",
+            "dates": [(d, fase_bulan(table.get(HOME, {}).get(d, {}).get("phase"))) for d in picks],
             "rows": [{"name": c["name"],
-                      "cells": [(_hm(table.get(c["name"], {}).get(d, {}).get("rise")),
-                                 _hm(table.get(c["name"], {}).get(d, {}).get("set"))) for d in picks]}
+                      "cells": [[_hm(table.get(c["name"], {}).get(d, {}).get(k)) for k in ("rise", "set", "mrise", "mset")]
+                                for d in picks]}
                      for c in cities],
         })
 

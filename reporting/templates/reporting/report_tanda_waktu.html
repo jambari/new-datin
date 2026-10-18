@@ -2,13 +2,13 @@
 {% load reporting_extras %}
 {% block body %}
 <h2>I. Pendahuluan</h2>
-<p>Stasiun Geofisika Kelas I Jayapura memberikan layanan informasi tanda waktu berupa waktu terbit dan terbenam Matahari bagi masyarakat di wilayah Papua dan sekitarnya. Informasi ini dimanfaatkan antara lain untuk penentuan waktu ibadah, kegiatan pelayaran dan penerbangan, serta kegiatan masyarakat sehari-hari. Laporan ini menjadi bukti capaian kinerja berupa terlaksananya layanan informasi tanda waktu selama periode {{ period.short_label }}.</p>
+<p>Stasiun Geofisika Kelas I Jayapura memberikan layanan informasi tanda waktu berupa waktu terbit dan terbenam Matahari dan Bulan serta fase Bulan bagi masyarakat di wilayah Papua dan sekitarnya. Informasi ini dimanfaatkan antara lain untuk penentuan waktu ibadah, kegiatan pelayaran dan penerbangan, serta kegiatan masyarakat sehari-hari. Laporan ini menjadi bukti capaian kinerja berupa terlaksananya layanan informasi tanda waktu selama periode {{ period.short_label }}.</p>
 
 <h2>II. Sumber Data dan Metode</h2>
 <ol>
-  <li><b>Sumber data:</b> tabel terbit dan terbenam Matahari pada sistem informasi Stasiun Geofisika Jayapura untuk {{ n_cities }} lokasi di wilayah Papua dan sekitarnya.</li>
-  <li><b>Metode perhitungan:</b> posisi Matahari dihitung secara astronomis dengan efemeris JPL DE421 (pustaka Skyfield) untuk koordinat tiap lokasi, dengan memperhitungkan refraksi atmosfer di horizon.</li>
-  <li><b>Waktu:</b> Waktu Indonesia Timur (WIT = UTC+9), dibulatkan ke menit.</li>
+  <li><b>Sumber data:</b> tabel terbit terbenam Matahari dan Bulan pada sistem informasi Stasiun Geofisika Jayapura untuk {{ n_cities }} lokasi di wilayah Papua dan sekitarnya.</li>
+  <li><b>Metode perhitungan:</b> posisi Matahari dan Bulan dihitung secara astronomis dengan efemeris JPL DE421 (pustaka Skyfield) untuk koordinat tiap lokasi. Terbit/terbenam adalah saat tepi atas piringan Matahari atau Bulan menyentuh horizon dengan koreksi refraksi atmosfer 34′ (definisi USNO). Fase Bulan ditentukan dari selisih bujur ekliptika Bulan dan Matahari pada pukul 12.00 WIT.</li>
+  <li><b>Waktu:</b> Waktu Indonesia Timur (WIT = UTC+9), dibulatkan ke menit. Pada hari tertentu Bulan tidak terbit atau tidak terbenam (ditandai “–”) karena siklus terbit Bulan ±50 menit lebih lambat setiap hari.</li>
   <li><b>Penyebaran:</b> informasi ditampilkan untuk publik pada laman <i>{{ public_url }}</i> dan pada halaman utama situs web Stasiun Geofisika Jayapura (terbit/terbenam Jayapura untuk esok hari), serta tersedia sebagai layanan permintaan data.</li>
 </ol>
 
@@ -16,7 +16,7 @@
 <div class="kpi">
   <div><b>{{ n_cities }}</b><span>lokasi layanan di Papua dan sekitarnya</span></div>
   <div><b>{{ n_days }}</b><span>hari dalam periode</span></div>
-  <div><b>{{ n_records|idn:0 }}</b><span>informasi harian terbit &amp; terbenam tersedia</span></div>
+  <div><b>{{ n_records|idn:0 }}</b><span>informasi harian terbit &amp; terbenam Matahari tersedia</span></div>
   <div><b>{{ completeness|idn:1 }}%</b><span>kelengkapan data</span></div>
 </div>
 {% if map %}<img class="mapfig" src="{{ map }}" alt="Peta lokasi layanan"><div class="cap">Gambar 1. Lokasi layanan informasi terbit dan terbenam Matahari ({{ home }} ditandai bintang). Basemap © OpenStreetMap contributors.</div>{% endif %}
@@ -30,27 +30,29 @@
 </div>
 {% if chart %}<img class="fig" src="{{ chart }}" alt="Grafik terbit terbenam"><div class="cap">Gambar 2. Waktu terbit dan terbenam Matahari harian di {{ home }} dan rentang seluruh lokasi layanan.</div>{% endif %}
 
-<h2 class="pb">IV. Informasi Terbit dan Terbenam Matahari Harian – {{ home }}</h2>
+<h2 class="pb">IV. Informasi Terbit dan Terbenam Matahari dan Bulan Harian – {{ home }}</h2>
 {% for m in home_months %}
 <div class="avoid">
 <h3>{{ m.label }}</h3>
-<table class="k"><thead><tr><th>Tanggal</th><th>Terbit (WIT)</th><th>Terbenam (WIT)</th><th>Lama siang</th><th>Tanggal</th><th>Terbit (WIT)</th><th>Terbenam (WIT)</th><th>Lama siang</th></tr></thead><tbody>
-{% for pair in m.rows|pairs %}<tr>{% for r in pair %}{% if r %}<td>{{ r.date|date:"d/m/Y" }}</td><td>{{ r.rise }}</td><td>{{ r.set }}</td><td>{{ r.len }}</td>{% else %}<td></td><td></td><td></td><td></td>{% endif %}{% endfor %}</tr>{% endfor %}
+<table class="k"><thead><tr><th rowspan="2">Tanggal</th><th colspan="3">Matahari</th><th colspan="2">Bulan</th><th rowspan="2">Fase Bulan</th></tr>
+<tr><th>Terbit</th><th>Terbenam</th><th>Lama siang</th><th>Terbit</th><th>Terbenam</th></tr></thead><tbody>
+{% for r in m.rows %}<tr><td>{{ r.date|date:"d/m/Y" }}</td><td>{{ r.rise }}</td><td>{{ r.set }}</td><td>{{ r.len }}</td><td>{{ r.mrise }}</td><td>{{ r.mset }}</td><td style="text-align:left">{{ r.phase }}</td></tr>{% endfor %}
 </tbody></table>
 </div>
 {% endfor %}
 
 <h2>V. Kesimpulan</h2>
-<p>Selama periode {{ period.label }} layanan informasi tanda waktu berupa waktu terbit dan terbenam Matahari telah tersedia untuk <b>{{ n_cities }} lokasi</b> di wilayah Papua dan sekitarnya, sebanyak <b>{{ n_records|idn:0 }} informasi harian</b> ({{ completeness|idn:1 }}% dari {{ expected|idn:0 }} lokasi-hari), dan disebarkan kepada masyarakat melalui situs web Stasiun Geofisika Jayapura. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah terlaksana.</p>
+<p>Selama periode {{ period.label }} layanan informasi tanda waktu berupa waktu terbit dan terbenam Matahari dan Bulan serta fase Bulan telah tersedia untuk <b>{{ n_cities }} lokasi</b> di wilayah Papua dan sekitarnya, sebanyak <b>{{ n_records|idn:0 }} informasi harian</b> ({{ completeness|idn:1 }}% dari {{ expected|idn:0 }} lokasi-hari), dan disebarkan kepada masyarakat melalui situs web Stasiun Geofisika Jayapura. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah terlaksana.</p>
 
-<h2 class="pb">Lampiran. Terbit dan Terbenam Matahari Seluruh Lokasi (WIT)</h2>
+<h2 class="pb">Lampiran. Terbit dan Terbenam Matahari dan Bulan Seluruh Lokasi (WIT)</h2>
 <p class="note">Ditampilkan untuk tanggal 1, 15, dan akhir setiap bulan; data harian lengkap tersedia pada laman {{ public_url }}.</p>
 {% for m in sample_months %}
 <div class="avoid">
 <h3>{{ m.label }}</h3>
-<table class="k"><thead><tr><th rowspan="2">Lokasi</th>{% for d in m.dates %}<th colspan="2">{{ d|date:"d/m" }}</th>{% endfor %}</tr>
-<tr>{% for d in m.dates %}<th>Terbit</th><th>Terbenam</th>{% endfor %}</tr></thead><tbody>
-{% for r in m.rows %}<tr><td style="text-align:left">{{ r.name }}</td>{% for rise, set in r.cells %}<td>{{ rise }}</td><td>{{ set }}</td>{% endfor %}</tr>{% endfor %}
+<table class="k"><thead><tr><th rowspan="3">Lokasi</th>{% for d, ph in m.dates %}<th colspan="4">{{ d|date:"d/m" }} · {{ ph }}</th>{% endfor %}</tr>
+<tr>{% for d in m.dates %}<th colspan="2">Matahari</th><th colspan="2">Bulan</th>{% endfor %}</tr>
+<tr>{% for d in m.dates %}<th>Terbit</th><th>Terbenam</th><th>Terbit</th><th>Terbenam</th>{% endfor %}</tr></thead><tbody>
+{% for r in m.rows %}<tr><td style="text-align:left">{{ r.name }}</td>{% for cell in r.cells %}{% for v in cell %}<td>{{ v }}</td>{% endfor %}{% endfor %}</tr>{% endfor %}
 </tbody></table>
 </div>
 {% endfor %}
