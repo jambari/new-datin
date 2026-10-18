@@ -1417,14 +1417,19 @@ def event_browser_delete(request, pk):
 
 
 # ── Event Browser ─────────────────────────────────────────────────────────────
-def _qc_entry(e):
-    """Build a map-data dict from a QCEvent using its latest run snapshot."""
+def _qc_entry(e, on_duty=None):
+    """Build a map-data dict from a QCEvent using its latest run snapshot.
+
+    Pakai runs yang sudah di-prefetch dan resolver petugas (on_duty) bila ada, agar
+    daftar kejadian tidak menjalankan dua query per kejadian.
+    """
     from qc_review.utils import get_on_duty_staff, delta_on_time_info
-    run = e.latest_run
+    runs = list(e.runs.all())
+    run = max(runs, key=lambda r: r.run_number) if runs else None
     if not run:
         return None
     ot = run.snap_origin_time or e.origin_time
-    duties = get_on_duty_staff(e.origin_time)
+    duties = (on_duty or get_on_duty_staff)(e.origin_time)
     petugas = ", ".join(d["pegawai"].nama for d in duties) or "–"
     delta_min, delta_label = delta_on_time_info(e.origin_time, e.created_at)
     return {
@@ -1446,27 +1451,31 @@ def _qc_entry(e):
 
 def _qc_map_entries_by_date(start, end):
     from qc_review.models import Event as QCEvent
-    qs = QCEvent.objects.filter(
+    from qc_review.utils import on_duty_resolver
+    events = list(QCEvent.objects.filter(
         origin_time__date__gte=start,
         origin_time__date__lte=end,
-    ).prefetch_related('runs')
-    return [e for e in (_qc_entry(ev) for ev in qs) if e is not None]
+    ).prefetch_related('runs'))
+    on_duty = on_duty_resolver([ev.origin_time for ev in events])
+    return [e for e in (_qc_entry(ev, on_duty) for ev in events) if e is not None]
 
 
 def _qc_map_entries_by_month(year, month):
     from qc_review.models import Event as QCEvent
-    qs = QCEvent.objects.filter(
+    from qc_review.utils import on_duty_resolver
+    events = list(QCEvent.objects.filter(
         origin_time__year=year,
         origin_time__month=month,
-    ).prefetch_related('runs')
-    return [e for e in (_qc_entry(ev) for ev in qs) if e is not None]
+    ).prefetch_related('runs'))
+    on_duty = on_duty_resolver([ev.origin_time for ev in events])
+    return [e for e in (_qc_entry(ev, on_duty) for ev in events) if e is not None]
 
 
 @login_required
 def event_browser(request):
     from .models import EventBrowser
     from jadwal.models import Pegawai
-    from qc_review.utils import get_on_duty_staff, delta_on_time_info
+    from qc_review.utils import delta_on_time_info, get_on_duty_staff, on_duty_resolver
     today = date.today()
     default_start = today - timedelta(days=6)
 
@@ -1503,9 +1512,11 @@ def event_browser(request):
 
     map_data = []
     lats, lons = [], []
-    for ev in qs.values('event_id', 'latitude', 'longitude', 'magnitude', 'depth_km', 'origin_time', 'location', 'nearest_city', 'distance_km', 'fetched_at'):
+    rows = list(qs.values('event_id', 'latitude', 'longitude', 'magnitude', 'depth_km', 'origin_time', 'location', 'nearest_city', 'distance_km', 'fetched_at'))
+    on_duty = on_duty_resolver([r['origin_time'] for r in rows])
+    for ev in rows:
         dist = ev['distance_km']
-        duties = get_on_duty_staff(ev['origin_time'])
+        duties = on_duty(ev['origin_time'])
         petugas = ", ".join(d["pegawai"].nama for d in duties) or "–"
         delta_min, delta_label = delta_on_time_info(ev['origin_time'], ev['fetched_at'])
         map_data.append({

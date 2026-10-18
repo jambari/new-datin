@@ -429,3 +429,30 @@ class StationReportRetryTest(TestCase):
         station_report.send_daily_report(DAY)
         call_command("send_station_qc_report", day=DAY.isoformat(), stdout=open(os.devnull, "w"))
         self.assertEqual(self.sent(), ["sendDocument", "sendDocument"])
+
+
+class OnDutyResolverTest(TestCase):
+    """on_duty_resolver (satu query) harus sama hasilnya dengan get_on_duty_staff."""
+
+    def test_matches_get_on_duty_staff_including_overnight(self):
+        import datetime as _d
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from jadwal.models import JadwalHarian, Pegawai, PolaDinas
+        from .utils import WIT, get_on_duty_staff, on_duty_resolver
+        pagi = PolaDinas.objects.create(kode="P", nama="Pagi", jam_mulai=_d.time(7), jam_selesai=_d.time(14), durasi=7)
+        malam = PolaDinas.objects.create(kode="M", nama="Malam", jam_mulai=_d.time(21), jam_selesai=_d.time(7), durasi=10)
+        a = Pegawai.objects.create(nama="A", nip="1", pangkat="-", jabatan="-")
+        b = Pegawai.objects.create(nama="B", nip="2", pangkat="-", jabatan="-")
+        JadwalHarian.objects.create(pegawai=a, tanggal=_d.date(2026, 3, 1), pola=pagi)
+        JadwalHarian.objects.create(pegawai=b, tanggal=_d.date(2026, 3, 1), pola=malam)
+        times = [_d.datetime(2026, 3, 1, h, 30, tzinfo=WIT) for h in (8, 13, 22)] + \
+                [_d.datetime(2026, 3, 2, 3, 0, tzinfo=WIT), _d.datetime(2026, 3, 2, 9, 0, tzinfo=WIT)]
+        times = [t.astimezone(_d.timezone.utc) for t in times]
+        with CaptureQueriesContext(connection) as q:
+            resolve = on_duty_resolver(times)
+            got = [[d["pegawai"].nama for d in resolve(t)] for t in times]
+        self.assertEqual(len(q.captured_queries), 1)
+        expected = [[d["pegawai"].nama for d in get_on_duty_staff(t)] for t in times]
+        self.assertEqual(got, expected)
+        self.assertEqual(got, [["A"], ["A"], ["B"], ["B"], []])
