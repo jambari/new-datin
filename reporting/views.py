@@ -8,7 +8,7 @@ from django.urls import reverse
 from magnet.fmi_kindex import fmi_start_date
 from magnet.models import KIndexDaily
 
-from .builders import gempabumi, gempabumi_cepat, hujan, kualitas_udara, magnet_petir, percepatan_tanah
+from .builders import gempabumi, gempabumi_cepat, hujan, kualitas_udara, magnet_petir, percepatan_tanah, tanda_waktu
 from .common import Period
 from .forms import REPORT_TYPES, ReportForm
 
@@ -21,6 +21,7 @@ BUILDERS = {
     "hujan": (hujan, "reporting/report_hujan.html"),
     "gempabumi": (gempabumi, "reporting/report_gempabumi.html"),
     "gempabumi_cepat": (gempabumi_cepat, "reporting/report_gempabumi_cepat.html"),
+    "tanda_waktu": (tanda_waktu, "reporting/report_tanda_waktu.html"),
 }
 
 

@@ -11,6 +11,7 @@ REPORT_TYPES = [
     ("hujan", "Hujan (Curah Hujan Harian)"),
     ("gempabumi", "Gempabumi (Informasi yang Dianalisis & Disebarkan)"),
     ("gempabumi_cepat", "Gempabumi M < 5,0 (Disampaikan < 3 Menit)"),
+    ("tanda_waktu", "Tanda Waktu (Terbit & Terbenam Matahari)"),
 ]
 MONTHS = [(i, BULAN[i]) for i in range(1, 13)]
 INPUT = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
