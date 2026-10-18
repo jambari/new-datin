@@ -28,6 +28,10 @@ BULAN = ["", "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AG
          "OKTOBER", "NOVEMBER", "DESEMBER"]
 BULAN_TITLE = [b.title() for b in BULAN]
 BOUNDARY = Path(__file__).resolve().parent / "static" / "lightning" / "kota_jayapura.geojson"
+DEM = Path(__file__).resolve().parent / "data" / "dem_kota_jayapura.png"
+# Copernicus DEM GLO-30 (© DLR/Airbus, ESA), dipotong & disampel ulang 0,0004° (≈ 44 m) dengan gdalwarp.
+DEM_BOUNDS = (-2.88, -2.42, 140.58, 141.04)                 # lat_s, lat_n, lon_w, lon_e
+DEM_RES = 0.0004
 LOGO = Path(settings.BASE_DIR) / "repository" / "static" / "repository" / "images" / "logo-bmkg.png"
 CLASSES = [("Rendah (0–5)", "#8fd16f"), ("Sedang (5–10)", "#ffff73"), ("Tinggi (>10)", "#ff7f7f")]
 GRID, LAT0, LON0, N = 0.01, -3.01, 140.21, 100
@@ -58,6 +62,28 @@ def _dms(v, pos, neg):
     if minutes == 60:
         deg, minutes = deg + 1, 0
     return f"{deg}°{minutes:02d}'{pos if v >= 0 else neg}"
+
+
+def _hillshade(smap, ax):
+    """Bayangan relief (sumber cahaya barat laut) di atas warna kerapatan: lereng terang dibuat sedikit
+    lebih terang, lereng teduh lebih gelap; laut/datar tidak berubah."""
+    if not DEM.exists():
+        return
+    dem = np.asarray(Image.open(DEM), dtype=float)
+    lat_s, lat_n, lon_w, lon_e = DEM_BOUNDS
+    d = DEM_RES * 111_320 * math.cos(math.radians((lat_s + lat_n) / 2))
+    ls = matplotlib.colors.LightSource(azdeg=315, altdeg=45)
+    hs = ls.hillshade(dem, vert_exag=1.5, dx=d, dy=d, fraction=1.0)
+    flat = ls.hillshade(np.zeros((3, 3)), dx=d, dy=d, fraction=1.0)[1, 1]
+    land = dem > 0
+    dark = np.zeros(dem.shape + (4,))
+    dark[..., 3] = np.where(land, np.clip((flat - hs) * 1.1, 0, 0.55), 0)
+    light = np.ones(dem.shape + (4,))
+    light[..., 3] = np.where(land, np.clip((hs - flat) * 0.8, 0, 0.3), 0)
+    x0, y0 = smap.project(lat_n, lon_w)
+    x1, y1 = smap.project(lat_s, lon_e)
+    for layer in (dark, light):
+        ax.imshow(layer, extent=(x0, x1, y1, y0), interpolation="bilinear", zorder=2.5)
 
 
 def _density(cells):
@@ -126,6 +152,7 @@ def _render(year, month, cells):
         gx1, gy1 = smap.project(LAT0 - GRID / 2, LON0 + N * GRID - GRID / 2)      # sudut tenggara grid
         im = ax.imshow(rgba[::-1], extent=(gx0, gx1, gy1, gy0), interpolation="nearest", zorder=2)
         im.set_clip_path(PathPatch(_path([r for _n, g in feats for r in _rings(g)], smap), transform=ax.transData))
+    _hillshade(smap, ax)
     for name, g in feats:
         ax.add_patch(PathPatch(_path(_rings(g), smap), fc="none", ec="#4b5563", lw=0.9, zorder=3))
         p = g.point_on_surface
@@ -144,7 +171,7 @@ def _render(year, month, cells):
     for lab in ax.get_xticklabels(which="both"):
         lab.set_fontsize(7)
     ax.grid(color="#6b7280", lw=0.3, ls="--", alpha=0.6)
-    ax.text(smap.width - 6, smap.height - 6, ATTRIBUTION, ha="right", va="bottom", fontsize=6.5,
+    ax.text(smap.width - 6, smap.height - 6, f"{ATTRIBUTION}; relief: Copernicus DEM GLO-30 © DLR/Airbus, ESA", ha="right", va="bottom", fontsize=6.5,
             bbox=dict(fc="white", ec="none", alpha=0.75, pad=1.5), zorder=5)
     for s in ax.spines.values():
         s.set_linewidth(1.2)
