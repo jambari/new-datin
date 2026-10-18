@@ -1,0 +1,60 @@
+{% extends "reporting/report_base.html" %}
+{% load reporting_extras %}
+{% block body %}
+<h2>I. Pendahuluan</h2>
+<p>Stasiun Geofisika Kelas I Jayapura melakukan pengamatan curah hujan harian sebagai data pendukung analisis cuaca dan geofisika (antara lain aktivitas petir dan kimia air hujan). Laporan ini menjadi bukti capaian kinerja berupa tersedianya data curah hujan harian yang tercatat lengkap dan terkendali mutunya untuk periode {{ period.short_label }}.</p>
+
+<h2>II. Sumber Data dan Metode</h2>
+<ol>
+  <li><b>Sumber data:</b> pencatatan hujan harian stasiun pada sistem informasi Stasiun Geofisika Jayapura (menu <i>Kualitas Udara &gt; Data Hujan</i>).</li>
+  <li><b>Alat ukur:</b> penakar hujan observatorium (OBS) sebagai nilai utama, dan penakar Hellmann sebagai pembanding. Nilai Hellmann 9999 menandakan alat tidak beroperasi.</li>
+  <li><b>Statistik:</b> total curah hujan, jumlah hari hujan (OBS &gt; 0 mm), hujan harian maksimum, dan sebaran kategori intensitas sesuai pencatatan petugas. Penulisan kategori diseragamkan (mis. “Hujan Sangat Ringan”, “sangat ringan” → Sangat Ringan).</li>
+  <li><b>Kontrol kualitas:</b> kelengkapan data harian, status alat Hellmann, dan selisih OBS–Hellmann lebih dari 20% (minimal 1 mm).</li>
+</ol>
+
+<h2>III. Ringkasan Capaian</h2>
+<div class="kpi">
+  <div><b>{{ n_records }}/{{ ndays }}</b><span>hari tercatat ({{ completeness|idn:1 }}%)</span></div>
+  <div><b>{{ total|idn:1 }}</b><span>total curah hujan (mm)</span></div>
+  <div><b>{{ rainy }}</b><span>hari hujan (OBS &gt; 0 mm)</span></div>
+  <div><b>{{ peak.obs|idn:1 }}</b><span>hujan harian maksimum (mm){% if peak %}, {{ peak.date|date:"d/m/Y" }}{% endif %}</span></div>
+</div>
+<div class="avoid">
+<h3>Tabel 1. Ringkasan bulanan</h3>
+<table><thead><tr><th>Bulan</th><th>Hari tercatat</th><th>Total (mm)</th><th>Hari hujan</th><th>Maksimum (mm)</th><th>Tanggal maks.</th><th>Hellmann tidak beroperasi</th></tr></thead><tbody>
+{% for m in months %}<tr><td>{{ m.label }}</td><td class="c">{{ m.n }}/{{ m.ndays }}</td><td class="n">{{ m.total|idn:1 }}</td><td class="c">{{ m.rainy }}</td><td class="n">{{ m.peak.obs|idn:1 }}</td><td class="c">{% if m.peak %}{{ m.peak.date|date:"d/m" }} ({{ m.peak.cat|default:"–" }}){% else %}–{% endif %}</td><td class="c">{{ m.hellmann_off|length }} hari</td></tr>{% endfor %}
+<tr><td><b>Periode</b></td><td class="c"><b>{{ n_records }}/{{ ndays }}</b></td><td class="n"><b>{{ total|idn:1 }}</b></td><td class="c"><b>{{ rainy }}</b></td><td class="n"><b>{{ peak.obs|idn:1 }}</b></td><td></td><td class="c"><b>{{ hellmann_off|length }} hari</b></td></tr>
+</tbody></table>
+</div>
+<div class="avoid">
+<h3>Tabel 2. Sebaran kategori hujan harian</h3>
+<table style="width:60%"><thead><tr><th>Kategori</th><th>Jumlah hari</th></tr></thead><tbody>
+{% for c, n in categories %}<tr><td>{{ c }}</td><td class="n">{{ n }}</td></tr>{% endfor %}
+</tbody></table>
+</div>
+{% if chart_totals %}<img class="fig" src="{{ chart_totals }}" alt="Total bulanan"><div class="cap">Gambar 1. Total curah hujan bulanan.</div>{% endif %}
+
+<h2 class="pb">IV. Data Curah Hujan Harian</h2>
+{% for m in months %}
+  <h3{% if not forloop.first %} class="pb"{% endif %}>IV.{{ forloop.counter }} {{ m.label }}</h3>
+  <p>Tercatat <b>{{ m.n }} dari {{ m.ndays }} hari</b> dengan total curah hujan <b>{{ m.total|idn:1 }} mm</b> dan {{ m.rainy }} hari hujan.{% if m.peak %} Hujan harian tertinggi {{ m.peak.obs|idn:1 }} mm pada {{ m.peak.date|date:"d/m/Y" }}.{% endif %}</p>
+  <img class="fig" src="{{ m.chart }}" alt="Hujan {{ m.label }}">
+  <table class="k"><thead><tr><th>Tgl</th><th>OBS (mm)</th><th>Hellmann (mm)</th><th>Kategori</th><th>Petugas</th><th>Keterangan</th></tr></thead><tbody>
+  {% for d in m.days %}
+    {% if d.obs is None %}<tr class="emp"><td>{{ d.date.day }}</td><td colspan="5">Tidak ada data</td></tr>
+    {% else %}<tr{% if d.hellmann_off %} class="ver"{% endif %}><td>{{ d.date.day }}</td><td class="n">{{ d.obs|idn:1 }}</td><td class="n">{% if d.hellmann_off %}tidak beroperasi{% else %}{{ d.hellmann|idn:1 }}{% endif %}</td><td>{{ d.cat|default:"–" }}</td><td>{{ d.petugas }}</td><td style="text-align:left">{{ d.note }}</td></tr>{% endif %}
+  {% endfor %}
+  </tbody></table>
+{% endfor %}
+
+<h2 class="pb">V. Catatan Kualitas Data dan Tindak Lanjut</h2>
+<ol>
+  {% if missing %}<li><b>Hari tanpa catatan:</b> {% for d in missing %}{{ d|date:"d/m/Y" }}{% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% else %}<li><b>Kelengkapan:</b> seluruh hari pada periode ini tercatat.</li>{% endif %}
+  {% if hellmann_off %}<li><b>Penakar Hellmann tidak beroperasi</b> pada {{ hellmann_off|length }} hari ({% for d in hellmann_off %}{{ d.date|date:"d/m" }}{% if not forloop.last %}, {% endif %}{% endfor %}); nilai OBS tetap tersedia. Keterangan petugas dicantumkan pada tabel harian.</li>{% endif %}
+  {% if n_pairs %}<li><b>Perbandingan OBS–Hellmann:</b> {{ n_pairs }} hari dengan kedua nilai; selisih rata-rata {{ mean_abs_diff|idn:2 }} mm.{% if big_diff %} Selisih &gt; 20%: {% for d in big_diff %}{{ d.date|date:"d/m" }} (OBS {{ d.obs|idn:1 }}, Hellmann {{ d.hellmann|idn:1 }}){% if not forloop.last %}; {% endif %}{% endfor %}.{% endif %}</li>{% endif %}
+  {% if raw_label_count > 7 %}<li><b>Penulisan kategori</b> belum seragam ({{ raw_label_count }} variasi penulisan pada periode ini); disarankan memakai pilihan kategori baku saat entri.</li>{% endif %}
+</ol>
+
+<h2>VI. Kesimpulan</h2>
+<p>Selama periode {{ period.label }} tersedia data curah hujan harian Stasiun Geofisika Jayapura untuk <b>{{ n_records }} dari {{ ndays }} hari ({{ completeness|idn:1 }}%)</b>, dengan total curah hujan {{ total|idn:1 }} mm dan {{ rainy }} hari hujan. Data telah diperiksa kelengkapan dan konsistensinya terhadap penakar pembanding, serta kekurangannya diidentifikasi untuk ditindaklanjuti. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah tercapai.</p>
+{% endblock %}

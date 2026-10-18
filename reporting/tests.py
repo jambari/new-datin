@@ -218,3 +218,31 @@ class OfficerIdentityTest(TestCase):
         r = self.client.get(report_url("kualitas_udara", nip="123456"))
         self.assertEqual(r.context["identity"]["nama"], "Budi Santoso")
         self.assertEqual(r.context["identity"]["nip"], "123456")
+
+
+class HujanReportTest(TestCase):
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("t", password="x"))
+
+    def test_hujan_report(self):
+        from hujan.models import Hujan
+        Hujan.objects.create(tanggal=datetime.date(2026, 1, 1), hilman=4.4, obs=4.3, kategori="sangat ringan")
+        Hujan.objects.create(tanggal=datetime.date(2026, 1, 2), hilman=9999, obs=0.4, kategori="Hujan Sangat  Ringan",
+                             keterangan="Timer macet")
+        Hujan.objects.create(tanggal=datetime.date(2026, 1, 5), hilman=86.3, obs=97.0, kategori="Hukan Lebat")
+        Hujan.objects.create(tanggal=datetime.date(2026, 1, 6), hilman=3.9, obs=2.0, kategori="NIHIIL")
+        r = self.client.get(report_url("hujan", start=(1, 2026), end=(1, 2026)))
+        self.assertEqual(r.status_code, 200)
+        c = r.context
+        self.assertEqual(c["n_records"], 4)
+        self.assertEqual(len(c["missing"]), 27)
+        self.assertAlmostEqual(c["total"], 103.7)
+        self.assertEqual(c["peak"]["obs"], 97.0)
+        self.assertEqual([d["date"].day for d in c["hellmann_off"]], [2])
+        self.assertEqual(dict(c["categories"]), {"Nihil": 1, "Sangat Ringan": 2, "Lebat": 1})
+        self.assertEqual([d["date"].day for d in c["big_diff"]], [6])
+        self.assertContains(r, "Tersedianya data curah hujan yang berkualitas")
+        self.assertContains(r, "tidak beroperasi")
+
+    def test_hujan_in_report_type_choices(self):
+        self.assertContains(self.client.get("/reporting/"), "Hujan (Curah Hujan Harian)")
