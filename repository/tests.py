@@ -360,3 +360,40 @@ class WaveSimulationTest(TestCase):
         self.client.post(f"/api/wavesim/{job['id']}/fail/", **self.auth, data={'log': 'boom'})
         sim = WaveSimulation.objects.get(pk=job['id'])
         self.assertEqual((sim.status, sim.log), ('failed', 'boom'))
+
+
+class ShakemapLookupTest(TestCase):
+    """Record ShakemapEvent lama ber-id '<WIB>_mag_lat_lon_<WIB>' harus tetap ditemukan."""
+
+    def setUp(self):
+        import datetime as _d
+        from .models import ShakemapEvent
+        utc = _d.timezone.utc
+        self.legacy = ShakemapEvent.objects.create(
+            event_id="20260114064812_32_-3700_133590_20260114064812", latitude=-3.7, longitude=133.59,
+            magnitude=3.2, depth=10, event_time=_d.datetime(2026, 1, 14, 6, 48, 12, tzinfo=utc),
+            location_string="KAIMANA", shakemap_image="shakemaps/legacy.jpg")
+        self.new = ShakemapEvent.objects.create(
+            event_id="20260517142319", latitude=-2.5, longitude=140.7, magnitude=3.6, depth=10,
+            event_time=_d.datetime(2026, 5, 17, 7, 23, 19, tzinfo=utc), location_string="JAYAPURA",
+            shakemap_image="shakemaps/20260517142319.mmi.jpg")
+
+    def test_find_by_new_and_legacy_id_with_tolerance(self):
+        from .shakemap_lookup import find_shakemap_event, wib_id_to_utc
+        import datetime as _d
+        self.assertEqual(find_shakemap_event("20260517142319"), self.new)
+        self.assertEqual(find_shakemap_event("20260114064812"), self.legacy)
+        self.assertEqual(find_shakemap_event("20260114064814"), self.legacy)  # origin beda 2 detik
+        self.assertIsNone(find_shakemap_event("20260114064830"))
+        self.assertEqual(wib_id_to_utc("20260114064812"), _d.datetime(2026, 1, 13, 23, 48, 12, tzinfo=_d.timezone.utc))
+
+    def test_public_detail_shows_intensity_for_legacy_event(self):
+        import datetime as _d
+        from .models import FeltEarthquake
+        fe = FeltEarthquake.objects.create(
+            event_datetime=_d.datetime(2026, 1, 13, 23, 48, 12, tzinfo=_d.timezone.utc), latitude=-3.7,
+            longitude=133.59, magnitude=3.2, depth_km=10, wilayah="KAIMANA")
+        r = self.client.get(f"/shakemap/{fe.pk}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["shk_event"], self.legacy)
+        self.assertContains(r, "/media/shakemaps/legacy.jpg")

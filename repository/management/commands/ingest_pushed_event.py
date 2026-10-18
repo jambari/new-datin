@@ -26,6 +26,7 @@ from django.core.management.base import BaseCommand, CommandError
 from repository.models import (
     EventResponseSpectrum, EventStationWaveform, ShakemapEvent,
 )
+from repository.shakemap_lookup import find_shakemap_event, wib_id_to_utc
 
 # Filename patterns produced by scwfparam on .50:
 #   <WIB>_IA_<STA>_<COMP>_BP4_0.1_40.psa5
@@ -87,12 +88,12 @@ class Command(BaseCommand):
         # Point the field at the rsync'd path directly (no re-save) so repeat
         # pushes don't leave Django-renamed duplicates (e.g. _IzbL2GH suffixes).
         if intensity_path.exists():
-            from datetime import datetime as _dt, timezone as _tz
-            shk = ShakemapEvent.objects.filter(event_id=wib).first()
+            # Termasuk record lama ber-id "<WIB>_mag_lat_lon_<WIB>" dan selisih origin ±5 detik.
+            shk = find_shakemap_event(wib)
             if shk is None:
-                # Auto-create the ShakemapEvent from the WIB timestamp
+                # Auto-create the ShakemapEvent from the WIB timestamp (id = WIB, event_time = UTC)
                 try:
-                    dt = _dt.strptime(wib, "%Y%m%d%H%M%S").replace(tzinfo=_tz.utc)
+                    dt = wib_id_to_utc(wib)
                     shk = ShakemapEvent.objects.create(
                         event_id=wib,
                         event_time=dt,

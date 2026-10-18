@@ -3,7 +3,8 @@ import datetime
 import math
 from collections import defaultdict
 
-from repository.models import EventResponseSpectrum, ShakemapEvent, Station
+from repository.models import EventResponseSpectrum, FeltEarthquake, Station
+from repository.shakemap_lookup import candidate_ids, shakemap_index, wib_id_to_utc
 from reporting.charts import new_figure, to_data_uri
 
 TITLE = "Tersedianya data percepatan tanah yang berkualitas di Papua"
@@ -12,10 +13,24 @@ PERIODS = (("sa03", 0.3), ("sa10", 1.0), ("sa30", 3.0))
 
 
 def _parse_event_time(event_id):
-    try:
-        return datetime.datetime.strptime(event_id[:14], "%Y%m%d%H%M%S").replace(tzinfo=datetime.timezone.utc)
-    except ValueError:
-        return None
+    """Waktu UTC dari id .psa5 (stempel waktu WIB 14 digit)."""
+    return wib_id_to_utc(event_id)
+
+
+def _event_meta(event_id, t, index, felt):
+    """(ShakemapEvent atau None, dict metadata). Metadata dari ShakemapEvent bila lengkap,
+    selain itu dari gempa dirasakan BMKG (±10 detik): record yang dibuat otomatis saat push
+    berisi magnitudo/koordinat 0."""
+    sm = next((index[c] for c in candidate_ids(event_id[:14]) if c in index), None)
+    if sm and sm.magnitude and (sm.latitude or sm.longitude):
+        return sm, {"mag": sm.magnitude, "depth": sm.depth, "lat": sm.latitude, "lon": sm.longitude,
+                    "location": sm.location_string}
+    fe = min((f for f in felt if abs((f.event_datetime - t).total_seconds()) <= 10),
+             key=lambda f: abs((f.event_datetime - t).total_seconds()), default=None)
+    if fe:
+        return sm, {"mag": fe.magnitude, "depth": fe.depth_km, "lat": fe.latitude, "lon": fe.longitude,
+                    "location": fe.wilayah}
+    return sm, {"mag": None, "depth": None, "lat": None, "lon": None, "location": ""}
 
 
 def _sa_at(points, period):
@@ -67,28 +82,33 @@ def _pga_distance_chart(records):
 def build(period):
     t0 = datetime.datetime.combine(period.start, datetime.time.min, tzinfo=datetime.timezone.utc)
     t1 = datetime.datetime.combine(period.end, datetime.time.max, tzinfo=datetime.timezone.utc)
-    prefixes = {f"{y}{m:02d}" for y, m in period.months}
+    # id WIB = UTC + 7 jam: kejadian akhir bulan (UTC) bisa ber-id bulan berikutnya.
+    months = list(period.months)
+    nxt = (months[-1][0] + (months[-1][1] == 12), months[-1][1] % 12 + 1)
+    prefixes = {f"{y}{m:02d}" for y, m in months + [nxt]}
     spectra = defaultdict(list)
     for ers in EventResponseSpectrum.objects.filter(event_id__regex=r"^(%s)" % "|".join(sorted(prefixes))):
         t = _parse_event_time(ers.event_id)
         if t and t0 <= t <= t1:
             spectra[ers.event_id].append(ers)
 
-    shakemaps = {s.event_id[:14]: s for s in ShakemapEvent.objects.filter(event_time__range=(t0, t1))}
+    index = shakemap_index()
+    felt = list(FeltEarthquake.objects.filter(event_datetime__range=(t0 - datetime.timedelta(minutes=1),
+                                                                      t1 + datetime.timedelta(minutes=1))))
     codes = {e.station_code for lst in spectra.values() for e in lst}
     stations = {s.code: s for s in Station.objects.filter(code__in=codes)}
 
     events, all_records = [], []
     for event_id in sorted(spectra):
-        sm = shakemaps.get(event_id[:14])
+        sm, meta = _event_meta(event_id, _parse_event_time(event_id), index, felt)
         by_station = defaultdict(list)
         for ers in spectra[event_id]:
             by_station[ers.station_code].append(ers)
         dist = {}
         for code in by_station:
             st = stations.get(code)
-            dist[code] = (_haversine_km(sm.latitude, sm.longitude, st.latitude, st.longitude)
-                          if sm and st else None)
+            dist[code] = (_haversine_km(meta["lat"], meta["lon"], st.latitude, st.longitude)
+                          if meta["lat"] is not None and st else None)
         chosen = sorted(by_station, key=lambda c: (dist[c] is None, dist[c] or 0))[:NEAREST_STATIONS]
         records = []
         for code in chosen:
@@ -99,7 +119,7 @@ def build(period):
                        "horizontal": ers.component[-1:] in ("E", "N", "1", "2"),
                        "pga": _sa_at(pts, 0.0) if pts and pts[0].get("T") == 0 else None,
                        "peak": max((p["Sa"] for p in pts if p.get("Sa") is not None), default=None),
-                       "mag": sm.magnitude if sm else None}
+                       "mag": meta["mag"]}
                 if rec["pga"] is None and pts:
                     rec["pga"] = min(pts, key=lambda p: p.get("T", 9))["Sa"]
                 for key, period_s in PERIODS:
@@ -117,8 +137,9 @@ def build(period):
 
         events.append({
             "event_id": event_id, "time": _parse_event_time(event_id), "shakemap": sm,
-            "mag": sm.magnitude if sm else None, "depth": sm.depth if sm else None,
-            "location": sm.location_string if sm else "", "image": sm.shakemap_image if sm and sm.shakemap_image else None,
+            "mag": meta["mag"], "depth": meta["depth"], "location": meta["location"],
+            "has_meta": meta["mag"] is not None,
+            "image": sm.shakemap_image if sm and sm.shakemap_image else None,
             "records": records, "nearest": records[0] if records else None,
             "pga": best("pga"), "sa03": best("sa03"), "sa10": best("sa10"), "sa30": best("sa30"),
             "n_stations": len(by_station),
@@ -144,7 +165,9 @@ def build(period):
         "reasons": sorted(reasons.items(), key=lambda x: -x[1]),
         "bad_stations": sorted(bad_stations.items(), key=lambda x: -x[1]),
         "n_stations": len({r["station"] for r in all_records}),
-        "events_valid": len(with_values), "events_without_shakemap": sum(1 for e in events if not e["shakemap"]),
+        "events_valid": len(with_values),
+        "events_without_shakemap": sum(1 for e in events if not e["has_meta"]),
+        "events_without_image": sum(1 for e in events if not e["image"]),
         "top_pga": top_pga, "top_sa": top_sa,
         "mag_min": min(mags, default=None), "mag_max": max(mags, default=None),
         "per_month": [(y, m, months.get((y, m), 0)) for y, m in period.months],

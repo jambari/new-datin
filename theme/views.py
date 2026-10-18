@@ -331,8 +331,8 @@ def _resolve_shakemap_context(pk):
             effective_id = eid
             break
 
-    shk_event = (ShakemapEvent.objects.filter(event_id=effective_id).first()
-                 or ShakemapEvent.objects.filter(event_id=wib_ts).first())
+    from repository.shakemap_lookup import find_shakemap_event
+    shk_event = find_shakemap_event(effective_id) or find_shakemap_event(wib_ts)
 
     mseed_count = EventStationWaveform.objects.filter(
         event_id=effective_id

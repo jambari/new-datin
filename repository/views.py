@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from .models import Gempa, DataAvailability
+from .shakemap_lookup import find_shakemap_event
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from .models import Station
@@ -387,7 +388,7 @@ class ShakemapDetailView(generic.DetailView):
         fe = self.object
         _WIB = dt_timezone(timedelta(hours=7))
         wib_ts = fe.event_datetime.astimezone(_WIB).strftime("%Y%m%d%H%M%S")
-        context['shk_event'] = ShakemapEvent.objects.filter(event_id=wib_ts).first()
+        context['shk_event'] = find_shakemap_event(wib_ts)
         return context
 
 @login_required
@@ -1779,7 +1780,7 @@ def dirasakan_events(year, month, build_absolute_uri):
         try:
             # ShakemapEvent.event_id is the WIB timestamp (UTC+7).
             wib_ts = obj.event_datetime.astimezone(_WIB).strftime('%Y%m%d%H%M%S')
-            shk = ShakemapEvent.objects.filter(event_id=wib_ts).first()
+            shk = find_shakemap_event(wib_ts)
             shakemap_url = ''
             if shk and shk.shakemap_image:
                 shakemap_url = build_absolute_uri(shk.shakemap_image.url)

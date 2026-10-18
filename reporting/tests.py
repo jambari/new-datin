@@ -147,12 +147,21 @@ class ReportingTest(TestCase):
         self.assertEqual(self.client.post("/reporting/indeks-k/upload/").status_code, 404)
 
     def test_percepatan_tanah_report(self):
+        from repository.models import FeltEarthquake
         Station.objects.create(code="JAY", network="IA", latitude=-2.51, longitude=140.70)
         Station.objects.create(code="SWI", network="IA", latitude=-2.60, longitude=140.30)
+        # Record lama: id XML panjang, event_time = jam WIB tertulis UTC.
         ShakemapEvent.objects.create(event_id="20260114064812_32_-2600_140600_20260114064812", latitude=-2.6,
                                      longitude=140.6, magnitude=3.2, depth=10,
                                      event_time=datetime.datetime(2026, 1, 14, 6, 48, 12, tzinfo=UTC),
-                                     location_string="10 km Jayapura")
+                                     location_string="10 km Jayapura", shakemap_image="shakemaps/old.jpg")
+        # Record dibuat otomatis saat push (metadata 0) -> metadata dari gempa dirasakan.
+        ShakemapEvent.objects.create(event_id="20260401050000", latitude=0, longitude=0, magnitude=0, depth=0,
+                                     event_time=datetime.datetime(2026, 4, 1, 5, 0, tzinfo=UTC),
+                                     location_string="Pushed from jaygenerator (auto-created)")
+        FeltEarthquake.objects.create(event_datetime=datetime.datetime(2026, 3, 31, 22, 0, 2, tzinfo=UTC),
+                                      latitude=-2.55, longitude=140.65, magnitude=4.1, depth_km=12,
+                                      wilayah="Dekat Jayapura")
 
         def spec(scale):
             return [{"T": 0.0, "Sa": 0.02 * scale}, {"T": 0.3, "Sa": 0.04 * scale},
@@ -161,17 +170,23 @@ class ReportingTest(TestCase):
             EventResponseSpectrum.objects.create(event_id="20260114064812", station_code="JAY", component=comp, spectrum=spec(1))
             EventResponseSpectrum.objects.create(event_id="20260114064812", station_code="SWI", component=comp,
                                                  spectrum=spec(2000 if comp == "HNE" else 1))
-        EventResponseSpectrum.objects.create(event_id="20260414000000", station_code="JAY", component="HNE", spectrum=spec(1))
+        # 1 Apr 05:00 WIB = 31 Mar 22:00 UTC -> masuk Januari–Maret.
+        EventResponseSpectrum.objects.create(event_id="20260401050000", station_code="JAY", component="HNE", spectrum=spec(1))
+        # 1 Apr 08:00 WIB = 1 Apr 01:00 UTC -> di luar periode.
+        EventResponseSpectrum.objects.create(event_id="20260401080000", station_code="JAY", component="HNE", spectrum=spec(1))
         r = self.client.get(report_url("percepatan_tanah"))
         self.assertEqual(r.status_code, 200)
         c = r.context
-        self.assertEqual(c["n_events"], 1)  # April event outside period
-        self.assertEqual(c["n_records"], 6)
-        self.assertEqual(c["n_bad"], 3)  # SWI spike + its siblings
-        ev = c["events"][0]
-        self.assertEqual(ev["nearest"]["station"], "JAY")
-        self.assertAlmostEqual(ev["pga"]["pga"], 0.02)
-        self.assertAlmostEqual(ev["sa03"]["sa03"], 0.04)
+        self.assertEqual([e["event_id"] for e in c["events"]], ["20260114064812", "20260401050000"])
+        first, last = c["events"]
+        self.assertEqual(first["time"], datetime.datetime(2026, 1, 13, 23, 48, 12, tzinfo=UTC))  # WIB -> UTC
+        self.assertEqual(first["image"].name, "shakemaps/old.jpg")  # id lama tetap ditemukan
+        self.assertEqual(first["nearest"]["station"], "JAY")
+        self.assertAlmostEqual(first["pga"]["pga"], 0.02)
+        self.assertEqual(c["n_bad"], 3)  # SWI spike + komponen lainnya
+        self.assertEqual(last["mag"], 4.1)  # dari gempa dirasakan
+        self.assertEqual(last["location"], "Dekat Jayapura")
+        self.assertIsNone(last["image"])
         self.assertContains(r, "nilai &gt; 3 g")
 
 
