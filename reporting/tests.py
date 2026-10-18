@@ -359,19 +359,19 @@ class GempabumiCepatReportTest(TestCase):
             Event.objects.filter(pk=e.pk).update(created_at=when + datetime.timedelta(seconds=delay_s))
             QCRun.objects.create(event=e, run_number=1)
             e.petugas.set(who)
-        ev("old", datetime.datetime(2026, 5, 20, 2, tzinfo=UTC), 3.0, 900000)        # sebelum cutoff: tanpa delta
+        ev("old", datetime.datetime(2025, 12, 31, 2, tzinfo=UTC), 3.0, 900000)       # sebelum 2026: tanpa delta
         ev("fast", datetime.datetime(2026, 6, 5, 2, tzinfo=UTC), 3.5, 161)           # 02:41 tepat waktu
         ev("edge", datetime.datetime(2026, 6, 6, 2, tzinfo=UTC), 3.5, 180)           # tepat 3 menit = terlambat
         ev("slow", datetime.datetime(2026, 7, 6, 2, tzinfo=UTC), 4.9, 3725)          # 1:02:05 terlambat
         ev("big", datetime.datetime(2026, 6, 7, 2, tzinfo=UTC), 5.0, 60)             # M ≥ 5: tidak termasuk
         self.client.force_login(user)
-        r = self.client.get(report_url("gempabumi_cepat", start=(5, 2026), end=(7, 2026)))
+        r = self.client.get(report_url("gempabumi_cepat", start=(12, 2025), end=(7, 2026)))
         self.assertEqual(r.status_code, 200)
         c = r.context
         self.assertEqual([e["id"] for e in c["events"]], ["old", "fast", "edge", "slow"])
         self.assertEqual((c["n_timed"], c["n_on"], c["n_late"]), (3, 1, 2))
         self.assertAlmostEqual(c["pct_on"], 100 / 3)
-        self.assertEqual([m["timed"] for m in c["monthly"]], [0, 2, 1])
+        self.assertEqual([m["timed"] for m in c["monthly"]], [0, 0, 0, 0, 0, 0, 2, 1])
         self.assertEqual([e["delta_text"] for e in c["events"]], ["–", "02:41", "03:00", "1:02:05"])
         self.assertIsNotNone(c["chart"])
         self.assertContains(r, "kurang dari 3 menit")

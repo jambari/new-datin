@@ -1,15 +1,15 @@
 """Laporan kecepatan penyampaian informasi gempabumi M < 5,0 (Repositori Angkasa).
 
-Delta waktu = waktu event tersimpan di Repositori Angkasa (Event.created_at) − waktu kejadian.
-Sebelum qc_review.utils.DELTA_ON_TIME_CUTOFF waktu simpan berasal dari impor susulan, sehingga
-delta kejadian tersebut tidak dihitung.
+Delta waktu = Event.created_at − waktu kejadian. Sejak 2026 created_at diselaraskan dengan waktu
+commit manual pertama petugas di SeisComP (pengiriman ke Repositori Angkasa hanya beberapa detik),
+sehingga data impor susulan (Jan–Mei dan Agustus 2026) tetap mencerminkan waktu penyampaian.
+Sebelum DELTA_START created_at berasal dari impor susulan dan delta tidak dihitung.
 """
 import datetime
 import statistics as st
 from collections import Counter
 
 from qc_review.models import Event
-from qc_review.utils import DELTA_ON_TIME_CUTOFF
 from reporting.charts import NAVY, new_figure, to_data_uri
 from reporting.common import BULAN
 
@@ -17,6 +17,7 @@ TITLE = ("Tersedianya informasi gempabumi dengan Magnitudo M < 5.0 "
          "yang disampaikan dalam waktu kurang dari 3 menit")
 PER_OFFICER = True
 WIT = datetime.timezone(datetime.timedelta(hours=9))
+DELTA_START = datetime.datetime(2026, 1, 1, tzinfo=WIT)
 MAG_LIMIT = 5.0
 TARGET_MIN = 3.0
 GREEN, RED, GREY = "#16a34a", "#dc2626", "#9ca3af"
@@ -79,7 +80,7 @@ def build(period, officer=None):
     events = []
     for e in qs:
         delta = None
-        if e.origin_time >= DELTA_ON_TIME_CUTOFF and e.created_at:
+        if e.origin_time >= DELTA_START and e.created_at:
             delta = (e.created_at - e.origin_time).total_seconds()
         events.append({
             # Tanpa zona (naive) agar filter |date di template tidak mengonversi ke TIME_ZONE server.
@@ -113,6 +114,6 @@ def build(period, officer=None):
         "delta_median": st.median(deltas) if deltas else None,
         "delta_min": min(deltas, default=None), "delta_max": max(deltas, default=None),
         "monthly": monthly, "target_min": TARGET_MIN, "mag_limit": MAG_LIMIT,
-        "cutoff": DELTA_ON_TIME_CUTOFF.astimezone(WIT).replace(tzinfo=None),
+        "cutoff": DELTA_START.astimezone(WIT).replace(tzinfo=None),
         "chart": _charts(events, monthly) if timed else None,
     }

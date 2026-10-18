@@ -7,10 +7,10 @@
 <h2>II. Sumber Data dan Metode</h2>
 <ol>
   <li><b>Sumber data:</b> kejadian gempabumi M &lt; 5,0 hasil analisis petugas yang telah di-<i>commit</i> ke Repositori Angkasa (sistem informasi Stasiun Geofisika Jayapura).</li>
-  <li><b>Delta waktu</b> = waktu informasi tersimpan dan tersedia di Repositori Angkasa − waktu kejadian (<i>origin time</i>), dalam menit:detik.</li>
+  <li><b>Delta waktu</b> = waktu penyampaian − waktu kejadian (<i>origin time</i>), dalam menit:detik. Waktu penyampaian adalah waktu <i>commit</i> manual pertama petugas di SeisComP, yang dalam hitungan detik dikirim otomatis ke Repositori Angkasa.</li>
   <li><b>Kriteria:</b> <span style="color:#15803d;font-weight:700">Tepat waktu</span> bila delta &lt; {{ target_min|idn:0 }} menit; <span style="color:#b91c1c;font-weight:700">Terlambat</span> bila delta ≥ {{ target_min|idn:0 }} menit.</li>
   <li><b>Petugas:</b> petugas operasional yang bertugas saat kejadian menurut jadwal dinas; pada jam serah terima kejadian dikreditkan ke dinas sebelumnya.{% if per_officer %} Laporan ini memuat kejadian saat <b>{{ officer.nama }}</b> bertugas.{% endif %}</li>
-  <li>Waktu penyimpanan tercatat sejak {{ cutoff|date:"d/m/Y" }}; kejadian sebelum tanggal tersebut (hasil impor susulan) ditampilkan tanpa delta dan tidak dihitung dalam persentase.</li>
+  <li>Waktu penyampaian tersedia untuk kejadian sejak {{ cutoff|date:"d/m/Y" }}; kejadian sebelum tanggal tersebut ditampilkan tanpa delta dan tidak dihitung dalam persentase.</li>
 </ol>
 
 <h2>III. Ringkasan Capaian</h2>
@@ -20,7 +20,7 @@
   <div><b style="color:#b91c1c">{{ pct_late|idn:1 }}%</b><span>terlambat ({{ n_late }} kejadian)</span></div>
   <div><b>{% if delta_median is not None %}{{ delta_median|idn:1 }}{% else %}–{% endif %}</b><span>median delta (menit)</span></div>
 </div>
-{% if n_untimed %}<p class="note">{{ n_untimed }} kejadian tanpa catatan waktu penyimpanan (sebelum {{ cutoff|date:"d/m/Y" }}) tidak dihitung dalam persentase.</p>{% endif %}
+{% if n_untimed %}<p class="note">{{ n_untimed }} kejadian tanpa catatan waktu penyampaian (sebelum {{ cutoff|date:"d/m/Y" }}) tidak dihitung dalam persentase.</p>{% endif %}
 <div class="avoid">
 <h3>Tabel 1. Ketepatan waktu penyampaian per bulan</h3>
 <table><thead><tr><th>Bulan</th><th>Jumlah kejadian</th><th>Dihitung</th><th>Tepat waktu</th><th>%</th><th>Terlambat</th><th>%</th><th>Median delta (menit)</th></tr></thead><tbody>
