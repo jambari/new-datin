@@ -341,14 +341,14 @@ def _filter_events(request):
         except ValueError:
             date_to_str = ""
 
-    # Filter delta waktu insert: ON TIME (<= 5 menit) / LATE (> 5 menit), hanya event sejak
+    # Filter delta waktu insert: ON TIME (< 3 menit) / LATE (>= 3 menit), hanya event sejak
     # DELTA_VALID_FROM (sebelumnya waktu insert tidak bermakna).
     delta_filter = request.GET.get("delta", "").strip()
     if delta_filter in ("ontime", "late"):
         from .utils import DELTA_ON_TIME_MINUTES, DELTA_VALID_FROM
         limit = F("origin_time") + timedelta(minutes=DELTA_ON_TIME_MINUTES)
         qs = qs.filter(origin_time__gte=DELTA_VALID_FROM)
-        qs = qs.filter(created_at__lte=limit) if delta_filter == "ontime" else qs.filter(created_at__gt=limit)
+        qs = qs.filter(created_at__lt=limit) if delta_filter == "ontime" else qs.filter(created_at__gte=limit)
 
     return qs, pegawai_list, selected_pegawai, date_from_str, date_to_str
 

@@ -418,4 +418,5 @@ class DeltaRuleTest(TestCase):
         self.assertEqual(delta_on_time_info(old, old + datetime.timedelta(days=90)), (None, "–"))
         t = datetime.datetime(2026, 2, 1, tzinfo=UTC)
         self.assertEqual(delta_on_time_info(t, t + datetime.timedelta(minutes=7)), (7.0, "LATE"))
-        self.assertEqual(delta_on_time_info(t, t + datetime.timedelta(minutes=4)), (4.0, "ON TIME"))
+        self.assertEqual(delta_on_time_info(t, t + datetime.timedelta(minutes=3)), (3.0, "LATE"))
+        self.assertEqual(delta_on_time_info(t, t + datetime.timedelta(seconds=161)), (2.7, "ON TIME"))

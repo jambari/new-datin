@@ -229,8 +229,8 @@
     Delta
     <select name="delta">
       <option value="">— Semua —</option>
-      <option value="ontime" {% if delta_filter == "ontime" %}selected{% endif %}>ON TIME (≤ 5 mnt)</option>
-      <option value="late" {% if delta_filter == "late" %}selected{% endif %}>LATE (> 5 mnt)</option>
+      <option value="ontime" {% if delta_filter == "ontime" %}selected{% endif %}>ON TIME (&lt; 3 mnt)</option>
+      <option value="late" {% if delta_filter == "late" %}selected{% endif %}>LATE (≥ 3 mnt)</option>
     </select>
   </label>
   <button type="submit" class="btn-filter">Terapkan</button>

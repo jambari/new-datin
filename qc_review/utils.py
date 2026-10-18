@@ -29,7 +29,7 @@ WIT = zoneinfo.ZoneInfo("Asia/Jayapura")
 # Sejak 2026 Event.created_at = waktu commit manual pertama di SeisComP (data impor susulan
 # diselaraskan 2026-10-18); sebelum itu created_at hanya waktu impor sehingga delta tidak dihitung.
 DELTA_VALID_FROM = datetime(2026, 1, 1, tzinfo=WIT)
-DELTA_ON_TIME_MINUTES = 5
+DELTA_ON_TIME_MINUTES = 3   # sama dengan target SKP: tepat waktu bila < 3 menit
 
 
 def delta_on_time_info(origin_time, insert_time):
@@ -37,8 +37,8 @@ def delta_on_time_info(origin_time, insert_time):
 
     Aturan:
       - origin_time < DELTA_VALID_FROM  -> (None, "–")
-      - selisih insert <= 5 menit       -> (menit, "ON TIME")
-      - selisih insert >  5 menit       -> (menit, "LATE")
+      - selisih insert <  3 menit       -> (menit, "ON TIME")
+      - selisih insert >= 3 menit       -> (menit, "LATE")
     """
     if origin_time is None or insert_time is None:
         return None, "–"
@@ -51,7 +51,7 @@ def delta_on_time_info(origin_time, insert_time):
     if ot < DELTA_VALID_FROM:
         return None, "–"
     minutes = (it - ot).total_seconds() / 60.0
-    return round(minutes, 1), ("ON TIME" if minutes <= DELTA_ON_TIME_MINUTES else "LATE")
+    return round(minutes, 1), ("ON TIME" if minutes < DELTA_ON_TIME_MINUTES else "LATE")
 
 
 def _local(origin_time_utc):
