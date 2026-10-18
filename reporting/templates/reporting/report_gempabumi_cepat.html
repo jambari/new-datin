@@ -31,7 +31,31 @@
 {% if chart %}<img class="fig" src="{{ chart }}" alt="Grafik ketepatan waktu"><div class="cap">Gambar 1. Jumlah kejadian tepat waktu dan terlambat per bulan, persentase periode, dan sebaran delta waktu.</div>{% endif %}
 
 {% if events %}
-<h2 class="pb">IV. Daftar Kejadian dan Delta Waktu Penyampaian</h2>
+<h2>IV. Sebaran Episenter dan Jaringan Stasiun Seismik</h2>
+<img class="mapfig" src="{{ map }}" alt="Peta sebaran episenter dan stasiun"><div class="cap">Gambar 2. Sebaran episenter gempabumi M &lt; 5,0 {{ period.short_label }} (lingkaran: warna = kedalaman, ukuran = magnitudo) dan stasiun seismik (segitiga){% if health %} dengan status kesehatan terkini {{ health.day|date:"d/m/Y" }}: hijau = baik, kuning = gangguan, hitam = off{% endif %}. Basemap © OpenStreetMap contributors.</div>
+{% endif %}
+
+<h2>V. Kendala</h2>
+<ol>
+  <li><b>Jaringan stasiun seismik di Papua masih jarang.</b> Jarak antarstasiun besar dan sebagian wilayah (pegunungan tengah, pesisir selatan, kepulauan) belum tercakup rapat{% if health %}; pada {{ health.day|date:"d/m/Y" }} dari {{ health.n }} stasiun yang dipantau, {% for lab, c, k in health.counts %}{{ k }} {{ lab|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}.</li>
+  <li><b>Gempabumi kecil terekam oleh sedikit stasiun.</b> Semakin kecil magnitudo, semakin sedikit stasiun yang merekam fase P dan S dengan jelas, sehingga petugas perlu waktu lebih lama untuk memperoleh solusi lokasi yang stabil.</li>
+  <li><b>Kualitas waveform kurang baik</b> (noise tinggi, gap data, komponen mati/flatline, kualitas waktu GPS) menambah waktu untuk <i>picking</i> fase dan pemilihan filter sebelum solusi dapat di-<i>commit</i>.</li>
+</ol>
+{% if n_timed %}
+<p>Data periode ini menunjukkan hubungan tersebut: kejadian dengan magnitudo lebih kecil dan jumlah stasiun yang di-<i>pick</i> lebih sedikit memiliki delta waktu lebih lama dan persentase tepat waktu lebih rendah.</p>
+<div class="avoid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<table><thead><tr><th>Magnitudo</th><th>Kejadian</th><th>Median stasiun di-pick</th><th>Median delta (mnt)</th><th>Tepat waktu</th></tr></thead><tbody>
+{% for g in by_mag %}<tr><td>{{ g.label }}</td><td class="n">{{ g.n }}</td><td class="n">{{ g.picks|idn:0 }}</td><td class="n">{{ g.median|idn:1 }}</td><td class="n">{{ g.pct_on|idn:1 }}%</td></tr>{% endfor %}
+</tbody></table>
+<table><thead><tr><th>Stasiun di-pick (P)</th><th>Kejadian</th><th>Median delta (mnt)</th><th>Tepat waktu</th></tr></thead><tbody>
+{% for g in by_picks %}<tr><td>{{ g.label }}</td><td class="n">{{ g.n }}</td><td class="n">{{ g.median|idn:1 }}</td><td class="n">{{ g.pct_on|idn:1 }}%</td></tr>{% endfor %}
+</tbody></table>
+</div>
+<div class="cap">Tabel 2. Delta waktu menurut magnitudo dan jumlah stasiun yang di-<i>pick</i> petugas pada <i>commit</i> pertama.</div>
+{% endif %}
+
+{% if events %}
+<h2 class="pb">VI. Daftar Kejadian dan Delta Waktu Penyampaian</h2>
 <table class="k"><thead><tr><th>No</th><th>Tanggal</th><th>Waktu (UTC)</th><th>Waktu (WIT)</th><th>Lintang</th><th>Bujur</th><th>Kedalaman (km)</th><th>Mag.</th><th>Wilayah</th><th>Disampaikan (WIT)</th><th>Delta</th><th>Status</th></tr></thead><tbody>
 {% for e in events %}<tr><td>{{ forloop.counter }}</td><td>{{ e.time_utc|date:"d/m/Y" }}</td><td>{{ e.time_utc|date:"H:i:s" }}</td><td>{{ e.time_wit|date:"H:i:s" }}</td><td>{{ e.lat|idn:2 }}</td><td>{{ e.lon|idn:2 }}</td><td>{{ e.depth|idn:0 }}</td><td>{{ e.mag|idn:1 }}</td><td style="text-align:left">{{ e.region }}</td><td>{% if e.sent_wit %}{{ e.sent_wit|date:"H:i:s" }}{% else %}–{% endif %}</td><td>{{ e.delta_text }}</td><td>{% if e.delta_min is None %}–{% elif e.on_time %}<span style="color:#15803d;font-weight:700">Tepat waktu</span>{% else %}<span style="color:#b91c1c;font-weight:700">Terlambat</span>{% endif %}</td></tr>{% endfor %}
 </tbody></table>
@@ -40,10 +64,18 @@
 <div class="warn">Tidak ada kejadian gempabumi M &lt; 5,0 pada periode ini{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %}.</div>
 {% endif %}
 
-<h2>{% if events %}V{% else %}IV{% endif %}. Kesimpulan</h2>
+<h2>{% if events %}VII{% else %}VI{% endif %}. Kesimpulan</h2>
 {% if n_timed %}
-<p>Selama periode {{ period.label }} terdapat <b>{{ n }} kejadian gempabumi M &lt; 5,0</b>{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %}. Dari {{ n_timed }} kejadian yang tercatat waktu penyampaiannya, <b>{{ n_on }} kejadian ({{ pct_on|idn:1 }}%) disampaikan dalam waktu kurang dari {{ target_min|idn:0 }} menit</b> dan {{ n_late }} kejadian ({{ pct_late|idn:1 }}%) terlambat, dengan median delta {{ delta_median|idn:1 }} menit.</p>
+<p>Selama periode {{ period.label }} terdapat <b>{{ n }} kejadian gempabumi M &lt; 5,0</b>{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %}. Dari {{ n_timed }} kejadian yang tercatat waktu penyampaiannya, <b>{{ n_on }} kejadian ({{ pct_on|idn:1 }}%) disampaikan dalam waktu kurang dari {{ target_min|idn:0 }} menit</b> dan {{ n_late }} kejadian ({{ pct_late|idn:1 }}%) melebihi {{ target_min|idn:0 }} menit, dengan median delta {{ delta_median|idn:1 }} menit. Keterlambatan terutama dipengaruhi kerapatan jaringan stasiun dan kualitas rekaman gempabumi kecil sebagaimana diuraikan pada bagian Kendala.</p>
 {% else %}
 <p>Selama periode {{ period.label }} terdapat {{ n }} kejadian gempabumi M &lt; 5,0{% if per_officer %} saat {{ officer.nama }} bertugas{% endif %}, namun belum ada kejadian dengan catatan waktu penyampaian sehingga persentase ketepatan waktu belum dapat dihitung.</p>
+{% endif %}
+
+{% if health %}
+<h2 class="pb">Lampiran. Hasil Station Health Monitoring ({{ health.day|date:"d/m/Y" }})</h2>
+<p>Status kesehatan stasiun seismik dari pemantauan harian (Station Health Monitoring) Stasiun Geofisika Jayapura pada hari data terakhir: {% for lab, c, k in health.counts %}<span style="color:{{ c }};font-size:13px">▲</span> {{ lab }}: <b>{{ k }}</b>{% if not forloop.last %}; {% endif %}{% endfor %} (total {{ health.n }} stasiun).</p>
+<table class="k"><thead><tr><th>No</th><th>Stasiun</th><th>Status</th><th>Lintang</th><th>Bujur</th><th>Temuan</th></tr></thead><tbody>
+{% for s in health.stations %}<tr><td>{{ forloop.counter }}</td><td>{{ s.network }}.{{ s.station }}</td><td style="text-align:left;white-space:nowrap"><span style="color:{{ s.color }};font-size:12px{% if s.state == 'gangguan' %};-webkit-text-stroke:.4px #111827{% endif %}">▲</span> {{ s.label }}</td><td>{{ s.lat|idn:2 }}</td><td>{{ s.lon|idn:2 }}</td><td style="text-align:left">{{ s.notes|join:" "|default:"–" }}</td></tr>{% endfor %}
+</tbody></table>
 {% endif %}
 {% endblock %}

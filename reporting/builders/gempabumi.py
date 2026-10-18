@@ -9,13 +9,15 @@ from qc_review.models import Event
 from reporting.charts import NAVY, new_figure, to_data_uri
 from reporting.common import BULAN, fmt
 from reporting.osm import ATTRIBUTION, StaticMap
+from reporting.seismic_stations import station_health
 
 TITLE = "Tersedianya Informasi Gempabumi dan Tsunami yang dianalisis dan disebarkan"
 PER_OFFICER = True
 WIT = datetime.timezone(datetime.timedelta(hours=9))
 STATION = (-2.5145, 140.7043)                     # Stasiun Geofisika Jayapura (JAY)
-DEPTH_CLASSES = [("Dangkal (< 70 km)", 0, 70, "#dc2626"), ("Menengah (70–300 km)", 70, 300, "#f59e0b"),
-                 ("Dalam (≥ 300 km)", 300, 10_000, "#16a34a")]
+# Warna kedalaman sengaja bukan hijau/kuning/hitam agar tidak tertukar dengan status stasiun.
+DEPTH_CLASSES = [("Dangkal (< 70 km)", 0, 70, "#dc2626"), ("Menengah (70–300 km)", 70, 300, "#2563eb"),
+                 ("Dalam (≥ 300 km)", 300, 10_000, "#9333ea")]
 MAG_BINS = [("< 3,0", None, 3.0), ("3,0–3,9", 3.0, 4.0), ("4,0–4,9", 4.0, 5.0), ("5,0–5,9", 5.0, 6.0), ("≥ 6,0", 6.0, None)]
 
 
@@ -33,7 +35,8 @@ def _mag_bin(mag):
     return MAG_BINS[0][0]
 
 
-def _map(events):
+def _map(events, stations=None):
+    """Peta episenter; `stations` (seismic_stations.station_health) ditumpangkan sebagai segitiga."""
     lats = sorted(e["lat"] for e in events)
     lons = sorted(e["lon"] for e in events)
     k = max(1, len(lats) // 100)                    # buang 1% pencilan untuk batas peta
@@ -53,8 +56,19 @@ def _map(events):
         x, y = smap.project(e["lat"], e["lon"])
         ax.scatter(x, y, s=4 + (max(e["mag"], 1.5) - 1.5) ** 2.2 * 9, c=e["depth_color"], alpha=0.75,
                    edgecolors="#111827", linewidths=0.3)
+    for st_ in stations or []:
+        if st_["lat"] is None:
+            continue
+        x, y = smap.project(st_["lat"], st_["lon"])
+        if not (0 <= x <= smap.width and 0 <= y <= smap.height):
+            continue
+        ax.plot(x, y, marker="^", ms=7.5, mfc=st_["color"], mec="#111827" if st_["state"] != "off" else "white",
+                mew=0.7, ls="")
+        ax.annotate(st_["station"], (x, y), xytext=(0, 6), textcoords="offset points", fontsize=5.5,
+                    ha="center", color="#111827")
     sx, sy = smap.project(*STATION)
-    ax.plot(sx, sy, marker="^", ms=9, mfc=NAVY, mec="white", mew=1)
+    if not stations:
+        ax.plot(sx, sy, marker="^", ms=9, mfc=NAVY, mec="white", mew=1)
     ax.annotate("JAY", (sx, sy), xytext=(6, -12), textcoords="offset points", fontsize=7.5, fontweight="bold",
                 bbox=dict(boxstyle="round,pad=.2", fc="white", ec="none", alpha=0.8))
     lon_t = [round(lo0 + (lo1 - lo0) * i / 4, 1) for i in range(5)]
@@ -71,7 +85,12 @@ def _map(events):
                for lab, _lo, _hi, c in DEPTH_CLASSES]
     handles += [Line2D([], [], marker="o", ls="", mfc="white", mec="#374151", ms=(4 + (m - 1.5) ** 2.2 * 9) ** 0.5,
                        label=f"M{m:g}".replace(".", ",")) for m in (3, 5)]
-    handles.append(Line2D([], [], marker="^", ls="", mfc=NAVY, mec="white", ms=8, label="Stasiun JAY"))
+    if stations:
+        from reporting.seismic_stations import STATES
+        handles += [Line2D([], [], marker="^", ls="", mfc=c, mec="#111827", mew=0.7, ms=7, label=f"Stasiun: {lab}")
+                    for lab, c in STATES.values()]
+    else:
+        handles.append(Line2D([], [], marker="^", ls="", mfc=NAVY, mec="white", ms=8, label="Stasiun JAY"))
     ax.legend(handles=handles, loc="lower left", fontsize=7, framealpha=0.9, ncol=2)
     ax.text(smap.width - 4, smap.height - 4, ATTRIBUTION, ha="right", va="bottom", fontsize=6.5,
             bbox=dict(fc="white", ec="none", alpha=0.8, pad=1.5))
@@ -131,6 +150,7 @@ def build(period, officer=None):
                         "mag_max": max((e["mag"] for e in mv), default=None),
                         "n_m5": sum(1 for e in mv if e["mag"] >= 5)})
     mags = [e["mag"] for e in events]
+    health = station_health()
     biggest = sorted(events, key=lambda e: -e["mag"])[:5]
     partners = Counter(n for e in events for n in e["officers"] if officer is None or n != officer.nama)
     return {
@@ -142,6 +162,7 @@ def build(period, officer=None):
         "depth_counts": [(lab, sum(1 for e in events if e["depth_class"] == lab)) for lab, *_ in DEPTH_CLASSES],
         "mag_counts": [(lab, sum(1 for e in events if _mag_bin(e["mag"]) == lab)) for lab, *_ in MAG_BINS],
         "biggest": biggest, "partners": partners.most_common(),
-        "map": _map(events) if events else None,
+        "health": health,
+        "map": _map(events, health["stations"] if health else None) if events else None,
         "chart": _charts(events, months) if events else None,
     }

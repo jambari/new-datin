@@ -26,18 +26,19 @@ from datetime import datetime, timedelta, timezone
 
 WIT = zoneinfo.ZoneInfo("Asia/Jayapura")
 
-# Event dengan origin_time sebelum 1 Juni 2026 WIT dianggap ON TIME
-# (data backfill lama yang selisih insert-nya tidak relevan).
-DELTA_ON_TIME_CUTOFF = datetime(2026, 6, 1, tzinfo=WIT)
+# Sejak 2026 Event.created_at = waktu commit manual pertama di SeisComP (data impor susulan
+# diselaraskan 2026-10-18); sebelum itu created_at hanya waktu impor sehingga delta tidak dihitung.
+DELTA_VALID_FROM = datetime(2026, 1, 1, tzinfo=WIT)
+DELTA_ON_TIME_MINUTES = 5
 
 
 def delta_on_time_info(origin_time, insert_time):
     """Kembalikan (delta_minutes, label).
 
     Aturan:
-      - origin_time < 1 Juni 2026 WIT  -> (None, "ON TIME")
-      - selisih insert <= 5 menit      -> (menit, "ON TIME")
-      - selisih insert >  5 menit      -> (menit, "LATE")
+      - origin_time < DELTA_VALID_FROM  -> (None, "–")
+      - selisih insert <= 5 menit       -> (menit, "ON TIME")
+      - selisih insert >  5 menit       -> (menit, "LATE")
     """
     if origin_time is None or insert_time is None:
         return None, "–"
@@ -47,10 +48,10 @@ def delta_on_time_info(origin_time, insert_time):
         ot = ot.replace(tzinfo=timezone.utc)
     if it.tzinfo is None:
         it = it.replace(tzinfo=timezone.utc)
-    if ot < DELTA_ON_TIME_CUTOFF:
-        return None, "ON TIME"
+    if ot < DELTA_VALID_FROM:
+        return None, "–"
     minutes = (it - ot).total_seconds() / 60.0
-    return round(minutes, 1), ("ON TIME" if minutes <= 5 else "LATE")
+    return round(minutes, 1), ("ON TIME" if minutes <= DELTA_ON_TIME_MINUTES else "LATE")
 
 
 def _local(origin_time_utc):

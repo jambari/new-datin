@@ -348,7 +348,8 @@ class GempabumiReportTest(TestCase):
 
 
 class GempabumiCepatReportTest(TestCase):
-    def test_delta_and_percentages(self):
+    @mock.patch("reporting.osm._tile", side_effect=fake_tile)
+    def test_delta_and_percentages(self, _tile):
         from jadwal.models import Pegawai
         from qc_review.models import Event, QCRun
         user = get_user_model().objects.create_user("jambari", password="x")
@@ -377,3 +378,44 @@ class GempabumiCepatReportTest(TestCase):
         self.assertContains(r, "kurang dari 3 menit")
         self.assertContains(r, "33,3")
         self.assertContains(r, "<td>02:00:00</td><td>11:00:00</td>", html=False)
+
+    @mock.patch("reporting.osm._tile", side_effect=fake_tile)
+    def test_station_health_on_map_and_appendix(self, _tile):
+        from qc_review.models import Event, QCRun, StationDailyQC, StationDiagnosis
+        from stations.models import Station
+        e = Event.objects.create(public_id="x", origin_time=datetime.datetime(2026, 6, 5, 2, tzinfo=UTC),
+                                 latitude=-3.0, longitude=139.5, depth_km=10, magnitude=3.0)
+        QCRun.objects.create(event=e, run_number=1)
+        day = datetime.date(2026, 10, 17)
+        for sta, chans in {"JAY": {"SHZ": "green", "SHN": "green"}, "ARMI": {"SHZ": "red", "SHN": "green"},
+                           "AMPM": {"SHZ": "red", "SHN": "red"}}.items():
+            for cha, sev in chans.items():
+                StationDailyQC.objects.create(network="IA", station=sta, channel=cha, day=day, status=sev)
+        StationDiagnosis.objects.create(network="IA", station="ARMI", channel="SHZ", day=day, code="COMPONENT_DEAD",
+                                        severity="red", message_id="SHZ mati.", message_en="SHZ dead.")
+        for cha in ("SHZ", "SHN"):
+            StationDiagnosis.objects.create(network="IA", station="AMPM", channel=cha, day=day, code="NO_DATA",
+                                            severity="red", message_id="Tidak ada data.", message_en="No data.")
+        for code, lat in (("JAY", -2.51), ("ARMI", -2.9), ("AMPM", -3.3), ("DYPI", -4.85)):
+            Station.objects.create(network="IA", code=code, latitude=lat, longitude=140.0,
+                                   station_type=Station.TYPE_SEISMIC)
+        self.client.force_login(get_user_model().objects.create_user("tamu", password="x"))
+        r = self.client.get(report_url("gempabumi_cepat", start=(6, 2026), end=(6, 2026)))
+        h = r.context["health"]
+        self.assertEqual({s["station"]: s["state"] for s in h["stations"]},
+                         {"JAY": "baik", "ARMI": "gangguan", "AMPM": "off", "DYPI": "off"})
+        self.assertEqual([k for _lab, _c, k in h["counts"]], [1, 1, 2])
+        self.assertIsNotNone(r.context["map"])
+        self.assertContains(r, "Hasil Station Health Monitoring")
+        self.assertContains(r, "V. Kendala")
+        self.assertContains(r, "SHZ mati.")
+
+
+class DeltaRuleTest(TestCase):
+    def test_no_on_time_default_before_2026(self):
+        from qc_review.utils import delta_on_time_info
+        old = datetime.datetime(2025, 12, 1, tzinfo=UTC)
+        self.assertEqual(delta_on_time_info(old, old + datetime.timedelta(days=90)), (None, "–"))
+        t = datetime.datetime(2026, 2, 1, tzinfo=UTC)
+        self.assertEqual(delta_on_time_info(t, t + datetime.timedelta(minutes=7)), (7.0, "LATE"))
+        self.assertEqual(delta_on_time_info(t, t + datetime.timedelta(minutes=4)), (4.0, "ON TIME"))

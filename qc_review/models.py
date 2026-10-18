@@ -36,13 +36,13 @@ class Event(models.Model):
 
     @property
     def insert_delta_minutes(self):
-        """Selisih menit antara created_at dan origin_time (None untuk data sebelum Juni 2026)."""
+        """Selisih menit antara created_at dan origin_time (None untuk data sebelum 2026)."""
         from .utils import delta_on_time_info
         return delta_on_time_info(self.origin_time, self.created_at)[0]
 
     @property
     def insert_delta_label(self):
-        """ON TIME / LATE, dengan data sebelum Juni 2026 selalu ON TIME."""
+        """ON TIME / LATE; "–" untuk data sebelum 2026."""
         from .utils import delta_on_time_info
         return delta_on_time_info(self.origin_time, self.created_at)[1]
 

@@ -37,7 +37,7 @@
 </tbody></table>
 
 <h2>IV. Sebaran Episenter</h2>
-<img class="mapfig" src="{{ map }}" alt="Peta sebaran episenter"><div class="cap">Gambar 1. Sebaran episenter gempabumi {{ period.short_label }} (warna = kedalaman, ukuran = magnitudo; basemap © OpenStreetMap contributors).</div>
+<img class="mapfig" src="{{ map }}" alt="Peta sebaran episenter"><div class="cap">Gambar 1. Sebaran episenter gempabumi {{ period.short_label }} (lingkaran: warna = kedalaman, ukuran = magnitudo){% if health %} dan stasiun seismik (segitiga) dengan status kesehatan {{ health.day|date:"d/m/Y" }}: hijau = baik, kuning = gangguan, hitam = off{% endif %}. Basemap © OpenStreetMap contributors.</div>
 <img class="fig" src="{{ chart }}" alt="Grafik statistik"><div class="cap">Gambar 2. Jumlah kejadian per bulan, sebaran magnitudo, dan kedalaman.</div>
 {% if per_officer and partners %}<p class="note">Rekan dinas pada kejadian-kejadian ini: {% for nm, c in partners %}{{ nm }} ({{ c }}){% if not forloop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
 

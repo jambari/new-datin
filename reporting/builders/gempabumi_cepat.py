@@ -9,18 +9,24 @@ import datetime
 import statistics as st
 from collections import Counter
 
-from qc_review.models import Event
+from django.db.models import Count, Q
+
+from qc_review.models import Event, StationResult
+from qc_review.utils import DELTA_VALID_FROM as DELTA_START
+from reporting.builders.gempabumi import _depth_class, _map
 from reporting.charts import NAVY, new_figure, to_data_uri
 from reporting.common import BULAN
+from reporting.seismic_stations import station_health
 
 TITLE = ("Tersedianya informasi gempabumi dengan Magnitudo M < 5.0 "
          "yang disampaikan dalam waktu kurang dari 3 menit")
 PER_OFFICER = True
 WIT = datetime.timezone(datetime.timedelta(hours=9))
-DELTA_START = datetime.datetime(2026, 1, 1, tzinfo=WIT)
 MAG_LIMIT = 5.0
 TARGET_MIN = 3.0
 GREEN, RED, GREY = "#16a34a", "#dc2626", "#9ca3af"
+MAG_CLASSES = [("M < 3,0", 0, 3), ("M 3,0–3,9", 3, 4), ("M 4,0–4,9", 4, 5)]
+PICK_CLASSES = [("< 5 stasiun", 0, 5), ("5–7 stasiun", 5, 8), ("8–11 stasiun", 8, 12), ("≥ 12 stasiun", 12, None)]
 DELTA_BINS = [("< 1", 0, 1), ("1–2", 1, 2), ("2–3", 2, 3), ("3–5", 3, 5), ("5–10", 5, 10),
               ("10–30", 10, 30), ("≥ 30", 30, None)]
 
@@ -77,8 +83,14 @@ def build(period, officer=None):
           .distinct().prefetch_related("petugas").order_by("origin_time"))
     if officer is not None:
         qs = qs.filter(petugas=officer)
+    qs = list(qs)
+    # Jumlah stasiun yang di-pick petugas (fase P) pada commit pertama.
+    picks = dict(StationResult.objects.filter(run__event__in=qs, run__run_number=1)
+                 .values("run__event_id").annotate(n=Count("id", filter=Q(analyst_p__isnull=False)))
+                 .values_list("run__event_id", "n"))
     events = []
     for e in qs:
+        dclass, dcolor = _depth_class(e.depth_km)
         delta = None
         if e.origin_time >= DELTA_START and e.created_at:
             delta = (e.created_at - e.origin_time).total_seconds()
@@ -88,7 +100,7 @@ def build(period, officer=None):
             "time_wit": e.origin_time.astimezone(WIT).replace(tzinfo=None),
             "sent_wit": e.created_at.astimezone(WIT).replace(tzinfo=None) if delta is not None else None,
             "lat": e.latitude, "lon": e.longitude, "depth": e.depth_km, "mag": e.magnitude,
-            "region": e.region or "",
+            "region": e.region or "", "depth_class": dclass, "depth_color": dcolor, "n_picks": picks.get(e.pk),
             "delta_min": delta / 60 if delta is not None else None,
             "delta_text": fmt_delta(delta) if delta is not None else "–",
             "on_time": delta is not None and delta < TARGET_MIN * 60,
@@ -106,7 +118,22 @@ def build(period, officer=None):
     timed = [e for e in events if e["delta_min"] is not None]
     n_on = sum(1 for e in timed if e["on_time"])
     deltas = [e["delta_min"] for e in timed]
+    def group(rows, key, classes):
+        out = []
+        for lab, lo, hi in classes:
+            g = [e for e in rows if key(e) is not None and key(e) >= lo and (hi is None or key(e) < hi)]
+            on_ = sum(1 for e in g if e["on_time"])
+            out.append({"label": lab, "n": len(g), "on": on_, "pct_on": _pct(on_, len(g)),
+                        "median": st.median(e["delta_min"] for e in g) if g else None,
+                        "picks": st.median(e["n_picks"] for e in g if e["n_picks"] is not None)
+                        if any(e["n_picks"] is not None for e in g) else None})
+        return out
+    health = station_health()
     return {
+        "by_mag": group(timed, lambda e: e["mag"], MAG_CLASSES),
+        "by_picks": group(timed, lambda e: e["n_picks"], PICK_CLASSES),
+        "health": health,
+        "map": _map(events, health["stations"] if health else None) if events else None,
         "officer": officer, "per_officer": officer is not None,
         "events": events, "n": len(events), "n_timed": len(timed), "n_untimed": len(events) - len(timed),
         "n_on": n_on, "n_late": len(timed) - n_on,
