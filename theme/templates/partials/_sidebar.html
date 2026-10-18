@@ -275,11 +275,6 @@
                 </a>
               </li>
               <li>
-                <a href="{% url 'magnet_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
-                  Ketersediaan Data
-                </a>
-              </li>
-              <li>
                 <a href="{% url 'fmi_indices_list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
                   Indeks K &amp; A
                 </a>
@@ -296,11 +291,6 @@
               <li>
                 <a href="{% url 'lightning:nexstorm_query_page' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
                   Query Sambaran
-                </a>
-              </li>
-              <li>
-                <a href="{% url 'lightning:lightning_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
-                  Ketersediaan Data
                 </a>
               </li>
               <li>
@@ -441,6 +431,16 @@
               <li>
                 <a href="{% url 'accelero_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
                   Akselerograf
+                </a>
+              </li>
+              <li>
+                <a href="{% url 'magnet_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                  Magnetik
+                </a>
+              </li>
+              <li>
+                <a href="{% url 'lightning:lightning_availability_query' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+                  Petir
                 </a>
               </li>
               {% comment %} Diganti tautan Monitoring WRSNG di bawah.
