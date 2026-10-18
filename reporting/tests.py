@@ -246,3 +246,62 @@ class HujanReportTest(TestCase):
 
     def test_hujan_in_report_type_choices(self):
         self.assertContains(self.client.get("/reporting/"), "Hujan (Curah Hujan Harian)")
+
+
+class HujanCreditTest(TestCase):
+    """Hujan 07:00 WIT dikreditkan ke semua petugas dinas malam (MT/PSM) dari hari sebelumnya."""
+
+    def setUp(self):
+        from jadwal.models import JadwalHarian, Pegawai, PolaDinas
+        self.MT = PolaDinas.objects.create(kode="MT", nama="Malam Tengah Malam", jam_mulai=datetime.time(19, 30),
+                                           jam_selesai=datetime.time(8, 0), durasi=12.5)
+        self.PSM = PolaDinas.objects.create(kode="PSM", nama="Pagi Siang Malam", jam_mulai=datetime.time(7, 30),
+                                            jam_selesai=datetime.time(8, 0), durasi=24.5)
+        self.PS = PolaDinas.objects.create(kode="PS", nama="Pagi Siang", jam_mulai=datetime.time(7, 30),
+                                           jam_selesai=datetime.time(20, 0), durasi=12.5)
+        U = get_user_model()
+        self.juan_user = U.objects.create_user("juan", password="x")
+        self.lidya_user = U.objects.create_user("lidya", password="x")
+        self.juan = Pegawai.objects.create(user=self.juan_user, nama="GREGORIUS JUAN P. P. HALAWA, S.Tr.Geof", nip="1", pangkat="-", jabatan="-")
+        self.lidya = Pegawai.objects.create(user=self.lidya_user, nama="LIDYA N. HUTAPEA, S.Si", nip="2", pangkat="-", jabatan="-")
+        self.richard = Pegawai.objects.create(nama="RICHARD MILHOUS PANGKALI, S.Tr.Geof", nip="3", pangkat="-", jabatan="-")
+        J = JadwalHarian.objects.create
+        J(pegawai=self.juan, tanggal=datetime.date(2026, 1, 4), pola=self.MT)     # -> pembacaan 5 Jan
+        J(pegawai=self.lidya, tanggal=datetime.date(2026, 1, 4), pola=self.MT)
+        J(pegawai=self.richard, tanggal=datetime.date(2026, 1, 5), pola=self.PS)  # dinas pagi 5 Jan: tidak
+        J(pegawai=self.juan, tanggal=datetime.date(2026, 1, 9), pola=self.PSM)    # -> pembacaan 10 Jan
+        J(pegawai=self.lidya, tanggal=datetime.date(2026, 1, 9), pola=self.MT, keterangan_lain="CUTI")
+        J(pegawai=self.lidya, tanggal=datetime.date(2026, 1, 19), pola=self.MT)   # -> 20 Jan, tercatat Richard
+        from hujan.models import Hujan
+        Hujan.objects.create(tanggal=datetime.date(2026, 1, 5), hilman=95, obs=97.0, kategori="sangat lebat", petugas="Juan")
+        Hujan.objects.create(tanggal=datetime.date(2026, 1, 10), hilman=3, obs=3.2, kategori="sangat ringan", petugas="juan")
+        Hujan.objects.create(tanggal=datetime.date(2026, 1, 20), hilman=0, obs=0, kategori="nihil", petugas="richard")
+
+    def test_staff_on_duty_and_name_matching(self):
+        from jadwal.duty import all_pegawai, match_pegawai, staff_on_duty_at
+        t5, t10 = datetime.datetime(2026, 1, 5, 7), datetime.datetime(2026, 1, 10, 7)
+        on = staff_on_duty_at([t5, t10])
+        self.assertEqual(set(on[t5]), {self.juan, self.lidya})
+        self.assertEqual(on[t10], [self.juan])  # PSM 24,5 jam; Lidya cuti
+        peg = all_pegawai()
+        self.assertEqual(match_pegawai("Juan", peg), self.juan)
+        self.assertEqual(match_pegawai("RICHARD MILHOUS PANGKALI, S.Tr.Geof", peg), self.richard)
+        self.assertIsNone(match_pegawai("staff ops", peg))
+
+    def test_report_credits_both_night_officers_and_swaps(self):
+        self.client.force_login(self.lidya_user)
+        r = self.client.get(report_url("hujan", start=(1, 2026), end=(1, 2026)))
+        c = r.context
+        self.assertTrue(c["per_officer"])
+        days = [d["date"].day for m in c["months"] for d in m["days"]]
+        self.assertEqual(days, [5, 20])          # 5 Jan walau tercatat Juan; 20 Jan tukar dinas tercatat Richard
+        jan5 = c["months"][0]["days"][0]
+        self.assertEqual(set(jan5["officers"]), {self.juan.nama, self.lidya.nama})
+        jan20 = c["months"][0]["days"][1]
+        self.assertEqual(set(jan20["officers"]), {self.lidya.nama, self.richard.nama})
+        self.assertEqual(c["n_records"], 2)
+        self.assertContains(r, "LIDYA N. HUTAPEA")
+
+        self.client.force_login(self.juan_user)
+        c = self.client.get(report_url("hujan", start=(1, 2026), end=(1, 2026))).context
+        self.assertEqual([d["date"].day for m in c["months"] for d in m["days"]], [5, 10])

@@ -83,6 +83,7 @@ def report(request):
         "report_label": dict(REPORT_TYPES)[data["jenis"]],
         "back_url": reverse("reporting:index"),
         "generated_at": datetime.datetime.now(),
-        **module.build(period),
+        **(module.build(period, officer=getattr(request.user, "pegawai", None))
+           if getattr(module, "PER_OFFICER", False) else module.build(period)),
     }
     return render(request, template, context)

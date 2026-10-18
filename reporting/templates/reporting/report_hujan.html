@@ -8,20 +8,21 @@
 <ol>
   <li><b>Sumber data:</b> pencatatan hujan harian stasiun pada sistem informasi Stasiun Geofisika Jayapura (menu <i>Kualitas Udara &gt; Data Hujan</i>).</li>
   <li><b>Alat ukur:</b> penakar hujan observatorium (OBS) sebagai nilai utama, dan penakar Hellmann sebagai pembanding. Nilai Hellmann 9999 menandakan alat tidak beroperasi.</li>
+  <li><b>Kredit petugas:</b> hujan dibaca pukul 07:00 WIT oleh petugas dinas malam (mis. MT 19:30–08:00 atau PSM) yang bertugas sejak hari sebelumnya, biasanya dua orang. Setiap pembacaan dikreditkan kepada <b>semua</b> petugas yang menurut jadwal dinas sedang bertugas pukul 07:00, walaupun hanya satu nama yang tercatat di kolom petugas; nama di kolom petugas juga dikreditkan bila berbeda (tukar dinas).{% if per_officer %} Laporan ini memuat pembacaan yang dikreditkan kepada <b>{{ officer.nama }}</b>.{% endif %}</li>
   <li><b>Statistik:</b> total curah hujan, jumlah hari hujan (OBS &gt; 0 mm), hujan harian maksimum, dan sebaran kategori intensitas sesuai pencatatan petugas. Penulisan kategori diseragamkan (mis. “Hujan Sangat Ringan”, “sangat ringan” → Sangat Ringan).</li>
   <li><b>Kontrol kualitas:</b> kelengkapan data harian, status alat Hellmann, dan selisih OBS–Hellmann lebih dari 20% (minimal 1 mm).</li>
 </ol>
 
 <h2>III. Ringkasan Capaian</h2>
 <div class="kpi">
-  <div><b>{{ n_records }}/{{ ndays }}</b><span>hari tercatat ({{ completeness|idn:1 }}%)</span></div>
+  <div><b>{{ n_records }}/{{ ndays }}</b><span>{% if per_officer %}pembacaan tersedia dari {{ ndays }} hari dinas malam{% else %}hari tercatat{% endif %} ({{ completeness|idn:1 }}%)</span></div>
   <div><b>{{ total|idn:1 }}</b><span>total curah hujan (mm)</span></div>
   <div><b>{{ rainy }}</b><span>hari hujan (OBS &gt; 0 mm)</span></div>
   <div><b>{{ peak.obs|idn:1 }}</b><span>hujan harian maksimum (mm){% if peak %}, {{ peak.date|date:"d/m/Y" }}{% endif %}</span></div>
 </div>
 <div class="avoid">
 <h3>Tabel 1. Ringkasan bulanan</h3>
-<table><thead><tr><th>Bulan</th><th>Hari tercatat</th><th>Total (mm)</th><th>Hari hujan</th><th>Maksimum (mm)</th><th>Tanggal maks.</th><th>Hellmann tidak beroperasi</th></tr></thead><tbody>
+<table><thead><tr><th>Bulan</th><th>{% if per_officer %}Pembacaan / hari dinas{% else %}Hari tercatat{% endif %}</th><th>Total (mm)</th><th>Hari hujan</th><th>Maksimum (mm)</th><th>Tanggal maks.</th><th>Hellmann tidak beroperasi</th></tr></thead><tbody>
 {% for m in months %}<tr><td>{{ m.label }}</td><td class="c">{{ m.n }}/{{ m.ndays }}</td><td class="n">{{ m.total|idn:1 }}</td><td class="c">{{ m.rainy }}</td><td class="n">{{ m.peak.obs|idn:1 }}</td><td class="c">{% if m.peak %}{{ m.peak.date|date:"d/m" }} ({{ m.peak.cat|default:"–" }}){% else %}–{% endif %}</td><td class="c">{{ m.hellmann_off|length }} hari</td></tr>{% endfor %}
 <tr><td><b>Periode</b></td><td class="c"><b>{{ n_records }}/{{ ndays }}</b></td><td class="n"><b>{{ total|idn:1 }}</b></td><td class="c"><b>{{ rainy }}</b></td><td class="n"><b>{{ peak.obs|idn:1 }}</b></td><td></td><td class="c"><b>{{ hellmann_off|length }} hari</b></td></tr>
 </tbody></table>
@@ -37,24 +38,29 @@
 <h2 class="pb">IV. Data Curah Hujan Harian</h2>
 {% for m in months %}
   <h3{% if not forloop.first %} class="pb"{% endif %}>IV.{{ forloop.counter }} {{ m.label }}</h3>
-  <p>Tercatat <b>{{ m.n }} dari {{ m.ndays }} hari</b> dengan total curah hujan <b>{{ m.total|idn:1 }} mm</b> dan {{ m.rainy }} hari hujan.{% if m.peak %} Hujan harian tertinggi {{ m.peak.obs|idn:1 }} mm pada {{ m.peak.date|date:"d/m/Y" }}.{% endif %}</p>
+  {% if not m.days %}<p class="note">Tidak ada hari dinas malam{% if per_officer %} untuk {{ officer.nama }}{% endif %} pada bulan ini.</p>{% else %}
+  <p>Tercatat <b>{{ m.n }} dari {{ m.ndays }} {% if per_officer %}hari dinas malam{% else %}hari{% endif %}</b> dengan total curah hujan <b>{{ m.total|idn:1 }} mm</b> dan {{ m.rainy }} hari hujan.{% if m.peak %} Hujan harian tertinggi {{ m.peak.obs|idn:1 }} mm pada {{ m.peak.date|date:"d/m/Y" }}.{% endif %}</p>
   <img class="fig" style="width:82%;display:block;margin:4px auto" src="{{ m.chart }}" alt="Hujan {{ m.label }}">
-  <table class="k"><thead><tr><th>Tgl</th><th>OBS (mm)</th><th>Hellmann (mm)</th><th>Kategori</th><th>Petugas</th><th>Keterangan</th></tr></thead><tbody>
+  <table class="k"><thead><tr><th>Tgl</th><th>OBS (mm)</th><th>Hellmann (mm)</th><th>Kategori</th><th>Petugas dinas malam (07:00 WIT)</th><th>Tercatat</th><th>Keterangan</th></tr></thead><tbody>
   {% for d in m.days %}
-    {% if d.obs is None %}<tr class="emp"><td>{{ d.date.day }}</td><td colspan="5">Tidak ada data</td></tr>
-    {% else %}<tr{% if d.hellmann_off %} class="ver"{% endif %}><td>{{ d.date.day }}</td><td class="n">{{ d.obs|idn:1 }}</td><td class="n">{% if d.hellmann_off %}tidak beroperasi{% else %}{{ d.hellmann|idn:1 }}{% endif %}</td><td>{{ d.cat|default:"–" }}</td><td>{{ d.petugas }}</td><td style="text-align:left">{{ d.note }}</td></tr>{% endif %}
+    {% if d.obs is None %}<tr class="emp"><td>{{ d.date.day }}</td><td colspan="3">Tidak ada data</td><td style="text-align:left">{{ d.officers|join:"; " }}</td><td colspan="2"></td></tr>
+    {% else %}<tr{% if d.hellmann_off %} class="ver"{% endif %}><td>{{ d.date.day }}</td><td class="n">{{ d.obs|idn:1 }}</td><td class="n">{% if d.hellmann_off %}tidak beroperasi{% else %}{{ d.hellmann|idn:1 }}{% endif %}</td><td>{{ d.cat|default:"–" }}</td><td style="text-align:left">{{ d.officers|join:"; "|default:"–" }}</td><td>{{ d.petugas }}</td><td style="text-align:left">{{ d.note }}</td></tr>{% endif %}
   {% endfor %}
   </tbody></table>
+  {% endif %}
 {% endfor %}
 
 <h2 class="pb">V. Catatan Kualitas Data dan Tindak Lanjut</h2>
 <ol>
+  {% if uncredited and not per_officer %}<li><b>Tanpa petugas dinas malam di jadwal:</b> {{ uncredited|length }} hari.</li>{% endif %}
   {% if missing %}<li><b>Hari tanpa catatan:</b> {% for d in missing %}{{ d|date:"d/m/Y" }}{% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% else %}<li><b>Kelengkapan:</b> seluruh hari pada periode ini tercatat.</li>{% endif %}
   {% if hellmann_off %}<li><b>Penakar Hellmann tidak beroperasi</b> pada {{ hellmann_off|length }} hari ({% for d in hellmann_off %}{{ d.date|date:"d/m" }}{% if not forloop.last %}, {% endif %}{% endfor %}); nilai OBS tetap tersedia. Keterangan petugas dicantumkan pada tabel harian.</li>{% endif %}
   {% if n_pairs %}<li><b>Perbandingan OBS–Hellmann:</b> {{ n_pairs }} hari dengan kedua nilai; selisih rata-rata {{ mean_abs_diff|idn:2 }} mm.{% if big_diff %} Selisih &gt; 20%: {% for d in big_diff %}{{ d.date|date:"d/m" }} (OBS {{ d.obs|idn:1 }}, Hellmann {{ d.hellmann|idn:1 }}){% if not forloop.last %}; {% endif %}{% endfor %}.{% endif %}</li>{% endif %}
   {% if raw_label_count > 7 %}<li><b>Penulisan kategori</b> belum seragam ({{ raw_label_count }} variasi penulisan pada periode ini); disarankan memakai pilihan kategori baku saat entri.</li>{% endif %}
 </ol>
 
+{% if per_officer and partners %}<p class="note">Rekan dinas malam pada periode ini: {% for n, c in partners %}{{ n }} ({{ c }} hari){% if not forloop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
+
 <h2>VI. Kesimpulan</h2>
-<p>Selama periode {{ period.label }} tersedia data curah hujan harian Stasiun Geofisika Jayapura untuk <b>{{ n_records }} dari {{ ndays }} hari ({{ completeness|idn:1 }}%)</b>, dengan total curah hujan {{ total|idn:1 }} mm dan {{ rainy }} hari hujan. Data telah diperiksa kelengkapan dan konsistensinya terhadap penakar pembanding, serta kekurangannya diidentifikasi untuk ditindaklanjuti. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah tercapai.</p>
+<p>Selama periode {{ period.label }} tersedia data curah hujan harian Stasiun Geofisika Jayapura {% if per_officer %}yang dikreditkan kepada {{ officer.nama }} untuk <b>{{ n_records }} dari {{ ndays }} hari dinas malam ({{ completeness|idn:1 }}%)</b>{% else %}untuk <b>{{ n_records }} dari {{ ndays }} hari ({{ completeness|idn:1 }}%)</b>{% endif %}, dengan total curah hujan {{ total|idn:1 }} mm dan {{ rainy }} hari hujan. Data telah diperiksa kelengkapan dan konsistensinya terhadap penakar pembanding, serta kekurangannya diidentifikasi untuk ditindaklanjuti. Dengan demikian, sasaran kinerja <b>“{{ title }}”</b> untuk periode ini telah tercapai.</p>
 {% endblock %}

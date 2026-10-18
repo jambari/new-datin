@@ -8,11 +8,14 @@ from matplotlib.patches import Patch
 
 from hujan.categories import kategori_label
 from hujan.models import Hujan
+from jadwal.duty import all_pegawai, match_pegawai, staff_on_duty_at
 from reporting.charts import NAVY, new_figure, to_data_uri
 from reporting.common import BULAN, fmt
 
 TITLE = "Tersedianya data curah hujan yang berkualitas di Stasiun Geofisika Jayapura"
 HELLMANN_OFF = 9999          # penanda alat Hellmann tidak beroperasi pada data stasiun
+READING_TIME = datetime.time(7, 0)   # hujan dibaca pukul 07:00 WIT oleh petugas dinas malam
+PER_OFFICER = True                   # laporan dikreditkan ke pegawai yang login
 CATEGORIES = ["Nihil", "Sangat Ringan", "Ringan", "Sedang", "Lebat", "Sangat Lebat", "Tak Terukur"]
 CAT_COLORS = {"Nihil": "#e5e7eb", "Sangat Ringan": "#bae6fd", "Ringan": "#60a5fa", "Sedang": "#2563eb",
               "Lebat": "#f59e0b", "Sangat Lebat": "#dc2626", "Tak Terukur": "#9ca3af", "Lainnya": "#d1d5db"}
@@ -25,7 +28,7 @@ def _hellmann(value):
     return None if value is None or value >= HELLMANN_OFF else value
 
 
-def _month_chart(label, days):
+def _month_chart(label, days, month_days):
     fig, ax = new_figure(7.4, 2.7)
     x = [d["date"].day for d in days]
     colors = [CAT_COLORS.get(d["cat"], "#d1d5db") if d["obs"] is not None else "#ffffff" for d in days]
@@ -36,8 +39,8 @@ def _month_chart(label, days):
     for d in days:
         if d["obs"] is None:
             ax.axvspan(d["date"].day - 0.45, d["date"].day + 0.45, color="#fee2e2", zorder=0)
-    ax.set_xlim(0.3, len(days) + 0.7)
-    ax.set_xticks(x[::2])
+    ax.set_xlim(0.3, month_days + 0.7)
+    ax.set_xticks(range(1, month_days + 1, 2))
     ax.set_ylabel("Curah hujan (mm)")
     ax.set_xlabel(f"Tanggal ({label})")
     ax.set_ylim(bottom=0)
@@ -65,8 +68,35 @@ def _monthly_totals_chart(months):
     return to_data_uri(fig)
 
 
-def build(period):
+def credited_officers(dates, hujan_by_date=None):
+    """{tanggal: [Pegawai]} petugas yang dikreditkan atas pembacaan hujan tanggal itu.
+
+    Pembacaan pukul 07:00 WIT dilakukan petugas dinas malam (biasanya 2 orang, mis. MT
+    19:30–08:00 atau PSM yang mulai sehari sebelumnya): semua petugas yang bertugas pukul
+    07:00 dikreditkan bersama, ditambah nama di kolom petugas bila berbeda (tukar dinas).
+    """
+    times = {d: datetime.datetime.combine(d, READING_TIME) for d in dates}
+    on_duty = staff_on_duty_at(times.values())
+    pegawai = all_pegawai()
+    out = {}
+    for d, t in times.items():
+        staff = list(on_duty.get(t, []))
+        h = (hujan_by_date or {}).get(d)
+        recorded = match_pegawai(h.petugas, pegawai) if h else None
+        if recorded and recorded not in staff:
+            staff.append(recorded)
+        out[d] = staff
+    return out
+
+
+def build(period, officer=None):
+    all_dates = [period.start + datetime.timedelta(days=i) for i in range(period.days)]
     rows = {h.tanggal: h for h in Hujan.objects.filter(tanggal__range=(period.start, period.end)).order_by("tanggal", "id")}
+    credit = credited_officers(all_dates, rows)
+    if officer is not None:
+        own_dates = {d for d in all_dates if officer in credit[d]}
+    else:
+        own_dates = set(all_dates)
     raw_labels = set()
     months = []
     all_days = []
@@ -76,18 +106,20 @@ def build(period):
         days = []
         d = start
         while d <= end:
-            h = rows.get(d)
-            if h is not None:
-                raw_labels.add(h.kategori or "")
-            days.append({
-                "date": d, "obj": h,
-                "obs": h.obs if h else None,
-                "hellmann": _hellmann(h.hilman) if h else None,
-                "hellmann_off": bool(h and h.hilman is not None and h.hilman >= HELLMANN_OFF),
-                "cat": normalize_category(h.kategori) if h else "",
-                "note": (h.keterangan or "").strip() if h else "",
-                "petugas": h.petugas if h else "",
-            })
+            if d in own_dates:
+                h = rows.get(d)
+                if h is not None:
+                    raw_labels.add(h.kategori or "")
+                days.append({
+                    "date": d, "obj": h,
+                    "obs": h.obs if h else None,
+                    "hellmann": _hellmann(h.hilman) if h else None,
+                    "hellmann_off": bool(h and h.hilman is not None and h.hilman >= HELLMANN_OFF),
+                    "cat": normalize_category(h.kategori) if h else "",
+                    "note": (h.keterangan or "").strip() if h else "",
+                    "petugas": h.petugas if h else "",
+                    "officers": [p.nama for p in credit[d]],
+                })
             d += datetime.timedelta(days=1)
         rec = [x for x in days if x["obs"] is not None]
         total = sum(x["obs"] for x in rec)
@@ -95,10 +127,11 @@ def build(period):
         label = f"{BULAN[m]} {y}"
         months.append({
             "label": label, "days": days, "n": len(rec), "ndays": len(days),
+            "month_days": (end - start).days + 1,
             "missing": [x["date"] for x in days if x["obs"] is None],
             "total": total, "rainy": sum(1 for x in rec if x["obs"] > 0),
             "peak": peak, "hellmann_off": [x for x in days if x["hellmann_off"]],
-            "chart": _month_chart(label, days),
+            "chart": _month_chart(label, days, (end - start).days + 1) if days else None,
         })
         all_days.extend(days)
 
@@ -108,9 +141,12 @@ def build(period):
     big_diff = [x for x in pairs if abs(x["obs"] - x["hellmann"]) > max(1.0, 0.2 * max(x["obs"], x["hellmann"]))]
     cats = Counter(x["cat"] or "(kosong)" for x in rec)
     peak = max(rec, key=lambda x: x["obs"]) if rec else None
+    ndays = len(all_days)
+    partners = Counter(n for x in all_days for n in x["officers"] if officer is None or n != officer.nama)
     return {
-        "months": months, "ndays": period.days, "n_records": len(rec),
-        "completeness": 100 * len(rec) / period.days if period.days else None,
+        "officer": officer, "per_officer": officer is not None,
+        "months": months, "ndays": ndays, "period_days": period.days, "n_records": len(rec),
+        "completeness": 100 * len(rec) / ndays if ndays else None,
         "missing": [x["date"] for x in all_days if x["obs"] is None],
         "total": sum(x["obs"] for x in rec), "rainy": sum(1 for x in rec if x["obs"] > 0),
         "peak": peak,
@@ -119,5 +155,7 @@ def build(period):
         "n_pairs": len(pairs), "mean_abs_diff": st.mean(diffs) if diffs else None,
         "big_diff": big_diff,
         "hellmann_off": [x for x in all_days if x["hellmann_off"]],
-        "chart_totals": _monthly_totals_chart(months) if len(months) > 1 else None,
+        "partners": partners.most_common(),
+        "uncredited": [d for d in all_dates if not credit[d]],
+        "chart_totals": _monthly_totals_chart(months) if len(months) > 1 and rec else None,
     }
