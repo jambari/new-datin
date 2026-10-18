@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 from django.urls import reverse
 import json
 from django.http import JsonResponse
-from .constants import WRS_CODE_MAP, CODE_TO_STATION
+from .constants import WRS_CODE_MAP, WRS_REPORT_STATIONS, CODE_TO_STATION
 
 class WRSNGStatusUpdateAPI(APIView):
     """
@@ -132,12 +132,12 @@ def wrsng_availability_query(request):
     daftar_bulan_indo = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
     month_name = daftar_bulan_indo[selected_month]
 
-    station_list = list(WRS_CODE_MAP.keys())
+    station_list = list(WRS_REPORT_STATIONS)
 
     # Flat list of all actual codes for DB queries
-    all_wrs_codes = [code for codes in WRS_CODE_MAP.values() for code in codes]
+    all_wrs_codes = [code for name in station_list for code in WRS_CODE_MAP.get(name, [])]
     # Reverse map: actual DB code -> display name
-    CODE_TO_STATION = {code: name for name, codes in WRS_CODE_MAP.items() for code in codes}
+    CODE_TO_STATION = {code: name for name in station_list for code in WRS_CODE_MAP.get(name, [])}
 
     # Date Range
     start_date = datetime.datetime(selected_year, selected_month, 1, tzinfo=datetime.timezone.utc)
@@ -178,7 +178,7 @@ def wrsng_availability_query(request):
             status_val = log['display_status']
             auto_map[station_name][d_day].append(status_val)
 
-    # 3. GABUNGKAN (Prioritas: Manual > Auto > Default 100)
+    # 3. GABUNGKAN (Prioritas: Manual > Auto > Default 0)
     tabel_data = []
     for stasiun in station_list:
         row = {'nama': stasiun, 'hari': [], 'avg_row': 0}

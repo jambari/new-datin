@@ -10,7 +10,17 @@ WRS_CODE_MAP = {
     "BPBD BIAK NUMFOR":    ["BPBD_BIAK", "bpbd_biak", "bpbd biak"],
     "BASARNAS MERAUKE":    ["BASARNAS_MERAUKE"],
     "BPBD KAB. MIMIKA":    ["bpbd-mimika"],
+    # Belum ada log status dari perangkat; isi kode alat bila sudah diketahui.
+    "BPBD KAB. WAROPEN":   [],
+    "BPBD KAB. SUPIORI":   [],
 }
+
+# Stasiun pada laporan bulanan availability (/wrsng/status/report/), sesuai urutan tampil.
+# BPBD KAB. MIMIKA tidak dilaporkan, tetapi tetap di WRS_CODE_MAP agar log statusnya
+# masih bernama di halaman Status Log.
+WRS_REPORT_STATIONS = [
+    name for name in WRS_CODE_MAP if name != "BPBD KAB. MIMIKA"
+]
 
 CODE_TO_STATION = {
     code: name

@@ -199,3 +199,27 @@ class SecureRedirectExemptTest(TestCase):
             secure=False,
         )
         self.assertEqual(resp.status_code, 301)
+
+
+class WRSNGReportStationsTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        User.objects.create_user('testuser', password='pass123')
+        self.client.login(username='testuser', password='pass123')
+
+    def test_report_drops_mimika_adds_waropen_supiori_with_zero_default(self):
+        resp = self.client.get(reverse('wrsng:wrsng_availability_query'), {'month': 3, 'year': 2026})
+        rows = {r['nama']: r for r in resp.context['tabel_data']}
+        self.assertNotIn('BPBD KAB. MIMIKA', rows)
+        for name in ('BPBD KAB. WAROPEN', 'BPBD KAB. SUPIORI'):
+            self.assertIn(name, rows)
+            self.assertEqual({d['val'] for d in rows[name]['hari']}, {0.0})
+            self.assertEqual(rows[name]['avg_row'], 0)
+        self.assertEqual(len(rows['BPBD KAB. WAROPEN']['hari']), 31)
+
+    def test_status_list_keeps_mimika_filter(self):
+        resp = self.client.get(reverse('wrsng:status_list'))
+        options = resp.context.get('wrs_code_options') or []
+        if options:
+            self.assertIn('BPBD KAB. MIMIKA', options)
+            self.assertNotIn('BPBD KAB. WAROPEN', options)
