@@ -132,3 +132,26 @@ class LightningViewsTest(TestCase):
         self.client.logout()
         resp = self.client.get(reverse('lightning:nexstorm_query_page'))
         self.assertIn(resp.status_code, [200, 302, 403])
+
+
+class LightningGridKotaJayapuraTest(TestCase):
+    def setUp(self):
+        from .models import LightningMonthlyGrid
+        self.client.force_login(User.objects.create_user('petir', password='x'))
+        cells = [(-2.53, 140.71, 3, 4),     # Jayapura Utara
+                 (-2.60, 140.65, 1, 1),     # Heram / Abepura
+                 (-2.60, 140.34, 7, 6),     # Sentani (di luar Kota Jayapura)
+                 (-2.20, 140.90, 2, 0)]     # laut
+        for lat, lon, plus, minus in cells:
+            LightningMonthlyGrid.objects.create(year=2026, month=6, latitude=lat, longitude=lon, cg_plus=plus,
+                                                cg_minus=minus, total=plus + minus, idw_smooth=plus + minus)
+
+    def test_summary_counts_only_cells_inside_city(self):
+        r = self.client.get('/lightning/grid/', {'year': 2026, 'month': 6})
+        self.assertEqual(r.status_code, 200)
+        kj = r.context['kota_jayapura']
+        self.assertEqual(kj['total'], {'cells': 2, 'cg_plus': 4, 'cg_minus': 5, 'total': 9})
+        self.assertEqual(kj['rows'][0], {'name': 'Jayapura Utara', 'cells': 1, 'cg_plus': 3, 'cg_minus': 4, 'total': 7})
+        self.assertEqual(len(kj['rows']), 5)
+        self.assertContains(r, 'Potong ke batas Kota Jayapura')
+        self.assertContains(r, 'kota_jayapura.geojson')

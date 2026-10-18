@@ -1,5 +1,6 @@
 # lightning/views.py
 import json
+from pathlib import Path
 import calendar
 from datetime import date, datetime, timedelta, timezone as dt_timezone
 from django.utils import timezone
@@ -509,6 +510,44 @@ def lightning_grid_months(request):
 
 
 
+KOTA_JAYAPURA_GEOJSON = Path(__file__).resolve().parent / 'static' / 'lightning' / 'kota_jayapura.geojson'
+_kecamatan_cache = None
+
+
+def _kecamatan_polygons():
+    """Poligon kecamatan Kota Jayapura (BPS, WGS84) sebagai GEOS prepared geometry."""
+    global _kecamatan_cache
+    if _kecamatan_cache is None:
+        import json
+        from django.contrib.gis.geos import GEOSGeometry
+        data = json.loads(KOTA_JAYAPURA_GEOJSON.read_text())
+        _kecamatan_cache = [(f['properties']['KECAMATAN'], GEOSGeometry(json.dumps(f['geometry'])).prepared)
+                            for f in data['features']]
+    return _kecamatan_cache
+
+
+def kota_jayapura_summary(cells):
+    """Jumlah sambaran per kecamatan Kota Jayapura dari sel grid yang titik tengahnya di dalam batas."""
+    from django.contrib.gis.geos import Point
+    polys = _kecamatan_polygons()
+    rows = {name: {'name': name, 'cells': 0, 'cg_plus': 0, 'cg_minus': 0, 'total': 0} for name, _ in polys}
+    for c in cells:
+        if not c.total:
+            continue
+        pt = Point(c.longitude, c.latitude)
+        for name, poly in polys:
+            if poly.contains(pt):
+                r = rows[name]
+                r['cells'] += 1
+                r['cg_plus'] += c.cg_plus
+                r['cg_minus'] += c.cg_minus
+                r['total'] += c.total
+                break
+    out = sorted(rows.values(), key=lambda r: -r['total'])
+    total = {k: sum(r[k] for r in out) for k in ('cells', 'cg_plus', 'cg_minus', 'total')}
+    return {'rows': out, 'total': total}
+
+
 @login_required
 def lightning_grid_view(request):
     """HTML page to view monthly grid with IDW color gradient."""
@@ -594,4 +633,5 @@ def lightning_grid_view(request):
         'grid_rows': grid_rows,
         'grid_json': grid_json,
         'api_data_url': f'/lightning/api/grid/monthly/?year={year}&month={month}',
+        'kota_jayapura': kota_jayapura_summary(cells) if cells else None,
     })

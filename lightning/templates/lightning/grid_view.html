@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 <style>
 /* ── Layout ── */
@@ -178,6 +179,10 @@ body { margin:0; font-family:system-ui,sans-serif; }
               <span class="font-bold text-gray-700">🗺️ Peta Kerapatan Sambaran Petir {{ selected_month_name }} {{ selected_year }}</span>
               <div class="toolbar" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
                 <span class="text-gray-400 text-sm">{{ cells|length }} sel</span>
+                <label style="font-size:12px;color:#4b5563;display:flex;align-items:center;gap:6px;cursor:pointer">
+                  <input type="checkbox" id="clipToggle" checked onchange="renderOverlay()">
+                  <span>Potong ke batas Kota Jayapura</span>
+                </label>
                 <label style="font-size:12px;color:#4b5563;display:flex;align-items:center;gap:6px">
                   <span>Opacity:</span>
                   <input type="range" id="opacitySlider" min="10" max="100" value="80" style="width:80px;cursor:pointer" oninput="setOpacity(this.value/100)">
@@ -188,6 +193,19 @@ body { margin:0; font-family:system-ui,sans-serif; }
             <div class="card-body">
               {% if cells %}
               <div id="heatMap"></div>
+              {% if kota_jayapura %}
+              <div style="margin-top:16px">
+                <div class="font-bold text-gray-700" style="font-size:14px;margin-bottom:6px">Sambaran petir di Kota Jayapura per kecamatan — {{ selected_month_name }} {{ selected_year }}</div>
+                <table class="grid-table" style="width:auto;min-width:420px;font-size:13px">
+                  <thead><tr><th style="text-align:left;padding:6px 10px">Kecamatan</th><th style="padding:6px 10px">CG+</th><th style="padding:6px 10px">CG−</th><th style="padding:6px 10px">Total</th><th style="padding:6px 10px">Sel bersambaran</th></tr></thead>
+                  <tbody>
+                    {% for r in kota_jayapura.rows %}<tr><td style="text-align:left;padding:5px 10px">{{ r.name }}</td><td style="padding:5px 10px">{{ r.cg_plus }}</td><td style="padding:5px 10px">{{ r.cg_minus }}</td><td style="padding:5px 10px;font-weight:700">{{ r.total }}</td><td style="padding:5px 10px">{{ r.cells }}</td></tr>{% endfor %}
+                    <tr><td style="text-align:left;padding:5px 10px;font-weight:700">Kota Jayapura</td><td style="padding:5px 10px;font-weight:700">{{ kota_jayapura.total.cg_plus }}</td><td style="padding:5px 10px;font-weight:700">{{ kota_jayapura.total.cg_minus }}</td><td style="padding:5px 10px;font-weight:700">{{ kota_jayapura.total.total }}</td><td style="padding:5px 10px;font-weight:700">{{ kota_jayapura.total.cells }}</td></tr>
+                  </tbody>
+                </table>
+                <p style="font-size:11px;color:#9ca3af;margin-top:6px">Dihitung dari sel grid 0,01° yang titik tengahnya berada di dalam batas kecamatan (batas wilayah: BPS Provinsi Papua).</p>
+              </div>
+              {% endif %}
               {% else %}
               <div class="p-8 text-center text-gray-400">Belum ada data.</div>
               {% endif %}
@@ -258,52 +276,38 @@ function downloadCSV() {
 }
 
 // ── Map ──
-var map = null, overlay = null;
+var map = null, overlay = null, boundary = null, boundaryData = null, baseCanvas = null;
 var GRID = 0.01, lat0 = -3.01, lon0 = 140.21, ROWS = 100, COLS = 100;
+var BOUNDS = [[-3.015, 140.205], [-2.015, 141.205]];   // [selatan-barat], [utara-timur]
+var BOUNDARY_URL = "{% static 'lightning/kota_jayapura.geojson' %}?v=1";
 
-function initMap() {
-  if (map) { map.invalidateSize(); return; }
-  var data = {{ grid_json|safe }};
-  if (!data.length) return;
+// Color function: green -> yellow -> red gradient
+function getColor(ratio){
+  var r,g,b,t;
+  if (ratio < 0.33) {
+    t = ratio/0.33;
+    r=Math.round(34+(234-34)*t); g=Math.round(197+(158-197)*t); b=Math.round(94+(11-94)*t);
+  } else if (ratio < 0.66) {
+    t = (ratio-0.33)/0.33;
+    r=Math.round(234+(239-234)*t); g=Math.round(158+(68-158)*t); b=11;
+  } else {
+    t = (ratio-0.66)/0.34;
+    r=239; g=Math.round(68+(34-68)*t); b=11;
+  }
+  return [r,g,b];
+}
 
-  var lats = data.map(function(c){return c.lat;});
-  var lons = data.map(function(c){return c.lon;});
-  var cLat = (Math.min.apply(null,lats)+Math.max.apply(null,lats))/2;
-  var cLon = (Math.min.apply(null,lons)+Math.max.apply(null,lons))/2;
-  var bnds = [[-3.015,140.205],[-2.015,141.205]];
-
-  map = L.map('heatMap', {center:[cLat,cLon], zoom:10, zoomControl:true});
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18,attribution:'&copy; OpenStreetMap', referrerPolicy: 'strict-origin-when-cross-origin'}).addTo(map);
-
+// Kanvas IDW 800x800 (satu sel 0,01° = 8 px). Baris kanvas 0 = utara.
+function buildBaseCanvas(data) {
   var maxVal = 0;
   data.forEach(function(c){ if(c.idw_smooth > maxVal) maxVal = c.idw_smooth; });
   if (maxVal === 0) maxVal = 1;
-
-  // Build 100x100 grid lookup
   var vg = {};
   data.forEach(function(c){
     var ri = Math.round((c.lat - lat0) / GRID);
     var ci = Math.round((c.lon - lon0) / GRID);
     if (ri >= 0 && ri < ROWS && ci >= 0 && ci < COLS) vg[ri+','+ci] = c.idw_smooth || 0;
   });
-
-  // Color function: green -> yellow -> red gradient
-  function getColor(ratio){
-    var r,g,b;
-    if (ratio < 0.33) {
-      var t = ratio/0.33;
-      r=Math.round(34+(234-34)*t); g=Math.round(197+(158-197)*t); b=Math.round(94+(11-94)*t);
-    } else if (ratio < 0.66) {
-      var t = (ratio-0.33)/0.33;
-      r=Math.round(234+(239-234)*t); g=Math.round(158+(68-158)*t); b=Math.round(11+(11-11)*t);
-    } else {
-      var t = (ratio-0.66)/0.34;
-      r=Math.round(239+(239-239)*t); g=Math.round(68+(34-68)*t); b=Math.round(11+(11-11)*t);
-    }
-    return [r,g,b];
-  }
-
-  // Off-screen canvas 100x100 (1 pixel per cell)
   var cv = document.createElement('canvas');
   cv.width = COLS; cv.height = ROWS;
   var ctx = cv.getContext('2d');
@@ -314,14 +318,12 @@ function initMap() {
       var key = r+','+c;
       var v = vg.hasOwnProperty(key) ? vg[key] / maxVal : 0;
       var rgb = getColor(v);
-      var i = (r*COLS + c)*4;
+      var i = ((ROWS - 1 - r)*COLS + c)*4;           // r=0 adalah lintang paling selatan → baris bawah
       px[i]=rgb[0]; px[i+1]=rgb[1]; px[i+2]=rgb[2];
       px[i+3] = v > 0 ? 255 : 0;
     }
   }
   ctx.putImageData(img, 0, 0);
-
-  // Scale up 8x with smooth interpolation
   var s = 8;
   var big = document.createElement('canvas');
   big.width = COLS*s; big.height = ROWS*s;
@@ -329,9 +331,65 @@ function initMap() {
   bctx.imageSmoothingEnabled = true;
   bctx.imageSmoothingQuality = 'high';
   bctx.drawImage(cv, 0, 0, big.width, big.height);
+  return big;
+}
 
-  overlay = L.imageOverlay(big.toDataURL(), bnds, {opacity:0.8}).addTo(map);
-  map.fitBounds(bnds, {padding:[20,20]});
+// Salin kanvas dasar dan, bila diminta, sisakan hanya bagian di dalam batas Kota Jayapura.
+function renderOverlay() {
+  if (!map || !baseCanvas) return;
+  var clip = document.getElementById('clipToggle').checked && boundaryData;
+  var out = document.createElement('canvas');
+  out.width = baseCanvas.width; out.height = baseCanvas.height;
+  var ctx = out.getContext('2d');
+  ctx.drawImage(baseCanvas, 0, 0);
+  if (clip) {
+    var W = out.width, H = out.height;
+    var x0 = BOUNDS[0][1], y0 = BOUNDS[1][0];
+    var sx = W / (BOUNDS[1][1] - BOUNDS[0][1]), sy = H / (BOUNDS[1][0] - BOUNDS[0][0]);
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.beginPath();
+    boundaryData.features.forEach(function(f){
+      var polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+      polys.forEach(function(rings){
+        rings.forEach(function(ring){
+          ring.forEach(function(p, i){
+            var x = (p[0] - x0) * sx, y = (y0 - p[1]) * sy;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          });
+          ctx.closePath();
+        });
+      });
+    });
+    ctx.fill('evenodd');
+  }
+  var opacity = overlay ? overlay.options.opacity : 0.8;
+  if (overlay) map.removeLayer(overlay);
+  overlay = L.imageOverlay(out.toDataURL(), BOUNDS, {opacity: opacity}).addTo(map);
+  if (boundary) boundary.bringToFront();
+  map.fitBounds(clip ? boundary.getBounds() : BOUNDS, {padding:[20,20]});
+}
+
+function initMap() {
+  if (map) { map.invalidateSize(); return; }
+  var data = {{ grid_json|safe }};
+  if (!data.length) return;
+
+  map = L.map('heatMap', {zoomControl:true});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18,attribution:'&copy; OpenStreetMap', referrerPolicy: 'strict-origin-when-cross-origin'}).addTo(map);
+  map.fitBounds(BOUNDS, {padding:[20,20]});
+  baseCanvas = buildBaseCanvas(data);
+
+  fetch(BOUNDARY_URL).then(function(r){ return r.json(); }).then(function(gj){
+    boundaryData = gj;
+    boundary = L.geoJSON(gj, {
+      style: {color:'#1e3a8a', weight:1.5, fill:true, fillOpacity:0, dashArray:'4 3'},
+      onEachFeature: function(f, layer){ layer.bindTooltip('Kec. ' + f.properties.KECAMATAN, {sticky:true}); }
+    }).addTo(map);
+    renderOverlay();
+  }).catch(function(){
+    document.getElementById('clipToggle').disabled = true;
+    renderOverlay();
+  });
 
   // Legend
   var leg = L.control({position:'bottomright'});
@@ -340,7 +398,8 @@ function initMap() {
     d.innerHTML = '<div class="legend-title">Kerapatan Sambaran</div>' +
       '<i style="background:#22c55e"></i> Rendah<br>' +
       '<i style="background:#f59e0b"></i> Sedang<br>' +
-      '<i style="background:#ef4444"></i> Tinggi';
+      '<i style="background:#ef4444"></i> Tinggi<br>' +
+      '<i style="background:none;border:1.5px dashed #1e3a8a"></i> Batas kecamatan';
     return d;
   };
   leg.addTo(map);
