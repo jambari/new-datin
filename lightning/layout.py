@@ -78,6 +78,12 @@ def _density(cells):
 
 
 def render_layout(year, month, cells):
+    # Gaya bawaan matplotlib: modul lain (reporting.charts) mengubah rcParams global (spine, warna).
+    with plt.style.context("default"):
+        return _render(year, month, cells)
+
+
+def _render(year, month, cells):
     feats = _features()
     union = feats[0][1]
     for _n, g in feats[1:]:
