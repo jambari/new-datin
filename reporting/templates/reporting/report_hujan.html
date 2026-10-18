@@ -38,7 +38,7 @@
 {% for m in months %}
   <h3{% if not forloop.first %} class="pb"{% endif %}>IV.{{ forloop.counter }} {{ m.label }}</h3>
   <p>Tercatat <b>{{ m.n }} dari {{ m.ndays }} hari</b> dengan total curah hujan <b>{{ m.total|idn:1 }} mm</b> dan {{ m.rainy }} hari hujan.{% if m.peak %} Hujan harian tertinggi {{ m.peak.obs|idn:1 }} mm pada {{ m.peak.date|date:"d/m/Y" }}.{% endif %}</p>
-  <img class="fig" src="{{ m.chart }}" alt="Hujan {{ m.label }}">
+  <img class="fig" style="width:82%;display:block;margin:4px auto" src="{{ m.chart }}" alt="Hujan {{ m.label }}">
   <table class="k"><thead><tr><th>Tgl</th><th>OBS (mm)</th><th>Hellmann (mm)</th><th>Kategori</th><th>Petugas</th><th>Keterangan</th></tr></thead><tbody>
   {% for d in m.days %}
     {% if d.obs is None %}<tr class="emp"><td>{{ d.date.day }}</td><td colspan="5">Tidak ada data</td></tr>
