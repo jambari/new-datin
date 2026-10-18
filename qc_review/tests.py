@@ -490,3 +490,32 @@ class EventPetugasTest(TestCase):
         self.assertEqual(set(night.petugas.all()), {self.a, self.b})
         self.assertEqual(list(day.petugas.all()), [self.c])
         self.assertFalse(old.petugas.exists())
+
+
+class HandoverRuleTest(TestCase):
+    """Jam irisan dikreditkan ke dinas sebelumnya; R/WFA ikut dihitung."""
+
+    def test_handover_and_regular(self):
+        import datetime as _d
+        from jadwal.duty import staff_on_duty_at
+        from jadwal.models import JadwalHarian, Pegawai, PolaDinas
+        P = PolaDinas.objects.create
+        mt = P(kode="MT", nama="Malam", jam_mulai=_d.time(19, 30), jam_selesai=_d.time(8), durasi=12.5)
+        ps = P(kode="PS", nama="Pagi Siang", jam_mulai=_d.time(7, 30), jam_selesai=_d.time(20), durasi=12.5)
+        r = P(kode="R", nama="Reguler", jam_mulai=_d.time(7, 30), jam_selesai=_d.time(16), durasi=7.5)
+        psm = P(kode="PSM", nama="PSM", jam_mulai=_d.time(7, 30), jam_selesai=_d.time(8), durasi=24.5)
+        peg = {n: Pegawai.objects.create(nama=n, nip=n, pangkat="-", jabatan="-") for n in ("MALAM", "PAGI", "REG", "MALAM2", "PSM")}
+        J = JadwalHarian.objects.create
+        J(pegawai=peg["MALAM"], tanggal=_d.date(2026, 1, 4), pola=mt)
+        J(pegawai=peg["PAGI"], tanggal=_d.date(2026, 1, 5), pola=ps)
+        J(pegawai=peg["REG"], tanggal=_d.date(2026, 1, 5), pola=r)
+        J(pegawai=peg["MALAM2"], tanggal=_d.date(2026, 1, 5), pola=mt)
+        J(pegawai=peg["PSM"], tanggal=_d.date(2026, 1, 5), pola=psm)
+        t = lambda h, m=0: _d.datetime(2026, 1, 5, h, m)
+        names = lambda x: sorted(p.nama for p in x)
+        on = staff_on_duty_at([t(7, 45), t(10), t(15, 30), t(19, 45), t(23)])
+        self.assertEqual(names(on[t(7, 45)]), ["MALAM"])                  # serah terima pagi -> dinas malam
+        self.assertEqual(names(on[t(10)]), ["PAGI", "PSM", "REG"])        # mulai bersamaan dihitung bersama
+        self.assertEqual(names(on[t(15, 30)]), ["PAGI", "PSM", "REG"])    # R sampai 16:00 (bukan 07:30+7,5)
+        self.assertEqual(names(on[t(19, 45)]), ["PAGI", "PSM"])           # serah terima sore -> PS (PSM masih jalan)
+        self.assertEqual(names(on[t(23)]), ["MALAM2", "PSM"])

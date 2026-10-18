@@ -1,8 +1,13 @@
 """Siapa yang bertugas pada suatu waktu menurut jadwal dinas (jadwal.JadwalHarian).
 
-Rentang dinas dihitung dari jam_mulai + durasi, bukan dari jam_selesai: pola PSM
-(07:30, 24,5 jam) berakhir 08:00 HARI BERIKUTNYA walaupun jam_selesai > jam_mulai.
+Rentang dinas: jam_mulai s.d. jam_selesai, digeser ke hari berikutnya bila dinas
+melewati tengah malam (MT 19:30–08:00) atau durasinya ±24 jam (PSM 07:30, 24,5 jam,
+berakhir 08:00 HARI BERIKUTNYA walaupun jam_selesai > jam_mulai).
 Status DL/Cuti/Sakit/Izin/TB (keterangan_lain) tidak dihitung bertugas.
+
+Jam irisan serah terima: bila dua dinas sama-sama aktif, kejadian dikreditkan ke dinas
+SEBELUMNYA (yang mulai lebih awal dan berakhir lebih awal) — mis. 07:30–08:00 ke dinas
+malam, 19:30–20:00 ke dinas PS. Dinas yang mulai bersamaan (PS & R) dihitung bersama.
 """
 import datetime
 import re
@@ -14,7 +19,11 @@ NOT_ON_DUTY = {"DL", "CUTI", "SAKIT", "IZIN", "TB"}
 
 def _shift_window(tanggal, pola):
     start = datetime.datetime.combine(tanggal, pola.jam_mulai)
-    return start, start + datetime.timedelta(hours=pola.durasi or 0)
+    end = datetime.datetime.combine(tanggal, pola.jam_selesai)
+    hours = pola.durasi or 0
+    while end <= start or (end - start) < datetime.timedelta(hours=hours - 1):
+        end += datetime.timedelta(days=1)
+    return start, end
 
 
 def staff_on_duty_at(times):
@@ -33,13 +42,20 @@ def staff_on_duty_at(times):
     )
     out = {}
     for t in times:
-        staff = []
+        covering = []
         for j in rows:
             if (j.keterangan_lain or "").upper() in NOT_ON_DUTY:
                 continue
             start, end = _shift_window(j.tanggal, j.pola)
-            if start <= t <= end and j.pegawai not in staff:
-                staff.append(j.pegawai)
+            if start <= t <= end:
+                covering.append((j.pegawai, start, end))
+        # Serah terima: dinas yang baru masuk belum dihitung selama dinas sebelumnya
+        # (mulai & selesai lebih awal) masih berjalan.
+        staff = []
+        for peg, start, end in covering:
+            handed_over = any(s2 < start and e2 < end for _p, s2, e2 in covering)
+            if not handed_over and peg not in staff:
+                staff.append(peg)
         out[t] = staff
     return out
 
