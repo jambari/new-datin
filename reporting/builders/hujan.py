@@ -1,12 +1,12 @@
 """Laporan Hujan (penakar OBS & Hellmann) Stasiun Geofisika Jayapura."""
 import datetime
-import re
 import statistics as st
 from collections import Counter
 
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
+from hujan.categories import kategori_label
 from hujan.models import Hujan
 from reporting.charts import NAVY, new_figure, to_data_uri
 from reporting.common import BULAN, fmt
@@ -16,19 +16,9 @@ HELLMANN_OFF = 9999          # penanda alat Hellmann tidak beroperasi pada data 
 CATEGORIES = ["Nihil", "Sangat Ringan", "Ringan", "Sedang", "Lebat", "Sangat Lebat", "Tak Terukur"]
 CAT_COLORS = {"Nihil": "#e5e7eb", "Sangat Ringan": "#bae6fd", "Ringan": "#60a5fa", "Sedang": "#2563eb",
               "Lebat": "#f59e0b", "Sangat Lebat": "#dc2626", "Tak Terukur": "#9ca3af", "Lainnya": "#d1d5db"}
-_TYPO = {"hukan": "hujan", "huan": "hujan", "hujna": "hujan", "sanga t": "sangat", "nihiil": "nihil"}
-
-
 def normalize_category(raw):
-    """Seragamkan penulisan kategori ('Hujan Sangat  Ringan', 'NIHIIL', ...)."""
-    text = " ".join((raw or "").lower().split())
-    for wrong, right in _TYPO.items():
-        text = text.replace(wrong, right)
-    text = re.sub(r"^hujan\s+", "", text)
-    for cat in sorted(CATEGORIES, key=len, reverse=True):
-        if text == cat.lower():
-            return cat
-    return "" if not text else "Lainnya"
+    """Label kategori baku untuk tampilan (lihat hujan.categories)."""
+    return kategori_label(raw)
 
 
 def _hellmann(value):

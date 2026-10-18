@@ -185,3 +185,38 @@ class HujanTelegramNotifyTest(TestCase):
                     record = make_hujan(obs=55.5)
         self.assertTrue(Hujan.objects.filter(pk=record.pk).exists())
         self.assertEqual(post.call_count, 0)
+
+
+class HujanKategoriNormalizeTest(TestCase):
+    def test_normalize_variants(self):
+        from .categories import normalize_kategori, kategori_label
+        cases = {
+            'Nihil': 'nihil', 'NIHIIL': 'nihil', ' Sangat Ringan': 'sangat ringan',
+            'Hujan Sangat  Ringan': 'sangat ringan', 'Hujan Sanga t Ringan': 'sangat ringan',
+            'Hukan Ringan': 'ringan', 'Huan Sedang': 'sedang', 'hujan sangat lebat': 'sangat lebat',
+            'TTU': 'tak terukur', 'tak terukur': 'tak terukur', '': '', None: '',
+        }
+        for raw, key in cases.items():
+            self.assertEqual(normalize_kategori(raw), key, raw)
+        self.assertIsNone(normalize_kategori('gerimis'))
+        self.assertEqual(kategori_label('Hujan Lebat'), 'Lebat')
+        self.assertEqual(kategori_label('gerimis'), 'Lainnya')
+
+    def test_command_normalizes_and_backs_up(self):
+        import json, os, tempfile, io
+        from django.core.management import call_command
+        a = Hujan.objects.create(tanggal=datetime.date(2010, 1, 1), obs=0, kategori='Nihil')
+        b = Hujan.objects.create(tanggal=datetime.date(2010, 1, 2), obs=3, kategori='Hujan Sangat Ringan')
+        c = Hujan.objects.create(tanggal=datetime.date(2026, 1, 1), obs=12, kategori='ringan')
+        d = Hujan.objects.create(tanggal=datetime.date(2010, 1, 3), obs=0, kategori='')
+        out = io.StringIO()
+        call_command('normalize_hujan_kategori', '--dry-run', stdout=out)
+        self.assertIn('2 record akan diubah', out.getvalue())
+        self.assertEqual(Hujan.objects.get(pk=a.pk).kategori, 'Nihil')
+        with tempfile.TemporaryDirectory() as tmp:
+            backup = os.path.join(tmp, 'b.json')
+            call_command('normalize_hujan_kategori', '--backup', backup, stdout=io.StringIO())
+            saved = {r['pk']: r['kategori'] for r in json.load(open(backup))}
+        self.assertEqual(saved, {a.pk: 'Nihil', b.pk: 'Hujan Sangat Ringan'})
+        self.assertEqual([Hujan.objects.get(pk=x.pk).kategori for x in (a, b, c, d)],
+                         ['nihil', 'sangat ringan', 'ringan', ''])

@@ -1,6 +1,7 @@
 import json
 from django.core.management.base import BaseCommand
 import urllib.request
+from hujan.categories import normalize_kategori
 from hujan.models import Hujan
 from datetime import datetime
 
@@ -36,7 +37,7 @@ class Command(BaseCommand):
                         tanggal=tanggal,
                         hilman=float(item.get('hilman', 0)),
                         obs=obs,
-                        kategori=item.get('kategori', ''),
+                        kategori=normalize_kategori(item.get('kategori')) or item.get('kategori') or '',
                         keterangan=item.get('keterangan'),
                         petugas=item.get('petugas') or 'staff ops' # Handle null explicitly
                     ))

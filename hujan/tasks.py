@@ -5,6 +5,7 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 from django.conf import settings
+from hujan.categories import normalize_kategori
 from hujan.models import Hujan
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ def import_today_hujan_data():
                 tanggal=tanggal,
                 hilman=float(item.get('hilman', 0)),
                 obs=obs,
-                kategori=item.get('kategori', ''),
+                kategori=normalize_kategori(item.get('kategori')) or item.get('kategori') or '',
                 keterangan=item.get('keterangan'),
                 petugas=item.get('petugas') or 'staff ops'
             ))
