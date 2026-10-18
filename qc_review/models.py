@@ -15,6 +15,9 @@ class Event(models.Model):
     region = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_committed_at = models.DateTimeField(auto_now=True)
+    # Petugas yang bertugas saat kejadian menurut jadwal dinas (jadwal.JadwalHarian),
+    # diisi otomatis untuk event baru dan lewat `manage.py assign_qc_petugas`.
+    petugas = models.ManyToManyField("jadwal.Pegawai", blank=True, related_name="qc_events")
 
     class Meta:
         ordering = ["-origin_time"]

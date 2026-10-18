@@ -456,3 +456,37 @@ class OnDutyResolverTest(TestCase):
         expected = [[d["pegawai"].nama for d in get_on_duty_staff(t)] for t in times]
         self.assertEqual(got, expected)
         self.assertEqual(got, [["A"], ["A"], ["B"], ["B"], []])
+
+
+class EventPetugasTest(TestCase):
+    """Petugas jaga dilekatkan ke event QC sesuai jadwal dinas (mulai 2026)."""
+
+    def setUp(self):
+        import datetime as _d
+        from jadwal.models import JadwalHarian, Pegawai, PolaDinas
+        mt = PolaDinas.objects.create(kode="MT", nama="Malam", jam_mulai=_d.time(19, 30), jam_selesai=_d.time(8), durasi=12.5)
+        ps = PolaDinas.objects.create(kode="PS", nama="Pagi Siang", jam_mulai=_d.time(7, 30), jam_selesai=_d.time(20), durasi=12.5)
+        self.a = Pegawai.objects.create(nama="A", nip="1", pangkat="-", jabatan="-")
+        self.b = Pegawai.objects.create(nama="B", nip="2", pangkat="-", jabatan="-")
+        self.c = Pegawai.objects.create(nama="C", nip="3", pangkat="-", jabatan="-")
+        JadwalHarian.objects.create(pegawai=self.a, tanggal=_d.date(2026, 1, 4), pola=mt)
+        JadwalHarian.objects.create(pegawai=self.b, tanggal=_d.date(2026, 1, 4), pola=mt)
+        JadwalHarian.objects.create(pegawai=self.c, tanggal=_d.date(2026, 1, 5), pola=ps)
+
+    def _event(self, pid, wit):
+        import datetime as _d
+        from .utils import WIT
+        from .models import Event
+        return Event.objects.create(public_id=pid, origin_time=wit.replace(tzinfo=WIT).astimezone(_d.timezone.utc),
+                                    latitude=-2.5, longitude=140.7, depth_km=10, magnitude=4.0)
+
+    def test_command_assigns_by_schedule_and_skips_before_2026(self):
+        import datetime as _d, io
+        from django.core.management import call_command
+        night = self._event("jay2026a", _d.datetime(2026, 1, 5, 2, 0))     # MT A+B
+        day = self._event("jay2026b", _d.datetime(2026, 1, 5, 10, 0))      # PS C
+        old = self._event("jay2025z", _d.datetime(2025, 12, 31, 22, 0))
+        call_command("assign_qc_petugas", stdout=io.StringIO())
+        self.assertEqual(set(night.petugas.all()), {self.a, self.b})
+        self.assertEqual(list(day.petugas.all()), [self.c])
+        self.assertFalse(old.petugas.exists())

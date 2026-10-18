@@ -32,6 +32,10 @@ from .utils import get_on_duty_staff
 from repository.utils import calculate_remark
 
 import zoneinfo as _zi
+
+import logging
+
+logger = logging.getLogger(__name__)
 _WIT = _zi.ZoneInfo("Asia/Jayapura")
 
 
@@ -103,6 +107,14 @@ def ingest_event(request):
             "region": region,
         },
     )
+
+    # Petugas jaga saat kejadian (jadwal dinas); dihitung ulang tiap commit karena
+    # origin_time bisa bergeser. Jangan gagalkan penerimaan event karena ini.
+    try:
+        from .petugas import assign_petugas
+        assign_petugas([event], refresh=True)
+    except Exception:  # pragma: no cover
+        logger.exception("Gagal melekatkan petugas ke event %s", pid)
 
     # New QCRun for THIS commit. We never overwrite past runs.
     last = event.runs.order_by("-run_number").first()
