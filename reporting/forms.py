@@ -31,10 +31,6 @@ class ReportForm(forms.Form):
     end_tahun = forms.TypedChoiceField(choices=_years, coerce=int, label="Tahun",
                                        widget=forms.Select(attrs={"class": INPUT}))
     nip = forms.CharField(max_length=30, required=False, label="NIP", widget=forms.TextInput(attrs={"class": INPUT}))
-    unit_kerja = forms.CharField(max_length=100, initial="Stasiun Geofisika Jayapura", label="Unit kerja",
-                                 widget=forms.TextInput(attrs={"class": INPUT}))
-    tempat_tanggal = forms.CharField(max_length=60, required=False, label="Tempat, tanggal tanda tangan",
-                                     widget=forms.TextInput(attrs={"class": INPUT, "placeholder": "Jayapura, 5 April 2026"}))
 
     def clean(self):
         data = super().clean()

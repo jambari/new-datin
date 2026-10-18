@@ -16,6 +16,8 @@ from .forms import REPORT_TYPES, KIndexUploadForm, ReportForm
 
 logger = logging.getLogger(__name__)
 
+UNIT_KERJA = "Stasiun Geofisika Jayapura"
+
 BUILDERS = {
     "kualitas_udara": (kualitas_udara, "reporting/report_kualitas_udara.html"),
     "magnet_petir": (magnet_petir, "reporting/report_magnet_petir.html"),
@@ -38,7 +40,6 @@ def _initial(request):
     return {
         "start_bulan": last_quarter_end - 2, "start_tahun": year,
         "end_bulan": last_quarter_end, "end_tahun": year,
-        "unit_kerja": "Stasiun Geofisika Jayapura",
     }
 
 
@@ -51,6 +52,7 @@ def index(request):
         "form": form,
         "officer_nama": nama,
         "officer_nip": nip,
+        "unit_kerja": UNIT_KERJA,
         "upload_form": KIndexUploadForm(initial={"tahun": datetime.date.today().year}),
         "report_types": REPORT_TYPES,
         "kindex_first": kindex_range.first(),
@@ -74,6 +76,7 @@ def report(request):
     nama, nip = officer(request.user)
     data["nama"] = nama
     data["nip"] = nip or data.get("nip", "")
+    data["unit_kerja"] = UNIT_KERJA
     period = Period(data["start_tahun"], data["start_bulan"], data["end_tahun"], data["end_bulan"])
     module, template = BUILDERS[data["jenis"]]
     context = {

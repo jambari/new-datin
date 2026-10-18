@@ -23,7 +23,7 @@ def fake_tile(z, x, y):
 def report_url(jenis, start=(1, 2026), end=(3, 2026), **extra):
     params = {"jenis": jenis, "start_bulan": start[0], "start_tahun": start[1], "end_bulan": end[0],
               "end_tahun": end[1], "nip": "199202062012101001",
-              "unit_kerja": "Stasiun Geofisika Jayapura", **extra}
+              **extra}
     return "/reporting/laporan/?" + "&".join(f"{k}={v}" for k, v in params.items())
 
 
@@ -190,6 +190,10 @@ class OfficerIdentityTest(TestCase):
         self.assertEqual(r.context["identity"]["nip"], "199202062012101001")
         self.assertNotContains(r, "Orang Lain")
         self.assertNotContains(r, "Mengetahui")
+        self.assertNotContains(r, "Yang Membuat")
+        self.assertContains(r, "Stasiun Geofisika Jayapura")
+        self.assertNotContains(index, 'name="unit_kerja"')
+        self.assertNotContains(index, 'name="tempat_tanggal"')
 
     def test_user_without_pegawai_uses_account_name_and_manual_nip(self):
         user = get_user_model().objects.create_user("tamu", password="x", first_name="Budi", last_name="Santoso")

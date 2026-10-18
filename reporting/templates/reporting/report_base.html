@@ -40,8 +40,6 @@ table.info td { border: none; padding: 1px 6px 1px 0; font-size: 10pt; backgroun
 .bad td { background: #fee2e2 !important; color: #991b1b; } .ver td { background: #fef3c7 !important; } .emp td { color: #9ca3af; font-style: italic; }
 .red { color: #b91c1c; font-weight: bold; }
 .avoid { break-inside: avoid; } .pb { break-before: page; }
-.sign { display: grid; grid-template-columns: 1fr 1fr; margin-top: 26px; text-align: center; break-inside: avoid; }
-.sign .sp { height: 62px; }
 ol { margin: 4px 0 6px 18px; padding: 0; }
 .ev { break-inside: avoid; border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin: 0 0 10px; display: grid; grid-template-columns: 58mm 1fr; gap: 10px; }
 .ev img { width: 100%; border: 1px solid var(--line); }
@@ -79,11 +77,6 @@ td.k7 { background: #fee2e2 !important; } td.k8 { background: #fae8ff !important
 
   {% block body %}{% endblock %}
 
-  <div class="sign">
-    <div></div>
-    <div>{{ identity.tempat_tanggal|default:"Jayapura, ..................." }}<br>Yang Membuat<div class="sp"></div>
-      <b><u>{{ identity.nama }}</u></b><br>NIP. {{ identity.nip|default:"...................................." }}</div>
-  </div>
   <p class="note" style="margin-top:18px">Dibuat otomatis dari sistem informasi Stasiun Geofisika Jayapura pada {{ generated_at|date:"d/m/Y H:i" }}.</p>
 </div>
 </body>

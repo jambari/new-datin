@@ -52,12 +52,8 @@
               {% endif %}
             </div>
             <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ form.unit_kerja.id_for_label }}">{{ form.unit_kerja.label }}</label>
-              {{ form.unit_kerja }}
-            </div>
-            <div>
-              <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ form.tempat_tanggal.id_for_label }}">{{ form.tempat_tanggal.label }}</label>
-              {{ form.tempat_tanggal }}
+              <span class="mb-1 block text-sm font-medium text-gray-700">Unit kerja</span>
+              <div class="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-700">{{ unit_kerja }}</div>
             </div>
           </div>
           <p class="mt-4 text-xs text-gray-500">Periode maksimal 12 bulan. Laporan terbuka di tab baru; laporan dengan peta petir butuh beberapa detik.</p>
