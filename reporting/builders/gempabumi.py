@@ -120,6 +120,7 @@ def build(period, officer=None):
             "depth": e.depth_km, "mag": e.magnitude, "mag_type": e.magnitude_type or "M",
             "region": e.region or "", "depth_class": dclass, "depth_color": dcolor,
             "officers": [p.nama for p in e.petugas.all()],
+            "officers_short": [p.nama.split(",")[0].strip() for p in e.petugas.all()],
         })
     months = list(period.months)
     monthly = []

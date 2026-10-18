@@ -36,14 +36,14 @@
 {% for e in biggest %}<tr><td class="c">{{ e.time_wit|date:"d/m/Y H:i:s" }}</td><td class="c">{{ e.mag|idn:1 }}</td><td class="n">{{ e.depth|idn:0 }}</td><td>{{ e.region }}</td></tr>{% endfor %}
 </tbody></table>
 
-<h2 class="pb">IV. Sebaran Episenter</h2>
+<h2>IV. Sebaran Episenter</h2>
 <img class="mapfig" src="{{ map }}" alt="Peta sebaran episenter"><div class="cap">Gambar 1. Sebaran episenter gempabumi {{ period.short_label }} (warna = kedalaman, ukuran = magnitudo; basemap © OpenStreetMap contributors).</div>
 <img class="fig" src="{{ chart }}" alt="Grafik statistik"><div class="cap">Gambar 2. Jumlah kejadian per bulan, sebaran magnitudo, dan kedalaman.</div>
 {% if per_officer and partners %}<p class="note">Rekan dinas pada kejadian-kejadian ini: {% for nm, c in partners %}{{ nm }} ({{ c }}){% if not forloop.last %}; {% endif %}{% endfor %}.</p>{% endif %}
 
 <h2 class="pb">V. Daftar Kejadian Gempabumi yang Disebarkan</h2>
 <table class="k"><thead><tr><th>No</th><th>Tanggal</th><th>Waktu (UTC)</th><th>Waktu (WIT)</th><th>Lintang</th><th>Bujur</th><th>Kedalaman (km)</th><th>Mag.</th><th>Wilayah</th><th>Petugas</th></tr></thead><tbody>
-{% for e in events %}<tr><td>{{ forloop.counter }}</td><td>{{ e.time_utc|date:"d/m/Y" }}</td><td>{{ e.time_utc|date:"H:i:s" }}</td><td>{{ e.time_wit|date:"H:i:s" }}</td><td>{{ e.lat|idn:2 }}</td><td>{{ e.lon|idn:2 }}</td><td>{{ e.depth|idn:0 }}</td><td>{{ e.mag|idn:1 }}</td><td style="text-align:left">{{ e.region }}</td><td style="text-align:left">{% for o in e.officers %}{{ o }}{% if not forloop.last %}; {% endif %}{% empty %}–{% endfor %}</td></tr>{% endfor %}
+{% for e in events %}<tr><td>{{ forloop.counter }}</td><td>{{ e.time_utc|date:"d/m/Y" }}</td><td>{{ e.time_utc|date:"H:i:s" }}</td><td>{{ e.time_wit|date:"H:i:s" }}</td><td>{{ e.lat|idn:2 }}</td><td>{{ e.lon|idn:2 }}</td><td>{{ e.depth|idn:0 }}</td><td>{{ e.mag|idn:1 }}</td><td style="text-align:left">{{ e.region }}</td><td style="text-align:left">{{ e.officers_short|join:"; "|default:"–" }}</td></tr>{% endfor %}
 </tbody></table>
 <p class="note">Lintang negatif = Lintang Selatan; bujur dalam derajat Bujur Timur. Tanggal mengikuti UTC.</p>
 {% else %}
