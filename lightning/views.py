@@ -549,6 +549,22 @@ def kota_jayapura_summary(cells):
 
 
 @login_required
+def lightning_grid_layout(request):
+    """PNG layout peta kerapatan sambaran petir Kota Jayapura untuk laporan bulanan."""
+    from django.http import HttpResponse
+    from lightning.layout import render_layout
+    try:
+        year, month = int(request.GET['year']), int(request.GET['month'])
+    except (KeyError, ValueError):
+        return HttpResponse('year dan month wajib diisi', status=400)
+    cells = list(LightningMonthlyGrid.objects.filter(year=year, month=month))
+    png = render_layout(year, month, cells)
+    resp = HttpResponse(png, content_type='image/png')
+    resp['Content-Disposition'] = f'attachment; filename="peta_kerapatan_petir_kota_jayapura_{year}_{month:02d}.png"'
+    return resp
+
+
+@login_required
 def lightning_grid_view(request):
     """HTML page to view monthly grid with IDW color gradient."""
     from lightning.models import LightningMonthlyGrid

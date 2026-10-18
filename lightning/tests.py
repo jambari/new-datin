@@ -155,3 +155,17 @@ class LightningGridKotaJayapuraTest(TestCase):
         self.assertEqual(len(kj['rows']), 5)
         self.assertContains(r, 'Potong ke batas Kota Jayapura')
         self.assertContains(r, 'kota_jayapura.geojson')
+
+    def test_layout_png(self):
+        from unittest import mock
+        from PIL import Image
+        tile = lambda z, x, y: Image.new("RGB", (256, 256), (200, 220, 240))
+        with mock.patch("reporting.osm._tile", side_effect=tile):
+            r = self.client.get('/lightning/grid/layout/', {'year': 2026, 'month': 6})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r['Content-Type'], 'image/png')
+        self.assertIn('peta_kerapatan_petir_kota_jayapura_2026_06.png', r['Content-Disposition'])
+        self.assertEqual(Image.open(__import__('io').BytesIO(r.content)).size, (1680, 1245))
+        self.assertEqual(self.client.get('/lightning/grid/layout/').status_code, 400)
+        page = self.client.get('/lightning/grid/', {'year': 2026, 'month': 6})
+        self.assertContains(page, '/lightning/grid/layout/?year=2026&month=6')
