@@ -53,50 +53,20 @@ def delta_on_time_info(origin_time, insert_time):
     return round(minutes, 1), ("ON TIME" if minutes <= 5 else "LATE")
 
 
-def _schedules_for(dates):
-    """{tanggal: [JadwalHarian, ...]} (dinas, bukan libur) untuk sekumpulan tanggal, satu query."""
-    from jadwal.models import JadwalHarian
-
-    by_date = {d: [] for d in dates}
-    qs = (
-        JadwalHarian.objects
-        .filter(tanggal__in=list(by_date), pola__isnull=False, pola__is_libur=False)
-        .select_related("pegawai", "pola")
-        .order_by("pola__jam_mulai", "pegawai__urutan")
-    )
-    for s in qs:
-        by_date[s.tanggal].append(s)
-    return by_date
+def _local(origin_time_utc):
+    return origin_time_utc.astimezone(WIT).replace(tzinfo=None)
 
 
-def _on_duty(event_wit, by_date):
-    event_date = event_wit.date()
-    event_time = event_wit.time()
-    results = []
-    for delta, check_date in ((0, event_date), (-1, event_date - timedelta(days=1))):
-        for s in by_date.get(check_date, ()):
-            start = s.pola.jam_mulai
-            end   = s.pola.jam_selesai
-            overnight = end < start  # jam_selesai wraps past midnight
-
-            if delta == 0:
-                # Shift started TODAY
-                if not overnight:
-                    if start <= event_time <= end:
-                        results.append(_row(s, check_date, overnight))
-                else:
-                    if event_time >= start:
-                        results.append(_row(s, check_date, overnight))
-            else:
-                # Shift started YESTERDAY — only counts if overnight and still running
-                if overnight and event_time <= end:
-                    results.append(_row(s, check_date, overnight))
-    return results
+def _rows_for(entries):
+    return [_row(j, j.tanggal, end.date() > start.date()) for j, start, end in entries]
 
 
 def get_on_duty_staff(origin_time_utc) -> list[dict]:
     """
     Return a list of dicts describing who was on duty at origin_time_utc.
+
+    Memakai aturan jadwal.duty (dinas lintas tengah malam & PSM, R s.d. 16:00, jam
+    irisan serah terima dikreditkan ke dinas sebelumnya).
 
     Each dict:
         pegawai     : Pegawai instance
@@ -104,27 +74,25 @@ def get_on_duty_staff(origin_time_utc) -> list[dict]:
         shift_date  : date (the date the shift started, i.e. JadwalHarian.tanggal)
         overnight   : bool – True when the shift spans midnight
     """
+    from jadwal.duty import duty_entries_at
+
     if origin_time_utc is None:
         return []
-    event_wit = origin_time_utc.astimezone(WIT)
-    d = event_wit.date()
-    return _on_duty(event_wit, _schedules_for([d, d - timedelta(days=1)]))
+    t = _local(origin_time_utc)
+    return _rows_for(duty_entries_at([t])[t])
 
 
 def on_duty_resolver(origin_times):
     """Seperti get_on_duty_staff, untuk banyak kejadian sekaligus: jadwal diambil
     dalam satu query, lalu fungsi yang dikembalikan menjawab per origin_time."""
-    dates = set()
-    for t in origin_times:
-        if t is not None:
-            d = t.astimezone(WIT).date()
-            dates.update((d, d - timedelta(days=1)))
-    by_date = _schedules_for(dates)
+    from jadwal.duty import duty_entries_at
+
+    by_time = duty_entries_at({_local(t) for t in origin_times if t is not None})
 
     def resolve(origin_time_utc):
         if origin_time_utc is None:
             return []
-        return _on_duty(origin_time_utc.astimezone(WIT), by_date)
+        return _rows_for(by_time.get(_local(origin_time_utc), []))
 
     return resolve
 

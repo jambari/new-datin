@@ -1429,8 +1429,12 @@ def _qc_entry(e, on_duty=None):
     if not run:
         return None
     ot = run.snap_origin_time or e.origin_time
-    duties = (on_duty or get_on_duty_staff)(e.origin_time)
-    petugas = ", ".join(d["pegawai"].nama for d in duties) or "–"
+    stored = list(e.petugas.all())   # dilekatkan sesuai jadwal (lihat qc_review.petugas)
+    if stored:
+        names = [p.nama for p in stored]
+    else:
+        names = [d["pegawai"].nama for d in (on_duty or get_on_duty_staff)(e.origin_time)]
+    petugas = ", ".join(names) or "–"
     delta_min, delta_label = delta_on_time_info(e.origin_time, e.created_at)
     return {
         'latitude':   float(run.snap_latitude  if run.snap_latitude  is not None else (e.latitude  or 0)),
@@ -1449,14 +1453,17 @@ def _qc_entry(e, on_duty=None):
     }
 
 
-def _qc_map_entries_by_date(start, end):
+def _qc_map_entries_by_date(start, end, pegawai=None):
     from qc_review.models import Event as QCEvent
     from qc_review.utils import on_duty_resolver
-    events = list(QCEvent.objects.filter(
+    qs = QCEvent.objects.filter(
         origin_time__date__gte=start,
         origin_time__date__lte=end,
-    ).prefetch_related('runs'))
-    on_duty = on_duty_resolver([ev.origin_time for ev in events])
+    )
+    if pegawai is not None:
+        qs = qs.filter(petugas=pegawai)
+    events = list(qs.prefetch_related('runs', 'petugas'))
+    on_duty = on_duty_resolver([ev.origin_time for ev in events if not ev.petugas.all()])
     return [e for e in (_qc_entry(ev, on_duty) for ev in events) if e is not None]
 
 
@@ -1466,8 +1473,8 @@ def _qc_map_entries_by_month(year, month):
     events = list(QCEvent.objects.filter(
         origin_time__year=year,
         origin_time__month=month,
-    ).prefetch_related('runs'))
-    on_duty = on_duty_resolver([ev.origin_time for ev in events])
+    ).prefetch_related('runs', 'petugas'))
+    on_duty = on_duty_resolver([ev.origin_time for ev in events if not ev.petugas.all()])
     return [e for e in (_qc_entry(ev, on_duty) for ev in events) if e is not None]
 
 
@@ -1475,7 +1482,7 @@ def _qc_map_entries_by_month(year, month):
 def event_browser(request):
     from .models import EventBrowser
     from jadwal.models import Pegawai
-    from qc_review.utils import delta_on_time_info, get_on_duty_staff, on_duty_resolver
+    from qc_review.utils import delta_on_time_info, on_duty_resolver
     today = date.today()
     default_start = today - timedelta(days=6)
 
@@ -1501,11 +1508,10 @@ def event_browser(request):
     if pegawai_id:
         try:
             selected_pegawai = Pegawai.objects.get(pk=int(pegawai_id))
-            keep = []
-            for ev in qs:
-                duties = get_on_duty_staff(ev.origin_time)
-                if any(d["pegawai"].pk == selected_pegawai.pk for d in duties):
-                    keep.append(ev.pk)
+            evs = list(qs)
+            resolve = on_duty_resolver([ev.origin_time for ev in evs])
+            keep = [ev.pk for ev in evs
+                    if any(d["pegawai"].pk == selected_pegawai.pk for d in resolve(ev.origin_time))]
             qs = qs.filter(pk__in=keep)
         except (ValueError, Pegawai.DoesNotExist):
             selected_pegawai = None
@@ -1571,7 +1577,7 @@ def event_browser(request):
     ]
 
     # QC Reviewer data untuk rentang tanggal yang sama
-    qc_map_data = _qc_map_entries_by_date(start, end)
+    qc_map_data = _qc_map_entries_by_date(start, end, pegawai=selected_pegawai)
 
     # Monitoring Seiscomp — tabel rekap bulanan (sama seperti di json_analysis)
     num_days = (end - start).days + 1

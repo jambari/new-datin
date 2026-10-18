@@ -397,3 +397,28 @@ class ShakemapLookupTest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context["shk_event"], self.legacy)
         self.assertContains(r, "/media/shakemaps/legacy.jpg")
+
+
+class EventBrowserPetugasTest(TestCase):
+    """Event browser memakai petugas tersimpan di event QC dan menyaring per pegawai."""
+
+    def test_stored_petugas_and_pegawai_filter(self):
+        import datetime as _d, json
+        from django.contrib.auth import get_user_model
+        from jadwal.models import Pegawai
+        from qc_review.models import Event, QCRun
+        a = Pegawai.objects.create(nama="ANAS", nip="1", pangkat="-", jabatan="-")
+        b = Pegawai.objects.create(nama="JAMBARI", nip="2", pangkat="-", jabatan="-")
+        today = _d.date.today()
+        t = _d.datetime.combine(today, _d.time(3), tzinfo=_d.timezone.utc)
+        e1 = Event.objects.create(public_id="x1", origin_time=t, latitude=-2.5, longitude=140.7, depth_km=10, magnitude=3.0)
+        e2 = Event.objects.create(public_id="x2", origin_time=t + _d.timedelta(hours=1), latitude=-2.5, longitude=140.7, depth_km=10, magnitude=3.1)
+        for e in (e1, e2):
+            QCRun.objects.create(event=e, run_number=1)
+        e1.petugas.set([a, b]); e2.petugas.set([b])
+        self.client.force_login(get_user_model().objects.create_user("u", password="x"))
+        r = self.client.get("/repository/event-browser/")
+        data = {d["event_id"]: d["petugas"] for d in json.loads(r.context["qc_map_data"])}
+        self.assertEqual(data, {"x1": "ANAS, JAMBARI", "x2": "JAMBARI"})
+        r = self.client.get(f"/repository/event-browser/?pegawai={a.pk}")
+        self.assertEqual([d["event_id"] for d in json.loads(r.context["qc_map_data"])], ["x1"])
