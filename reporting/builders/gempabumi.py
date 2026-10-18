@@ -115,8 +115,9 @@ def build(period, officer=None):
             continue
         dclass, dcolor = _depth_class(e.depth_km)
         events.append({
-            "id": e.public_id, "time_utc": e.origin_time.astimezone(datetime.timezone.utc),
-            "time_wit": e.origin_time.astimezone(WIT), "lat": e.latitude, "lon": e.longitude,
+            # Tanpa zona (naive) agar filter |date di template tidak mengonversi ke TIME_ZONE server.
+            "id": e.public_id, "time_utc": e.origin_time.astimezone(datetime.timezone.utc).replace(tzinfo=None),
+            "time_wit": e.origin_time.astimezone(WIT).replace(tzinfo=None), "lat": e.latitude, "lon": e.longitude,
             "depth": e.depth_km, "mag": e.magnitude, "mag_type": e.magnitude_type or "M",
             "region": e.region or "", "depth_class": dclass, "depth_color": dcolor,
             "officers": [p.nama for p in e.petugas.all()],

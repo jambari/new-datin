@@ -339,6 +339,8 @@ class GempabumiReportTest(TestCase):
         self.assertNotContains(r, "Delta")
         self.assertNotContains(r, "ON TIME")
         self.assertEqual(c["partners"], [("ANAS", 1)])
+        # 5 Jan 02:00 UTC = 11:00 WIT; kedua kolom waktu tidak boleh sama
+        self.assertContains(r, "<td>02:00:00</td><td>11:00:00</td>", html=False)
 
         anon = get_user_model().objects.create_user("tamu", password="x")
         self.client.force_login(anon)
