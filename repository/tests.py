@@ -479,4 +479,11 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(r, '/repository/event-browser/gmt-map/')
         self.assertContains(r, '<option value="gmtrelief" selected>')
         self.assertContains(r, 'baseLayer = gmtReliefLayer().addTo(mapInstance)')
-        self.assertContains(r, 'tiles/gmt_relief/{z}/{x}/{y}.webp')
+        self.assertContains(r, 'repository/js/gmt_relief.js')
+        self.assertContains(r, 'gmtReliefLayer().addTo(mapFeltInstance)')     # peta dirasakan juga
+        from django.contrib.auth import get_user_model
+        self.client.force_login(get_user_model().objects.create_user('staf', password='x', is_staff=True))
+        lb = self.client.get('/laporan-bulanan/?source=JAY')          # khusus staf
+        self.assertContains(lb, 'repository/js/gmt_relief.js')
+        self.assertContains(lb, '<option value="gmtrelief" selected>')
+        self.assertContains(lb, 'baseLayer = gmtReliefLayer();')

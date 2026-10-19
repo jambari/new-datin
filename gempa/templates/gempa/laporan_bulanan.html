@@ -16,6 +16,7 @@
 <script src="{% static 'gjson/patahan.js' %}"></script>
 <script src="{% static 'gjson/subduksi.js' %}"></script>
 <script src="{% static 'repository/js/garis_pantai_papua.js' %}?v=2"></script>
+<script src="{% static 'repository/js/gmt_relief.js' %}?v=1"></script>
 <script src="{% static 'gjson/png.js' %}"></script>
 <script src="{% static 'gjson/batasinapng.js' %}"></script>
 <style>
@@ -222,7 +223,8 @@
 
             <h6 class="fw-bold border-bottom pb-2 mb-2">Basemap</h6>
             <select id="selBasemap" class="form-select form-select-sm mb-2" onchange="changeBasemap()">
-              <option value="ocean">🌊 Ocean (Default)</option>
+              <option value="gmtrelief" selected>⛰️ Relief GMT (Default)</option>
+              <option value="ocean">🌊 Ocean</option>
               <option value="topo">🏔️ Topography</option>
               <option value="street">🗺️ Street</option>
               <option value="imagery">🛰️ Imagery</option>
@@ -655,7 +657,7 @@ function initMap() {
   mapInstance.createPane('pSubduksi');  mapInstance.getPane('pSubduksi').style.zIndex  = 280;
   mapInstance.createPane('pEvents');    mapInstance.getPane('pEvents').style.zIndex    = 500;
 
-  baseLayer = L.tileLayer(BASEMAPS.ocean, { attribution: 'Tiles &copy; Esri' });
+  baseLayer = gmtReliefLayer();                     // bawaan: relief bergaya GMT
   baseLayer.addTo(mapInstance);
   if (document.body.classList.contains('night-mode') && typeof changeBasemap === 'function') changeBasemap();
 
@@ -808,7 +810,8 @@ function changeBasemap() {
   if (!mapInstance) return;
   mapInstance.removeLayer(baseLayer);
   const key = document.getElementById('selBasemap').value;
-  baseLayer = L.tileLayer(BASEMAPS[key] || BASEMAPS.ocean, { attribution: '&copy; Esri / OSM' });
+  baseLayer = key === 'gmtrelief' ? gmtReliefLayer()
+            : L.tileLayer(BASEMAPS[key] || BASEMAPS.ocean, { attribution: '&copy; Esri / OSM' });
   baseLayer.addTo(mapInstance);
 }
 
