@@ -6,7 +6,7 @@
 .layout-toggle { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; margin-bottom: 8px; font-size: 0.75rem; }
 .layout-toggle .btn { font-size: 0.72rem; padding: 2px 10px; }
 
-.formal-frame.layout-side { display: grid; grid-template-columns: minmax(0, 1fr) 290px; grid-template-rows: auto 1fr; }
+.formal-frame.layout-side { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto 1fr; }
 /* Peta mengikuti tinggi panel kanan (height:auto mengalahkan tinggi tetap pada id peta). */
 .formal-frame.layout-side > .map-wrapper { grid-column: 1; grid-row: 1 / span 2; height: auto !important; min-height: 640px; }
 .formal-frame.layout-side > .header-grid { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; padding: 14px 12px; border: 2px solid #000; border-left: none; border-bottom: 1px solid #000; }
@@ -20,7 +20,7 @@
 .formal-frame.layout-side .legend-box img:not(.leaflet-container img) { max-width: 100% !important; max-height: 150px; height: auto !important; }
 .formal-frame.layout-side .legend-box :not(.leaflet-container, .leaflet-container *) { white-space: normal !important; }
 /* Inset lebih tinggi di panel samping: pada 120–130 px peta inset turun ke zoom 1 dan nyaris kosong. */
-.formal-frame.layout-side .legend-box [id^="inset"] { height: 180px !important; }
+.formal-frame.layout-side .legend-box [id^="inset"] { height: 200px !important; }
 
 /* Kolom peta melebar penuh saat panel pengaturan disembunyikan (atau tata letak samping tanpa pengaturan). */
 .map-main-wide { flex: 0 0 100% !important; max-width: 100% !important; width: 100% !important; }
