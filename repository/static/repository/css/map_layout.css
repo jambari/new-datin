@@ -18,6 +18,8 @@
 .formal-frame.layout-side .legend-box { min-width: 0; overflow: hidden; }
 .formal-frame.layout-side .legend-box img { max-width: 100% !important; max-height: 150px; height: auto !important; }
 .formal-frame.layout-side .legend-box * { white-space: normal !important; }
+/* Inset lebih tinggi di panel samping: pada 120–130 px peta inset turun ke zoom 1 dan nyaris kosong. */
+.formal-frame.layout-side .legend-box [id^="inset"] { height: 180px !important; }
 
 /* Kolom peta melebar penuh saat panel pengaturan disembunyikan (atau tata letak samping tanpa pengaturan). */
 .map-main-wide { flex: 0 0 100% !important; max-width: 100% !important; width: 100% !important; }
