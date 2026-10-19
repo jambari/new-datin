@@ -1,0 +1,9 @@
+{# Tombol tata letak peta (repository/js/map_layout.js). settings=True bila halaman punya panel pengaturan. #}
+<div class="layout-toggle no-print">
+  {% if settings %}<button type="button" class="btn btn-outline-secondary btn-sm" data-toggle-settings onclick="MapLayout.toggleSettings()"><i class="bi bi-arrows-angle-expand"></i> Sembunyikan pengaturan</button>{% endif %}
+  <span class="text-muted ms-2">Tata letak:</span>
+  <div class="btn-group btn-group-sm" role="group">
+    <button type="button" class="btn btn-outline-secondary" data-layout="bottom" onclick="MapLayout.set('bottom')">Legenda di bawah</button>
+    <button type="button" class="btn btn-outline-secondary" data-layout="side" onclick="MapLayout.set('side')">Judul &amp; legenda di kanan</button>
+  </div>
+</div>

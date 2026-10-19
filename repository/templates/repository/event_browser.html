@@ -22,6 +22,8 @@
 <script src="{% static 'repository/js/newpng.js' %}"></script>
 <script src="{% static 'repository/js/map_grid_overlay.js' %}?v=2"></script>
 <script src="{% static 'repository/js/gmt_relief.js' %}?v=7"></script>
+<script src="{% static 'repository/js/map_layout.js' %}?v=1"></script>
+<link rel="stylesheet" href="{% static 'repository/css/map_layout.css' %}?v=1">
 
 <style>
     :root { --bmkg-blue: #1e293b; }
@@ -50,20 +52,6 @@
     .sumber-data { font-size: 0.5rem; line-height: 1.15; text-align: left; }
     .felt-legend-row { display: flex; align-items: center; gap: 8px; font-size: 0.68rem; width: 100%; justify-content: flex-start; padding-left: 8px; }
     .felt-legend-row svg { flex: 0 0 auto; }
-    /* Pilihan tata letak: legenda di bawah (bawaan) atau judul + legenda di panel kanan */
-    .layout-toggle { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px; font-size: 0.75rem; }
-    .layout-toggle .btn { font-size: 0.72rem; padding: 2px 10px; }
-    .formal-frame.layout-side { display: grid; grid-template-columns: minmax(0, 1fr) 290px; grid-template-rows: auto 1fr; }
-    /* Peta mengikuti tinggi panel kanan (height:auto mengalahkan tinggi #mapWrap/#mapFeltWrap). */
-    .formal-frame.layout-side > .map-wrapper { grid-column: 1; grid-row: 1 / span 2; height: auto !important; min-height: 640px; }
-    .formal-frame.layout-side > .header-grid { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; padding: 14px 12px; border: 2px solid #000; border-left: none; border-bottom: 1px solid #000; }
-    .formal-frame.layout-side > .header-grid .t-main { font-size: 1.05rem; }
-    .formal-frame.layout-side > .header-grid .text-end img { height: 56px !important; width: auto !important; }
-    .formal-frame.layout-side > .legend-grid { grid-column: 2; grid-row: 2; grid-template-columns: 1fr !important; border: 2px solid #000; border-left: none; border-top: none; align-content: start; }
-    .formal-frame.layout-side .legend-box { border-right: none; border-bottom: 1px solid #000; }
-    .formal-frame.layout-side .legend-box:last-child { border-bottom: none; }
-    .formal-frame.layout-side .legend-box img { max-height: 150px; }
-    @media (max-width: 991px) { .formal-frame.layout-side { display: block; } }
     .report-card { background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .chart-box { height: 240px; width: 100%; position: relative; }
     
@@ -175,7 +163,7 @@
           
           <div class="tab-pane fade show active" id="pane-map" role="tabpanel">
             <div class="row">
-              <div class="col-lg-3 mb-4 no-print">
+              <div class="col-lg-3 mb-4 no-print" data-map-settings>
                 <div class="report-card">
                   <label class="form-label small fw-bold">Judul Peta</label>
                   <input type="text" id="inTitle" class="form-control form-control-sm mb-2" value="PETA SEISMISITAS" oninput="updateMapDisplay()">
@@ -251,15 +239,9 @@
                 </div>
               </div>
 
-              <div class="col-lg-9">
-                <div class="layout-toggle no-print">
-                  <span class="text-muted">Tata letak:</span>
-                  <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary" data-layout="bottom" onclick="setMapLayout('bottom')">Legenda di bawah</button>
-                    <button type="button" class="btn btn-outline-secondary" data-layout="side" onclick="setMapLayout('side')">Judul &amp; legenda di kanan</button>
-                  </div>
-                </div>
-                <div class="formal-frame shadow-sm">
+              <div class="col-lg-9" data-map-main>
+                {% include 'repository/includes/map_layout_toggle.html' with settings=True %}
+                <div class="formal-frame shadow-sm" data-map-frame>
                   <div class="header-grid">
                     <div class="text-start">
                       <img src="{% static 'repository/images/logo-bmkg.png' %}" style="height:65px;display:block;margin:0 auto;">
@@ -320,15 +302,9 @@
 
           <div class="tab-pane fade" id="pane-felt" role="tabpanel">
              <div class="row justify-content-center">
-              <div class="col-xl-10">
-                <div class="layout-toggle no-print">
-                  <span class="text-muted">Tata letak:</span>
-                  <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary" data-layout="bottom" onclick="setMapLayout('bottom')">Legenda di bawah</button>
-                    <button type="button" class="btn btn-outline-secondary" data-layout="side" onclick="setMapLayout('side')">Judul &amp; legenda di kanan</button>
-                  </div>
-                </div>
-                <div class="formal-frame shadow-sm mb-4">
+              <div class="col-xl-10" data-map-main>
+                {% include 'repository/includes/map_layout_toggle.html' %}
+                <div class="formal-frame shadow-sm mb-4" data-map-frame>
                     <div class="header-grid">
                         <div class="text-start">
                           <img src="{% static 'repository/images/logo-bmkg.png' %}" style="height:65px;display:block;margin:0 auto;">
@@ -765,26 +741,6 @@
   // Ukuran bintang peta dirasakan menurut magnitudo (sama dengan legenda).
   function feltStarSize(mag) { return mag >= 5 ? 28 : (mag >= 4 ? 20 : 14); }
 
-  // --- Tata letak peta: legenda di bawah (bawaan) atau judul + legenda di panel kanan ---
-  function setMapLayout(mode) {
-    mode = mode === 'side' ? 'side' : 'bottom';
-    document.querySelectorAll('#pane-map .formal-frame, #pane-felt .formal-frame').forEach(function (f) {
-      f.classList.toggle('layout-side', mode === 'side');
-    });
-    document.querySelectorAll('.layout-toggle [data-layout]').forEach(function (b) {
-      b.classList.toggle('active', b.dataset.layout === mode);
-    });
-    try { localStorage.setItem('eb_map_layout', mode); } catch (e) {}
-    setTimeout(refreshMapFrames, 60);
-  }
-  // Ukur ulang peta & inset (setelah ganti tata letak atau tab dibuka; peta di tab tersembunyi berukuran 0).
-  function refreshMapFrames() {
-    [mapInstance, mapFeltInstance, window._insetSeis, window._insetFelt].forEach(function (m) {
-      if (m) m.invalidateSize();
-    });
-    if (mapInstance) mapInstance.fire('moveend');
-    if (mapFeltInstance) mapFeltInstance.fire('moveend');
-  }
   var starIcon = _makeFeltIcon(feltStarColor);
   function changeFilter() {
     refreshMarkers();
@@ -839,6 +795,7 @@
   function initMap() {
     if (mapInstance) { mapInstance.invalidateSize(); return; }
     mapInstance = L.map('map', { zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
+    MapLayout.register(mapInstance);
     attachMapGridOverlay(mapInstance, document.getElementById('mapWrap'), document.getElementById('mapGrid'));
 
     mapInstance.createPane('pBg');        mapInstance.getPane('pBg').style.zIndex        = 250;
@@ -914,10 +871,10 @@
     document.getElementById('tahunDibuat').textContent = "Dibuat tahun " + new Date().getFullYear();
 
     // Inset map
-    var insetMap = window._insetSeis = L.map('insetMap', {
+    var insetMap = MapLayout.registerAux(L.map('insetMap', {
       zoomControl: false, attributionControl: false, dragging: false,
       scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false
-    });
+    }));
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(insetMap);
     var insetRect = null;
     function updateInsetMap() {
@@ -980,6 +937,7 @@
   function initMapFelt() {
     if (mapFeltInstance) { mapFeltInstance.invalidateSize(); return; }
     mapFeltInstance = L.map('mapFelt', { zoomSnap: 0.1, zoomDelta: 0.1, minZoom: 2 }).setView([-2.5, 137.5], 5.5);
+    MapLayout.register(mapFeltInstance);
     attachMapGridOverlay(mapFeltInstance, document.getElementById('mapFeltWrap'), document.getElementById('mapFeltGrid'));
     
     var esriOceanFelt    = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ', maxZoom: 13 });
@@ -1028,7 +986,7 @@
     var insetFelt = L.map('insetFelt', { zoomControl: false, attributionControl: false, dragging: false,
                                         scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(insetFelt);
-    window._insetFelt = insetFelt;
+    MapLayout.registerAux(insetFelt);
     var insetFeltRect = null;
     function updateInsetFelt() {
       if (insetFeltRect) insetFelt.removeLayer(insetFeltRect);
@@ -1392,8 +1350,8 @@
     sel.addEventListener('change', calculateSeiscomp);
   });
 
-  document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => { initMap(); setTimeout(refreshMapFrames, 100); });
-  document.getElementById('tab-felt-btn').addEventListener('shown.bs.tab', () => { initMapFelt(); setTimeout(refreshMapFrames, 300); });
+  document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => { initMap(); MapLayout.refresh(); });
+  document.getElementById('tab-felt-btn').addEventListener('shown.bs.tab', () => { initMapFelt(); MapLayout.refresh(); });
   document.getElementById('tab-gmt-btn').addEventListener('shown.bs.tab', function () {
     var img = document.getElementById('gmtMapImg');
     if (img.getAttribute('src')) return;
@@ -1409,9 +1367,6 @@
   document.addEventListener('DOMContentLoaded', () => {
       var outPFelt = document.getElementById('outPFelt');
       if (outPFelt) outPFelt.textContent = 'PERIODE ' + formatPeriod('{{ start }} s/d {{ end }}');
-      var savedLayout = 'bottom';
-      try { savedLayout = localStorage.getItem('eb_map_layout') || 'bottom'; } catch (e) {}
-      setMapLayout(savedLayout);
       var outP = document.getElementById('outP');
       if (outP) {
         outP.textContent = 'PERIODE ' + formatPeriod('{{ start }} s/d {{ end }}');

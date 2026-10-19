@@ -482,6 +482,9 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(r, 'repository/js/gmt_relief.js')
         self.assertContains(r, 'gmtReliefLayer().addTo(mapFeltInstance)')     # peta dirasakan juga
         self.assertContains(r, 'Judul &amp; legenda di kanan')                 # pilihan tata letak
+        self.assertContains(r, 'repository/js/map_layout.js')
+        self.assertContains(r, 'MapLayout.register(mapFeltInstance)')
+        self.assertContains(r, 'data-map-settings')
         self.assertContains(r, 'id="insetFelt"')
         self.assertContains(r, '<strong>Gempabumi Dirasakan</strong>')
         from django.contrib.auth import get_user_model
@@ -490,7 +493,13 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(lb, 'repository/js/gmt_relief.js')
         self.assertContains(lb, '<option value="gmtrelief" selected>')
         self.assertContains(lb, 'baseLayer = gmtReliefLayer();')
+        self.assertContains(lb, 'repository/js/map_layout.js')
+        self.assertContains(lb, 'MapLayout.register(mapInstance)')
+        self.assertContains(lb, 'Sembunyikan pengaturan')
         gs = self.client.get('/gempa-susulan/')
         self.assertContains(gs, 'repository/js/gmt_relief.js')
         self.assertContains(gs, '<option value="gmtrelief" selected>')
         self.assertContains(gs, 'baseLayer = gmtReliefLayer();')
+        self.assertContains(gs, 'repository/js/map_layout.js')
+        self.assertContains(gs, 'MapLayout.register(mapInstance)')
+        self.assertContains(gs, 'Sembunyikan pengaturan')
