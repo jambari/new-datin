@@ -34,3 +34,6 @@
 .map-main-wide { flex: 0 0 100% !important; max-width: 100% !important; width: 100% !important; }
 
 @media (max-width: 991px) { .formal-frame.layout-side { display: block; } }
+/* Kontrol Leaflet tetap di dalam bingkai grid (kiri 60 px, bawah 40 px) di semua halaman. */
+.formal-frame.layout-side .leaflet-left { left: 65px !important; }
+.formal-frame.layout-side .leaflet-bottom { bottom: 45px !important; }
