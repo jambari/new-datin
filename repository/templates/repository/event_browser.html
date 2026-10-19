@@ -130,6 +130,11 @@
             </button>
           </li>
           <li class="nav-item">
+            <button class="nav-link" id="tab-gmt-btn" data-bs-toggle="pill" data-bs-target="#pane-gmt">
+              <i class="bi bi-image me-2"></i>Peta Seismisitas (GMT)
+            </button>
+          </li>
+          <li class="nav-item">
             <button class="nav-link" id="tab-felt-btn" data-bs-toggle="pill" data-bs-target="#pane-felt">
               <i class="bi bi-star me-2"></i>Peta Dirasakan
             </button>
@@ -272,6 +277,18 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="pane-gmt" role="tabpanel">
+            <div class="report-card">
+              <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3 flex-wrap gap-2">
+                <span class="fw-bold">Peta Seismisitas Papua dan Sekitarnya — relief GMT Earth Relief</span>
+                <a id="gmtDownload" class="btn btn-sm btn-outline-primary no-print" href="#"><i class="bi bi-download me-1"></i>Unduh PNG</a>
+              </div>
+              <div id="gmtLoading" class="text-center text-muted py-5">Membuat peta GMT… (± 5–20 detik pada pembuatan pertama)</div>
+              <img id="gmtMapImg" alt="Peta seismisitas GMT" style="display:none;width:100%;max-width:1200px;height:auto;margin:0 auto;">
+              <p class="small text-muted mt-2 mb-0">Kejadian dari Repositori Angkasa sesuai periode{% if selected_pegawai %} dan petugas{% endif %} yang dipilih; warna = kedalaman, ukuran = magnitudo, bintang = gempabumi dirasakan.</p>
             </div>
           </div>
 
@@ -1285,6 +1302,16 @@
 
   document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => initMap());
   document.getElementById('tab-felt-btn').addEventListener('shown.bs.tab', () => initMapFelt());
+  document.getElementById('tab-gmt-btn').addEventListener('shown.bs.tab', function () {
+    var img = document.getElementById('gmtMapImg');
+    if (img.getAttribute('src')) return;
+    var q = new URLSearchParams({start: '{{ start }}', end: '{{ end }}'{% if selected_pegawai %}, pegawai: '{{ selected_pegawai.pk }}'{% endif %}});
+    var url = "{% url 'event_browser_gmt_map' %}?" + q.toString();
+    document.getElementById('gmtDownload').href = url + '&download=1';
+    img.onload = function () { document.getElementById('gmtLoading').style.display = 'none'; img.style.display = 'block'; };
+    img.onerror = function () { document.getElementById('gmtLoading').textContent = 'Peta GMT gagal dibuat. Coba lagi beberapa saat.'; };
+    img.src = url;
+  });
   document.getElementById('tab-stats-btn').addEventListener('shown.bs.tab', () => { renderCharts(); generateDailyFrequencyTable(); initEventsTable(); });
 
   document.addEventListener('DOMContentLoaded', () => {

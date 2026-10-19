@@ -352,6 +352,9 @@ MEDIA_URL = '/media/'
 # The absolute path to the folder where media files will be stored
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Interpreter venv PyGMT terpisah (numpy/pandas berbeda dari venv aplikasi) untuk peta GMT.
+PYGMT_PYTHON = config('PYGMT_PYTHON', default='/home/sysop/venvs/pygmt/bin/python')
+
 # Absolute path to the directory where NexStorm .db3 files are placed.
 # Override in .env / .env.production so it stays correct regardless of BASE_DIR.
 LIGHTNING_DB3_DIR = config('LIGHTNING_DB3_DIR', default=str(BASE_DIR / 'lightning' / 'db3'))

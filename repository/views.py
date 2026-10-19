@@ -38,6 +38,12 @@ from .utils import calculate_remark
 import json
 from io import StringIO
 import re
+import logging
+import math
+from pathlib import Path
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
 from dateutil import parser as dateutil_parser
 
 def station_map_view(request):
@@ -1476,6 +1482,81 @@ def _qc_map_entries_by_month(year, month):
     ).prefetch_related('runs', 'petugas'))
     on_duty = on_duty_resolver([ev.origin_time for ev in events if not ev.petugas.all()])
     return [e for e in (_qc_entry(ev, on_duty) for ev in events) if e is not None]
+
+
+GMT_REGION = (129.0, 146.0, -10.0, 2.0)              # Papua dan sekitarnya
+GMT_SCRIPT = Path(settings.BASE_DIR) / 'scripts' / 'gmt' / 'seismicity_map.py'
+
+
+def _event_browser_filters(request):
+    """(start, end, pegawai) dari query string, dengan default yang sama seperti event_browser."""
+    from jadwal.models import Pegawai
+    today = date.today()
+    try:
+        start = date.fromisoformat(request.GET.get('start', ''))
+        end = date.fromisoformat(request.GET.get('end', ''))
+    except ValueError:
+        start, end = today - timedelta(days=6), today
+    pegawai = None
+    if request.GET.get('pegawai', '').strip():
+        pegawai = Pegawai.objects.filter(pk=request.GET['pegawai'].strip()).first() \
+            if request.GET['pegawai'].strip().isdigit() else None
+    return start, end, pegawai
+
+
+@login_required
+def event_browser_gmt_map(request):
+    """Peta seismisitas PyGMT (relief GMT Earth Relief) untuk periode & petugas Event Browser."""
+    import hashlib
+    import subprocess
+    import tempfile
+    start, end, pegawai = _event_browser_filters(request)
+    events = _qc_map_entries_by_date(start, end, pegawai=pegawai)
+    felt = FeltEarthquake.objects.filter(event_datetime__date__gte=start, event_datetime__date__lte=end)
+    w, e, s, n = GMT_REGION
+    lons = [ev['longitude'] for ev in events]
+    lats = [ev['latitude'] for ev in events]
+    if lons:      # perluas bila ada kejadian di luar kotak bawaan
+        w, e = min(w, math.floor(min(lons)) - 1), max(e, math.ceil(max(lons)) + 1)
+        s, n = min(s, math.floor(min(lats)) - 1), max(n, math.ceil(max(lats)) + 1)
+    period = (start.strftime('%d %B %Y') if start == end
+              else f"{start.strftime('%d %B %Y')} - {end.strftime('%d %B %Y')}").upper()
+    js = Path(settings.BASE_DIR) / 'repository' / 'static' / 'repository' / 'js'
+    cfg = {
+        'title': 'PETA SEISMISITAS PAPUA DAN SEKITARNYA',
+        'subtitle': f'PERIODE {period}' + (f' ({pegawai.nama.split(",")[0]})' if pegawai else ''),
+        'region': [w, e, s, n],
+        'events': [{'lon': ev['longitude'], 'lat': ev['latitude'], 'depth': ev['depth'], 'mag': ev['magnitude']}
+                   for ev in events],
+        'felt': [{'lon': float(f.longitude), 'lat': float(f.latitude), 'mag': float(f.magnitude)} for f in felt],
+        'faults': str(js / 'indofaults.js'),
+        'subduction': str(js / 'subduksi.js'),
+        'source_label': 'Data gempabumi: Repositori Angkasa (hasil analisis SeisComP), '
+                        'Stasiun Geofisika Kelas I Jayapura',
+    }
+    payload = json.dumps(cfg, sort_keys=True)
+    key = hashlib.sha1((payload + GMT_SCRIPT.read_text()).encode()).hexdigest()[:20]
+    cache_dir = Path(settings.MEDIA_ROOT) / 'gmt_cache'
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    out = cache_dir / f'seismisitas_{key}.png'
+    if not out.exists():
+        with tempfile.TemporaryDirectory(prefix='gmt_') as tmp:
+            inp = Path(tmp) / 'input.json'
+            inp.write_text(payload)
+            try:
+                proc = subprocess.run([settings.PYGMT_PYTHON, str(GMT_SCRIPT), str(inp), str(Path(tmp) / 'map.png')],
+                                      cwd=tmp, capture_output=True, text=True, timeout=25)
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                logger.exception('Peta GMT gagal: %s', exc)
+                return HttpResponse('Peta GMT gagal dibuat.', status=503, content_type='text/plain')
+            if proc.returncode != 0 or not (Path(tmp) / 'map.png').exists():
+                logger.error('Peta GMT gagal (kode %s): %s', proc.returncode, proc.stderr[-2000:])
+                return HttpResponse('Peta GMT gagal dibuat.', status=503, content_type='text/plain')
+            (Path(tmp) / 'map.png').replace(out)
+    resp = HttpResponse(out.read_bytes(), content_type='image/png')
+    disposition = 'attachment' if request.GET.get('download') else 'inline'
+    resp['Content-Disposition'] = f'{disposition}; filename="peta_seismisitas_{start:%Y%m%d}_{end:%Y%m%d}.png"'
+    return resp
 
 
 @login_required

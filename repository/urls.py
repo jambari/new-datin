@@ -32,6 +32,7 @@ urlpatterns = [
     path('json/delete/<int:pk>/', views.json_delete, name='json_delete'),
 
     path('event-browser/', views.event_browser, name='event_browser'),
+    path('event-browser/gmt-map/', views.event_browser_gmt_map, name='event_browser_gmt_map'),
 
     # ── Integrasi (EventBrowser CRUD) ──────────────────────────────────────────
     path('integrasi/', views.event_browser_list, name='event_browser_list'),

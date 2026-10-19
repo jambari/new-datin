@@ -422,3 +422,53 @@ class EventBrowserPetugasTest(TestCase):
         self.assertEqual(data, {"x1": "ANAS, JAMBARI", "x2": "JAMBARI"})
         r = self.client.get(f"/repository/event-browser/?pegawai={a.pk}")
         self.assertEqual([d["event_id"] for d in json.loads(r.context["qc_map_data"])], ["x1"])
+
+
+from unittest import mock  # noqa: E402
+
+
+class EventBrowserGmtMapTest(TestCase):
+    def setUp(self):
+        import tempfile, shutil
+        from django.contrib.auth import get_user_model
+        self.client.force_login(get_user_model().objects.create_user('gmt', password='x'))
+        self.media = tempfile.mkdtemp(prefix='gmt-media-')
+        self.addCleanup(shutil.rmtree, self.media, True)
+
+    def _fake_run(self, calls):
+        import json as _json
+        from pathlib import Path as _Path
+        def run(cmd, **kw):
+            calls.append(_json.loads(_Path(cmd[2]).read_text()))
+            _Path(cmd[3]).write_bytes(b'\x89PNG fake')
+            return mock.Mock(returncode=0, stderr='')
+        return run
+
+    def test_renders_and_caches(self):
+        from django.test import override_settings
+        calls = []
+        with override_settings(MEDIA_ROOT=self.media), \
+                mock.patch('subprocess.run', side_effect=self._fake_run(calls)):
+            url = '/repository/event-browser/gmt-map/?start=2026-09-01&end=2026-09-30'
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r['Content-Type'], 'image/png')
+            self.assertTrue(r['Content-Disposition'].startswith('inline;'))
+            self.assertEqual(self.client.get(url + '&download=1')['Content-Disposition'].split(';')[0], 'attachment')
+        self.assertEqual(len(calls), 1)                       # kedua kalinya dari cache
+        cfg = calls[0]
+        self.assertEqual(cfg['region'], [129.0, 146.0, -10.0, 2.0])
+        self.assertIn('01 SEPTEMBER 2026 - 30 SEPTEMBER 2026', cfg['subtitle'])
+        self.assertTrue(cfg['faults'].endswith('indofaults.js'))
+
+    def test_failure_returns_503(self):
+        from django.test import override_settings
+        with override_settings(MEDIA_ROOT=self.media), \
+                mock.patch('subprocess.run', return_value=mock.Mock(returncode=1, stderr='boom')):
+            r = self.client.get('/repository/event-browser/gmt-map/?start=2026-08-01&end=2026-08-02')
+        self.assertEqual(r.status_code, 503)
+
+    def test_tab_present(self):
+        r = self.client.get('/repository/event-browser/?start=2026-09-01&end=2026-09-30')
+        self.assertContains(r, 'Peta Seismisitas (GMT)')
+        self.assertContains(r, '/repository/event-browser/gmt-map/')
