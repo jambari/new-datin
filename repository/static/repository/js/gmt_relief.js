@@ -6,7 +6,8 @@
  * Pemakaian: gmtReliefLayer().addTo(map)
  */
 (function () {
-  var URL = '/media/tiles/gmt_relief/{z}/{x}/{y}.webp';
+  // Halaman di server lain dapat menetapkan window.GMT_RELIEF_TILES sebelum skrip ini dimuat.
+  var URL = window.GMT_RELIEF_TILES || '/media/tiles/gmt_relief/{z}/{x}/{y}.webp';
   var ATTRIBUTION = 'Relief: GMT Earth Relief / SRTM15+ (Tozer dkk., 2019)';
   var SEA = '#a9d3ea';   // warna laut pada tile
 
