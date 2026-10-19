@@ -218,8 +218,8 @@
 
                   <h6 class="fw-bold border-bottom pb-2 mb-2">Basemap</h6>
                   <select id="selB" class="form-select form-select-sm mb-2" onchange="changeBasemap()">
-                    <option value="ocean">🌊 Ocean (Default)</option>
-                    <option value="gmtrelief">⛰️ Relief GMT</option>
+                    <option value="gmtrelief" selected>⛰️ Relief GMT (Default)</option>
+                    <option value="ocean">🌊 Ocean</option>
                     <option value="topo">🏔️ Topography</option>
                     <option value="street">🗺️ Street</option>
                     <option value="imagery">📰️ Imagery</option>
@@ -790,8 +790,7 @@
     var esriStreet   = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS' });
     var esriTopo     = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom' });
     var esriDarkGray = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ', maxZoom: 16 });
-    baseLayer = esriOcean;
-    esriOcean.addTo(mapInstance);
+    baseLayer = gmtReliefLayer().addTo(mapInstance);      // bawaan: relief bergaya GMT
     
     if (typeof newPng !== 'undefined') { window.pngLayer = L.geoJSON(newPng, { pane: 'pBg', style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5 } }).addTo(mapInstance); }
     if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { pane: 'pBg', style: { color: "#00FFFF", weight: 1 } }).addTo(mapInstance);
