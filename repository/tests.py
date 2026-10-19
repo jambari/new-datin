@@ -487,3 +487,7 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(lb, 'repository/js/gmt_relief.js')
         self.assertContains(lb, '<option value="gmtrelief" selected>')
         self.assertContains(lb, 'baseLayer = gmtReliefLayer();')
+        gs = self.client.get('/gempa-susulan/')
+        self.assertContains(gs, 'repository/js/gmt_relief.js')
+        self.assertContains(gs, '<option value="gmtrelief" selected>')
+        self.assertContains(gs, 'baseLayer = gmtReliefLayer();')
