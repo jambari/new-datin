@@ -28,9 +28,9 @@
     if (!visible(map)) { entry.pending = true; return; }
     entry.pending = false;
     if (mode() === 'side') {
-      map.fitBounds(PAPUA, { paddingTopLeft: [70, 50], paddingBottomRight: [50, 50] });
+      map.fitBounds(PAPUA, { paddingTopLeft: [70, 50], paddingBottomRight: [50, 50], animate: false });
     } else if (entry.fittedSide) {
-      map.setView(entry.center, entry.zoom);
+      map.setView(entry.center, entry.zoom, { animate: false });
     }
     entry.fittedSide = mode() === 'side';
   }

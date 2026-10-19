@@ -20,7 +20,7 @@
 <script src="{% static 'gjson/subduksi.js' %}"></script>
 <script src="{% static 'repository/js/garis_pantai_papua.js' %}?v=2"></script>
 <script src="{% static 'repository/js/gmt_relief.js' %}?v=7"></script>
-<script src="{% static 'repository/js/map_layout.js' %}?v=1"></script>
+<script src="{% static 'repository/js/map_layout.js' %}?v=2"></script>
 <link rel="stylesheet" href="{% static 'repository/css/map_layout.css' %}?v=3">
 <script src="{% static 'gjson/png.js' %}"></script>
 <script src="{% static 'gjson/batasinapng.js' %}"></script>
@@ -734,7 +734,7 @@ function initMap() {
   function updateInsetMap() {
     if (insetRect) insetMap.removeLayer(insetRect);
     insetRect = L.rectangle(mapInstance.getBounds(), { color: '#e74c3c', weight: 2, fill: false }).addTo(insetMap);
-    insetMap.fitBounds(insetRect.getBounds(), { padding: [50, 50], maxZoom: 10 });
+    insetMap.fitBounds(insetRect.getBounds(), { padding: [50, 50], maxZoom: 10, animate: false });
   }
   setTimeout(updateInsetMap, 200);
   mapInstance.on('moveend', updateInsetMap);
