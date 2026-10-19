@@ -15,7 +15,9 @@
 .formal-frame.layout-side > .legend-grid { grid-column: 2; grid-row: 2; grid-template-columns: 1fr !important; border: 2px solid #000; border-left: none; border-top: none; align-content: start; }
 .formal-frame.layout-side .legend-box { border-right: none !important; border-bottom: 1px solid #000; }
 .formal-frame.layout-side .legend-box:last-child { border-bottom: none; }
-.formal-frame.layout-side .legend-box img { max-height: 150px; }
+.formal-frame.layout-side .legend-box { min-width: 0; overflow: hidden; }
+.formal-frame.layout-side .legend-box img { max-width: 100% !important; max-height: 150px; height: auto !important; }
+.formal-frame.layout-side .legend-box * { white-space: normal !important; }
 
 /* Kolom peta melebar penuh saat panel pengaturan disembunyikan (atau tata letak samping tanpa pengaturan). */
 .map-main-wide { flex: 0 0 100% !important; max-width: 100% !important; width: 100% !important; }
