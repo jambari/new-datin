@@ -16,8 +16,9 @@
 .formal-frame.layout-side .legend-box { border-right: none !important; border-bottom: 1px solid #000; }
 .formal-frame.layout-side .legend-box:last-child { border-bottom: none; }
 .formal-frame.layout-side .legend-box { min-width: 0; overflow: hidden; }
-.formal-frame.layout-side .legend-box img { max-width: 100% !important; max-height: 150px; height: auto !important; }
-.formal-frame.layout-side .legend-box * { white-space: normal !important; }
+/* :not(.leaflet-container img) — jangan sentuh tile/ikon peta inset di dalam legend-box. */
+.formal-frame.layout-side .legend-box img:not(.leaflet-container img) { max-width: 100% !important; max-height: 150px; height: auto !important; }
+.formal-frame.layout-side .legend-box :not(.leaflet-container, .leaflet-container *) { white-space: normal !important; }
 /* Inset lebih tinggi di panel samping: pada 120–130 px peta inset turun ke zoom 1 dan nyaris kosong. */
 .formal-frame.layout-side .legend-box [id^="inset"] { height: 180px !important; }
 
