@@ -12,11 +12,21 @@
 
   window.gmtReliefLayer = function () {
     var opts = {attribution: ATTRIBUTION};
-    var group = L.layerGroup([
+    var layers = [
       L.tileLayer(URL, L.extend({maxNativeZoom: 5, maxZoom: 18}, opts)),
       L.tileLayer(URL, L.extend({minZoom: 6, minNativeZoom: 6, maxNativeZoom: 10, maxZoom: 18,
                                  bounds: [[-13, 122], [6, 152]]}, opts))
-    ]);
+    ];
+    // Tile yang diperbesar (zoom pecahan / di atas maxNativeZoom) dirender browser dengan tepi
+    // yang tercampur sehingga tampak garis tipis. Lebihkan 1 px dari ukuran yang dipasang Leaflet
+    // agar tile bertumpuk sedikit dengan tetangganya.
+    layers.forEach(function (layer) {
+      layer.on('tileloadstart', function (e) {
+        var w = parseFloat(e.tile.style.width), h = parseFloat(e.tile.style.height);
+        if (w && h) { e.tile.style.width = (w + 1) + 'px'; e.tile.style.height = (h + 1) + 'px'; }
+      });
+    });
+    var group = L.layerGroup(layers);
     // Zoom pecahan (zoomSnap 0.1) menyisakan celah sub-piksel antar-tile; latar container diberi
     // warna laut agar celah itu tidak tampak sebagai garis putih/abu-abu.
     var prev = null;
