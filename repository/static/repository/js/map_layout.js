@@ -16,13 +16,18 @@
   var PAPUA = [[-9.3, 129.8], [0.4, 141.3]];        // Pulau Papua bagian Indonesia + Raja Ampat
   // Ruang bingkai grid (map_grid_overlay / drawOverlayGridLayout): kiri 60, atas/kanan/bawah 40 px.
   var PAD = { left: 65, top: 45, right: 45, bottom: 45 };
-  var KEY_LAYOUT = 'map_layout', KEY_SETTINGS = 'map_settings_hidden';
+  // Halaman dapat menetapkan bawaan & kunci simpanan sendiri sebelum skrip ini dimuat:
+  //   window.MAP_LAYOUT_CONFIG = {key: 'eb', layout: 'side', settingsHidden: true}
+  var CFG = window.MAP_LAYOUT_CONFIG || {};
+  var SUFFIX = CFG.key ? '_' + CFG.key : '';
+  var KEY_LAYOUT = 'map_layout' + SUFFIX, KEY_SETTINGS = 'map_settings_hidden' + SUFFIX;
+  var DEF_LAYOUT = CFG.layout === 'side' ? 'side' : 'bottom', DEF_SETTINGS = CFG.settingsHidden ? '1' : '0';
   var maps = [], aux = [];
 
   function get(key, def) { try { return localStorage.getItem(key) || def; } catch (e) { return def; } }
   function put(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
-  function mode() { return get(KEY_LAYOUT, 'bottom') === 'side' ? 'side' : 'bottom'; }
-  function settingsHidden() { return get(KEY_SETTINGS, '0') === '1'; }
+  function mode() { return get(KEY_LAYOUT, DEF_LAYOUT) === 'side' ? 'side' : 'bottom'; }
+  function settingsHidden() { return get(KEY_SETTINGS, DEF_SETTINGS) === '1'; }
   function visible(map) { var c = map.getContainer(); return c.offsetWidth > 0 && c.offsetHeight > 0; }
 
   function fit(entry) {

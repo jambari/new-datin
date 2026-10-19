@@ -22,7 +22,8 @@
 <script src="{% static 'repository/js/newpng.js' %}"></script>
 <script src="{% static 'repository/js/map_grid_overlay.js' %}?v=2"></script>
 <script src="{% static 'repository/js/gmt_relief.js' %}?v=7"></script>
-<script src="{% static 'repository/js/map_layout.js' %}?v=4"></script>
+<script>window.MAP_LAYOUT_CONFIG = {key: 'eb', layout: 'side', settingsHidden: true};  // bawaan Event Browser</script>
+<script src="{% static 'repository/js/map_layout.js' %}?v=5"></script>
 <link rel="stylesheet" href="{% static 'repository/css/map_layout.css' %}?v=8">
 
 <style>

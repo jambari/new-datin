@@ -483,6 +483,7 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(r, 'gmtReliefLayer().addTo(mapFeltInstance)')     # peta dirasakan juga
         self.assertContains(r, 'Judul &amp; legenda di kanan')                 # pilihan tata letak
         self.assertContains(r, 'repository/js/map_layout.js')
+        self.assertContains(r, "layout: 'side', settingsHidden: true")
         self.assertContains(r, 'MapLayout.register(mapFeltInstance)')
         self.assertContains(r, 'data-map-settings')
         self.assertContains(r, 'id="insetFelt"')
