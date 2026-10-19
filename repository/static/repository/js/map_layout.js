@@ -50,23 +50,37 @@
     });
   }
 
-  // Panah utara + skala di dalam peta (hanya tata letak samping; di bawah tetap di kotak judul).
+  // Tata letak samping: panah utara + skala di kanan atas peta; kotak ringkasan/statistik yang ada
+  // di kanan atas dipindah ke kiri bawah (dan dikembalikan saat kembali ke tata letak bawah).
   function furniture(entry) {
-    var side = mode() === 'side', map = entry.map;
+    var side = mode() === 'side', map = entry.map, corners = map._controlCorners;
     if (side && !entry.controls) {
       var frame = map.getContainer().closest('.formal-frame');
       var arrow = frame && frame.querySelector('.header-grid .text-end img');
-      var north = L.control({ position: 'bottomleft' });
+      var north = L.control({ position: 'topright' });
       north.onAdd = function () {
         var d = L.DomUtil.create('div', 'map-north-arrow');
         if (arrow) d.innerHTML = '<img src="' + arrow.src + '" alt="Utara">';
         return d;
       };
-      entry.controls = [north, L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 140 })];
+      entry.controls = [north, L.control.scale({ position: 'topright', imperial: false, maxWidth: 140 })];
       entry.controls.forEach(function (c) { c.addTo(map); });
     } else if (!side && entry.controls) {
       entry.controls.forEach(function (c) { c.remove(); });
       entry.controls = null;
+    }
+    if (!corners) return;
+    entry.moved = entry.moved || [];
+    if (side) {
+      var mine = (entry.controls || []).map(function (c) { return c.getContainer(); });
+      Array.prototype.slice.call(corners.topright.children).forEach(function (el) {
+        if (mine.indexOf(el) >= 0) return;
+        corners.bottomleft.appendChild(el);
+        entry.moved.push(el);
+      });
+    } else {
+      entry.moved.forEach(function (el) { corners.topright.appendChild(el); });
+      entry.moved = [];
     }
   }
 
