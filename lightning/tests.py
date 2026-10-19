@@ -169,7 +169,7 @@ class LightningGridKotaJayapuraTest(TestCase):
         with mock.patch("reporting.osm._tile", side_effect=tile):
             d = self.client.get('/lightning/grid/layout/', {'year': 2026, 'month': 6, 'download': 1})
         self.assertTrue(d['Content-Disposition'].startswith('attachment;'))
-        self.assertEqual(Image.open(__import__('io').BytesIO(r.content)).size, (1680, 1245))
+        self.assertEqual(Image.open(__import__('io').BytesIO(r.content)).size, (1800, 1245))
         self.assertEqual(self.client.get('/lightning/grid/layout/').status_code, 400)
         page = self.client.get('/lightning/grid/', {'year': 2026, 'month': 6})
         self.assertContains(page, 'Layout Peta Kota Jayapura')

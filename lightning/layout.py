@@ -30,7 +30,7 @@ BULAN_TITLE = [b.title() for b in BULAN]
 BOUNDARY = Path(__file__).resolve().parent / "static" / "lightning" / "kota_jayapura.geojson"
 DEM = Path(__file__).resolve().parent / "data" / "dem_kota_jayapura.png"
 # Copernicus DEM GLO-30 (© DLR/Airbus, ESA), dipotong & disampel ulang 0,0004° (≈ 44 m) dengan gdalwarp.
-DEM_BOUNDS = (-2.88, -2.42, 140.58, 141.04)                 # lat_s, lat_n, lon_w, lon_e
+DEM_BOUNDS = (-2.92, -2.38, 140.45, 141.15)                 # lat_s, lat_n, lon_w, lon_e
 DEM_RES = 0.0004
 LOGO = Path(settings.BASE_DIR) / "repository" / "static" / "repository" / "images" / "logo-bmkg.png"
 CLASSES = [("Rendah (0–5)", "#8fd16f"), ("Sedang (5–10)", "#ffff73"), ("Tinggi (>10)", "#ff7f7f")]
@@ -116,13 +116,15 @@ def _render(year, month, cells):
         union = union.union(g)
     x0, y0, x1, y1 = union.extent
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    half = max(x1 - x0, y1 - y0) / 2 * 1.08
-    smap = StaticMap(cy - half, cy + half, cx - half, cx + half, zoom=12)
+    W, H = 12.0, 8.3                                    # inci; peta utama MAP_W × MAP_H inci
+    MAP_W, MAP_H, M = 8.3, 6.45, 0.4
+    # Peta melebar ke timur-barat (rasio MAP_W:MAP_H) dengan skala sama; dekat ekuator Mercator ≈ 1:1.
+    half_y = max((y1 - y0) / 2, (x1 - x0) / 2 * MAP_H / MAP_W) * 1.08
+    half_x = half_y * MAP_W / MAP_H
+    smap = StaticMap(cy - half_y, cy + half_y, cx - half_x, cx + half_x, zoom=12)
 
-    W, H = 11.2, 8.3                                    # inci; peta utama MAP × MAP inci
-    MAP, M = 6.45, 0.4
     mx, my = M / W, M / H
-    mw, mh = MAP / W, MAP / H
+    mw, mh = MAP_W / W, MAP_H / H
     px0 = mx + mw + 0.25 / W                            # tepi kiri panel kanan
     fig = plt.figure(figsize=(W, H), dpi=150)
     fig.patch.set_facecolor("white")
@@ -136,7 +138,7 @@ def _render(year, month, cells):
     tax.text(0.5, 0.5, f"PETA KERAPATAN SAMBARAN PETIR WILAYAH KOTA JAYAPURA\nPERIODE {BULAN[month]} TAHUN {year}",
              ha="center", va="center", fontsize=13, fontweight="bold", linespacing=1.45)
 
-    # Peta utama (persegi)
+    # Peta utama
     ax = fig.add_axes([mx, my, mw, mh])
     ax.imshow(smap.image, extent=(0, smap.width, smap.height, 0), zorder=0)
     ax.set_aspect("equal")
@@ -161,8 +163,8 @@ def _render(year, month, cells):
                 bbox=dict(boxstyle="round,pad=.15", fc="white", ec="none", alpha=0.6))
     ax.set_xlim(0, smap.width)
     ax.set_ylim(smap.height, 0)
-    lon_t = np.arange(math.ceil((cx - half) * 12) / 12, cx + half, 1 / 12)
-    lat_t = np.arange(math.ceil((cy - half) * 12) / 12, cy + half, 1 / 12)
+    lon_t = np.arange(math.ceil((cx - half_x) * 12) / 12, cx + half_x, 1 / 12)
+    lat_t = np.arange(math.ceil((cy - half_y) * 12) / 12, cy + half_y, 1 / 12)
     ax.set_xticks([smap.project(cy, v)[0] for v in lon_t])
     ax.set_xticklabels([_dms(v, "BT", "BB") for v in lon_t], fontsize=7)
     ax.set_yticks([smap.project(v, cx)[1] for v in lat_t])
@@ -185,16 +187,16 @@ def _render(year, month, cells):
     if LOGO.exists():
         lax = fig.add_axes([px0 + pw / 2 - 0.04, 0.825, 0.08, 0.095])
         lax.imshow(Image.open(LOGO)), lax.axis("off")
-    pax.text(0.5, 0.79, "STASIUN GEOFISIKA\nKELAS I JAYAPURA", ha="center", va="center", fontsize=11,
+    pax.text(0.5, 0.79, "STASIUN GEOFISIKA\nKELAS I JAYAPURA", ha="center", va="center", fontsize=10,
              fontweight="bold", linespacing=1.3)
     pax.text(0.5, 0.722, "U", ha="center", fontsize=11, fontweight="bold")
     pax.add_patch(FancyArrow(0.5, 0.645, 0, 0.042, width=0.02, head_width=0.07, head_length=0.03, color="#111"))
 
     # Skala batang (km)
-    km_per_px = (2 * half * 111.32 * math.cos(math.radians(cy))) / smap.width
+    km_per_px = (2 * half_x * 111.32 * math.cos(math.radians(cy))) / smap.width
     pan_w_in = pax.get_position().width * W
     bar_km = 12
-    bar_frac = (bar_km / km_per_px) / smap.width * MAP / pan_w_in
+    bar_frac = (bar_km / km_per_px) / smap.width * MAP_W / pan_w_in
     bx = 0.5 - bar_frac / 2
     for i in range(4):
         pax.add_patch(Rectangle((bx + bar_frac * i / 4, 0.605), bar_frac / 4, 0.012,
@@ -203,25 +205,25 @@ def _render(year, month, cells):
         pax.text(bx + bar_frac * km / 12, 0.625, str(km), ha="center", fontsize=7.5)
     pax.text(bx + bar_frac, 0.588, "Kilometer", ha="right", fontsize=7)
 
-    pax.text(0.06, 0.54, "Legenda", fontsize=12, fontweight="bold")
+    pax.text(0.06, 0.54, "Legenda", fontsize=11, fontweight="bold")
     for i, (lab, color) in enumerate(CLASSES):
         y = 0.50 - i * 0.035
         pax.add_patch(Rectangle((0.08, y), 0.09, 0.022, fc=color, ec="#6b7280", lw=0.6))
-        pax.text(0.21, y + 0.011, lab, va="center", fontsize=9)
+        pax.text(0.23, y + 0.011, lab, va="center", fontsize=8.5)
     y = 0.50 - len(CLASSES) * 0.035
     pax.add_patch(Rectangle((0.08, y), 0.09, 0.022, fc="none", ec="#4b5563", lw=0.9))
-    pax.text(0.21, y + 0.011, "Batas kecamatan", va="center", fontsize=9)
+    pax.text(0.23, y + 0.011, "Batas kecamatan", va="center", fontsize=8.5)
 
     pax.text(0.06, 0.345, f"Sumber Data :\nData Listrik Udara {BULAN_TITLE[month]} {year}\n"
-             "Stasiun Geofisika Kelas I Jayapura", fontsize=8.5, va="top", linespacing=1.4)
+             "Stasiun Geofisika Kelas I Jayapura", fontsize=7.5, va="top", linespacing=1.4)
     pax.text(0.06, 0.255, "Inset Peta", fontsize=9.5, fontweight="bold")
 
     # Inset Papua
     iax = fig.add_axes([px0 + 0.012, my + 0.012, pw - 0.024, 0.2])
     ismap = StaticMap(-9.3, 0.3, 130.0, 142.0, zoom=6)
     iax.imshow(ismap.image, extent=(0, ismap.width, ismap.height, 0))
-    rx0, ry0 = ismap.project(cy + half, cx - half)
-    rx1, ry1 = ismap.project(cy - half, cx + half)
+    rx0, ry0 = ismap.project(cy + half_y, cx - half_x)
+    rx1, ry1 = ismap.project(cy - half_y, cx + half_x)
     iax.add_patch(Rectangle((rx0 - 3, ry0 - 3), rx1 - rx0 + 6, ry1 - ry0 + 6, fill=False, ec="#dc2626", lw=1.6))
     ix, iy = ismap.project(-4.3, 137.5)
     iax.text(ix, iy, "Papua", fontsize=9, ha="center")
