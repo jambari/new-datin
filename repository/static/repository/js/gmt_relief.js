@@ -8,18 +8,27 @@
 (function () {
   var URL = '/media/tiles/gmt_relief/{z}/{x}/{y}.webp';
   var ATTRIBUTION = 'Relief: GMT Earth Relief / SRTM15+ (Tozer dkk., 2019)';
-  // Peta memakai zoom pecahan (zoomSnap 0.1): tanpa ini muncul garis putih tipis di batas tile.
-  var style = document.createElement('style');
-  // className Leaflet dipasang pada container layer, bukan pada <img> tile.
-  style.textContent = '.gmt-relief-tile img.leaflet-tile{width:256.5px!important;height:256.5px!important}';
-  document.head.appendChild(style);
+  var SEA = '#a9d3ea';   // warna laut pada tile
 
   window.gmtReliefLayer = function () {
-    var opts = {className: 'gmt-relief-tile', attribution: ATTRIBUTION};
-    return L.layerGroup([
+    var opts = {attribution: ATTRIBUTION};
+    var group = L.layerGroup([
       L.tileLayer(URL, L.extend({maxNativeZoom: 5, maxZoom: 18}, opts)),
       L.tileLayer(URL, L.extend({minZoom: 6, minNativeZoom: 6, maxNativeZoom: 10, maxZoom: 18,
                                  bounds: [[-13, 122], [6, 152]]}, opts))
     ]);
+    // Zoom pecahan (zoomSnap 0.1) menyisakan celah sub-piksel antar-tile; latar container diberi
+    // warna laut agar celah itu tidak tampak sebagai garis putih/abu-abu.
+    var prev = null;
+    group.on('add', function (e) {
+      var c = e.target._map && e.target._map.getContainer();
+      if (c) { prev = c.style.background; c.style.background = SEA; }
+    });
+    group.on('remove', function (e) {
+      var m = e.target._map || this._mapToAdd;
+      var c = m && m.getContainer();
+      if (c) c.style.background = prev || '';
+    });
+    return group;
   };
 })();
