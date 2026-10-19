@@ -1508,6 +1508,7 @@ def _event_browser_filters(request):
 def event_browser_gmt_map(request):
     """Peta seismisitas PyGMT (relief GMT Earth Relief) untuk periode & petugas Event Browser."""
     import hashlib
+    import os
     import subprocess
     import tempfile
     start, end, pegawai = _event_browser_filters(request)
@@ -1544,15 +1545,17 @@ def event_browser_gmt_map(request):
             inp = Path(tmp) / 'input.json'
             inp.write_text(payload)
             try:
-                proc = subprocess.run([settings.PYGMT_PYTHON, str(GMT_SCRIPT), str(inp), str(Path(tmp) / 'map.png')],
+                part = cache_dir / f'seismisitas_{key}.{os.getpid()}.part.png'   # disk yang sama → replace atomik
+                proc = subprocess.run([settings.PYGMT_PYTHON, str(GMT_SCRIPT), str(inp), str(part)],
                                       cwd=tmp, capture_output=True, text=True, timeout=25)
             except (OSError, subprocess.TimeoutExpired) as exc:
                 logger.exception('Peta GMT gagal: %s', exc)
                 return HttpResponse('Peta GMT gagal dibuat.', status=503, content_type='text/plain')
-            if proc.returncode != 0 or not (Path(tmp) / 'map.png').exists():
+            if proc.returncode != 0 or not part.exists():
+                part.unlink(missing_ok=True)
                 logger.error('Peta GMT gagal (kode %s): %s', proc.returncode, proc.stderr[-2000:])
                 return HttpResponse('Peta GMT gagal dibuat.', status=503, content_type='text/plain')
-            (Path(tmp) / 'map.png').replace(out)
+            part.replace(out)
     resp = HttpResponse(out.read_bytes(), content_type='image/png')
     disposition = 'attachment' if request.GET.get('download') else 'inline'
     resp['Content-Disposition'] = f'{disposition}; filename="peta_seismisitas_{start:%Y%m%d}_{end:%Y%m%d}.png"'
