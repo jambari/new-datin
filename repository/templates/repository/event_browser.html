@@ -54,7 +54,8 @@
     .layout-toggle { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px; font-size: 0.75rem; }
     .layout-toggle .btn { font-size: 0.72rem; padding: 2px 10px; }
     .formal-frame.layout-side { display: grid; grid-template-columns: minmax(0, 1fr) 290px; grid-template-rows: auto 1fr; }
-    .formal-frame.layout-side > .map-wrapper { grid-column: 1; grid-row: 1 / span 2; height: 760px; }
+    /* Peta mengikuti tinggi panel kanan (height:auto mengalahkan tinggi #mapWrap/#mapFeltWrap). */
+    .formal-frame.layout-side > .map-wrapper { grid-column: 1; grid-row: 1 / span 2; height: auto !important; min-height: 640px; }
     .formal-frame.layout-side > .header-grid { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; padding: 14px 12px; border: 2px solid #000; border-left: none; border-bottom: 1px solid #000; }
     .formal-frame.layout-side > .header-grid .t-main { font-size: 1.05rem; }
     .formal-frame.layout-side > .header-grid .text-end img { height: 56px !important; width: auto !important; }
@@ -774,13 +775,15 @@
       b.classList.toggle('active', b.dataset.layout === mode);
     });
     try { localStorage.setItem('eb_map_layout', mode); } catch (e) {}
-    setTimeout(function () {
-      [mapInstance, mapFeltInstance, window._insetSeis, window._insetFelt].forEach(function (m) {
-        if (m) m.invalidateSize();
-      });
-      if (mapInstance) mapInstance.fire('moveend');
-      if (mapFeltInstance) mapFeltInstance.fire('moveend');
-    }, 60);
+    setTimeout(refreshMapFrames, 60);
+  }
+  // Ukur ulang peta & inset (setelah ganti tata letak atau tab dibuka; peta di tab tersembunyi berukuran 0).
+  function refreshMapFrames() {
+    [mapInstance, mapFeltInstance, window._insetSeis, window._insetFelt].forEach(function (m) {
+      if (m) m.invalidateSize();
+    });
+    if (mapInstance) mapInstance.fire('moveend');
+    if (mapFeltInstance) mapFeltInstance.fire('moveend');
   }
   var starIcon = _makeFeltIcon(feltStarColor);
   function changeFilter() {
@@ -1389,8 +1392,8 @@
     sel.addEventListener('change', calculateSeiscomp);
   });
 
-  document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => initMap());
-  document.getElementById('tab-felt-btn').addEventListener('shown.bs.tab', () => initMapFelt());
+  document.getElementById('tab-map-btn').addEventListener('shown.bs.tab', () => { initMap(); setTimeout(refreshMapFrames, 100); });
+  document.getElementById('tab-felt-btn').addEventListener('shown.bs.tab', () => { initMapFelt(); setTimeout(refreshMapFrames, 300); });
   document.getElementById('tab-gmt-btn').addEventListener('shown.bs.tab', function () {
     var img = document.getElementById('gmtMapImg');
     if (img.getAttribute('src')) return;
