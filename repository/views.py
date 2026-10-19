@@ -1520,8 +1520,9 @@ def event_browser_gmt_map(request):
     if lons:      # perluas bila ada kejadian di luar kotak bawaan
         w, e = min(w, math.floor(min(lons)) - 1), max(e, math.ceil(max(lons)) + 1)
         s, n = min(s, math.floor(min(lats)) - 1), max(n, math.ceil(max(lats)) + 1)
-    period = (start.strftime('%d %B %Y') if start == end
-              else f"{start.strftime('%d %B %Y')} - {end.strftime('%d %B %Y')}").upper()
+    from reporting.common import BULAN
+    tgl = lambda d: f"{d.day:02d} {BULAN[d.month]} {d.year}"
+    period = (tgl(start) if start == end else f"{tgl(start)} - {tgl(end)}").upper()
     js = Path(settings.BASE_DIR) / 'repository' / 'static' / 'repository' / 'js'
     cfg = {
         'title': 'PETA SEISMISITAS PAPUA DAN SEKITARNYA',

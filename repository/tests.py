@@ -459,6 +459,11 @@ class EventBrowserGmtMapTest(TestCase):
         cfg = calls[0]
         self.assertEqual(cfg['region'], [129.0, 146.0, -10.0, 2.0])
         self.assertIn('01 SEPTEMBER 2026 - 30 SEPTEMBER 2026', cfg['subtitle'])
+        calls.clear()
+        with override_settings(MEDIA_ROOT=self.media), \
+                mock.patch('subprocess.run', side_effect=self._fake_run(calls)):
+            self.client.get('/repository/event-browser/gmt-map/?start=2026-08-01&end=2026-08-31')
+        self.assertIn('01 AGUSTUS 2026 - 31 AGUSTUS 2026', calls[0]['subtitle'])
         self.assertTrue(cfg['faults'].endswith('indofaults.js'))
 
     def test_failure_returns_503(self):
