@@ -11,7 +11,7 @@
   var SEA = '#a9d3ea';   // warna laut pada tile
 
   var css = document.createElement('style');
-  css.textContent = '.gmt-relief img.leaflet-tile{mix-blend-mode:normal}';
+  css.textContent = '.gmt-relief img.leaflet-tile{mix-blend-mode:normal!important}';   // menang atas leaflet.css
   document.head.appendChild(css);
 
   window.gmtReliefLayer = function () {
