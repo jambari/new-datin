@@ -8,11 +8,17 @@
 (function () {
   var URL = '/media/tiles/gmt_relief/{z}/{x}/{y}.webp';
   var ATTRIBUTION = 'Relief: GMT Earth Relief / SRTM15+ (Tozer dkk., 2019)';
+  // Peta memakai zoom pecahan (zoomSnap 0.1): tanpa ini muncul garis putih tipis di batas tile.
+  var style = document.createElement('style');
+  style.textContent = 'img.gmt-relief-tile{width:256.5px!important;height:256.5px!important}';
+  document.head.appendChild(style);
+
   window.gmtReliefLayer = function () {
+    var opts = {className: 'gmt-relief-tile', attribution: ATTRIBUTION};
     return L.layerGroup([
-      L.tileLayer(URL, {maxNativeZoom: 5, maxZoom: 18, attribution: ATTRIBUTION}),
-      L.tileLayer(URL, {minZoom: 6, minNativeZoom: 6, maxNativeZoom: 10, maxZoom: 18,
-                        bounds: [[-13, 122], [6, 152]], attribution: ATTRIBUTION})
+      L.tileLayer(URL, L.extend({maxNativeZoom: 5, maxZoom: 18}, opts)),
+      L.tileLayer(URL, L.extend({minZoom: 6, minNativeZoom: 6, maxNativeZoom: 10, maxZoom: 18,
+                                 bounds: [[-13, 122], [6, 152]]}, opts))
     ]);
   };
 })();
