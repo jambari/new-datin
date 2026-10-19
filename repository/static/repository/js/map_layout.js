@@ -117,7 +117,55 @@
     setTimeout(function () { remeasure(refit); }, 80);
   }
 
+  // --- Tangkapan layar bingkai peta (PNG) dengan html-to-image (dimuat saat pertama dipakai) ---
+  var H2I_URL = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js';
+  var h2iPromise = null;
+  function loadH2I() {
+    if (window.htmlToImage) return Promise.resolve(window.htmlToImage);
+    if (!h2iPromise) {
+      h2iPromise = new Promise(function (resolve, reject) {
+        var sc = document.createElement('script');
+        sc.src = H2I_URL;
+        sc.onload = function () { resolve(window.htmlToImage); };
+        sc.onerror = function () { h2iPromise = null; reject(new Error('html-to-image gagal dimuat')); };
+        document.head.appendChild(sc);
+      });
+    }
+    return h2iPromise;
+  }
+  function slug(text) {
+    return (text || 'peta').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'peta';
+  }
+  function screenshot(btn) {
+    var col = btn.closest('[data-map-main]');
+    var frame = col && col.querySelector('.formal-frame[data-map-frame]');
+    if (!frame) return;
+    var label = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Memproses…';
+    var title = frame.querySelector('.t-main'), sub = frame.querySelector('.t-sub');
+    var name = slug((title ? title.textContent : '') + ' ' + (sub ? sub.textContent : '')) + '.png';
+    loadH2I().then(function (h2i) {
+      return h2i.toPng(frame, {
+        pixelRatio: 2, cacheBust: false, backgroundColor: '#ffffff',
+        // Tombol zoom & elemen no-print tidak ikut di gambar.
+        filter: function (n) {
+          return !(n.classList && (n.classList.contains('leaflet-control-zoom') || n.classList.contains('no-print')));
+        }
+      });
+    }).then(function (url) {
+      var a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+    }).catch(function (e) {
+      alert('Gagal membuat gambar peta: ' + (e && e.message ? e.message : e));
+    }).finally(function () {
+      btn.disabled = false; btn.innerHTML = label;
+    });
+  }
+
   window.MapLayout = {
+    screenshot: screenshot,
     PAPUA: PAPUA,
     register: function (map) {
       var c = map.getCenter();

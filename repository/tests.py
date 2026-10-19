@@ -484,6 +484,7 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(r, 'Judul &amp; legenda di kanan')                 # pilihan tata letak
         self.assertContains(r, 'repository/js/map_layout.js')
         self.assertContains(r, "layout: 'side', settingsHidden: true")
+        self.assertContains(r, 'MapLayout.screenshot(this)', count=2)          # seismisitas + dirasakan
         self.assertContains(r, 'MapLayout.register(mapFeltInstance)')
         self.assertContains(r, 'data-map-settings')
         self.assertContains(r, 'id="insetFelt"')
@@ -497,6 +498,7 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(lb, 'repository/js/map_layout.js')
         self.assertContains(lb, 'MapLayout.register(mapInstance)')
         self.assertContains(lb, 'Sembunyikan pengaturan')
+        self.assertContains(lb, 'Unduh gambar peta')
         gs = self.client.get('/gempa-susulan/')
         self.assertContains(gs, 'repository/js/gmt_relief.js')
         self.assertContains(gs, '<option value="gmtrelief" selected>')
@@ -504,3 +506,4 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(gs, 'repository/js/map_layout.js')
         self.assertContains(gs, 'MapLayout.register(mapInstance)')
         self.assertContains(gs, 'Sembunyikan pengaturan')
+        self.assertContains(gs, 'Unduh gambar peta')

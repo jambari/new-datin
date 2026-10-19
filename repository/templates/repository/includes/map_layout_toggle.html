@@ -1,6 +1,7 @@
 {# Tombol tata letak peta (repository/js/map_layout.js). settings=True bila halaman punya panel pengaturan. #}
 <div class="layout-toggle no-print">
   {% if settings %}<button type="button" class="btn btn-outline-secondary btn-sm" data-toggle-settings onclick="MapLayout.toggleSettings()"><i class="bi bi-arrows-angle-expand"></i> Sembunyikan pengaturan</button>{% endif %}
+  <button type="button" class="btn btn-outline-primary btn-sm" onclick="MapLayout.screenshot(this)" title="Simpan bingkai peta sebagai PNG"><i class="bi bi-camera"></i> Unduh gambar peta</button>
   <span class="text-muted ms-2">Tata letak:</span>
   <div class="btn-group btn-group-sm" role="group">
     <button type="button" class="btn btn-outline-secondary" data-layout="bottom" onclick="MapLayout.set('bottom')">Legenda di bawah</button>
