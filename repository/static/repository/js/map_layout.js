@@ -13,7 +13,9 @@
  * Pilihan disimpan di localStorage dan berlaku untuk semua halaman tersebut.
  */
 (function () {
-  var PAPUA = [[-9.5, 129.0], [1.0, 141.5]];        // Papua (Indonesia) dan sekitarnya
+  var PAPUA = [[-9.3, 129.8], [0.4, 141.3]];        // Pulau Papua bagian Indonesia + Raja Ampat
+  // Ruang bingkai grid (map_grid_overlay / drawOverlayGridLayout): kiri 60, atas/kanan/bawah 40 px.
+  var PAD = { left: 65, top: 45, right: 45, bottom: 45 };
   var KEY_LAYOUT = 'map_layout', KEY_SETTINGS = 'map_settings_hidden';
   var maps = [], aux = [];
 
@@ -28,14 +30,49 @@
     if (!visible(map)) { entry.pending = true; return; }
     entry.pending = false;
     if (mode() === 'side') {
-      map.fitBounds(PAPUA, { paddingTopLeft: [70, 50], paddingBottomRight: [50, 50], animate: false });
+      map.fitBounds(PAPUA, { paddingTopLeft: [PAD.left, PAD.top], paddingBottomRight: [PAD.right, PAD.bottom],
+                             animate: false });
     } else if (entry.fittedSide) {
       map.setView(entry.center, entry.zoom, { animate: false });
     }
     entry.fittedSide = mode() === 'side';
   }
 
+  // Tinggi bingkai peta tata letak samping = lebar × rasio Papua (Mercator), agar tidak ada laut
+  // berlebih di selatan/utara.
+  function mercY(lat) { var r = lat * Math.PI / 180; return Math.log(Math.tan(Math.PI / 4 + r / 2)); }
+  var RATIO = (mercY(PAPUA[1][0]) - mercY(PAPUA[0][0])) / ((PAPUA[1][1] - PAPUA[0][1]) * Math.PI / 180);
+  function sizeFrames() {
+    document.querySelectorAll('.formal-frame[data-map-frame] > .map-wrapper').forEach(function (w) {
+      if (mode() !== 'side' || !w.offsetWidth) { w.style.removeProperty('height'); return; }
+      var inner = w.offsetWidth - PAD.left - PAD.right;
+      w.style.setProperty('height', Math.round(inner * RATIO + PAD.top + PAD.bottom) + 'px', 'important');
+    });
+  }
+
+  // Panah utara + skala di dalam peta (hanya tata letak samping; di bawah tetap di kotak judul).
+  function furniture(entry) {
+    var side = mode() === 'side', map = entry.map;
+    if (side && !entry.controls) {
+      var frame = map.getContainer().closest('.formal-frame');
+      var arrow = frame && frame.querySelector('.header-grid .text-end img');
+      var north = L.control({ position: 'bottomleft' });
+      north.onAdd = function () {
+        var d = L.DomUtil.create('div', 'map-north-arrow');
+        if (arrow) d.innerHTML = '<img src="' + arrow.src + '" alt="Utara">';
+        return d;
+      };
+      entry.controls = [north, L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 140 })];
+      entry.controls.forEach(function (c) { c.addTo(map); });
+    } else if (!side && entry.controls) {
+      entry.controls.forEach(function (c) { c.remove(); });
+      entry.controls = null;
+    }
+  }
+
   function remeasure(refit) {
+    sizeFrames();
+    maps.forEach(furniture);
     maps.concat(aux).forEach(function (e) { if (visible(e.map)) e.map.invalidateSize(); });
     maps.forEach(function (e) { if (refit || e.pending) fit(e); else if (visible(e.map)) e.map.fire('moveend'); });
   }
@@ -67,7 +104,7 @@
       var c = map.getCenter();
       var entry = { map: map, center: [c.lat, c.lng], zoom: map.getZoom(), fittedSide: false, pending: false };
       maps.push(entry);
-      if (mode() === 'side') setTimeout(function () { map.invalidateSize(); fit(entry); }, 120);
+      if (mode() === 'side') setTimeout(function () { sizeFrames(); furniture(entry); map.invalidateSize(); fit(entry); }, 120);
       return map;
     },
     registerAux: function (map) { aux.push({ map: map }); return map; },
@@ -78,4 +115,9 @@
   };
 
   document.addEventListener('DOMContentLoaded', function () { apply(false); });
+  var resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { if (mode() === 'side') remeasure(true); }, 200);
+  });
 })();

@@ -22,8 +22,8 @@
 <script src="{% static 'repository/js/newpng.js' %}"></script>
 <script src="{% static 'repository/js/map_grid_overlay.js' %}?v=2"></script>
 <script src="{% static 'repository/js/gmt_relief.js' %}?v=7"></script>
-<script src="{% static 'repository/js/map_layout.js' %}?v=2"></script>
-<link rel="stylesheet" href="{% static 'repository/css/map_layout.css' %}?v=5">
+<script src="{% static 'repository/js/map_layout.js' %}?v=3"></script>
+<link rel="stylesheet" href="{% static 'repository/css/map_layout.css' %}?v=6">
 
 <style>
     :root { --bmkg-blue: #1e293b; }
@@ -250,7 +250,7 @@
                     <div class="title-box">
                       <span id="outT" class="t-main">PETA SEISMISITAS PROVINSI PAPUA DAN SEKITARNYA</span>
                       <span id="outP" class="t-sub">PERIODE {{ start }} s/d {{ end }}</span>
-                      <div style="font-size:0.6rem;font-weight:700;color:#555;margin-bottom:2px;">Skala</div>
+                      <div class="scale-label" style="font-size:0.6rem;font-weight:700;color:#555;margin-bottom:2px;">Skala</div>
                       <div id="scaleCont" class="d-flex justify-content-center" style="font-size:11px;"></div>
                     </div>
                     <div class="text-end"><img id="outA" src="{% static 'repository/images/north-arrow-2.jpg' %}" style="height:70px;width:auto;" alt="North Arrow"></div>
@@ -313,7 +313,7 @@
                         <div class="title-box">
                             <span class="t-main">PETA GEMPABUMI DIRASAKAN DI PAPUA DAN SEKITARNYA</span>
                             <span id="outPFelt" class="t-sub">PERIODE {{ start }} s/d {{ end }}</span>
-                            <div style="font-size:0.6rem;font-weight:700;color:#555;margin-bottom:2px;">Skala</div>
+                            <div class="scale-label" style="font-size:0.6rem;font-weight:700;color:#555;margin-bottom:2px;">Skala</div>
                             <div id="scaleContFelt" class="d-flex justify-content-center" style="font-size:11px;"></div>
                         </div>
                         <div class="text-end"><img src="{% static 'repository/images/north-arrow-2.jpg' %}" style="height:70px;width:auto;" alt="North Arrow"></div>

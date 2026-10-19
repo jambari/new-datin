@@ -17,8 +17,8 @@
 <script src="{% static 'gjson/subduksi.js' %}"></script>
 <script src="{% static 'repository/js/garis_pantai_papua.js' %}?v=2"></script>
 <script src="{% static 'repository/js/gmt_relief.js' %}?v=7"></script>
-<script src="{% static 'repository/js/map_layout.js' %}?v=2"></script>
-<link rel="stylesheet" href="{% static 'repository/css/map_layout.css' %}?v=5">
+<script src="{% static 'repository/js/map_layout.js' %}?v=3"></script>
+<link rel="stylesheet" href="{% static 'repository/css/map_layout.css' %}?v=6">
 <script src="{% static 'gjson/png.js' %}"></script>
 <script src="{% static 'gjson/batasinapng.js' %}"></script>
 <style>
@@ -257,7 +257,7 @@
               <div class="title-box">
                 <span id="outTitle" class="t-main">PETA SEISMISITAS PAPUA DAN SEKITARNYA</span>
                 <span id="outPeriode" class="t-sub">PERIODE {{ formatted_bulan }}</span>
-                <div style="font-size:0.6rem;font-weight:700;color:#555;margin-bottom:2px;">Skala</div>
+                <div class="scale-label" style="font-size:0.6rem;font-weight:700;color:#555;margin-bottom:2px;">Skala</div>
                 <div id="scaleCont" class="d-flex justify-content-center" style="font-size:11px;"></div>
               </div>
               <div class="text-end">
