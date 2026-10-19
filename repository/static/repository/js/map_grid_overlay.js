@@ -12,14 +12,15 @@
   function gridStep(span) {
     var steps = [0.25, 0.5, 1, 2, 5, 10, 20, 30];
     for (var i = 0; i < steps.length; i++) {
-      if (span / steps[i] <= 8) return steps[i];
+      if (span / steps[i] <= 10) return steps[i];
     }
     return 45;
   }
 
   function fmt(v, step) {
-    var d = step < 1 ? 2 : 0;
-    return Math.abs(v).toFixed(d).replace(/\.?0+$/, '').replace('.', ',') + '°';
+    var t = Math.abs(v).toFixed(step < 1 ? 2 : 0);
+    if (t.indexOf('.') >= 0) t = t.replace(/0+$/, '').replace(/\.$/, '');   // 2.50 -> 2.5, 3.00 -> 3
+    return t.replace('.', ',') + '°';
   }
 
   function draw(map, wrapper, canvas) {
