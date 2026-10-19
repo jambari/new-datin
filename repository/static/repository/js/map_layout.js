@@ -148,6 +148,7 @@
     loadH2I().then(function (h2i) {
       return h2i.toPng(frame, {
         pixelRatio: 2, cacheBust: false, backgroundColor: '#ffffff',
+        skipFonts: true,   // font lintas-domain (Google/jsDelivr CSS) tidak bisa dibaca; teks tetap dirender
         // Tombol zoom & elemen no-print tidak ikut di gambar.
         filter: function (n) {
           return !(n.classList && (n.classList.contains('leaflet-control-zoom') || n.classList.contains('no-print')));
