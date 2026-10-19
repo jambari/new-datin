@@ -10,7 +10,8 @@
   var ATTRIBUTION = 'Relief: GMT Earth Relief / SRTM15+ (Tozer dkk., 2019)';
   // Peta memakai zoom pecahan (zoomSnap 0.1): tanpa ini muncul garis putih tipis di batas tile.
   var style = document.createElement('style');
-  style.textContent = 'img.gmt-relief-tile{width:256.5px!important;height:256.5px!important}';
+  // className Leaflet dipasang pada container layer, bukan pada <img> tile.
+  style.textContent = '.gmt-relief-tile img.leaflet-tile{width:256.5px!important;height:256.5px!important}';
   document.head.appendChild(style);
 
   window.gmtReliefLayer = function () {

@@ -1,7 +1,8 @@
 """Bangun tile XYZ basemap relief bergaya GMT untuk Leaflet (sekali jalan, bukan per permintaan).
 
 Gaya sama dengan peta seismisitas GMT (scripts/gmt/seismicity_map.py): GMT Earth Relief, palet
-dem2 0–5000 m, iluminasi dari barat laut hanya di darat, laut berwarna datar.
+dem2 0–5000 m, iluminasi dari barat laut hanya di darat, laut berwarna datar. Tile WebP
+lossless: kompresi lossy membuat tepi tile berbeda warna (garis tipis di laut).
 
 Dua piramida dalam satu folder:
   * dunia    z0–5  dari earth_relief_05m (agar tampilan jauh tidak kosong)
@@ -43,14 +44,18 @@ def render(region, resolution, out_tif, tmp):
 
 def tiles(src, out, zoom, procs=4):
     # numpy 2.x di ~/.local tidak cocok dengan binding GDAL sistem (dibangun untuk numpy 1.x).
-    env = {**os.environ, "PYTHONNOUSERSITE": "1"}
+    # GDAL_PAM_ENABLED=NO: tanpa berkas .aux.xml di samping setiap tile.
+    env = {**os.environ, "PYTHONNOUSERSITE": "1", "GDAL_PAM_ENABLED": "NO"}
     subprocess.run(["gdal2tiles.py", "--xyz", "-z", zoom, "-w", "none", "-r", "bilinear", "-s", "EPSG:4326",
-                    f"--processes={procs}", "--tiledriver=WEBP", "--webp-quality=85", "-q",
+                    f"--processes={procs}", "--tiledriver=WEBP", "--webp-lossless", "-q",
                     str(src), str(out)], check=True, env=env)
 
 
 def main(out):
-    out = Path(out)
+    """Bangun ke folder sementara di sampingnya lalu tukar, agar peta tidak pernah setengah jadi."""
+    final = Path(out)
+    out = final.with_name(final.name + ".new")
+    shutil.rmtree(out, ignore_errors=True)
     tmp = Path(tempfile.mkdtemp(prefix="gmt_tiles_"))
     try:
         for region, res, zoom, name in ((WORLD, "05m", "0-5", "world"), (REGION, "15s", "6-10", "papua")):
@@ -59,7 +64,13 @@ def main(out):
             tiles(tif, out, zoom)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    print(f"{sum(1 for _ in out.rglob('*.webp'))} tile di {out}")
+    old = final.with_name(final.name + ".old")
+    shutil.rmtree(old, ignore_errors=True)
+    if final.exists():
+        final.rename(old)
+    out.rename(final)
+    shutil.rmtree(old, ignore_errors=True)
+    print(f"{sum(1 for _ in final.rglob('*.webp'))} tile di {final}")
 
 
 if __name__ == "__main__":
