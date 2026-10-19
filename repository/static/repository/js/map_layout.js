@@ -136,6 +136,45 @@
   function slug(text) {
     return (text || 'peta').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'peta';
   }
+  // Lapisan vektor Leaflet (ribuan <path>: sesar, slab, batas wilayah, gempa) membuat html-to-image
+  // menyalin gaya ribuan elemen sampai tab macet. Sebelum ditangkap, tiap <svg> lapisan diubah jadi
+  // satu <img> (warna Leaflet tersimpan sebagai atribut SVG), lalu dikembalikan setelahnya.
+  function rasterizeVectors(frame) {
+    var svgs = Array.prototype.slice.call(frame.querySelectorAll('.leaflet-pane > svg'));
+    var swaps = [];
+    return Promise.all(svgs.map(function (svg) {
+      var w = parseFloat(svg.getAttribute('width')) || svg.clientWidth;
+      var h = parseFloat(svg.getAttribute('height')) || svg.clientHeight;
+      if (!w || !h || svg.style.display === 'none') return null;
+      var clone = svg.cloneNode(true);
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      clone.removeAttribute('style');
+      var url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+      return new Promise(function (resolve) {
+        var src = new Image();
+        src.onload = function () {
+          var c = document.createElement('canvas');
+          c.width = Math.round(w * 2); c.height = Math.round(h * 2);
+          var ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.drawImage(src, 0, 0, w, h);
+          var img = document.createElement('img');
+          img.src = c.toDataURL('image/png');
+          img.style.cssText = svg.style.cssText;
+          img.style.position = 'absolute'; img.style.width = w + 'px'; img.style.height = h + 'px';
+          img.style.maxWidth = 'none'; img.style.pointerEvents = 'none';
+          svg.parentNode.insertBefore(img, svg);
+          svg.setAttribute('data-h2i-skip', '1');
+          swaps.push([svg, img]);
+          resolve();
+        };
+        src.onerror = function () { resolve(); };
+        src.src = url;
+      });
+    })).then(function () { return swaps; });
+  }
+  function restoreVectors(swaps) {
+    (swaps || []).forEach(function (p) { p[0].removeAttribute('data-h2i-skip'); p[1].remove(); });
+  }
+
   function screenshot(btn) {
     var col = btn.closest('[data-map-main]');
     var frame = col && col.querySelector('.formal-frame[data-map-frame]');
@@ -145,12 +184,16 @@
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Memproses…';
     var title = frame.querySelector('.t-main'), sub = frame.querySelector('.t-sub');
     var name = slug((title ? title.textContent : '') + ' ' + (sub ? sub.textContent : '')) + '.png';
+    var swaps = null;
     loadH2I().then(function (h2i) {
+      return rasterizeVectors(frame).then(function (sw) { swaps = sw; return h2i; });
+    }).then(function (h2i) {
       return h2i.toPng(frame, {
         pixelRatio: 2, cacheBust: false, backgroundColor: '#ffffff',
         skipFonts: true,   // font lintas-domain (Google/jsDelivr CSS) tidak bisa dibaca; teks tetap dirender
         // Tombol zoom & elemen no-print tidak ikut di gambar.
         filter: function (n) {
+          if (n.getAttribute && n.getAttribute('data-h2i-skip')) return false;
           return !(n.classList && (n.classList.contains('leaflet-control-zoom') || n.classList.contains('no-print')));
         }
       });
@@ -161,6 +204,7 @@
     }).catch(function (e) {
       alert('Gagal membuat gambar peta: ' + (e && e.message ? e.message : e));
     }).finally(function () {
+      restoreVectors(swaps);
       btn.disabled = false; btn.innerHTML = label;
     });
   }
