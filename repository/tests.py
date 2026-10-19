@@ -477,3 +477,5 @@ class EventBrowserGmtMapTest(TestCase):
         r = self.client.get('/repository/event-browser/?start=2026-09-01&end=2026-09-30')
         self.assertContains(r, 'Peta Seismisitas (GMT)')
         self.assertContains(r, '/repository/event-browser/gmt-map/')
+        self.assertContains(r, '<option value="gmtrelief">')
+        self.assertContains(r, 'tiles/gmt_relief/{z}/{x}/{y}.webp')

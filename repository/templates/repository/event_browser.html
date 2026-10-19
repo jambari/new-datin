@@ -219,6 +219,7 @@
                   <h6 class="fw-bold border-bottom pb-2 mb-2">Basemap</h6>
                   <select id="selB" class="form-select form-select-sm mb-2" onchange="changeBasemap()">
                     <option value="ocean">🌊 Ocean (Default)</option>
+                    <option value="gmtrelief">⛰️ Relief GMT</option>
                     <option value="topo">🏔️ Topography</option>
                     <option value="street">🗺️ Street</option>
                     <option value="imagery">📰️ Imagery</option>
@@ -1111,8 +1112,21 @@
       cartodark:  ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxZoom:16}],
       hot:        ['https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {maxZoom:19}],
     };
+    if (value === 'gmtrelief') { baseLayer = gmtReliefLayer().addTo(mapInstance); return; }
     const conf = tileUrls[value] || tileUrls.ocean;
     baseLayer = L.tileLayer(conf[0], conf[1]).addTo(mapInstance);
+  }
+
+  // Basemap relief bergaya GMT (scripts/gmt/build_relief_tiles.py): tile statis, tanpa GMT saat dibuka.
+  // Dunia z0–5 di bawah, Papua dan sekitarnya z6–10 di atasnya.
+  function gmtReliefLayer() {
+    var url = "{{ MEDIA_URL|default:'/media/' }}tiles/gmt_relief/{z}/{x}/{y}.webp";
+    var attribution = 'Relief: GMT Earth Relief / SRTM15+ (Tozer dkk., 2019)';
+    return L.layerGroup([
+      L.tileLayer(url, {maxNativeZoom: 5, maxZoom: 18, attribution: attribution}),
+      L.tileLayer(url, {minZoom: 6, minNativeZoom: 6, maxNativeZoom: 10, maxZoom: 18,
+                        bounds: [[-13, 122], [6, 152]], attribution: attribution})
+    ]);
   }
   function changeNorthArrow() {
     const url = document.getElementById('selNorthArrow').value;
