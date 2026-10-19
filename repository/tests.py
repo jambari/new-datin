@@ -481,6 +481,9 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(r, 'baseLayer = gmtReliefLayer().addTo(mapInstance)')
         self.assertContains(r, 'repository/js/gmt_relief.js')
         self.assertContains(r, 'gmtReliefLayer().addTo(mapFeltInstance)')     # peta dirasakan juga
+        self.assertContains(r, 'Judul &amp; legenda di kanan')                 # pilihan tata letak
+        self.assertContains(r, 'id="insetFelt"')
+        self.assertContains(r, '<strong>Gempabumi Dirasakan</strong>')
         from django.contrib.auth import get_user_model
         self.client.force_login(get_user_model().objects.create_user('staf', password='x', is_staff=True))
         lb = self.client.get('/laporan-bulanan/?source=JAY')          # khusus staf
