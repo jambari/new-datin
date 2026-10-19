@@ -10,16 +10,20 @@
   var ATTRIBUTION = 'Relief: GMT Earth Relief / SRTM15+ (Tozer dkk., 2019)';
   var SEA = '#a9d3ea';   // warna laut pada tile
 
+  var css = document.createElement('style');
+  css.textContent = '.gmt-relief img.leaflet-tile{mix-blend-mode:normal}';
+  document.head.appendChild(css);
+
   window.gmtReliefLayer = function () {
-    var opts = {attribution: ATTRIBUTION};
+    var opts = {attribution: ATTRIBUTION, className: 'gmt-relief'};
     var layers = [
       L.tileLayer(URL, L.extend({maxNativeZoom: 5, maxZoom: 18}, opts)),
       L.tileLayer(URL, L.extend({minZoom: 6, minNativeZoom: 6, maxNativeZoom: 10, maxZoom: 18,
                                  bounds: [[-13, 122], [6, 152]]}, opts))
     ];
-    // Tile yang diperbesar (zoom pecahan / di atas maxNativeZoom) dirender browser dengan tepi
-    // yang tercampur sehingga tampak garis tipis. Lebihkan 1 px dari ukuran yang dipasang Leaflet
-    // agar tile bertumpuk sedikit dengan tetangganya.
+    // Leaflet 1.9 memberi tile mix-blend-mode: plus-lighter; pada zoom pecahan tepi tile yang
+    // bersebelahan saling dijumlahkan sehingga tampak garis terang. Pakai blending normal (CSS di
+    // bawah) dan lebihkan 1 px dari ukuran yang dipasang Leaflet agar tile sedikit bertumpuk.
     layers.forEach(function (layer) {
       layer.on('tileloadstart', function (e) {
         var w = parseFloat(e.tile.style.width), h = parseFloat(e.tile.style.height);
