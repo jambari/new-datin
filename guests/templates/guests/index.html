@@ -12,8 +12,10 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
+{% include 'partials/_landing_header.html' with pn_spacer=1 pn_no_theme=1 %}
+
 <!-- Header -->
-<header class="bg-white border-b border-gray-100 sticky top-0 z-50">
+<header class="bg-white border-b border-gray-100 sticky z-50" style="top:60px">
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
     <a href="{% url 'guests_index' %}" class="flex items-center gap-3 font-bold text-xl text-gray-900">
       <span class="w-9 h-9 bg-brand rounded-xl flex items-center justify-center text-white text-sm">BT</span>

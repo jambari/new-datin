@@ -12,14 +12,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-<header class="bg-white border-b border-gray-100">
-  <div class="max-w-3xl mx-auto px-4 h-16 flex items-center">
-    <a href="/" class="flex items-center gap-2">
-      <span class="w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">SG</span>
-      <span class="font-bold text-gray-900">Stasiun Geofisika Jayapura</span>
-    </a>
-  </div>
-</header>
+{% include 'partials/_landing_header.html' with pn_spacer=1 pn_no_theme=1 %}
 
 <div class="max-w-3xl mx-auto px-4 py-10">
   {% if messages %}

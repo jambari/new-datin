@@ -116,41 +116,6 @@
       transition: background 0.35s, color 0.35s;
     }
 
-    /* ── Shared Header ─────────────────────────────────── */
-    #site-header {
-      position: sticky; top: 0; left: 0; right: 0; z-index: 1000;
-      background: var(--hdr-bg);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--hdr-border);
-      box-shadow: var(--hdr-shadow);
-      transition: background 0.35s, border-color 0.35s, box-shadow 0.35s;
-    }
-    .header-inner {
-      max-width: 1400px; margin: 0 auto;
-      padding: 0 1.25rem; height: 56px;
-      display: flex; align-items: center; gap: 1rem;
-    }
-    .header-inner .brand {
-      display: flex; align-items: center; gap: 0.6rem; text-decoration: none;
-    }
-    .header-inner .brand img { height: 36px; width: auto; }
-    .brand-title {
-      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.04em;
-      color: var(--brand-title); text-transform: uppercase;
-      transition: color 0.35s;
-    }
-    .brand-sub {
-      font-size: 0.55rem; color: var(--brand-sub);
-      letter-spacing: 0.06em; text-transform: uppercase;
-      transition: color 0.35s;
-    }
-    .header-spacer { flex: 1; }
-    .header-back {
-      font-size: 0.7rem; font-weight: 600; color: var(--nav-text);
-      text-decoration: none; padding: 0.3rem 0.6rem; border-radius: 6px;
-      transition: color 0.2s, background 0.2s; white-space: nowrap;
-    }
-    .header-back:hover { color: var(--nav-hover-fg); background: var(--nav-hover-bg); }
     .thm-btn {
       background: rgba(0,0,0,0.05); border: none; cursor: pointer;
       border-radius: 6px; padding: 4px 8px; color: var(--nav-text);
@@ -183,17 +148,14 @@
         el.textContent = next === 'dark' ? '☀️' : '🌙';
       });
     }
-    // Init existing button (landing header)
+    // Bind opt-in theme buttons (landing header, topbar). Pages with their
+    // own .thm-btn handlers (e.g. landing.html) leave out data-theme-toggle.
     (function() {
-      var icon = document.getElementById('baseThemeIcon');
-      var btn  = document.getElementById('baseThemeBtn');
-      if (btn) {
-        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        if (icon) icon.textContent = isDark ? '☀️' : '🌙';
-        btn.addEventListener('click', toggleTheme);
-      }
-      // Init any .thm-btn added after DOM load (e.g. topbar)
-      document.querySelectorAll('.thm-btn:not([data-listener])').forEach(function(b) {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.querySelectorAll('.thm-icon').forEach(function(el) {
+        el.textContent = isDark ? '☀️' : '🌙';
+      });
+      document.querySelectorAll('[data-theme-toggle]:not([data-listener])').forEach(function(b) {
         b.setAttribute('data-listener', '1');
         b.addEventListener('click', toggleTheme);
       });

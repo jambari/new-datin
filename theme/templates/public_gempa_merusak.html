@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="id" data-theme="light">
+<html lang="id" data-theme="light" data-theme-key="gmTheme">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -168,30 +168,7 @@ body {
   transition: background .3s, color .3s;
 }
 
-/* ── Header ─────────────────────────────────────────────── */
-header {
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--header-border);
-  box-shadow: var(--shadow-hdr);
-  position: sticky; top: 0; z-index: 100;
-  transition: background .3s, border-color .3s;
-}
-.hdr-inner { max-width: 1200px; margin: 0 auto; padding: 0 1.2rem; display: flex; align-items: center; gap: 1rem; height: 56px; }
-.brand { display: flex; align-items: center; gap: .7rem; text-decoration: none; flex: 1; }
-.brand img { height: 36px; }
-.brand-title { font-size: .85rem; font-weight: 700; color: var(--text-title); display: block; }
-.brand-sub   { font-size: .65rem; color: var(--text-muted); display: block; }
-.header-back { font-size: .8rem; color: var(--text-muted); text-decoration: none; white-space: nowrap; }
-.header-back:hover { color: var(--text); }
 
-/* ── Theme toggle ────────────────────────────────────────── */
-.theme-toggle {
-  background: var(--toggle-bg); border: none; cursor: pointer;
-  border-radius: 6px; padding: .3rem .45rem; color: var(--toggle-fg);
-  font-size: .75rem; display: flex; align-items: center; gap: .3rem;
-  transition: background .2s, color .2s; white-space: nowrap;
-}
-.theme-toggle:hover { background: var(--border-input); color: var(--text); }
 
 /* ── Page layout ─────────────────────────────────────────── */
 .page-wrap { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.2rem 3rem; }
@@ -294,29 +271,12 @@ td { padding: .55rem .85rem; vertical-align: top; }
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 640px) {
   .page-title { font-size: 1.1rem; }
-  .hdr-inner { gap: .5rem; }
-  .brand-sub { display: none; }
 }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="hdr-inner">
-    <a href="{% url 'landing' %}" class="brand">
-      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
-      <div>
-        <span class="brand-title">Stasiun Geofisika Kelas I Jayapura</span>
-        <span class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</span>
-      </div>
-    </a>
-    <a href="{% url 'gempa_public' %}" class="header-back">← Daftar Gempa</a>
-    <button class="theme-toggle" id="themeToggle" title="Ganti tema">
-      <span id="themeIcon">🌙</span>
-      <span id="themeLabel">Malam</span>
-    </button>
-  </div>
-</header>
+{% include 'partials/_landing_header.html' with pn_spacer=1 %}
 
 <div class="page-wrap">
   <h1 class="page-title">Katalog Gempa Merusak Indonesia</h1>
@@ -460,8 +420,6 @@ function isDarkHour() {
 
 function applyTheme(dark, save) {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  document.getElementById('themeIcon').textContent  = dark ? '☀️' : '🌙';
-  document.getElementById('themeLabel').textContent = dark ? 'Siang' : 'Malam';
   if (save) localStorage.setItem('gmTheme', dark ? 'dark' : 'light');
   // Swap map tile if map is already initialised
   if (window._map && window._tileLayer) {
@@ -475,10 +433,8 @@ function applyTheme(dark, save) {
   applyTheme(saved ? saved === 'dark' : isDarkHour(), false);
 })();
 
-document.getElementById('themeToggle').addEventListener('click', function () {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  applyTheme(!isDark, true);   // toggle and save preference
-});
+// Navbar theme button already toggled + saved; just follow it (map tiles)
+document.addEventListener('pn:themechange', function (e) { applyTheme(e.detail.dark, false); });
 
 // ── Tab switcher ──────────────────────────────────────────
 function switchTab(name, btn) {

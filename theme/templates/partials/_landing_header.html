@@ -1,16 +1,319 @@
-{% load static %}<header id="site-header">
-  <div class="header-inner">
-    <a href="{% url 'landing' %}" class="brand">
+{% load static %}{% comment %}
+  Public site navbar, fixed to the top of the viewport (60px tall).
+  Self-contained (own CSS/JS, pn-* class names) so it also works on
+  standalone pages that don't extend base.html.
+
+  Include options:
+    pn_spacer=1    add a 60px spacer for pages whose content doesn't
+                   already leave room for the fixed header
+    pn_no_theme=1  hide the theme button (pages without dark mode)
+
+  Theme: toggles <html data-theme>, saved under the key in
+  <html data-theme-key> (default "landingTheme"), then fires
+  document event "pn:themechange" with detail {dark}.
+{% endcomment %}
+<header id="site-header" class="pn">
+  <div class="pn-inner">
+    <a href="{% url 'landing' %}" class="pn-brand">
       <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
-      <div class="brand-text" style="line-height:1.15;">
-        <div class="brand-title">Stasiun Geofisika Kelas I Jayapura</div>
-        <div class="brand-sub">BMKG</div>
-      </div>
+      <span class="pn-brand-text">
+        <span class="pn-title">Stasiun Geofisika Kelas I Jayapura</span>
+        <span class="pn-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</span>
+      </span>
     </a>
-    <div class="header-spacer"></div>
-    <a class="header-back" href="{% url 'landing' %}">&larr; Beranda</a>
-    <button class="thm-btn" id="baseThemeBtn" aria-label="Toggle theme">
-      <span id="baseThemeIcon">🌙</span>
+
+    {% if not pn_no_theme %}
+    <button type="button" class="pn-btn" id="pnThemeBtn" aria-label="Ganti tema" title="Ganti tema"><span id="pnThemeIcon">🌙</span></button>
+    {% endif %}
+    <button type="button" class="pn-btn" id="pnLangBtn" aria-label="Translate to English" title="Translate to English">EN</button>
+
+    <button type="button" class="pn-toggle" id="pnToggle" aria-label="Menu" aria-expanded="false" aria-controls="pnNav">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
     </button>
+
+    <nav class="pn-nav" id="pnNav">
+      <div class="pn-drop">
+        <button type="button" class="pn-drop-trigger" aria-expanded="false">
+          Gempa
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="pn-drop-menu">
+          <a href="{% url 'gempa_public' %}">Daftar Gempa</a>
+          <a href="{% url 'public_gempa_merusak' %}">Gempa Merusak</a>
+          <a href="{% url 'public_skala_mmi' %}">Skala MMI</a>
+        </div>
+      </div>
+      <a class="pn-link" href="{% url 'public_petir' %}">Petir</a>
+      <div class="pn-drop">
+        <button type="button" class="pn-drop-trigger" aria-expanded="false">
+          Magnetbumi
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="pn-drop-menu">
+          <a href="{% url 'public_magnetbumi' %}">Absolut Magnetik</a>
+          <a href="{% url 'public_magnetbumi_indices' %}">K dan A Indeks</a>
+        </div>
+      </div>
+      <div class="pn-drop">
+        <button type="button" class="pn-drop-trigger" aria-expanded="false">
+          Shakemap
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="pn-drop-menu">
+          <a href="{% url 'public_shakemap_list' %}">Shakemap</a>
+          <a href="{% url 'public_spectra_list' %}">Spectra Acceleration</a>
+          <a href="{% url 'public_siaranpress_list' %}">Siaran Pers</a>
+        </div>
+      </div>
+      <a class="pn-link" href="https://eskm.bmkg.go.id/login/" target="_blank" rel="noopener">SKM</a>
+      <a class="pn-link" href="{% url 'public_ttm' %}">TTM</a>
+      <a class="pn-link" href="{% url 'our_work' %}">Gallery</a>
+      <a class="pn-link" href="{% url 'public_about' %}">About Us</a>
+      <a class="pn-link" href="{% url 'public_bulletin_list' %}">Buletin</a>
+      <div class="pn-drop">
+        <button type="button" class="pn-drop-trigger" aria-expanded="false">
+          Lainnya
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="pn-drop-menu">
+          <a href="{% url 'public_glosarium' %}">Glosarium</a>
+          <a href="{% url 'layanan_landing' %}">Pelayanan</a>
+          <a href="{% url 'guests_index' %}">Buku Tamu</a>
+          <a href="{% url 'pengaduan_form' %}">Pengaduan</a>
+        </div>
+      </div>
+      <a class="pn-link pn-login" href="{% url 'login' %}">Masuk</a>
+    </nav>
   </div>
 </header>
+{% if pn_spacer %}<div class="pn-spacer" aria-hidden="true"></div>{% endif %}
+
+<style>
+  :root {
+    --pn-bg:        rgba(255,255,255,0.96);
+    --pn-border:    rgba(0,0,0,0.08);
+    --pn-shadow:    0 1px 8px rgba(0,0,0,0.08);
+    --pn-title:     #1e293b;
+    --pn-sub:       #64748b;
+    --pn-text:      #475569;
+    --pn-hover-fg:  #b45309;
+    --pn-hover-bg:  rgba(180,83,9,0.08);
+    --pn-drop-bg:   rgba(255,255,255,0.98);
+    --pn-mob-bg:    #ffffff;
+    --pn-btn-bg:    rgba(0,0,0,0.05);
+    --pn-btn-fg:    #64748b;
+  }
+  [data-theme="dark"] {
+    --pn-bg:        rgba(15,23,42,0.97);
+    --pn-border:    rgba(255,255,255,0.08);
+    --pn-shadow:    0 1px 8px rgba(0,0,0,0.4);
+    --pn-title:     #f1f5f9;
+    --pn-sub:       #475569;
+    --pn-text:      #94a3b8;
+    --pn-hover-fg:  #fbbf24;
+    --pn-hover-bg:  rgba(251,191,36,0.1);
+    --pn-drop-bg:   rgba(15,23,42,0.98);
+    --pn-mob-bg:    #0f172a;
+    --pn-btn-bg:    rgba(255,255,255,0.08);
+    --pn-btn-fg:    #94a3b8;
+  }
+
+  /* id + class beats page rules like `header {}` or `#site-header {}` */
+  #site-header.pn {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1100;
+    margin: 0; padding: 0;
+    background: var(--pn-bg);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--pn-border);
+    box-shadow: var(--pn-shadow);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    line-height: 1.5;
+    transition: background 0.35s, border-color 0.35s;
+  }
+  .pn-spacer { height: 60px; }
+  .pn *, .pn *::before, .pn *::after { box-sizing: border-box; }
+  .pn * { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .pn-inner {
+    max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; height: 60px;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .pn-brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; flex-shrink: 0; }
+  .pn-brand img { display: block; height: 42px; width: auto; object-fit: contain; }
+  .pn-brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .pn-title {
+    font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em;
+    color: var(--pn-title); text-transform: uppercase;
+  }
+  .pn-sub {
+    font-size: 0.6rem; color: var(--pn-sub);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+
+  .pn-btn {
+    display: flex; align-items: center; flex-shrink: 0;
+    margin: 0; padding: 4px 8px; border: none; border-radius: 6px; cursor: pointer;
+    background: var(--pn-btn-bg); color: var(--pn-btn-fg);
+    font: inherit; font-size: 0.8rem; line-height: 1;
+  }
+  .pn-btn:hover { opacity: 0.8; }
+
+  .pn-nav { display: flex; align-items: center; gap: 0.15rem; margin-left: auto; }
+  .pn-link, .pn-drop-trigger {
+    display: flex; align-items: center; gap: 3px;
+    margin: 0; padding: 0.35rem 0.7rem; border: none; border-radius: 6px;
+    background: none; cursor: pointer;
+    font: inherit; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em;
+    color: var(--pn-text); text-decoration: none; white-space: nowrap;
+    transition: color 0.2s, background 0.2s;
+  }
+  .pn-link:hover, .pn-drop-trigger:hover, .pn-drop.open .pn-drop-trigger,
+  .pn-link[aria-current="page"], .pn-drop.current .pn-drop-trigger {
+    color: var(--pn-hover-fg); background: var(--pn-hover-bg);
+  }
+  .pn-login, .pn-login:hover {
+    margin-left: 0.5rem; padding: 0.35rem 0.9rem;
+    background: #1e40af; color: #fff;
+  }
+  .pn-login:hover { background: #1d4ed8; color: #fff; }
+
+  .pn-drop { position: relative; }
+  .pn-drop-trigger svg { transition: transform 0.2s; }
+  .pn-drop.open .pn-drop-trigger svg { transform: rotate(180deg); }
+  .pn-drop-menu {
+    display: none; position: absolute; top: 100%; left: 0; z-index: 2000;
+    min-width: 150px; padding: 6px 0 0; overflow: hidden;
+    background: var(--pn-drop-bg); backdrop-filter: blur(8px);
+    border: 1px solid var(--pn-border); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  }
+  .pn-drop.open .pn-drop-menu { display: block; }
+  .pn-drop-menu a {
+    display: block; padding: 0.5rem 1rem;
+    font-size: 0.72rem; font-weight: 600; color: var(--pn-text);
+    text-decoration: none; white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  .pn-drop-menu a:hover, .pn-drop-menu a[aria-current="page"] { background: var(--pn-hover-bg); color: var(--pn-hover-fg); }
+
+  .pn-toggle {
+    display: none; flex-shrink: 0; margin: 0; padding: 4px; border: none;
+    background: none; color: var(--pn-text); cursor: pointer;
+  }
+  .pn-toggle svg { display: block; }
+
+  /* Full nav needs ~1400px; condense it on narrower laptops */
+  @media (max-width: 1439px) {
+    .pn-sub { display: none; }
+    .pn-link, .pn-drop-trigger { padding: 0.35rem 0.45rem; }
+  }
+
+  /* Hamburger for tablets and phones */
+  @media (max-width: 1279px) {
+    .pn-brand { flex-shrink: 1; min-width: 0; margin-right: auto; }
+    .pn-title { font-size: 0.68rem; }
+    .pn-toggle { display: block; }
+    .pn-nav {
+      display: none; position: fixed; top: 60px; left: 0; right: 0;
+      flex-direction: column; align-items: stretch; gap: 0;
+      max-height: calc(100vh - 60px); overflow-y: auto;
+      padding: 0.75rem; background: var(--pn-mob-bg);
+      border-bottom: 1px solid var(--pn-border);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+    }
+    .pn-nav.open { display: flex; }
+    .pn-link, .pn-drop-trigger { width: 100%; padding: 0.6rem 0.75rem; }
+    .pn-login, .pn-login:hover { margin: 0.25rem 0 0; padding: 0.6rem 0.75rem; }
+    .pn-drop-menu {
+      position: static; min-width: 0; padding: 0 0 0 0.75rem;
+      background: none; border: none; box-shadow: none; backdrop-filter: none;
+    }
+  }
+  @media print { #site-header.pn, .pn-spacer { display: none !important; } }
+</style>
+
+<script>
+(function () {
+  var root   = document.documentElement;
+  var header = document.getElementById('site-header');
+  var nav    = document.getElementById('pnNav');
+  var toggle = document.getElementById('pnToggle');
+  var drops  = header.querySelectorAll('.pn-drop');
+
+  // ── Mark the current page ─────────────────────────────────
+  var here = location.pathname;
+  header.querySelectorAll('.pn-nav a[href^="/"]').forEach(function (a) {
+    if (a.getAttribute('href') === here) {
+      a.setAttribute('aria-current', 'page');
+      var d = a.closest('.pn-drop');
+      if (d) d.classList.add('current');
+    }
+  });
+
+  // ── Hamburger ─────────────────────────────────────────────
+  toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // ── Dropdowns: hover for mouse (with close delay), tap/click otherwise
+  function setOpen(d, open) {
+    d.classList.toggle('open', open);
+    d.querySelector('.pn-drop-trigger').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  var lastPointer = 'mouse';
+  document.addEventListener('pointerdown', function (e) { lastPointer = e.pointerType; }, true);
+  drops.forEach(function (d) {
+    var timer;
+    d.addEventListener('pointerenter', function (e) {
+      if (e.pointerType !== 'mouse' || nav.classList.contains('open')) return;
+      clearTimeout(timer); setOpen(d, true);
+    });
+    d.addEventListener('pointerleave', function (e) {
+      if (e.pointerType !== 'mouse' || nav.classList.contains('open')) return;
+      timer = setTimeout(function () { setOpen(d, false); }, 180);
+    });
+    d.querySelector('.pn-drop-trigger').addEventListener('click', function () {
+      // A mouse already opened it on hover; clicking shouldn't close it again.
+      if (lastPointer === 'mouse' && !nav.classList.contains('open')) { setOpen(d, true); return; }
+      var open = !d.classList.contains('open');
+      drops.forEach(function (o) { if (o !== d) setOpen(o, false); });
+      setOpen(d, open);
+    });
+  });
+  document.addEventListener('click', function (e) {
+    if (header.contains(e.target)) return;
+    drops.forEach(function (d) { setOpen(d, false); });
+    nav.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  });
+
+  // ── Theme ─────────────────────────────────────────────────
+  var themeBtn = document.getElementById('pnThemeBtn');
+  if (themeBtn) {
+    var icon = document.getElementById('pnThemeIcon');
+    var key  = root.getAttribute('data-theme-key') || 'landingTheme';
+    var sync = function () { icon.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'; };
+    sync();
+    // Pages may set data-theme from their own scripts; keep the icon in step.
+    new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    themeBtn.addEventListener('click', function () {
+      var dark = root.getAttribute('data-theme') !== 'dark';
+      root.setAttribute('data-theme', dark ? 'dark' : 'light');
+      try { localStorage.setItem(key, dark ? 'dark' : 'light'); } catch (e) {}
+      document.dispatchEvent(new CustomEvent('pn:themechange', { detail: { dark: dark } }));
+    });
+  }
+
+  // ── Translate to English ──────────────────────────────────
+  document.getElementById('pnLangBtn').addEventListener('click', function () {
+    var original = new URLSearchParams(location.search).get('u');
+    if (original) {
+      location.href = original;
+    } else {
+      location.href = 'https://translate.google.com/translate?sl=id&tl=en&u=' + encodeURIComponent(location.href);
+    }
+  });
+})();
+</script>

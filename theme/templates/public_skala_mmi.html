@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="id" data-theme="light">
+<html lang="id" data-theme="light" data-theme-key="gmTheme">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,15 +27,6 @@
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .3s,color .3s; }
-header { background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
-.hdr-inner { max-width:1100px; margin:0 auto; padding:0 1.2rem; display:flex; align-items:center; gap:1rem; height:56px; }
-.brand { display:flex; align-items:center; gap:.7rem; text-decoration:none; flex:1; }
-.brand img { height:36px; }
-.brand-title { font-size:.85rem; font-weight:700; color:var(--title); display:block; }
-.brand-sub { font-size:.65rem; color:var(--muted); display:block; }
-.header-back { font-size:.8rem; color:var(--muted); text-decoration:none; white-space:nowrap; }
-.header-back:hover { color:var(--text); }
-.theme-toggle { background:var(--border-input); border:none; cursor:pointer; border-radius:6px; padding:.3rem .45rem; color:var(--muted); font-size:.75rem; }
 .page-wrap { max-width:1100px; margin:0 auto; padding:1.5rem 1.2rem 3rem; }
 .page-title { font-size:1.4rem; font-weight:700; color:var(--title); margin-bottom:.4rem; }
 .page-sub { font-size:.82rem; color:var(--soft); margin-bottom:1.5rem; line-height:1.6; }
@@ -47,23 +38,10 @@ header { background:var(--card); border-bottom:1px solid var(--border); position
 .mmi-img { width:100%; height:150px; object-fit:contain; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:.4rem; }
 .mmi-desc { font-size:.78rem; line-height:1.6; color:var(--muted); }
 .source { margin-top:1.4rem; font-size:.72rem; color:var(--soft); }
-@media (max-width:640px){ .brand-sub{display:none;} }
 </style>
 </head>
 <body>
-<header>
-  <div class="hdr-inner">
-    <a href="{% url 'landing' %}" class="brand">
-      <img src="{% static 'repository/images/logo-bmkg.png' %}" alt="BMKG">
-      <div>
-        <span class="brand-title">Stasiun Geofisika Kelas I Jayapura</span>
-        <span class="brand-sub">BMKG · Badan Meteorologi Klimatologi dan Geofisika</span>
-      </div>
-    </a>
-    <a href="{% url 'landing' %}" class="header-back">← Beranda</a>
-    <button class="theme-toggle" id="themeToggle" title="Ganti tema">🌙</button>
-  </div>
-</header>
+{% include 'partials/_landing_header.html' with pn_spacer=1 %}
 
 <div class="page-wrap">
   <h1 class="page-title">Skala MMI (Modified Mercalli Intensity)</h1>
@@ -143,15 +121,7 @@ header { background:var(--card); border-bottom:1px solid var(--border); position
   var saved = localStorage.getItem('gmTheme');
   var dark = saved ? saved === 'dark' : (new Date().getHours() < 6 || new Date().getHours() >= 18);
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  document.getElementById('themeToggle').textContent = dark ? '☀️' : '🌙';
 })();
-document.getElementById('themeToggle').addEventListener('click', function () {
-  var el = document.documentElement;
-  var dark = el.getAttribute('data-theme') !== 'dark';
-  el.setAttribute('data-theme', dark ? 'dark' : 'light');
-  localStorage.setItem('gmTheme', dark ? 'dark' : 'light');
-  document.getElementById('themeToggle').textContent = dark ? '☀️' : '🌙';
-});
 </script>
 </body>
 </html>
