@@ -136,11 +136,6 @@ def dashboard(request):
             ]
             break
 
-    # --- Latest QC events ---
-    from qc_review.models import Event as QCEvent
-    _qc_qs = QCEvent.objects.prefetch_related("runs__station_results").order_by("-origin_time")[:5]
-    latest_qc_rows = [{"event": e, "summary": e.qc_summary} for e in _qc_qs]
-
     context = {
         'gempa_7d':            gempa_7d,
         'gempa_30d':           gempa_30d,
@@ -163,7 +158,6 @@ def dashboard(request):
         'lapbul_bulan_ini':    lapbul_bulan_ini,
         'buletin_deadline':    buletin_deadline,
         'bulletin_ada':        bulletin_ada,
-        'latest_qc_rows':      latest_qc_rows,
     }
     cache.set(_cache_key, context, 120)  # cache for 120 seconds
     return render(request, 'dashboard.html', context)
