@@ -117,7 +117,7 @@
             width: 100%; 
             align-items: center;
         }
-        .filter-box, nav, aside, header, #sidebar-toggle { display: none !important; }
+        .filter-box, .lampiran-btn, nav, aside, header, #sidebar-toggle { display: none !important; }
         /* Pastikan background color tercetak */
         table.report-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
@@ -149,8 +149,6 @@
                     </div>
                     <div class="flex flex-wrap gap-2 justify-end">
                         <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-4 rounded text-sm">Submit</button>
-                        <button type="button" onclick="window.print()" class="bg-green-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded text-sm">Cetak</button>
-                        {% if hujan_records %}<a href="{% url 'lampiran_sampel_hujan_pdf' %}?start={{ start_date|urlencode }}&end={{ end_date|urlencode }}&kondisi={{ kondisi|urlencode }}" class="text-white font-bold py-1 px-4 rounded text-sm hover:opacity-90" style="background:#2563eb">Export Lampiran Sampel Hujan (PDF)</a>{% endif %}
                     </div>
                 </form>
 
@@ -178,6 +176,7 @@
                 </div>
 
                 <div class="sampel-title">Stasiun Geofisika Kelas I Jayapura<br>Laporan Hujan Harian</div>
+                <div class="lampiran-btn" style="width: 650px; text-align: right; margin-bottom: 2px;"><a href="{% url 'lampiran_sampel_hujan_pdf' %}?start={{ start_date|urlencode }}&end={{ end_date|urlencode }}&kondisi={{ kondisi|urlencode }}" class="inline-block text-white font-bold py-1 px-4 rounded text-sm hover:opacity-90" style="background:#2563eb">Export Lampiran Sampel Hujan (PDF)</a></div>
                 <table class="report-table">
                     <colgroup>
                         <col style="width: 40px;">  <col style="width: 120px;"> <col style="width: 120px;"> <col style="width: 150px;"> <col style="width: 150px;"> </colgroup>
