@@ -139,6 +139,35 @@ class ReportingTest(TestCase):
         self.assertEqual(storm.criteria, "Badai Menengah")
         self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 1, 5)).a_index_source, 999)
 
+    def test_kindex_page(self):
+        import_kindex_workbook(io.BytesIO(kindex_workbook()), 2026, "grafik_kindeks 2026.xlsx")
+        r = self.client.get("/reporting/indeks-k/?start_bulan=1&start_tahun=2026&end_bulan=2&end_tahun=2026")
+        self.assertEqual(r.status_code, 200)
+        c = r.context
+        self.assertEqual(c["kdays"], 30)
+        self.assertEqual([k["n"] for k in c["kmonths"]], [30, 0])
+        self.assertEqual([o.tanggal.day for o, _crit in c["k_storms"]], [19])
+        self.assertContains(r, "data:image/png;base64,", count=1)  # chart only for the month with data
+        self.assertContains(r, "Lost Data")
+        self.assertContains(r, "Badai Menengah")
+        self.assertContains(r, "Belum ada data indeks K untuk Februari 2026")
+
+    def test_kindex_page_defaults_to_last_month(self):
+        r = self.client.get("/reporting/indeks-k/")
+        self.assertEqual(r.status_code, 200)
+        last = datetime.date.today().replace(day=1) - datetime.timedelta(days=1)
+        self.assertEqual((r.context["period"].start.year, r.context["period"].start.month), (last.year, last.month))
+
+    def test_kindex_page_rejects_bad_period(self):
+        r = self.client.get("/reporting/indeks-k/?start_bulan=3&start_tahun=2026&end_bulan=1&end_tahun=2026")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("period", r.context)
+        self.assertContains(r, "Bulan akhir tidak boleh sebelum bulan awal.")
+
+    def test_kindex_page_requires_login(self):
+        self.client.logout()
+        self.assertEqual(self.client.get("/reporting/indeks-k/").status_code, 302)
+
     def test_no_kindex_upload_on_reporting_page(self):
         r = self.client.get("/reporting/")
         self.assertNotContains(r, 'type="file"')

@@ -260,6 +260,22 @@ def _kindex_chart(month):
     return to_data_uri(fig, dpi=150)
 
 
+def kindex_report(period):
+    """Bagian indeks K/A: dipakai laporan SKP ini dan halaman Lapbul Magnet."""
+    kmonths = [_kindex_month(y, m) for y, m in period.months]
+    for k in kmonths:
+        k["chart"] = _kindex_chart(k) if k["n"] else None
+    kdays = sum(k["n"] for k in kmonths)
+    storms = sorted((o for k in kmonths for o in (x["obj"] for x in k["days"]) if o and o.has_data and o.a_index >= 30),
+                    key=lambda o: o.tanggal)
+    return {
+        "kmonths": kmonths, "kdays": kdays, "kdays_pct": 100 * kdays / period.days,
+        "k_storms": [(o, a_index_criteria(o.a_index)) for o in storms],
+        "k_diffs": [o for k in kmonths for o in k["a_diff"]],
+        "k_fmi_start": fmi_start_date(),
+    }
+
+
 # --------------------------------------------------------------------- build
 def build(period, include_maps=True):
     petir = [_petir_month(y, m) for y, m in period.months]
@@ -286,13 +302,6 @@ def build(period, include_maps=True):
         vals = [float(getattr(o, field)) for o in reduced if getattr(o, field) is not None]
         ranges[field] = (max(vals) - min(vals)) if len(vals) > 1 else None
 
-    kmonths = [_kindex_month(y, m) for y, m in period.months]
-    for k in kmonths:
-        k["chart"] = _kindex_chart(k) if k["n"] else None
-    kdays = sum(k["n"] for k in kmonths)
-    storms = sorted((o for k in kmonths for o in (x["obj"] for x in k["days"]) if o and o.has_data and o.a_index >= 30),
-                    key=lambda o: o.tanggal)
-
     total = sum(p["total"] for p in petir)
     return {
         "petir": petir, "petir_total": total,
@@ -304,8 +313,5 @@ def build(period, include_maps=True):
         "magnet_months": magnet_months, "magnet_ranges": ranges,
         "magnet_sessions": len(reduced) + sum(1 for d in dim_raw if not d["reduced"]),
         "magnet_empty_months": [mm["label"] for mm in magnet_months if not mm["reduced"] and not mm["dim"]],
-        "kmonths": kmonths, "kdays": kdays, "kdays_pct": 100 * kdays / period.days,
-        "k_storms": [(o, a_index_criteria(o.a_index)) for o in storms],
-        "k_diffs": [o for k in kmonths for o in k["a_diff"]],
-        "k_fmi_start": fmi_start_date(),
+        **kindex_report(period),
     }

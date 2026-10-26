@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load reporting_extras %}
+
+{% block content %}
+<style>
+  /* Gaya tabel/grafik sama dengan laporan Bukti SKP (report_base.html), dibatasi ke .kreport. */
+  .kreport { background: #fff; color: #111827; font-family: "Liberation Sans", Arial, sans-serif; font-size: 10pt; line-height: 1.45; padding: 18px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .kreport h2 { font-size: 13pt; font-weight: bold; color: #1f3864; text-align: center; margin: 0; }
+  .kreport .per { text-align: center; color: #4b5563; margin: 2px 0 12px; }
+  .kreport h3 { font-size: 10.5pt; font-weight: bold; margin: 16px 0 4px; }
+  .kreport p { margin: 4px 0 6px; text-align: justify; }
+  .kreport table { border-collapse: collapse; width: 100%; font-size: 8.3pt; font-variant-numeric: tabular-nums; }
+  .kreport th, .kreport td { border: 1px solid #d1d5db; padding: 3px 4px; vertical-align: top; }
+  .kreport th { background: #1f3864; color: #fff; font-weight: bold; text-align: center; }
+  .kreport td.c { text-align: center; white-space: nowrap; }
+  .kreport tr:nth-child(even) td { background: #fafafa; }
+  .kreport .emp td { color: #9ca3af; font-style: italic; }
+  .kreport .fig { width: 100%; margin: 6px 0 4px; border: 1px solid #d1d5db; border-radius: 4px; }
+  .kreport .note { font-size: 8.5pt; color: #4b5563; }
+  .kreport .warn { border-left: 3px solid #d97706; background: #fffbeb; padding: 6px 9px; margin: 8px 0; font-size: 9pt; }
+  .kreport .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+  .kreport .kpi div { border: 1px solid #d1d5db; border-radius: 6px; padding: 7px 9px; background: #f3f4f6; }
+  .kreport .kpi b { display: block; font-size: 15pt; color: #1f3864; }
+  .kreport .kpi span { font-size: 8.5pt; color: #4b5563; }
+  .kreport table.k td, .kreport table.k th { padding: 1px 3px; font-size: 7.3pt; text-align: center; }
+  .kreport td.k0 { background: #dcfce7 !important; } .kreport td.k4 { background: #fef9c3 !important; }
+  .kreport td.k5 { background: #ffedd5 !important; } .kreport td.k7 { background: #fee2e2 !important; }
+  .kreport td.k8 { background: #fae8ff !important; } .kreport td.k9 { background: #ede9fe !important; }
+  .kreport ol { margin: 4px 0 6px 18px; padding: 0; list-style: decimal; }
+  @media (max-width: 640px) { .kreport .kpi { grid-template-columns: repeat(2, 1fr); } }
+  @media print {
+    @page { size: A4; margin: 14mm 12mm; }
+    aside#sidebar, header, .no-print { display: none !important; }
+    .h-screen { height: auto !important; display: block !important; }
+    .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
+    main { padding: 0 !important; background: #fff !important; }
+    .kreport { box-shadow: none; padding: 0; border-radius: 0; }
+    .kreport, .kreport * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .kreport .pb { break-before: page; }
+    .kreport .avoid, .kreport tr, .kreport .fig { break-inside: avoid; }
+    .kreport thead { display: table-header-group; }
+  }
+</style>
+
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-5xl">
+        <div class="no-print">
+          <h1 class="text-3xl font-bold text-gray-800">Indeks K dan A Magnetbumi</h1>
+          <p class="mt-1 mb-6 text-sm text-gray-500">
+            Grafik dan tabel indeks K per 3 jam serta indeks A harian Stasiun Jayapura, sama dengan bagian indeks K/A pada Bukti SKP Magnetbumi.
+          </p>
+
+          <form method="get" class="mb-6 flex flex-wrap items-end gap-4 rounded-xl bg-white p-5 shadow">
+            <div>
+              <span class="mb-1 block text-sm font-medium text-gray-700">Dari bulan</span>
+              <div class="flex gap-2">{{ form.start_bulan }}{{ form.start_tahun }}</div>
+            </div>
+            <div>
+              <span class="mb-1 block text-sm font-medium text-gray-700">Sampai bulan</span>
+              <div class="flex gap-2">{{ form.end_bulan }}{{ form.end_tahun }}</div>
+            </div>
+            <button type="submit" class="rounded-lg bg-gray-800 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-900">Tampilkan</button>
+            {% if period %}<button type="button" onclick="window.print()" class="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90" style="background:#059669">Cetak / PDF</button>{% endif %}
+            <p class="w-full text-xs text-gray-500">Periode maksimal 12 bulan.</p>
+          </form>
+
+          {% for err in form.non_field_errors %}
+            <div class="mb-4 rounded-lg bg-red-100 px-4 py-3 text-sm text-red-800">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        {% if period %}
+        <div class="kreport">
+          <h2>Indeks K dan A Magnetbumi Stasiun Geofisika Jayapura</h2>
+          <div class="per">Periode {{ period.label }}</div>
+
+          <div class="kpi">
+            <div><b>{{ kdays }}/{{ period.days }}</b><span>hari berdata indeks K ({{ kdays_pct|idn:1 }}%)</span></div>
+            <div><b>{{ k_storms|length }}</b><span>hari badai geomagnet (A ≥ 30)</span></div>
+            <div><b>{{ kmonths|length }}</b><span>bulan ditampilkan</span></div>
+            <div><b>{{ k_fmi_start|date:"d/m/Y" }}</b><span>mulai data otomatis FMI BMKG</span></div>
+          </div>
+
+          <p class="note">Indeks K per 3 jam (UTC). Sebelum {{ k_fmi_start|date:"d/m/Y" }} dari berkas pengolahan stasiun (Excel), mulai tanggal itu diurai otomatis dari citra FMI K-Indices BMKG. Indeks A dihitung dari K dengan konversi standar (0, 3, 7, 15, 27, 48, 80, 140, 240, 400). Kriteria: Tenang (A &lt; 30), Badai Kecil (30–49), Badai Menengah (50–99), Badai Besar (≥ 100).</p>
+
+          {% include "reporting/_kindex_months.html" with summary_caption="Tabel 1. Ringkasan indeks K dan A per bulan" section_prefix="" %}
+
+          {% if k_storms or k_diffs %}
+          <h3>Catatan</h3>
+          <ol>
+            {% if k_storms %}<li>Hari dengan aktivitas badai geomagnet: {% for o, c in k_storms %}{{ o.tanggal|date:"d/m/Y" }} ({{ c }}, A = {{ o.a_index|idn:1 }}){% if not forloop.last %}; {% endif %}{% endfor %}.</li>{% endif %}
+            {% if k_diffs %}<li>Indeks A berkas sumber berbeda dari hasil hitung K: {% for o in k_diffs %}{{ o.tanggal|date:"d/m" }} ({{ o.a_index_source|idn:2 }} → {{ o.a_index|idn:2 }}){% if not forloop.last %}; {% endif %}{% endfor %}. Halaman ini memakai nilai hasil hitung.</li>{% endif %}
+          </ol>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock content %}

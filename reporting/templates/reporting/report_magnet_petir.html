@@ -54,24 +54,7 @@
 {% endfor %}
 
 <h2 class="pb">VI. Data Magnetbumi – Indeks K dan A</h2>
-<div class="avoid">
-<h3>Tabel 4. Ringkasan indeks K dan A per bulan</h3>
-<table><thead><tr><th>Bulan</th><th>Hari berdata</th><th>Tanggal tanpa data</th><th>K maks. (tgl)</th><th>A rata-rata</th><th>A maks. (tgl)</th><th>Tenang</th><th>Badai Kecil</th><th>Badai Menengah</th><th>Badai Besar</th></tr></thead><tbody>
-{% for k in kmonths %}<tr><td>{{ k.label }}</td><td class="c">{{ k.n }}/{{ k.ndays }}</td><td class="c">{{ k.missing|join:", "|default:"–" }}</td><td class="c">{% if k.kmax is not None %}{{ k.kmax }} ({{ k.kmax_days|join:", " }}){% else %}–{% endif %}</td><td class="c">{{ k.amean|idn:1 }}</td><td class="c">{% if k.amax %}{{ k.amax.a_index|idn:1 }} ({{ k.amax.tanggal.day }}){% else %}–{% endif %}</td><td class="c">{{ k.criteria|get_item:"Tenang"|default:0 }}</td><td class="c">{{ k.criteria|get_item:"Badai Kecil"|default:0 }}</td><td class="c">{{ k.criteria|get_item:"Badai Menengah"|default:0 }}</td><td class="c">{{ k.criteria|get_item:"Badai Besar"|default:0 }}</td></tr>{% endfor %}
-</tbody></table>
-</div>
-{% for k in kmonths %}
-  <h3 class="pb">VI.{{ forloop.counter }} Indeks K – {{ k.label }}</h3>
-  {% if k.chart %}<img class="fig" style="width:80%;display:block;margin:4px auto" src="{{ k.chart }}" alt="Indeks K {{ k.label }}">
-  <table class="k"><thead><tr><th>Tgl</th><th>00–03</th><th>03–06</th><th>06–09</th><th>09–12</th><th>12–15</th><th>15–18</th><th>18–21</th><th>21–24</th><th>A</th><th>Kriteria</th></tr></thead><tbody>
-  {% for x in k.days %}{% with o=x.obj %}
-    {% if o and o.has_data %}<tr><td>{{ x.date.day }}</td>{% for v in o.k_values %}{% if v is None %}<td class="emp">–</td>{% else %}<td class="{% if v <= 3 %}k0{% elif v == 4 %}k4{% elif v <= 6 %}k5{% elif v == 7 %}k7{% elif v == 8 %}k8{% else %}k9{% endif %}">{{ v }}</td>{% endif %}{% endfor %}<td>{{ o.a_index|idn:2 }}</td><td>{{ o.criteria }}</td></tr>
-    {% else %}<tr class="emp"><td>{{ x.date.day }}</td><td colspan="10">{{ o.keterangan|default:"Tidak ada data" }}</td></tr>{% endif %}
-  {% endwith %}{% endfor %}
-  </tbody></table>
-  <p class="note">Sumber: {{ k.sources|join:", " }}.{% if k.partial %} Hari dengan slot tidak lengkap (–): {{ k.partial|join:", " }}; indeks A dihitung dari slot yang tersedia.{% endif %}</p>
-  {% else %}<div class="warn">Belum ada data indeks K untuk {{ k.label }}. Unggah berkas Excel indeks K di halaman Reporting.</div>{% endif %}
-{% endfor %}
+{% include "reporting/_kindex_months.html" with summary_caption="Tabel 4. Ringkasan indeks K dan A per bulan" section_prefix="VI." %}
 
 <h2 class="pb">VII. Catatan Kualitas Data dan Tindak Lanjut</h2>
 <ol>

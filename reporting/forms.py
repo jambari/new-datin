@@ -23,9 +23,8 @@ def _years():
     return [(y, y) for y in range(this, 2004, -1)]
 
 
-class ReportForm(forms.Form):
-    jenis = forms.ChoiceField(choices=REPORT_TYPES, label="Jenis laporan",
-                              widget=forms.Select(attrs={"class": INPUT}))
+class PeriodForm(forms.Form):
+    """Rentang bulan penuh, maksimal MAX_MONTHS bulan."""
     start_bulan = forms.TypedChoiceField(choices=MONTHS, coerce=int, label="Dari bulan",
                                          widget=forms.Select(attrs={"class": INPUT}))
     start_tahun = forms.TypedChoiceField(choices=_years, coerce=int, label="Tahun",
@@ -34,7 +33,6 @@ class ReportForm(forms.Form):
                                        widget=forms.Select(attrs={"class": INPUT}))
     end_tahun = forms.TypedChoiceField(choices=_years, coerce=int, label="Tahun",
                                        widget=forms.Select(attrs={"class": INPUT}))
-    nip = forms.CharField(max_length=30, required=False, label="NIP", widget=forms.TextInput(attrs={"class": INPUT}))
 
     def clean(self):
         data = super().clean()
@@ -48,3 +46,11 @@ class ReportForm(forms.Form):
         if n > MAX_MONTHS:
             raise forms.ValidationError(f"Periode laporan maksimal {MAX_MONTHS} bulan.")
         return data
+
+
+class ReportForm(PeriodForm):
+    jenis = forms.ChoiceField(choices=REPORT_TYPES, label="Jenis laporan",
+                              widget=forms.Select(attrs={"class": INPUT}))
+    nip = forms.CharField(max_length=30, required=False, label="NIP", widget=forms.TextInput(attrs={"class": INPUT}))
+
+    field_order = ["jenis", "start_bulan", "start_tahun", "end_bulan", "end_tahun", "nip"]

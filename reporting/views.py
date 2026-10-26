@@ -10,7 +10,7 @@ from magnet.models import KIndexDaily
 
 from .builders import gempabumi, gempabumi_cepat, hujan, kualitas_udara, magnet_petir, percepatan_tanah, tanda_waktu
 from .common import Period
-from .forms import REPORT_TYPES, ReportForm
+from .forms import REPORT_TYPES, PeriodForm, ReportForm
 
 UNIT_KERJA = "Stasiun Geofisika Jayapura"
 
@@ -90,3 +90,20 @@ def report(request):
            if getattr(module, "PER_OFFICER", False) else module.build(period)),
     }
     return render(request, template, context)
+
+
+@login_required
+def kindex(request):
+    """Lapbul & Infografis > Magnet: grafik dan tabel indeks K/A per bulan (sama dengan Bukti SKP Magnet)."""
+    if request.GET:
+        form = PeriodForm(request.GET)
+    else:
+        last = datetime.date.today().replace(day=1) - datetime.timedelta(days=1)
+        form = PeriodForm({"start_bulan": last.month, "start_tahun": last.year,
+                           "end_bulan": last.month, "end_tahun": last.year})
+    context = {"form": form}
+    if form.is_valid():
+        d = form.cleaned_data
+        period = Period(d["start_tahun"], d["start_bulan"], d["end_tahun"], d["end_bulan"])
+        context.update(period=period, **magnet_petir.kindex_report(period))
+    return render(request, "reporting/kindex.html", context)
