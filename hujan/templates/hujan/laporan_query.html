@@ -75,9 +75,11 @@
 
     table.report-table th, 
     table.report-table td {
-        border: 1px solid #000;
-        padding: 4px 6px; /* Padding sempit */
+        border: 1px solid #9ca3af;
+        padding: 5px 6px; /* Padding sempit */
         text-align: center;
+        vertical-align: middle;
+        font-weight: bold;
         height: 20px; /* Tinggi baris dipaksa kecil */
     }
 
@@ -89,13 +91,19 @@
         font-size: 10px;
     }
 
-    table.report-table tr:nth-child(even) {
-        background-color: #f2f2f2;
+    table.report-table tbody tr:nth-child(even) {
+        background-color: #f3f4f6;
     }
+    .sampel-title { width: 650px; text-align: center; font-weight: bold; font-size: 15px; line-height: 1.35; margin-bottom: 12px; }
+
+    /* Keterangan sampling di bawah tabel (format Lampiran Sampel Hujan) */
+    table.sampel-info { width: 650px; font-size: 14px; margin: -30px 0 50px; }
+    table.sampel-info td { padding: 5px 0; vertical-align: top; }
+    table.sampel-info td:first-child { width: 290px; }
 
     /* Warna Kategori di Tabel */
     .cat-red { color: red; font-weight: bold; }
-    .cat-gray { color: #888; font-style: italic; }
+    .cat-gray { color: #888; font-style: italic; font-weight: normal; }
 
     /* Print Settings */
     @media print {
@@ -126,7 +134,7 @@
                 
                 <h2 class="text-xl font-bold mb-4 text-gray-800" style="width: 700px; text-align: center;">Bahan Buletin Hujan</h2>
 
-                <form method="GET" action="" class="filter-box flex gap-4 items-end">
+                <form method="GET" action="" class="filter-box flex flex-wrap gap-4 items-end">
                     <div class="flex-1">
                         <label class="block text-xs font-bold text-gray-700 mb-1">Start Date</label>
                         <input type="date" name="start" value="{{ start_date }}" required class="w-full p-1 border rounded text-sm">
@@ -135,9 +143,14 @@
                         <label class="block text-xs font-bold text-gray-700 mb-1">End Date</label>
                         <input type="date" name="end" value="{{ end_date }}" required class="w-full p-1 border rounded text-sm">
                     </div>
-                    <div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Kondisi Sampling</label>
+                        <input type="text" name="kondisi" value="{{ kondisi|default:'Baik' }}" maxlength="50" class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div class="flex flex-wrap gap-2 justify-end">
                         <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-4 rounded text-sm">Submit</button>
-                        <button type="button" onclick="window.print()" class="bg-green-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded text-sm ml-2">Cetak</button>
+                        <button type="button" onclick="window.print()" class="bg-green-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded text-sm">Cetak</button>
+                        {% if hujan_records %}<a href="{% url 'lampiran_sampel_hujan_pdf' %}?start={{ start_date|urlencode }}&end={{ end_date|urlencode }}&kondisi={{ kondisi|urlencode }}" class="text-white font-bold py-1 px-4 rounded text-sm hover:opacity-90" style="background:#2563eb">Export Lampiran Sampel Hujan (PDF)</a>{% endif %}
                     </div>
                 </form>
 
@@ -164,7 +177,7 @@
                     </div>
                 </div>
 
-                <h3 class="font-bold text-sm text-gray-700">Tabel Data Hujan (Obs)</h3>
+                <div class="sampel-title">Stasiun Geofisika Kelas I Jayapura<br>Laporan Hujan Harian</div>
                 <table class="report-table">
                     <colgroup>
                         <col style="width: 40px;">  <col style="width: 120px;"> <col style="width: 120px;"> <col style="width: 150px;"> <col style="width: 150px;"> </colgroup>
@@ -182,9 +195,9 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td>{{ row.tanggal|date:"d-m-Y" }}</td>
-                            <td>{{ row.obs }}</td>
-                            <td class="{% if row.obs > 50 %}cat-red{% elif row.obs == 0 %}cat-gray{% endif %}">
-                                {{ row.kategori }}
+                            <td>{{ row.obs|floatformat:1 }}</td>
+                            <td class="{% if row.kategori|lower == 'sangat lebat' %}cat-red{% elif row.kategori|lower == 'nihil' %}cat-gray{% endif %}">
+                                {{ row.kategori|lower }}
                             </td>
                             <td>{{ row.petugas|default:"-" }}</td>
                         </tr>
@@ -200,6 +213,19 @@
                         </tr>
                     </tfoot>
                 </table>
+
+                {% if sampling %}
+                <table class="sampel-info">
+                    <tr><td>Nama Stasiun</td><td>: {{ sampling.nama_stasiun }}</td></tr>
+                    <tr><td>Periode Sampling / Minggu ke</td><td>: {{ sampling.minggu }}</td></tr>
+                    <tr><td>Bulan / Tahun</td><td>: {{ sampling.bulan_tahun }}</td></tr>
+                    <tr><td>Jumlah mm dari penakar hujan obs</td><td><b>: {{ sampling.total|floatformat:1 }} <i>mm</i></b></td></tr>
+                    <tr><td>Kondisi Sampling</td><td>: {{ sampling.kondisi }}</td></tr>
+                    <tr><td>Nama Pengamat</td><td>:</td></tr>
+                    {% for nama in sampling.pengamat %}<tr><td></td><td>-&nbsp;&nbsp;&nbsp;{{ nama }}</td></tr>
+                    {% empty %}<tr><td></td><td class="text-gray-500">Tidak ada pegawai dinas PS pada {{ end_date }} di jadwal.</td></tr>{% endfor %}
+                </table>
+                {% endif %}
 
                 {% elif start_date %}
                     <div class="p-4 bg-yellow-100 text-center rounded text-sm">Data tidak ditemukan.</div>

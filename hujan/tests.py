@@ -220,3 +220,56 @@ class HujanKategoriNormalizeTest(TestCase):
         self.assertEqual(saved, {a.pk: 'Nihil', b.pk: 'Hujan Sangat Ringan'})
         self.assertEqual([Hujan.objects.get(pk=x.pk).kategori for x in (a, b, c, d)],
                          ['nihil', 'sangat ringan', 'ringan', ''])
+
+
+# ── Lampiran Sampel Hujan ────────────────────────────────────────────────────
+class LampiranSampelHujanTest(TestCase):
+    def setUp(self):
+        from jadwal.models import JadwalHarian, Pegawai, PolaDinas
+        self.user = User.objects.create_user('sampler', password='pass123')
+        self.client.login(username='sampler', password='pass123')
+        ps = PolaDinas.objects.create(kode='PS', nama='Pagi Siang', jam_mulai='07:00', jam_selesai='19:00', durasi=12)
+        libur = PolaDinas.objects.create(kode='L', nama='Libur', jam_mulai='00:00', jam_selesai='00:00', durasi=0, is_libur=True)
+        monday = datetime.date(2026, 10, 5)
+        for i, (nama, pola) in enumerate([('ALIF MUHAMMAD ANNABAL, S.Tr.Inst, M.Sc', ps),
+                                          ('ANAS TAUFIQ SYARIFUDDIN, S.Tr.Inst', ps),
+                                          ('JAMBARI, S.Tr, M.Si', libur)]):
+            p = Pegawai.objects.create(nama=nama, nip=str(i), pangkat='-', jabatan='-', urutan=i)
+            JadwalHarian.objects.create(pegawai=p, tanggal=monday, pola=pola)
+        for day, obs, kat in [(29, 0, 'nihil'), (30, 0.8, 'sangat ringan'), (1, 73.7, 'sangat lebat'), (5, 0, 'nihil')]:
+            month = 9 if day > 20 else 10
+            make_hujan(tanggal=datetime.date(2026, month, day), obs=obs, kategori=kat, petugas='JAMBARI, S.Tr, M.Si')
+        self.params = {'start': '2026-09-29', 'end': '2026-10-05'}
+
+    def test_sampling_info_uses_week_of_start_month_and_ps_roster(self):
+        from .lampiran import sampling_info
+        info = sampling_info(datetime.date(2026, 9, 29), datetime.date(2026, 10, 5))
+        self.assertEqual(info['minggu'], 'V (Lima) / V (Lima)')
+        self.assertEqual(info['bulan_tahun'], 'September / 2026')
+        self.assertAlmostEqual(info['total'], 74.5)
+        self.assertEqual(info['kondisi'], 'Baik')
+        self.assertEqual(info['pengamat'], ['Alif Muhammad Annabal', 'Anas Taufiq Syarifuddin'])
+
+    def test_query_page_shows_sampling_block_and_export_link(self):
+        resp = self.client.get(reverse('query_laporan_hujan'), self.params)
+        self.assertContains(resp, 'Periode Sampling / Minggu ke')
+        self.assertContains(resp, 'Anas Taufiq Syarifuddin')
+        self.assertContains(resp, reverse('lampiran_sampel_hujan_pdf'))
+
+    def test_pdf_export(self):
+        resp = self.client.get(reverse('lampiran_sampel_hujan_pdf'), {**self.params, 'kondisi': 'Baik'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertIn('Lampiran_Sampel_Hujan_20261005.pdf', resp['Content-Disposition'])
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+
+    def test_pdf_export_rejects_bad_dates(self):
+        resp = self.client.get(reverse('lampiran_sampel_hujan_pdf'), {'start': '2026-10-05', 'end': '2026-09-29'})
+        self.assertEqual(resp.status_code, 400)
+        resp = self.client.get(reverse('lampiran_sampel_hujan_pdf'), {'start': 'x', 'end': ''})
+        self.assertEqual(resp.status_code, 400)
+
+    def test_pdf_export_requires_login(self):
+        self.client.logout()
+        resp = self.client.get(reverse('lampiran_sampel_hujan_pdf'), self.params)
+        self.assertEqual(resp.status_code, 302)

@@ -10,6 +10,7 @@ from django.utils import timezone
 from datetime import datetime
 import json
 from .forms import HujanForm, KATEGORI_CHOICES
+from .lampiran import lampiran_pdf, sampling_info
 from jadwal.models import Pegawai
 
 
@@ -130,10 +131,18 @@ def query_laporan_hujan(request):
                 pie_labels.append(item['kategori']) # e.g., "Sedang", "Nihil"
                 pie_data.append(item['total'])      # e.g., 5, 10
 
+    kondisi = request.GET.get('kondisi', 'Baik')
+    sampling = None
+    if hujan_records:
+        sampling = sampling_info(datetime.strptime(start_date, '%Y-%m-%d').date(),
+                                 datetime.strptime(end_date, '%Y-%m-%d').date(), kondisi)
+
     context = {
         'hujan_records': hujan_records,
         'start_date': start_date,
         'end_date': end_date,
+        'kondisi': kondisi,
+        'sampling': sampling,
         'stats': stats,
         # Dump data ke JSON string untuk JS
         'chart_dates': json.dumps(chart_dates),
@@ -143,6 +152,23 @@ def query_laporan_hujan(request):
     }
 
     return render(request, 'hujan/laporan_query.html', context)
+
+
+@login_required
+def lampiran_sampel_hujan_pdf(request):
+    """Lampiran Sampel Hujan (PDF) untuk periode query: tabel harian + keterangan sampling."""
+    try:
+        start = datetime.strptime(request.GET.get('start', ''), '%Y-%m-%d').date()
+        end = datetime.strptime(request.GET.get('end', ''), '%Y-%m-%d').date()
+    except ValueError:
+        return HttpResponse('Parameter start/end tidak valid (YYYY-MM-DD).', status=400)
+    if end < start:
+        return HttpResponse('Tanggal akhir sebelum tanggal awal.', status=400)
+    records = Hujan.objects.filter(tanggal__range=[start, end]).order_by('tanggal')
+    info = sampling_info(start, end, request.GET.get('kondisi', 'Baik'))
+    response = HttpResponse(lampiran_pdf(records, info), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Lampiran_Sampel_Hujan_{end:%Y%m%d}.pdf"'
+    return response
 
 @login_required
 def tambah_hujan(request):
