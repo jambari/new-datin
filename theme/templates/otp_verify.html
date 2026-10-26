@@ -14,7 +14,7 @@
   <div class="text-center mb-8">
     <img src="{% static 'theme/images/logo.jpeg' %}" alt="Logo" class="w-20 h-auto mx-auto mb-4 rounded-xl shadow">
     <h1 class="text-2xl font-extrabold text-gray-900">Verifikasi OTP</h1>
-    <p class="text-sm text-gray-500 mt-1">{{ user.username }}</p>
+    <p class="text-sm text-gray-500 mt-1">{{ username }}</p>
   </div>
 
   <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
@@ -38,7 +38,7 @@
     </form>
 
     <div class="mt-4 text-center">
-      <a href="{% url 'logout' %}" class="text-sm text-gray-400 hover:text-gray-600">Batal & logout</a>
+      <a href="{% url 'login' %}" class="text-sm text-gray-400 hover:text-gray-600">Batal, kembali ke login</a>
     </div>
   </div>
 </div>

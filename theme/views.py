@@ -7,6 +7,7 @@ from django.db.models import Sum, Max, Count
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 import datetime
+import time
 
 
 @never_cache
@@ -886,6 +887,30 @@ def account_profile(request):
 
 # ── Custom Login with OTP ───────────────────────────────────
 
+# Password OK but OTP not entered yet: the user is kept here (not logged in)
+# until otp_verify accepts a code, so /dashboard/ etc. can't skip the OTP.
+_PRE_OTP = 'pre_otp'
+_PRE_OTP_TTL = 300        # seconds to enter the code
+_PRE_OTP_MAX_TRIES = 5
+
+
+def _safe_next(request, next_url):
+    from django.utils.http import url_has_allowed_host_and_scheme
+    if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        return next_url
+    return ''
+
+
+def _after_login(next_url):
+    # Halaman ini tidak memakai LOGIN_REDIRECT_URL, jadi tujuan akhir
+    # ditentukan oleh dispatcher /post-login/: operator katalog gempa
+    # mendarat di katalog kantornya (mis. angkasa -> /gempa-admin/gempa/gempa/),
+    # user lain tetap ke dashboard.
+    return redirect(next_url) if next_url else redirect('post_login')
+
+
 def custom_login(request):
     from django.contrib.auth.forms import AuthenticationForm
     from django.contrib.auth import login as auth_login
@@ -894,18 +919,19 @@ def custom_login(request):
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
+            next_url = _safe_next(request, request.POST.get('next') or request.GET.get('next', ''))
+            if any(devices_for_user(user, confirmed=True)):
+                request.session.cycle_key()
+                request.session[_PRE_OTP] = {
+                    'user_id': user.pk,
+                    'backend': user.backend,
+                    'next': next_url,
+                    'at': time.time(),
+                    'tries': 0,
+                }
+                return redirect('otp_verify')
             auth_login(request, user)
-            next_url = request.POST.get('next') or request.GET.get('next', '')
-            if next_url:
-                return redirect(next_url)
-            # OTP redirect disabled — uncomment after CSIRT pentest
-            # if devices_for_user(user):
-            #     return redirect('otp_verify')
-            # Halaman ini tidak memakai LOGIN_REDIRECT_URL, jadi tujuan akhir
-            # ditentukan oleh dispatcher /post-login/: operator katalog gempa
-            # mendarat di katalog kantornya (mis. angkasa -> /gempa-admin/gempa/gempa/),
-            # user lain tetap ke dashboard.
-            return redirect('post_login')
+            return _after_login(next_url)
     else:
         form = AuthenticationForm(request)
 
@@ -916,17 +942,31 @@ def custom_login(request):
 
 
 def otp_verify(request):
-    if not request.user.is_authenticated:
+    from django.contrib.auth import get_user_model, login as auth_login
+    from django_otp import login as otp_login
+
+    pending = request.session.get(_PRE_OTP)
+    if not pending or time.time() - pending['at'] > _PRE_OTP_TTL:
+        request.session.pop(_PRE_OTP, None)
+        return redirect('login')
+    user = get_user_model().objects.filter(pk=pending['user_id'], is_active=True).first()
+    if user is None:
+        request.session.pop(_PRE_OTP, None)
         return redirect('login')
 
     msg = None
     if request.method == 'POST':
-        token = request.POST.get('otp_token', '')
-        device = match_token(request.user, token)
+        device = match_token(user, request.POST.get('otp_token', '').strip())
         if device:
-            request.user.otp_device = device
-            return redirect('dashboard')
-        else:
-            msg = 'Kode OTP tidak valid. Coba lagi.'
+            del request.session[_PRE_OTP]
+            auth_login(request, user, backend=pending['backend'])
+            otp_login(request, device)   # session counts as OTP-verified (also for /admin)
+            return _after_login(pending['next'])
+        pending['tries'] += 1
+        if pending['tries'] >= _PRE_OTP_MAX_TRIES:
+            del request.session[_PRE_OTP]
+            return redirect('login')
+        request.session[_PRE_OTP] = pending
+        msg = 'Kode OTP tidak valid. Coba lagi.'
 
-    return render(request, 'otp_verify.html', {'msg': msg})
+    return render(request, 'otp_verify.html', {'msg': msg, 'username': user.get_username()})
