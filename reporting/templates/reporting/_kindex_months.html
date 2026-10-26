@@ -7,7 +7,7 @@
 </div>
 {% for k in kmonths %}
   <h3 class="pb">{% if section_prefix %}{{ section_prefix }}{{ forloop.counter }} {% endif %}Indeks K – {{ k.label }}</h3>
-  {% if k.chart %}<img class="fig" style="width:80%;display:block;margin:4px auto" src="{{ k.chart }}" alt="Indeks K {{ k.label }}">
+  {% if k.chart %}<img class="fig" style="width:72%;display:block;margin:4px auto" src="{{ k.chart }}" alt="Indeks K {{ k.label }}">
   <table class="k"><thead><tr><th>Tgl</th><th>00–03</th><th>03–06</th><th>06–09</th><th>09–12</th><th>12–15</th><th>15–18</th><th>18–21</th><th>21–24</th><th>A</th><th>Kriteria</th></tr></thead><tbody>
   {% for x in k.days %}{% with o=x.obj %}
     {% if o and o.has_data %}<tr><td>{{ x.date.day }}</td>{% for v in o.k_values %}{% if v is None %}<td class="emp">–</td>{% else %}<td class="{% if v <= 3 %}k0{% elif v == 4 %}k4{% elif v <= 6 %}k5{% elif v == 7 %}k7{% elif v == 8 %}k8{% else %}k9{% endif %}">{{ v }}</td>{% endif %}{% endfor %}<td>{{ o.a_index|idn:2 }}</td><td>{{ o.criteria }}</td></tr>
