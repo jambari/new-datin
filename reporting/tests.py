@@ -152,6 +152,31 @@ class ReportingTest(TestCase):
         self.assertContains(r, "Badai Menengah")
         self.assertContains(r, "Belum ada data indeks K untuk Februari 2026")
 
+    def test_kindex_page_shows_bartington_absolute_values(self):
+        def dms(d, m=0):
+            return {"deg": str(d), "min": str(m), "sec": "0", "hh": "1", "mm": "0"}
+        MagneticObservation.objects.create(
+            observation_date=datetime.date(2026, 1, 21), observer="Achmad", session="Session 1",
+            deklinasi_readings={"WU": dms(182, 48), "ED": dms(182, 50), "WD": dms(182, 52), "EU": dms(182, 50), "_cr_awal": True},
+            inklinasi_readings={k: {**dms(v), "ftotal": "39270"} for k, v in
+                                (("NU", 202), ("SD", 338), ("ND", 158), ("SU", 22))})
+        # DIM (MinGeo) dan data impor lama bukan Bartington: tidak ditampilkan
+        MagneticObservation.objects.create(observation_date=datetime.date(2026, 1, 16), observer="Jambari",
+                                           session="Session 1",
+                                           deklinasi_readings={"WU": {"hh": "0", "mm": "47", "ss": "1", "circ": "303.5"}})
+        MagneticObservation.objects.create(observation_date=datetime.date(2026, 1, 25), observer="Juan",
+                                           session="Session 1", declination=2.79, inclination=-22.1,
+                                           total_intensity=39263.08)
+        r = self.client.get("/reporting/indeks-k/?start_bulan=1&start_tahun=2026&end_bulan=2&end_tahun=2026")
+        c = r.context
+        self.assertEqual(c["abs_total"], 1)
+        self.assertEqual([len(a["rows"]) for a in c["abs_months"]], [1, 0])
+        self.assertEqual(c["abs_months"][0]["rows"][0].observer, "Achmad")
+        self.assertIsNotNone(c["abs_months"][0]["chart"])
+        self.assertContains(r, "Nilai absolut – Januari 2026")
+        self.assertContains(r, "Tidak ada observasi absolut Bartington pada Februari 2026")
+        self.assertNotContains(r, "Juan")
+
     def test_kindex_page_defaults_to_last_month(self):
         r = self.client.get("/reporting/indeks-k/")
         self.assertEqual(r.status_code, 200)

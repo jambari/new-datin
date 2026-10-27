@@ -94,7 +94,7 @@ def report(request):
 
 @login_required
 def kindex(request):
-    """Lapbul & Infografis > Magnet: grafik dan tabel indeks K/A per bulan (sama dengan Bukti SKP Magnet)."""
+    """Lapbul & Infografis > Magnet: nilai absolut Bartington dan indeks K/A per bulan (seperti Bukti SKP Magnet)."""
     if request.GET:
         form = PeriodForm(request.GET)
     else:
@@ -105,5 +105,5 @@ def kindex(request):
     if form.is_valid():
         d = form.cleaned_data
         period = Period(d["start_tahun"], d["start_bulan"], d["end_tahun"], d["end_bulan"])
-        context.update(period=period, **magnet_petir.kindex_report(period))
+        context.update(period=period, **magnet_petir.kindex_report(period), **magnet_petir.absolute_report(period))
     return render(request, "reporting/kindex.html", context)

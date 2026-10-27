@@ -196,6 +196,27 @@ def _magnet_chart(month_label, rows, ndays):
     return to_data_uri(fig, dpi=140)
 
 
+def _is_bartington(o):
+    """Sesi theodolit Bartington: bacaan deklinasi dalam derajat/menit/detik (DIM MinGeo memakai 'circ')."""
+    return any(isinstance(v, dict) and "deg" in v for v in (o.deklinasi_readings or {}).values())
+
+
+def absolute_report(period):
+    """Nilai absolut Bartington per bulan (tabel + grafik): dipakai halaman Lapbul Magnet."""
+    rows = [o for o in MagneticObservation.objects.filter(observation_date__range=(period.start, period.end),
+                                                          declination__isnull=False)
+            .order_by("observation_date", "session", "id") if _is_bartington(o)]
+    months = []
+    for y, m in period.months:
+        mrows = [o for o in rows if (o.observation_date.year, o.observation_date.month) == (y, m)]
+        _s, e = _month_bounds(y, m)
+        label = f"{BULAN[m]} {y}"
+        months.append({"label": label, "rows": mrows,
+                       "chart": _magnet_chart(label, mrows, e.day) if mrows else None})
+    return {"abs_months": months, "abs_total": len(rows),
+            "abs_days": len({o.observation_date for o in rows})}
+
+
 # ------------------------------------------------------------------- K index
 def _kcolor(k):
     return ("#22c55e" if k <= 3 else "#eab308" if k == 4 else "#f97316" if k <= 6
