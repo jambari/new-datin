@@ -1414,3 +1414,34 @@ class SumberTerdekatTest(TestCase):
         self.assertIn('Sumber terdekat: <b>Sesar Mamberamo</b> (segmen Mawe)', body)
         self.assertIn('Di atas zona sumber <b>Megathrust Papua</b>', body)
         self.assertIn('Zona Waktu', body)
+
+
+class PusgenLayerSymbolTest(TestCase):
+    """Sesar naik/turun dan palung membawa 'gigi' (sisi hanging wall / lempeng atas di kiri garis)."""
+
+    def test_teeth_flags(self):
+        from gempa.faults import _read_js
+        static = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / 'gjson'
+        faults = _read_js(static / 'indofaults.js')['features']
+        self.assertEqual(sum(1 for f in faults if f['properties'].get('gigi')), 192)
+        self.assertFalse(any(f['properties'].get('gigi') for f in faults if f['properties']['tipe'] == 'geser'))
+        trench = _read_js(static / 'subduksi.js')['features']
+        self.assertTrue(all(f['properties'].get('gigi') and f['properties']['tipe'] == 'subduksi' for f in trench))
+
+    def test_papua_trench_teeth_face_south(self):
+        """Palung Papua: lempeng atas (Papua) di selatan, jadi di kiri arah garis (garis berjalan ke barat)."""
+        from gempa.faults import _read_js
+        static = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / 'gjson'
+        papua = next(f for f in _read_js(static / 'subduksi.js')['features'] if f['properties']['nama'] == 'Papua')
+        coords = papua['geometry']['coordinates']
+        self.assertGreater(coords[0][0], coords[-1][0])
+
+    def test_template_balai_loads_the_symbol_layer(self):
+        staff = User.objects.create_user('gigi_probe', password='pass12345', is_staff=True)
+        staff.groups.add(Group.objects.get(name=ANGKASA_GROUP))
+        self.client.force_login(staff)
+        event = make_event(Gempa, event_id='ev-gigi')
+        body = self.client.get(reverse('gempa_admin:gempa-template-balai', args=[event.pk])).content.decode()
+        self.assertIn('js/pusgen_layer.js?v=', body)
+        self.assertIn('L.pusgenLayer(indoFaults', body)
+        self.assertIn('L.pusgenLayer(subDuksi', body)

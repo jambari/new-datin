@@ -9,12 +9,19 @@ Keluaran (format sama dengan berkas lama, jadi kode Leaflet tetap):
   * indofaults.js  `var indoFaults = [FeatureCollection];`  (gempa/static/gjson dan repository/static/...)
   * subduksi.js    `var subDuksi = [FeatureCollection];`    palung subduksi 2024
   * gempa/data/pusgen2024_megathrust.json                   poligon megathrust (dipakai server)
+  * scripts/geodata/pusgen2024/gmt/*.gmt                    berkas GMT untuk buat_peta.sh (peta episenter)
+
+Garis sesar naik/turun dan palung diarahkan sehingga sisi gigi (hanging wall / lempeng atas) selalu di KIRI
+arah garis, dan diberi properti "gigi": true. Leaflet (gempa/static/js/pusgen_layer.js) dan GMT
+(`gmt plot -Sf...+l+t`) cukup menggambar gigi di sisi kiri.
 
     python scripts/geodata/pusgen_faults_js.py
 
 Butuh ogr2ogr (GDAL).
 """
 import json
+import math
+import re
 import subprocess
 from pathlib import Path
 
@@ -25,7 +32,11 @@ MEGATHRUST = ("2024_Megathrust_v2.zip", "2024_Megathrust_v2/2024_Megathrust_v2.s
 TRENCH = ("2024_Megathrust_v2.zip", "2024_Subduction trench_v2/2024_Subduction trench_v2.shp")
 JS_DIRS = [ROOT / "gempa/static/gjson", ROOT / "repository/static/repository/js"]
 MEGATHRUST_OUT = ROOT / "gempa/data/pusgen2024_megathrust.json"
+GMT_OUT = SRC / "gmt"
 CREDIT = "PuSGeN 2024, Peta Sumber dan Bahaya Gempa Indonesia Tahun 2024"
+ARAH = {"N": (0, 1), "S": (0, -1), "E": (1, 0), "W": (-1, 0)}
+# sisi lempeng atas (overriding) tiap palung subduksi 2024
+PALUNG_ARAH = {"Sumatra-Jawa": "NE", "Papua": "S", "Philippine": "W", "Cotobato": "E", "North Arm Sulawesi": "S"}
 
 
 def read_layer(zip_name, shp, precision=4):
@@ -40,6 +51,46 @@ def jenis(kode):
     """Kode Type PuSGeN ('SS-LL90', 'R45S', 'N60E', 'RR45S') -> geser/naik/turun."""
     kode = kode.strip().upper()
     return "geser" if kode.startswith("SS") else "turun" if kode.startswith("N") else "naik"
+
+
+def arah_dip(kode):
+    """'R45S' -> (0, -1), 'N60NE' -> NE, 'R45N-W' -> NW; None bila kode tanpa arah ('R45', 'SS90')."""
+    m = re.search(r"\d([NSEW]{1,2})$", kode.strip().upper().replace("-", ""))
+    if not m:
+        return None
+    x = sum(ARAH[c][0] for c in m.group(1))
+    y = sum(ARAH[c][1] for c in m.group(1))
+    n = math.hypot(x, y)
+    return (x / n, y / n)
+
+
+def _parts(geometry):
+    return [geometry["coordinates"]] if geometry["type"] == "LineString" else geometry["coordinates"]
+
+
+def orient_left(geometry, dip):
+    """Balik arah garis bila perlu agar sisi `dip` ada di kiri (suara berbobot panjang tiap ruas)."""
+    vote = 0.0
+    for part in _parts(geometry):
+        for (x1, y1), (x2, y2) in zip(part, part[1:]):
+            k = math.cos(math.radians((y1 + y2) / 2))
+            dx, dy = (x2 - x1) * k, y2 - y1
+            vote += -dy * dip[0] + dx * dip[1]          # kiri = (-dy, dx), dikali panjang ruas
+    if vote < 0:
+        parts = [list(reversed(p)) for p in reversed(_parts(geometry))]
+        geometry = {"type": geometry["type"], "coordinates": parts[0] if geometry["type"] == "LineString" else parts}
+    return geometry
+
+
+def write_gmt(name, features, header):
+    lines = [f"# {header}", f"# {CREDIT}; dibuat oleh scripts/geodata/pusgen_faults_js.py"]
+    for f in features:
+        label = " – ".join(x for x in (f["properties"]["nama"], f["properties"].get("segmen", "")) if x)
+        for part in _parts(f["geometry"]):
+            lines.append(f'> -L"{label}"')
+            lines += [f"{x:.4f}\t{y:.4f}" for x, y in part]
+    GMT_OUT.mkdir(exist_ok=True)
+    (GMT_OUT / name).write_text("\n".join(lines) + "\n")
 
 
 def number(value):
@@ -63,19 +114,36 @@ def main():
     faults = []
     for f in read_layer(*CRUSTAL):
         p = f["properties"]
-        faults.append({"type": "Feature", "geometry": f["geometry"], "properties": {
+        kode = (p.get("Type") or "").strip()
+        props = {
             "nama": (p.get("Name") or "").strip(), "segmen": (p.get("Segment") or "").strip(),
-            "tipe": jenis(p.get("Type") or ""), "kode": (p.get("Type") or "").strip(),
+            "tipe": jenis(kode), "kode": kode,
             "mmax": number(p.get("Mmax")), "sliprate": number(p.get("Sliprate_m")),
             "panjang_km": number(p.get("Length_km")), "wilayah": (p.get("Region") or "").strip(),
-        }})
+        }
+        geometry, dip = f["geometry"], arah_dip(kode)
+        if props["tipe"] != "geser" and dip:
+            geometry, props["gigi"] = orient_left(geometry, dip), True
+        faults.append({"type": "Feature", "geometry": geometry, "properties": props})
     write_js("indofaults.js", "indoFaults", collection("pusgen2024_sesar_aktif", faults))
 
-    trenches = [{"type": "Feature", "geometry": f["geometry"],
-                 "properties": {"nama": (f["properties"].get("TrenchName") or "").strip(),
-                                "keterangan": (f["properties"].get("Remarks") or "").strip()}}
-                for f in read_layer(*TRENCH)]
+    trenches = []
+    for f in read_layer(*TRENCH):
+        nama = (f["properties"].get("TrenchName") or "").strip()
+        side = PALUNG_ARAH[nama]
+        dip = arah_dip(f"T0{side}")
+        trenches.append({"type": "Feature", "geometry": orient_left(f["geometry"], dip),
+                         "properties": {"nama": nama, "tipe": "subduksi", "gigi": True,
+                                        "keterangan": (f["properties"].get("Remarks") or "").strip()}})
     write_js("subduksi.js", "subDuksi", collection("pusgen2024_palung_subduksi", trenches))
+
+    write_gmt("sesar_geser.gmt", [f for f in faults if not f["properties"].get("gigi")],
+              "Sesar geser + sesar tanpa arah kemiringan (garis polos)")
+    write_gmt("sesar_naik.gmt", [f for f in faults if f["properties"].get("gigi") and f["properties"]["tipe"] == "naik"],
+              "Sesar naik, sisi hanging wall di kiri: gmt plot -Sf...+l+t")
+    write_gmt("sesar_turun.gmt", [f for f in faults if f["properties"].get("gigi") and f["properties"]["tipe"] == "turun"],
+              "Sesar turun, sisi hanging wall di kiri: gmt plot -Sf...+l+f")
+    write_gmt("subduksi.gmt", trenches, "Palung subduksi, lempeng atas di kiri: gmt plot -Sf...+l+t")
 
     zones = [{"type": "Feature", "geometry": f["geometry"],
               "properties": {"nama": (f["properties"].get("Name") or "").strip()}}

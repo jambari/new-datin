@@ -84,6 +84,7 @@
 <script src="{% static 'gjson/png.js' %}"></script>
 <script src="{% static 'gjson/batasinapng.js' %}"></script>
 <script src="{% static_v 'gjson/indofaults.js' %}"></script>
+<script src="{% static_v 'js/pusgen_layer.js' %}"></script>
 <script>
 var mymap = L.map('map-baru').setView([{{ event.lintang }}, {{ event.bujur|unlocalize }}], 7);
 var layer = L.esri.basemapLayer('Imagery').addTo(mymap);
@@ -102,7 +103,8 @@ var pngStyle={fillColor:'#0AA53E',weight:1,opacity:1,color:'#0AA53E',fillOpacity
 L.geoJSON(png,{style:pngStyle}).addTo(mymap);
 var batasStyle={fillColor:'#D31B1B',weight:2,opacity:1,color:'#D31B1B',fillOpacity:1};
 L.geoJSON(batasInapng,{style:batasStyle}).addTo(mymap);
-L.geoJSON(indoFaults,{style:subduksiStyle}).addTo(mymap);
+L.pusgenLayer(indoFaults,{style:subduksiStyle}).addTo(mymap);
+if(typeof subDuksi!=='undefined')L.pusgenLayer(subDuksi,{style:{color:'#ff8c00',weight:1.6,opacity:0.9}}).addTo(mymap);
 var pulsingIcon=L.icon.pulse({iconSize:[30,30],color:'red'});
 var whiteIcon=L.divIcon({className:'white-icon',html:'<div class="white-icon"></div>',iconSize:[100,100]});
 L.marker([{{ event.lintang }}, {{ event.bujur|unlocalize }}],{icon:pulsingIcon}).addTo(mymap);

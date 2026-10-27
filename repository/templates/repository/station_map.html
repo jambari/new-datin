@@ -70,6 +70,7 @@
 <script src="{% static 'repository/js/esri-leaflet.js' %}"></script>
 <script src="{% static 'repository/js/d3.v7.min.js' %}"></script>
 <script src="{% static_v 'repository/js/indofaults.js' %}"></script>
+<script src="{% static_v 'js/pusgen_layer.js' %}"></script>
 <script src="{% static 'repository/js/slab_indonesia_usgs.js' %}"></script>  
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -255,7 +256,7 @@ fetch('/repository/stations.geojson')
             "fillColor": '#000000',
         }
 
-        L.geoJSON(indoFaults, {
+        L.pusgenLayer(indoFaults, {
             style: indoFaultsStyle
         }).addTo(map);
 

@@ -15,6 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 
 <script src="{% static_v 'repository/js/indofaults.js' %}"></script>
+<script src="{% static_v 'js/pusgen_layer.js' %}"></script>
 <script src="{% static 'repository/js/batas_laut_indonesia.js' %}"></script>
 <script src="{% static 'repository/js/batas_provinsi_papua.js' %}?v=2"></script>
 <script src="{% static 'repository/js/garis_pantai_papua.js' %}?v=2"></script>
@@ -818,8 +819,15 @@
 
     faultsLayer = L.layerGroup().addTo(mapInstance);
     var faultsInitColor = document.getElementById('colorFaults')?.value || '#000';
-    if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { pane: 'pFaults', style: { color: faultsInitColor, weight: 0.8 } }).addTo(faultsLayer);
+    if (typeof indoFaults !== 'undefined') L.pusgenLayer(indoFaults, { pane: 'pFaults', style: { color: faultsInitColor, weight: 0.8 } }).addTo(faultsLayer);
     else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { pane: 'pFaults', style: { color: faultsInitColor, weight: 0.8 } }).addTo(faultsLayer);
+
+    if (typeof subDuksi !== 'undefined') {
+      subLayer = L.layerGroup();
+      var subInitColor = document.getElementById('colorSubduksi')?.value || '#8b5cf6';
+      subDuksi.forEach(fc => L.pusgenLayer(fc, { pane: 'pSubduksi', style: { color: subInitColor, weight: 1.5 } }).addTo(subLayer));
+      if (document.getElementById('swSubduksi')?.checked !== false) subLayer.addTo(mapInstance);
+    }
 
     slabLayer = L.layerGroup().addTo(mapInstance);
     const slabColors = [[0,20,'rgb(245,0,0)'],[20,40,'rgb(250,75,0)'],[40,60,'rgb(252,118,0)'],[60,80,'rgb(253,160,0)'],[80,100,'rgb(250,160,0)'],[100,120,'rgb(245,245,0)'],[120,200,'rgb(210,247,0)'],[200,300,'rgb(169,247,0)'],[300,400,'rgb(128,247,0)'],[400,500,'rgb(86,247,0)'],[500,660,'rgb(0,245,0)']];
@@ -949,7 +957,7 @@
     gmtReliefLayer().addTo(mapFeltInstance);      // bawaan: relief bergaya GMT
 
     if (typeof newPng !== 'undefined') L.geoJSON(newPng, { style: { color: "#94a3b8", weight: 1, fillColor: "#f8fafc", fillOpacity: 0.5, pane: 'tilePane' } }).addTo(mapFeltInstance);
-    if (typeof indoFaults !== 'undefined') L.geoJSON(indoFaults, { style: { color: "#000", weight: 0.8 } }).addTo(mapFeltInstance);
+    if (typeof indoFaults !== 'undefined') L.pusgenLayer(indoFaults, { style: { color: "#000", weight: 0.8 } }).addTo(mapFeltInstance);
     else if (typeof indofaults !== 'undefined') L.geoJSON(indofaults, { style: { color: "#000", weight: 0.8 } }).addTo(mapFeltInstance);
     if (typeof GarisPantaiPapua !== 'undefined') L.geoJSON(GarisPantaiPapua, { style: { color: "#00FFFF", weight: 1 } }).addTo(mapFeltInstance);
     if (typeof batas_laut_indonesia !== 'undefined') L.geoJSON(batas_laut_indonesia, { style: { color: "#3b82f6", weight: 1, dashArray: '5, 5' } }).addTo(mapFeltInstance);

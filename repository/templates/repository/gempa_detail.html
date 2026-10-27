@@ -96,6 +96,7 @@
 <script src="{% static 'repository/js/slab_indonesia_usgs.js' %}"></script>
 <script src="{% static_v 'repository/js/subduksi.js' %}"></script>
 <script src="{% static_v 'repository/js/indofaults.js' %}"></script>
+<script src="{% static_v 'js/pusgen_layer.js' %}"></script>
 <script src="{% static 'repository/js/png.js' %}"></script>
 <script src="{% static 'repository/js/batasinapng.js' %}"></script>
 
@@ -135,7 +136,7 @@
           "fillColor": 'transparent',
       }
 
-      L.geoJSON(indoFaults, {
+      L.pusgenLayer(indoFaults, {
           style: indoFaultsStyle
       }).addTo(map);
 
