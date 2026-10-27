@@ -79,11 +79,11 @@
 <script src="https://unpkg.com/esri-leaflet@2.2.3/dist/esri-leaflet.js"></script>
 <script src="{% static 'js/L.Icon.Pulse.js' %}"></script>
 <script src="{% static 'gjson/patahan.js' %}"></script>
-<script src="{% static 'gjson/subduksi.js' %}"></script>
+<script src="{% static_v 'gjson/subduksi.js' %}"></script>
 <script src="{% static 'gjson/plates.js' %}"></script>
 <script src="{% static 'gjson/png.js' %}"></script>
 <script src="{% static 'gjson/batasinapng.js' %}"></script>
-<script src="{% static 'gjson/indofaults.js' %}"></script>
+<script src="{% static_v 'gjson/indofaults.js' %}"></script>
 <script>
 var mymap = L.map('map-baru').setView([{{ event.lintang }}, {{ event.bujur|unlocalize }}], 7);
 var layer = L.esri.basemapLayer('Imagery').addTo(mymap);

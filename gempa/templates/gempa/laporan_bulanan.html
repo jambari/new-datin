@@ -1,4 +1,4 @@
-{% load static %}
+{% load static %}{% load static_v %}
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -12,9 +12,9 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-<script src="{% static 'gjson/indofaults.js' %}"></script>
+<script src="{% static_v 'gjson/indofaults.js' %}"></script>
 <script src="{% static 'gjson/patahan.js' %}"></script>
-<script src="{% static 'gjson/subduksi.js' %}"></script>
+<script src="{% static_v 'gjson/subduksi.js' %}"></script>
 <script src="{% static 'repository/js/garis_pantai_papua.js' %}?v=2"></script>
 <script src="{% static 'repository/js/gmt_relief.js' %}?v=8"></script>
 <script src="{% static 'repository/js/map_layout.js' %}?v=8"></script>
