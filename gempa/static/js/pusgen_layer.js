@@ -9,6 +9,8 @@
  *   turun           garis tegak (tick)
  * Ukuran simbol tetap dalam piksel, jadi dihitung ulang setiap zoom/geser, hanya untuk garis yang terlihat.
  * setStyle({color}) ikut mengganti warna simbol (dipakai pemilih warna di event browser).
+ * Sesar yang berimpit palung (properti "palung", mis. North Papua Thrust) tidak diberi gigi selama layer
+ * palung ada di peta yang sama, supaya gigi tidak dobel dengan warna berbeda.
  */
 (function () {
     'use strict';
@@ -38,13 +40,28 @@
 
         onAdd: function (map) {
             L.FeatureGroup.prototype.onAdd.call(this, map);
-            map.on('zoomend moveend', this._redraw, this);
-            this._redraw();
+            map.on('zoomend moveend pusgen:palung', this._redraw, this);
+            if (this._isTrench()) {
+                map._pusgenPalung = (map._pusgenPalung || 0) + 1;
+                map.fire('pusgen:palung');
+            } else {
+                this._redraw();
+            }
         },
 
         onRemove: function (map) {
-            map.off('zoomend moveend', this._redraw, this);
+            map.off('zoomend moveend pusgen:palung', this._redraw, this);
             L.FeatureGroup.prototype.onRemove.call(this, map);
+            if (this._isTrench()) {
+                map._pusgenPalung = Math.max(0, (map._pusgenPalung || 1) - 1);
+                map.fire('pusgen:palung');
+            }
+        },
+
+        _isTrench: function () {
+            return this._data.some(function (c) {
+                return (c.features || []).some(function (f) { return (f.properties || {}).tipe === 'subduksi'; });
+            });
         },
 
         setStyle: function (style) {
@@ -59,11 +76,12 @@
             if (!map) return;
             this._teeth.clearLayers();
             var view = map.getBounds().pad(0.2);
+            var trenchShown = (map._pusgenPalung || 0) > 0;
             var self = this;
             this._data.forEach(function (collection) {
                 (collection.features || []).forEach(function (feature) {
                     var p = feature.properties || {};
-                    if (!p.gigi || !GAP[p.tipe]) return;
+                    if (!p.gigi || !GAP[p.tipe] || (p.palung && trenchShown)) return;
                     var st = L.Util.extend({}, styleOf(self._options.style, feature), self._override);
                     parts(feature.geometry).forEach(function (coords) {
                         var latlngs = coords.map(function (c) { return L.latLng(c[1], c[0]); });

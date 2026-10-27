@@ -82,6 +82,23 @@ def orient_left(geometry, dip):
     return geometry
 
 
+def on_trench(geometry, trenches, km=5.0, share=0.9):
+    """True bila ≥ `share` titik garis berjarak < `km` dari garis palung mana pun."""
+    segs = [(a, b) for t in trenches for part in _parts(t["geometry"]) for a, b in zip(part, part[1:])]
+    pts = [c for part in _parts(geometry) for c in part]
+
+    def dist(lon, lat):
+        k = math.cos(math.radians(lat))
+        best = float("inf")
+        for (x1, y1), (x2, y2) in segs:
+            ax, ay, dx, dy = (x1 - lon) * k, y1 - lat, (x2 - x1) * k, y2 - y1
+            t = max(0.0, min(1.0, -(ax * dx + ay * dy) / ((dx * dx + dy * dy) or 1)))
+            best = min(best, math.hypot(ax + t * dx, ay + t * dy))
+        return best * 111.2
+
+    return sum(dist(x, y) < km for x, y in pts) >= share * len(pts)
+
+
 def write_gmt(name, features, header):
     lines = [f"# {header}", f"# {CREDIT}; dibuat oleh scripts/geodata/pusgen_faults_js.py"]
     for f in features:
@@ -125,7 +142,6 @@ def main():
         if props["tipe"] != "geser" and dip:
             geometry, props["gigi"] = orient_left(geometry, dip), True
         faults.append({"type": "Feature", "geometry": geometry, "properties": props})
-    write_js("indofaults.js", "indoFaults", collection("pusgen2024_sesar_aktif", faults))
 
     trenches = []
     for f in read_layer(*TRENCH):
@@ -137,11 +153,19 @@ def main():
                                         "keterangan": (f["properties"].get("Remarks") or "").strip()}})
     write_js("subduksi.js", "subDuksi", collection("pusgen2024_palung_subduksi", trenches))
 
-    write_gmt("sesar_geser.gmt", [f for f in faults if not f["properties"].get("gigi")],
-              "Sesar geser + sesar tanpa arah kemiringan (garis polos)")
-    write_gmt("sesar_naik.gmt", [f for f in faults if f["properties"].get("gigi") and f["properties"]["tipe"] == "naik"],
+    # sesar yang berimpit dengan palung (North Papua Thrust): gigi digambar oleh layer palung saja
+    for f in faults:
+        if f["properties"].get("gigi") and on_trench(f["geometry"], trenches):
+            f["properties"]["palung"] = True
+            print(f"berimpit palung: {f['properties']['nama']} – {f['properties']['segmen']}")
+    write_js("indofaults.js", "indoFaults", collection("pusgen2024_sesar_aktif", faults))
+
+    bergigi = [f for f in faults if f["properties"].get("gigi") and not f["properties"].get("palung")]
+    write_gmt("sesar_geser.gmt", [f for f in faults if f not in bergigi],
+              "Sesar geser, sesar tanpa arah kemiringan, dan sesar yang berimpit palung (garis polos)")
+    write_gmt("sesar_naik.gmt", [f for f in bergigi if f["properties"]["tipe"] == "naik"],
               "Sesar naik, sisi hanging wall di kiri: gmt plot -Sf...+l+t")
-    write_gmt("sesar_turun.gmt", [f for f in faults if f["properties"].get("gigi") and f["properties"]["tipe"] == "turun"],
+    write_gmt("sesar_turun.gmt", [f for f in bergigi if f["properties"]["tipe"] == "turun"],
               "Sesar turun, sisi hanging wall di kiri: gmt plot -Sf...+l+f")
     write_gmt("subduksi.gmt", trenches, "Palung subduksi, lempeng atas di kiri: gmt plot -Sf...+l+t")
 

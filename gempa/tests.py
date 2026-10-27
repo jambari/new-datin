@@ -1425,6 +1425,8 @@ class PusgenLayerSymbolTest(TestCase):
         faults = _read_js(static / 'indofaults.js')['features']
         self.assertEqual(sum(1 for f in faults if f['properties'].get('gigi')), 192)
         self.assertFalse(any(f['properties'].get('gigi') for f in faults if f['properties']['tipe'] == 'geser'))
+        on_trench = sorted(f['properties']['segmen'] for f in faults if f['properties'].get('palung'))
+        self.assertEqual(on_trench, ['North Papua Thrust East', 'North Papua Thrust West'])   # gigi dari palung saja
         trench = _read_js(static / 'subduksi.js')['features']
         self.assertTrue(all(f['properties'].get('gigi') and f['properties']['tipe'] == 'subduksi' for f in trench))
 
