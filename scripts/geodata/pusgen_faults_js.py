@@ -25,6 +25,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from simplify_geojson_js import simplify_line
+
 ROOT = Path(__file__).resolve().parents[2]
 SRC = Path(__file__).with_name("pusgen2024")
 CRUSTAL = ("PusGeN2024_Shallow_Crustal_v5_12.zip", "PusGeN2024_Shallow_Crustal_v5_12.shp")
@@ -33,6 +35,7 @@ TRENCH = ("2024_Megathrust_v2.zip", "2024_Subduction trench_v2/2024_Subduction t
 JS_DIRS = [ROOT / "gempa/static/gjson", ROOT / "repository/static/repository/js"]
 MEGATHRUST_OUT = ROOT / "gempa/data/pusgen2024_megathrust.json"
 GMT_OUT = SRC / "gmt"
+GMT_SIMPLIFY = 0.015     # derajat (±1,5 km): ruas sangat pendek membuat arah simbol -Sf GMT melenceng
 CREDIT = "PuSGeN 2024, Peta Sumber dan Bahaya Gempa Indonesia Tahun 2024"
 ARAH = {"N": (0, 1), "S": (0, -1), "E": (1, 0), "W": (-1, 0)}
 # sisi lempeng atas (overriding) tiap palung subduksi 2024
@@ -99,11 +102,14 @@ def on_trench(geometry, trenches, km=5.0, share=0.9):
     return sum(dist(x, y) < km for x, y in pts) >= share * len(pts)
 
 
-def write_gmt(name, features, header):
+def write_gmt(name, features, header, tol=0.0):
     lines = [f"# {header}", f"# {CREDIT}; dibuat oleh scripts/geodata/pusgen_faults_js.py"]
     for f in features:
         label = " – ".join(x for x in (f["properties"]["nama"], f["properties"].get("segmen", "")) if x)
         for part in _parts(f["geometry"]):
+            part = simplify_line(part, tol, 4)                  # juga membuang titik kembar berurutan
+            if len(part) < 2:
+                continue
             lines.append(f'> -L"{label}"')
             lines += [f"{x:.4f}\t{y:.4f}" for x, y in part]
     GMT_OUT.mkdir(exist_ok=True)
@@ -164,10 +170,10 @@ def main():
     write_gmt("sesar_geser.gmt", [f for f in faults if f not in bergigi],
               "Sesar geser, sesar tanpa arah kemiringan, dan sesar yang berimpit palung (garis polos)")
     write_gmt("sesar_naik.gmt", [f for f in bergigi if f["properties"]["tipe"] == "naik"],
-              "Sesar naik, sisi hanging wall di kiri: gmt plot -Sf...+l+t")
+              "Sesar naik, sisi hanging wall di kiri: gmt plot -Sf...+l+t", GMT_SIMPLIFY)
     write_gmt("sesar_turun.gmt", [f for f in bergigi if f["properties"]["tipe"] == "turun"],
-              "Sesar turun, sisi hanging wall di kiri: gmt plot -Sf...+l+f")
-    write_gmt("subduksi.gmt", trenches, "Palung subduksi, lempeng atas di kiri: gmt plot -Sf...+l+t")
+              "Sesar turun, sisi hanging wall di kiri: gmt plot -Sf...+l+f", GMT_SIMPLIFY)
+    write_gmt("subduksi.gmt", trenches, "Palung subduksi, lempeng atas di kiri: gmt plot -Sf...+l+t", GMT_SIMPLIFY)
 
     zones = [{"type": "Feature", "geometry": f["geometry"],
               "properties": {"nama": (f["properties"].get("Name") or "").strip()}}

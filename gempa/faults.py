@@ -1,15 +1,17 @@
 """Sumber gempa terdekat dari model sumber gempa PuSGeN 2024 (petunjuk di halaman template balai).
 
 Data dari shapefile resmi PuSGeN 2024 (scripts/geodata/pusgen_faults_js.py):
-  * gempa/static/gjson/indofaults.js       sesar kerak dangkal (layer yang sama dengan peta Leaflet)
+  * gempa/static/gjson/indofaults.js       sesar kerak dangkal (layer yang sama dengan peta Leaflet);
+                                           bila tidak ada di app, dicari di STATIC_ROOT/gjson/ (server .188)
   * gempa/data/pusgen2024_megathrust.json  poligon sumber megathrust
+Python murni (tanpa numpy) supaya bisa dipakai juga di aplikasi gempa .188.
 """
 import json
 import math
 from functools import lru_cache
 from pathlib import Path
 
-import numpy as np
+from django.conf import settings
 
 BASE = Path(__file__).resolve().parent
 FAULTS = BASE / "static" / "gjson" / "indofaults.js"
@@ -84,16 +86,21 @@ def _parts(geometry):
     return [geometry["coordinates"]] if geometry["type"] in ("LineString", "Polygon") else geometry["coordinates"]
 
 
+def _faults_path():
+    if FAULTS.exists():
+        return FAULTS
+    return Path(settings.STATIC_ROOT) / "gjson" / "indofaults.js"
+
+
 @lru_cache(maxsize=1)
 def _lines():
-    props, a, b, owner = [], [], [], []
-    for i, f in enumerate(_read_js(FAULTS)["features"]):
+    """(properti tiap sesar, daftar ruas (x1, y1, x2, y2, indeks sesar))."""
+    props, segs = [], []
+    for i, f in enumerate(_read_js(_faults_path())["features"]):
         props.append(f["properties"])
         for part in _parts(f["geometry"]):
-            a.extend(part[:-1])
-            b.extend(part[1:])
-            owner.extend([i] * (len(part) - 1))
-    return props, np.array(a, float), np.array(b, float), np.array(owner)
+            segs.extend((x1, y1, x2, y2, i) for (x1, y1), (x2, y2) in zip(part, part[1:]))
+    return props, segs
 
 
 @lru_cache(maxsize=1)
@@ -101,16 +108,16 @@ def _zones():
     zones = []
     for f in json.loads(MEGATHRUST.read_text())["features"]:
         polys = [f["geometry"]["coordinates"]] if f["geometry"]["type"] == "Polygon" else f["geometry"]["coordinates"]
-        zones.append((f["properties"]["nama"], [np.array(p[0], float) for p in polys]))   # cincin luar
+        zones.append((f["properties"]["nama"], [p[0] for p in polys]))   # cincin luar
     return zones
 
 
 def _inside(lon, lat, ring):
-    x, y = ring[:, 0], ring[:, 1]
-    x2, y2 = np.roll(x, -1), np.roll(y, -1)
-    cross = (y > lat) != (y2 > lat)
-    xs = x + (lat - y) * (x2 - x) / np.where(y2 == y, 1, y2 - y)
-    return bool(np.count_nonzero(cross & (lon < xs)) % 2)
+    inside = False
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
+        if (y1 > lat) != (y2 > lat) and lon < x1 + (lat - y1) * (x2 - x1) / (y2 - y1):
+            inside = not inside
+    return inside
 
 
 def zona_megathrust(lat, lon):
@@ -129,27 +136,30 @@ def sumber_terdekat(lat, lon, depth=None):
         return None
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         return None
-    props, a, b, owner = _lines()
+    props, segs = _lines()
     k = math.cos(math.radians(lat))
-    ax, ay = (a[:, 0] - lon) * k, a[:, 1] - lat
-    dx, dy = (b[:, 0] - a[:, 0]) * k, b[:, 1] - a[:, 1]
-    seg2 = dx * dx + dy * dy
-    t = np.clip(-(ax * dx + ay * dy) / np.where(seg2 == 0, 1, seg2), 0, 1)
-    km = np.hypot(ax + t * dx, ay + t * dy) * 111.2
-    i = int(np.argmin(km))
+    best, owner = float("inf"), None
+    for x1, y1, x2, y2, i in segs:
+        ax, ay, dx, dy = (x1 - lon) * k, y1 - lat, (x2 - x1) * k, y2 - y1
+        seg2 = dx * dx + dy * dy
+        t = 0.0 if seg2 == 0 else min(1.0, max(0.0, -(ax * dx + ay * dy) / seg2))
+        d2 = (ax + t * dx) ** 2 + (ay + t * dy) ** 2
+        if d2 < best:
+            best, owner = d2, i
+    km = math.sqrt(best) * 111.2
     try:
         deep = depth is not None and float(depth) >= INTERMEDIATE_KM
     except (TypeError, ValueError):
         deep = False
     result = {"ada": False, "max_km": MAX_KM, "dalam": deep, "megathrust": zona_megathrust(lat, lon)}
-    if km[i] <= MAX_KM:
-        p = props[owner[i]]
+    if km <= MAX_KM:
+        p = props[owner]
         result.update(
             ada=True,
             nama=nama_struktur(p["nama"]) if p["nama"] else TIPE[p["tipe"]].capitalize(),
             segmen=p["segmen"] if p.get("segmen") and p["segmen"] != p["nama"] else "",
             tipe=tipe_sesar(p),
             mmax=p.get("mmax"),
-            jarak_km=max(1, round(float(km[i]))),
+            jarak_km=max(1, round(km)),
         )
     return result

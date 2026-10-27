@@ -95,23 +95,30 @@
             var gap = GAP[tipe], size = SIZE[tipe];
             var color = st.color || '#000', opacity = st.opacity === undefined ? 1 : st.opacity;
             var pts = latlngs.map(function (ll) { return map.latLngToLayerPoint(ll); });
-            var shapes = [], next = gap / 2;          // jarak simbol berikutnya dari awal ruas
-            for (var i = 1; i < pts.length; i++) {
-                var a = pts[i - 1], b = pts[i];
-                var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy);
+            var cum = [0];                                       // jarak kumulatif sepanjang garis (px)
+            for (var i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+            var total = cum[cum.length - 1];
+            var at = function (d) {                              // titik pada jarak d dari awal garis
+                d = Math.max(0, Math.min(total, d));
+                var j = 1;
+                while (j < cum.length - 1 && cum[j] < d) j++;
+                var seg = cum[j] - cum[j - 1], f = seg ? (d - cum[j - 1]) / seg : 0;
+                return [pts[j - 1].x + (pts[j].x - pts[j - 1].x) * f, pts[j - 1].y + (pts[j].y - pts[j - 1].y) * f];
+            };
+            var shapes = [];
+            for (var t = gap / 2; t < total; t += gap) {
+                // arah dari garis selebar satu simbol, bukan dari ruas pendek (yang bisa berbelok tajam)
+                var m = at(t), p0 = at(t - size * 1.5), p1 = at(t + size * 1.5);
+                var dx = p1[0] - p0[0], dy = p1[1] - p0[1], len = Math.sqrt(dx * dx + dy * dy);
                 if (!len) continue;
                 var ux = dx / len, uy = dy / len, lx = uy, ly = -ux;   // kiri arah garis (sumbu y layar ke bawah)
-                var t = next;
-                for (; t < len; t += gap) {
-                    var mx = a.x + ux * t, my = a.y + uy * t;
-                    if (tipe === 'turun') {
-                        shapes.push([[mx, my], [mx + lx * size * 1.4, my + ly * size * 1.4]]);
-                    } else {
-                        shapes.push([[mx - ux * size, my - uy * size], [mx + ux * size, my + uy * size],
-                                     [mx + lx * size * 1.5, my + ly * size * 1.5]]);
-                    }
+                var mx = m[0], my = m[1];
+                if (tipe === 'turun') {
+                    shapes.push([[mx, my], [mx + lx * size * 1.4, my + ly * size * 1.4]]);
+                } else {
+                    shapes.push([[mx - ux * size, my - uy * size], [mx + ux * size, my + uy * size],
+                                 [mx + lx * size * 1.5, my + ly * size * 1.5]]);
                 }
-                next = t - len;
             }
             var toLatLng = function (xy) { return map.layerPointToLatLng(L.point(xy[0], xy[1])); };
             var opts = { renderer: this._renderer, color: color, opacity: opacity, interactive: false };
