@@ -17,7 +17,7 @@
 .map-label{position:absolute;bottom:0;left:-50%;display:flex;flex-direction:column;text-align:center;}
 .map-label-content{order:1;position:relative;left:-50%;padding:3px;white-space:nowrap;color:white;}
 .map-label-arrow{order:2;width:0;height:0;left:50%;border-style:solid;border-color:#444 transparent transparent transparent;border-width:10px 6px 0 6px;margin-left:-6px;}
-.tz-panel{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:Courier,monospace;font-size:13px;background:#f5f5f5;padding:6px 12px;border-radius:4px;border:1px solid #ddd;}
+.tz-panel{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;font-family:Courier,monospace;font-size:13px;background:#f5f5f5;padding:6px 12px;border-radius:4px;border:1px solid #ddd;}
 .tz-panel select{padding:4px 8px;font-size:13px;font-family:inherit;border:1px solid #ccc;border-radius:3px;background:#fff;}
 </style>
 </head>
@@ -51,6 +51,7 @@
         <option value="WITA">WITA (UTC+8)</option>
         <option value="WIT" selected>WIT (UTC+9)</option>
       </select>
+      {% include 'gempa/_sumber_terdekat.html' %}
     </div>
     <div style="width:100%;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;">
       {% if epic_map %}

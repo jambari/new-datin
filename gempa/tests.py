@@ -1355,3 +1355,62 @@ class LaporanSusulanTest(TestCase):
         self.assertEqual(len(r.json()), 1)
         r = self.client.get('/api/gempa/dirasakan/', {'year': 2026, 'month': 10})
         self.assertEqual(r.json()[0]['dirasakan'], 'III MMI')
+
+
+# ── Sumber terdekat (model sumber gempa PuSGeN 2024) ────────────────────────
+from gempa.faults import nama_megathrust, nama_struktur, sumber_terdekat, zona_megathrust
+
+
+class SumberTerdekatTest(TestCase):
+    def test_layers_are_the_official_pusgen_2024_shapefiles(self):
+        from gempa.faults import _lines, _read_js, _zones
+        props = _lines()[0]
+        self.assertEqual(len(props), 402)
+        self.assertEqual({p['tipe'] for p in props}, {'geser', 'naik', 'turun'})
+        self.assertTrue(all(p['nama'] and p['segmen'] for p in props))
+        self.assertEqual(len(_zones()), 14)
+        static = pathlib.Path(settings.BASE_DIR) / 'gempa' / 'static' / 'gjson'
+        trench = _read_js(static / 'subduksi.js')
+        self.assertIn('Papua', {f['properties']['nama'] for f in trench['features']})
+        for name in ('indofaults.js', 'subduksi.js'):                  # salinan untuk peta repository sama
+            other = pathlib.Path(settings.BASE_DIR) / 'repository' / 'static' / 'repository' / 'js' / name
+            self.assertEqual((static / name).read_bytes(), other.read_bytes())
+
+    def test_known_locations(self):
+        s = sumber_terdekat('-2.66', 139.50, 49)          # gempa Lereh, 71 km BL Jayapura
+        self.assertEqual((s['nama'], s['segmen'], s['tipe']), ('Sesar Mamberamo', 'Mawe', 'sesar geser mengiri'))
+        self.assertLess(s['jarak_km'], 10)
+        self.assertEqual(s['mmax'], 7.5)
+        self.assertEqual(s['megathrust'], 'Megathrust Papua')
+        self.assertFalse(s['dalam'])
+        self.assertEqual(sumber_terdekat(-0.9, 131.3)['nama'], 'Sesar Sorong')
+        self.assertEqual(sumber_terdekat(-1.8, 134.15)['segmen'], 'Rumberpon')
+        palu = sumber_terdekat(-0.9, 119.85)
+        self.assertEqual((palu['nama'], palu['segmen'], palu['megathrust']), ('Sesar Palukoro', 'Palu-Saluki', None))
+
+    def test_far_deep_and_invalid(self):
+        far = sumber_terdekat(-8.5, 138.0)                             # Laut Arafura
+        self.assertFalse(far['ada'])
+        self.assertIsNone(far['megathrust'])
+        self.assertTrue(sumber_terdekat(-4.5, 136.9, 120)['dalam'])
+        self.assertIsNone(sumber_terdekat('', None))
+        self.assertEqual(zona_megathrust(-9.0, 110.5), 'Megathrust Jawa Timur')
+
+    def test_names(self):
+        self.assertEqual(nama_struktur('Sorong Fault'), 'Sesar Sorong')
+        self.assertEqual(nama_struktur('Manokwari Thurst'), 'Sesar Naik Manokwari')      # salah ketik di sumber
+        self.assertEqual(nama_struktur('Papua Fold Thurst Belt'), 'Sabuk Lipatan-Anjakan Papua')
+        self.assertEqual(nama_struktur('North Buru Fault'), 'Sesar Buru Utara')
+        self.assertEqual(nama_struktur('Aru Trough'), 'Palung Aru')
+        self.assertEqual(nama_struktur('Mamberamo'), 'Sesar Mamberamo')
+        self.assertEqual(nama_megathrust('Megathrust Western Java'), 'Megathrust Jawa Barat')
+
+    def test_template_balai_shows_the_hint(self):
+        staff = User.objects.create_user('sumber_probe', password='pass12345', is_staff=True)
+        staff.groups.add(Group.objects.get(name=ANGKASA_GROUP))
+        self.client.force_login(staff)
+        event = make_event(Gempa, event_id='ev-sumber', lintang='-2.66', bujur='139.50', depth=49)
+        body = self.client.get(reverse('gempa_admin:gempa-template-balai', args=[event.pk])).content.decode()
+        self.assertIn('Sumber terdekat: <b>Sesar Mamberamo</b> (segmen Mawe)', body)
+        self.assertIn('Di atas zona sumber <b>Megathrust Papua</b>', body)
+        self.assertIn('Zona Waktu', body)

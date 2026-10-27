@@ -19,6 +19,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.conf import settings
 from .sites import gempa_admin_site
 from . import gmt
+from .faults import sumber_terdekat
 
 import logging
 
@@ -295,6 +296,8 @@ class GmtMapMixin:
             'buat_peta_url': reverse(
                 f'gempa_admin:{self.model._meta.model_name}-buat-peta', args=[obj.pk]),
             'gmt_map_exists': gmt.map_exists(self.gmt_region, tanggal, origin),
+            # petunjuk sumber terdekat (sesar PuSGeN 2024) di sebelah pilihan Zona Waktu
+            'sumber_terdekat': sumber_terdekat(obj.lintang, obj.bujur, obj.depth),
         }
 
     def get_urls(self):

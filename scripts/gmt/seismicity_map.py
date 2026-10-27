@@ -143,7 +143,7 @@ def main(inp, out):
 
     fig.text(position="BC", text=cfg.get("source_label", ""), offset="0c/-1.25c", no_clip=True,
              font="7p,Helvetica,gray25", justify="TC")
-    fig.text(position="BC", text="Relief: GMT Earth Relief (Tozer dkk., 2019); sesar: PSG Bandung; garis pantai: GSHHG",
+    fig.text(position="BC", text="Relief: GMT Earth Relief (Tozer dkk., 2019); sesar: PuSGeN 2024; garis pantai: GSHHG",
              offset="0c/-1.6c", no_clip=True, font="7p,Helvetica,gray25", justify="TC")
     fig.savefig(out, dpi=200, crop=True)
 

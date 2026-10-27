@@ -1,0 +1,11 @@
+{# Petunjuk sumber gempa terdekat (model sumber gempa PuSGeN 2024), di sebelah pilihan Zona Waktu. #}
+{% if sumber_terdekat %}{% with s=sumber_terdekat %}
+<span class="sumber-hint" style="flex:1 1 auto;min-width:0;margin-left:6px;padding-left:10px;border-left:1px solid #ccc;color:#374151;line-height:1.35;"
+      title="Sesar aktif terdekat dari episenter (jarak ke garis sesar) dan zona megathrust menurut model sumber gempa PuSGeN 2024 (Peta Sumber dan Bahaya Gempa Indonesia 2024). Petunjuk saja, bukan penentuan sumber gempa.">
+  {% if s.ada %}Sumber terdekat: <b>{{ s.nama }}</b>{% if s.segmen %} (segmen {{ s.segmen }}){% endif %}
+  <span style="color:#6b7280;">· {{ s.tipe }}{% if s.mmax %}, Mmaks {{ s.mmax|floatformat:1 }}{% endif %} · ±{{ s.jarak_km }} km</span>
+  {% else %}Sumber terdekat: <span style="color:#6b7280;">tidak ada sesar aktif PuSGeN dalam {{ s.max_km }} km</span>{% endif %}
+  {% if s.megathrust %}<br>Di atas zona sumber <b>{{ s.megathrust }}</b>{% endif %}
+  {% if s.dalam %}<br><span style="color:#b45309;">Kedalaman ≥ 60 km: kemungkinan bersumber dari lempeng menunjam, bukan sesar dangkal.</span>{% endif %}
+</span>
+{% endwith %}{% endif %}
