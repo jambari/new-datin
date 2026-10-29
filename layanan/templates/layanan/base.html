@@ -25,6 +25,9 @@
     * { font-family: 'Inter', system-ui, sans-serif; }
     .gradient-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
     .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+    .bd-link { display: block; padding: 0.5rem 0.75rem; border-radius: 0.5rem; color: #4b5563; transition: background-color .15s, color .15s; }
+    .bd-link:hover { background: #fef2f2; color: #C30F42; }
+    .bd-link.bd-active { background: #fef2f2; color: #C30F42; font-weight: 600; box-shadow: inset 3px 0 0 #C30F42; }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
@@ -32,43 +35,37 @@
 
   {% include 'partials/_landing_header.html' with pn_spacer=1 pn_no_theme=1 %}
 
-  <!-- Navbar -->
-  <nav class="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky z-50" style="top:60px">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
-        <a href="{% url 'layanan_landing' %}" class="flex items-center gap-2">
-          <span class="bg-brand text-white font-extrabold text-lg px-3 py-1 rounded-lg">BukaData</span>
-        </a>
-        <div class="hidden md:flex items-center gap-1">
-          <a href="{% url 'layanan_tentang' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Tentang</a>
-          <a href="{% url 'layanan_tarif' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Tarif</a>
-          <a href="{% url 'layanan_alur' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Alur</a>
-          <a href="{% url 'layanan_data' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Data</a>
-          <a href="{% url 'layanan_jasa' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Jasa</a>
-          <a href="{% url 'layanan_magang' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">Magang</a>
-          <a href="{% url 'layanan_gts' %}" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand rounded-lg hover:bg-red-50 transition">GTS</a>
-          <a href="{% url 'layanan_daftar' %}" class="ml-2 px-4 py-2 text-sm font-semibold text-white bg-brand rounded-lg hover:bg-brand-dark transition shadow-sm">Daftar</a>
-        </div>
-        <!-- Mobile menu button -->
-        <button id="menu-toggle" class="md:hidden p-2 text-gray-600 hover:text-brand">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
-      </div>
+  {% with u=request.resolver_match.url_name %}
+  <!-- Sidebar BukaData (menggantikan navbar kedua di bawah header situs) -->
+  <div id="bd-backdrop" class="hidden lg:hidden fixed inset-0 bg-black/40 z-40" style="top:60px"></div>
+  <aside id="bd-sidebar" class="fixed left-0 bottom-0 w-60 bg-white border-r border-gray-100 z-50 overflow-y-auto -translate-x-full lg:translate-x-0 transition-transform duration-200" style="top:60px">
+    <div class="px-4 py-5">
+      <a href="{% url 'layanan_landing' %}" class="inline-block bg-brand text-white font-extrabold text-lg px-3 py-1 rounded-lg">BukaData</a>
+      <p class="text-xs text-gray-400 mt-2 leading-snug">Pelayanan Data &amp; Jasa Stasiun Geofisika Jayapura</p>
     </div>
-    <!-- Mobile menu -->
-    <div id="mobile-menu" class="hidden md:hidden border-t border-gray-100 bg-white">
-      <div class="px-4 py-3 space-y-1">
-        <a href="{% url 'layanan_tentang' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Tentang</a>
-        <a href="{% url 'layanan_tarif' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Tarif</a>
-        <a href="{% url 'layanan_alur' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Alur</a>
-        <a href="{% url 'layanan_data' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Data</a>
-        <a href="{% url 'layanan_jasa' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Jasa</a>
-        <a href="{% url 'layanan_magang' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Magang</a>
-        <a href="{% url 'layanan_gts' %}" class="block px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50">Goes to School</a>
-        <a href="{% url 'layanan_daftar' %}" class="block px-3 py-2 text-sm font-semibold text-brand rounded-lg hover:bg-red-50">Daftar Permohonan</a>
+    <nav class="px-3 pb-6 space-y-1 text-sm font-medium">
+      <a href="{% url 'layanan_landing' %}" class="bd-link {% if u == 'layanan_landing' %}bd-active{% endif %}">Beranda</a>
+      <a href="{% url 'layanan_tentang' %}" class="bd-link {% if u == 'layanan_tentang' %}bd-active{% endif %}">Tentang</a>
+      <a href="{% url 'layanan_tarif' %}" class="bd-link {% if u == 'layanan_tarif' %}bd-active{% endif %}">Tarif</a>
+      <a href="{% url 'layanan_alur' %}" class="bd-link {% if u == 'layanan_alur' %}bd-active{% endif %}">Alur Permohonan</a>
+      <p class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Layanan</p>
+      <a href="{% url 'layanan_data' %}" class="bd-link {% if u == 'layanan_data' or u == 'layanan_formulir' %}bd-active{% endif %}">Data</a>
+      <a href="{% url 'layanan_jasa' %}" class="bd-link {% if u == 'layanan_jasa' %}bd-active{% endif %}">Jasa</a>
+      <a href="{% url 'layanan_magang' %}" class="bd-link {% if u == 'layanan_magang' %}bd-active{% endif %}">Magang</a>
+      <a href="{% url 'layanan_gts' %}" class="bd-link {% if u == 'layanan_gts' %}bd-active{% endif %}">Goes To School</a>
+      <div class="pt-4">
+        <a href="{% url 'layanan_daftar' %}" class="block text-center px-4 py-2 font-semibold text-white bg-brand rounded-lg hover:bg-brand-dark transition shadow-sm">Daftar Permohonan</a>
       </div>
-    </div>
-  </nav>
+    </nav>
+  </aside>
+  {% endwith %}
+
+  <div class="lg:pl-60">
+  <!-- Tombol menu melayang (layar kecil), supaya tidak ada bar kedua di bawah header -->
+  <button id="menu-toggle" class="lg:hidden fixed left-4 bottom-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 bg-brand text-white text-sm font-semibold rounded-full shadow-lg hover:bg-brand-dark" aria-controls="bd-sidebar" aria-expanded="false" aria-label="Menu BukaData">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    Menu BukaData
+  </button>
 
   {% block content %}{% endblock %}
 
@@ -105,11 +102,21 @@
       </div>
     </div>
   </footer>
+  </div>
 
   <script>
-    document.getElementById('menu-toggle').addEventListener('click', function() {
-      document.getElementById('mobile-menu').classList.toggle('hidden');
-    });
+    (function () {
+      var sb = document.getElementById('bd-sidebar'), bd = document.getElementById('bd-backdrop'),
+          btn = document.getElementById('menu-toggle');
+      function setOpen(open) {
+        sb.classList.toggle('-translate-x-full', !open);
+        bd.classList.toggle('hidden', !open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      btn.addEventListener('click', function () { setOpen(sb.classList.contains('-translate-x-full')); });
+      bd.addEventListener('click', function () { setOpen(false); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
+    })();
   </script>
   {% block extra_script %}{% endblock %}
 </body>

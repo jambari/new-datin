@@ -68,6 +68,7 @@
         </div>
       </div>
       <a class="pn-link" href="https://eskm.bmkg.go.id/login/" target="_blank" rel="noopener">SKM</a>
+      <a class="pn-link" href="{% url 'layanan_landing' %}">Pelayanan</a>
       <a class="pn-link" href="{% url 'public_ttm' %}">TTM</a>
       <a class="pn-link" href="{% url 'our_work' %}">Gallery</a>
       <a class="pn-link" href="{% url 'public_about' %}">About Us</a>
@@ -79,7 +80,6 @@
         </button>
         <div class="pn-drop-menu">
           <a href="{% url 'public_glosarium' %}">Glosarium</a>
-          <a href="{% url 'layanan_landing' %}">Pelayanan</a>
           <a href="{% url 'guests_index' %}">Buku Tamu</a>
           <a href="{% url 'pengaduan_form' %}">Pengaduan</a>
         </div>
@@ -203,10 +203,15 @@
   }
   .pn-toggle svg { display: block; }
 
-  /* Full nav needs ~1400px; condense it on narrower laptops */
+  /* Full nav needs ~1600px; condense it on narrower laptops */
+  @media (max-width: 1599px) {
+    .pn-link, .pn-drop-trigger { padding: 0.35rem 0.45rem; }
+  }
   @media (max-width: 1439px) {
     .pn-sub { display: none; }
-    .pn-link, .pn-drop-trigger { padding: 0.35rem 0.45rem; }
+    .pn-nav { gap: 0; }
+    .pn-link, .pn-drop-trigger { padding: 0.35rem 0.38rem; letter-spacing: 0.01em; }
+    .pn-login, .pn-login:hover { margin-left: 0.3rem; }
   }
 
   /* Hamburger for tablets and phones */
