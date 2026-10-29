@@ -20,15 +20,59 @@ _HEADERS = {
 
 WIB = timezone(timedelta(hours=7))
 
-# Bounding box for all Papua provinces (Papua, Papua Barat, Papua Tengah, etc.)
-PAPUA_LON_MIN = 130.0
-PAPUA_LON_MAX = 141.0
-PAPUA_LAT_MIN =  -9.0
-PAPUA_LAT_MAX =   2.0
+# Papua region: the six Papua provinces plus roughly 50 km of surrounding sea, as (lon, lat).
+# Replaces the old 130-141E / 9S-2N box, which took in Maluku (Kep. Tanimbar, Laut Banda)
+# and stopped exactly at the PNG border.
+PAPUA_POLYGON = [
+    (129.0, 0.5), (131.5, 1.2), (134.5, 1.3), (136.5, -0.2), (139.5, -0.6), (141.0, -1.5),
+    (141.0, -9.4), (138.0, -9.0), (137.0, -7.5), (135.0, -5.0), (133.5, -4.65), (131.6, -3.3),
+    (129.6, -2.4), (129.0, -1.5),
+]
+
+# Places in Papua as BMKG writes them in "Dirasakan" (kabupaten/kota and common towns)
+PAPUA_PLACES = [
+    "jayapura", "sentani", "abepura", "keerom", "arso", "waris", "sarmi", "mamberamo", "kasonaweja",
+    "biak", "supiori", "yapen", "serui", "waropen", "botawa", "nabire", "paniai", "enarotali", "deiyai",
+    "waghete", "dogiyai", "moanemani", "intan jaya", "sugapa", "puncak", "ilaga", "mulia", "mimika",
+    "timika", "jayawijaya", "wamena", "lanny jaya", "tiom", "tolikara", "karubaga", "yalimo", "elelim",
+    "yahukimo", "dekai", "nduga", "kenyam", "pegunungan bintang", "oksibil", "boven digoel",
+    "tanah merah", "mindiptana", "merauke", "mappi", "kepi", "asmat", "agats", "manokwari", "bintuni",
+    "wondama", "wasior", "fakfak", "kaimana", "arfak", "anggi", "ransiki", "sorong", "raja ampat",
+    "waisai", "tambrauw", "maybrat", "kumurkek", "teminabuan", "sorong selatan", "aimas",
+]
+
+
+def _inside(lon, lat, ring):
+    inside = False
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
+        if (y1 > lat) != (y2 > lat) and lon < x1 + (lat - y1) * (x2 - x1) / (y2 - y1):
+            inside = not inside
+    return inside
 
 
 def is_papua(lat, lon):
-    return PAPUA_LAT_MIN <= lat <= PAPUA_LAT_MAX and PAPUA_LON_MIN <= lon <= PAPUA_LON_MAX
+    return _inside(lon, lat, PAPUA_POLYGON)
+
+
+def felt_mostly_in_papua(dirasakan):
+    """True when the first place in BMKG's "Dirasakan" list (the strongest shaking,
+    e.g. "III Boven Digoel, II Jayapura, II Merauke") is in Papua."""
+    first = (dirasakan or "").split(",")[0].lower()
+    return any(place in first for place in PAPUA_PLACES)
+
+
+# Western Papua New Guinea next to the border (Sandaun / Western Province, ~220 km wide).
+# Earthquakes there from M5 upward are usually felt in Jayapura, Keerom, Boven Digoel or Merauke,
+# even when BMKG's "Dirasakan" lists no Papua town.
+PNG_BORDER_POLYGON = [(141.0, -1.5), (143.0, -1.5), (143.0, -9.6), (141.0, -9.6)]
+PNG_MIN_MAGNITUDE = 5.0
+
+
+def is_papua_event(lat, lon, dirasakan, magnitude=0.0):
+    """Epicentre in the Papua region; or outside it but felt most strongly in Papua;
+    or an M5+ earthquake in western PNG close to the border."""
+    return (is_papua(lat, lon) or felt_mostly_in_papua(dirasakan)
+            or (magnitude >= PNG_MIN_MAGNITUDE and _inside(lon, lat, PNG_BORDER_POLYGON)))
 
 
 def wib_timestamp(dt_utc):
@@ -95,7 +139,7 @@ class Command(BaseCommand):
                 coords = event.get("Coordinates", "")
                 lat, lon = map(float, coords.split(","))
 
-                if not is_papua(lat, lon):
+                if not is_papua_event(lat, lon, event.get("Dirasakan", ""), float(event.get("Magnitude", 0))):
                     continue
 
                 # Parse UTC datetime

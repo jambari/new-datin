@@ -507,3 +507,30 @@ class EventBrowserGmtMapTest(TestCase):
         self.assertContains(gs, 'MapLayout.register(mapInstance)')
         self.assertContains(gs, 'Sembunyikan pengaturan')
         self.assertContains(gs, 'Unduh gambar peta')
+
+
+class FetchBmkgFeltRegionTest(TestCase):
+    """Papua filter of fetch_bmkg_felt: polygon around the provinces plus "Dirasakan" fallback."""
+
+    def test_papua_region(self):
+        from repository.management.commands.fetch_bmkg_felt import is_papua_event
+        cases = [
+            # (lat, lon, dirasakan, expected)
+            (-5.45, 141.90, "III Boven Digoel, II Jayapura, II Merauke", True),     # PNG, felt in Papua
+            (-6.34, 130.52, "II - III Banda Naira, II - III Tanimbar, II - III Kaimana, II - III Sorong", False),
+            (-0.73, 131.39, "II Kota Sorong", True),
+            (-2.46, 140.38, "II Kab. Jayapura", True),
+            (-8.50, 140.40, "", True),                                               # Merauke
+            (-4.59, 133.93, "", True),                                               # SE of Kaimana
+            (-1.09, 139.64, "", True),                                               # NE of Sarmi
+            (-4.80, 132.05, "", False),                                              # NW of Tual
+            (-3.70, 128.20, "III Ambon", False),
+        ]
+        for lat, lon, dirasakan, expected in cases:
+            self.assertEqual(is_papua_event(lat, lon, dirasakan), expected, (lat, lon, dirasakan))
+
+    def test_png_border_m5(self):
+        from repository.management.commands.fetch_bmkg_felt import is_papua_event
+        self.assertTrue(is_papua_event(-2.69, 141.81, "", 5.3))                 # 127 km SE of Jayapura
+        self.assertFalse(is_papua_event(-2.90, 141.88, "", 4.9))                # below M5
+        self.assertFalse(is_papua_event(-3.57, 143.63, "III Wewak", 5.5))       # too far east (Wewak)
