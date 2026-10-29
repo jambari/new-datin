@@ -1,66 +1,94 @@
 {% extends 'layanan/base.html' %}
 {% load static %}
 
-{% block title %}Permintaan Data — BukaData{% endblock %}
+{% block title %}Permintaan Data — PTSP{% endblock %}
 
 {% block content %}
 <section class="max-w-6xl mx-auto px-4 py-12">
-  <nav class="flex items-center gap-2 text-sm text-gray-500 mb-8">
-    <a href="{% url 'layanan_landing' %}" class="hover:text-brand">Home</a>
+  <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6">
+    <a href="{% url 'layanan_landing' %}" class="hover:text-brand">PTSP</a>
     <span>/</span>
     <span class="text-gray-900 font-medium">Data</span>
   </nav>
-  <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-8">Permintaan Data & Informasi</h1>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <!-- Item 1 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group">
-      <img src="{% static 'images/layanan/page01.jpg' %}" alt="Peta Kegempaan" class="w-full h-48 object-cover">
-      <div class="p-5">
-        <h3 class="font-bold text-gray-900 mb-2">Peta Kegempaan</h3>
-        <p class="text-sm text-gray-500 mb-4">Informasi sebaran gempabumi untuk perencanaan kontruksi per tahun.</p>
-        <div class="flex items-center justify-between">
-          <span class="text-brand font-bold">Rp250.000</span>
+  <div class="mb-10 max-w-3xl">
+    <p class="text-xs font-semibold tracking-widest uppercase text-brand mb-2">Produk Data &amp; Informasi</p>
+    <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3">Permintaan Data &amp; Informasi</h1>
+    <p class="text-gray-600 leading-relaxed">Pilih produk, isi formulir, dan hasilnya kami kirim ke email Anda. Gambar di bawah adalah contoh tampilan produk dari sistem pengolahan data Stasiun Geofisika Kelas I Jayapura.</p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+    <!-- Peta Kegempaan -->
+    <article class="group flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
+      <div class="relative overflow-hidden bg-gray-100">
+        <img src="{% static 'images/layanan/ptsp-peta-gempa.jpg' %}" alt="Contoh Peta Kegempaan (peta seismisitas Papua)" class="w-full aspect-[4/3] object-cover group-hover:scale-[1.03] transition duration-300" loading="lazy">
+        <span class="absolute top-3 left-3 bg-white/95 text-brand text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">Gempabumi</span>
+      </div>
+      <div class="flex flex-col flex-1 p-5">
+        <h3 class="text-lg font-bold text-gray-900 mb-1">Peta Kegempaan</h3>
+        <p class="text-sm text-gray-500 mb-5 flex-1">Sebaran episenter gempabumi per tahun untuk perencanaan konstruksi, lengkap dengan legenda magnitudo dan kedalaman.</p>
+        <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div><span class="text-xl font-extrabold text-brand">Rp250.000</span> <span class="text-xs text-gray-400">/ tahun</span></div>
           <a href="{% url 'layanan_formulir' id=1 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a>
         </div>
       </div>
-    </div>
-    <!-- Item 2 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group">
-      <img src="{% static 'images/layanan/page03.jpg' %}" alt="Peta Kerawanan Petir" class="w-full h-48 object-cover">
-      <div class="p-5">
-        <h3 class="font-bold text-gray-900 mb-2">Peta Tingkat Kerawanan Petir</h3>
-        <p class="text-sm text-gray-500 mb-4">Peta tingkat kerawanan petir per lokasi per tahun.</p>
-        <div class="flex items-center justify-between">
-          <span class="text-brand font-bold">Rp200.000</span>
-          <a href="{% url 'layanan_formulir' id=2 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a>
-        </div>
+    </article>
+
+    <!-- Peta Kejadian Petir -->
+    <article class="group flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
+      <div class="relative overflow-hidden bg-gray-100">
+        <img src="{% static 'images/layanan/ptsp-kejadian-petir.jpg' %}" alt="Contoh Peta Kejadian Petir (sebaran sambaran CG+ dan CG-)" class="w-full aspect-[4/3] object-cover group-hover:scale-[1.03] transition duration-300" loading="lazy">
+        <span class="absolute top-3 left-3 bg-white/95 text-brand text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">Petir</span>
       </div>
-    </div>
-    <!-- Item 3 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group">
-      <img src="{% static 'images/layanan/page04.jpg' %}" alt="Waktu Terbit" class="w-full h-48 object-cover">
-      <div class="p-5">
-        <h3 class="font-bold text-gray-900 mb-2">Waktu Terbit & Terbenam</h3>
-        <p class="text-sm text-gray-500 mb-4">Waktu terbit dan terbenam matahari/bulan per lokasi per tahun.</p>
-        <div class="flex items-center justify-between">
-          <span class="text-brand font-bold">Rp50.000</span>
-          <a href="{% url 'layanan_formulir' id=3 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a>
-        </div>
-      </div>
-    </div>
-    <!-- Item 4 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition group">
-      <img src="{% static 'images/layanan/kejadianpetir.jpg' %}" alt="Peta Kejadian Petir" class="w-full h-48 object-cover">
-      <div class="p-5">
-        <h3 class="font-bold text-gray-900 mb-2">Peta Kejadian Petir</h3>
-        <p class="text-sm text-gray-500 mb-4">Sebaran sambaran petir per hari per lokasi. Tarif kelipatan jumlah hari.</p>
-        <div class="flex items-center justify-between">
-          <span class="text-brand font-bold">Rp75.000</span>
+      <div class="flex flex-col flex-1 p-5">
+        <h3 class="text-lg font-bold text-gray-900 mb-1">Peta Kejadian Petir</h3>
+        <p class="text-sm text-gray-500 mb-5 flex-1">Sebaran sambaran petir (CG+ dan CG-) per hari untuk lokasi yang Anda tentukan. Tarif berlaku kelipatan jumlah hari.</p>
+        <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div><span class="text-xl font-extrabold text-brand">Rp75.000</span> <span class="text-xs text-gray-400">/ hari</span></div>
           <a href="{% url 'layanan_formulir' id=4 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a>
         </div>
       </div>
+    </article>
+
+    <!-- Peta Tingkat Kerawanan Petir -->
+    <article class="group flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
+      <div class="relative overflow-hidden bg-gray-100">
+        <img src="{% static 'images/layanan/ptsp-kerapatan-petir.jpg' %}" alt="Contoh Peta Kerapatan Sambaran Petir Kota Jayapura" class="w-full aspect-[4/3] object-cover group-hover:scale-[1.03] transition duration-300" loading="lazy">
+        <span class="absolute top-3 left-3 bg-white/95 text-brand text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">Petir</span>
+      </div>
+      <div class="flex flex-col flex-1 p-5">
+        <h3 class="text-lg font-bold text-gray-900 mb-1">Peta Tingkat Kerawanan Petir</h3>
+        <p class="text-sm text-gray-500 mb-5 flex-1">Peta kerapatan sambaran petir per lokasi per tahun, dikelompokkan menjadi tingkat rendah, sedang, dan tinggi.</p>
+        <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div><span class="text-xl font-extrabold text-brand">Rp200.000</span> <span class="text-xs text-gray-400">/ tahun</span></div>
+          <a href="{% url 'layanan_formulir' id=2 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Waktu Terbit & Terbenam -->
+    <article class="group flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
+      <div class="relative overflow-hidden bg-gray-100">
+        <img src="{% static 'images/layanan/ptsp-terbit-terbenam.jpg' %}" alt="Contoh tabel waktu terbit dan terbenam Matahari dan Bulan" class="w-full aspect-[4/3] object-cover object-top group-hover:scale-[1.03] transition duration-300" loading="lazy">
+        <span class="absolute top-3 left-3 bg-white/95 text-brand text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">Tanda Waktu</span>
+      </div>
+      <div class="flex flex-col flex-1 p-5">
+        <h3 class="text-lg font-bold text-gray-900 mb-1">Waktu Terbit &amp; Terbenam</h3>
+        <p class="text-sm text-gray-500 mb-5 flex-1">Jadwal terbit dan terbenam Matahari dan Bulan beserta fase Bulan, per lokasi untuk satu tahun.</p>
+        <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+          <div><span class="text-xl font-extrabold text-brand">Rp50.000</span> <span class="text-xs text-gray-400">/ tahun</span></div>
+          <a href="{% url 'layanan_formulir' id=3 %}" class="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-dark transition">Pesan</a>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-brand-soft border border-brand/15 rounded-2xl p-5">
+    <div class="flex-1">
+      <p class="font-semibold text-gray-900">Mahasiswa untuk tugas akhir atau skripsi?</p>
+      <p class="text-sm text-gray-600">Permintaan data untuk penelitian mahasiswa dapat dikenai tarif Rp0 dengan melampirkan persyaratan.</p>
     </div>
+    <a href="{% url 'layanan_tarif' %}" class="shrink-0 px-4 py-2 text-sm font-semibold text-brand bg-white border border-brand/20 rounded-lg hover:bg-white/70 transition">Lihat ketentuan tarif</a>
   </div>
 </section>
 {% endblock %}

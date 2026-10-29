@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}BukaData — Pelayanan Stasiun Geofisika Jayapura{% endblock %}</title>
-  <meta name="description" content="Platform Pelayanan Data dan Jasa di Stasiun Geofisika Kelas I Jayapura">
+  <title>{% block title %}PTSP — Pelayanan Terpadu Satu Pintu Stasiun Geofisika Jayapura{% endblock %}</title>
+  <meta name="description" content="PTSP (Pelayanan Terpadu Satu Pintu) Stasiun Geofisika Kelas I Jayapura: permintaan data, jasa, magang, dan kunjungan sekolah secara daring">
   <link rel="icon" href="https://bmkg.go.id/asset/img/favicon.ico">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -13,7 +13,7 @@
       theme: {
         extend: {
           colors: {
-            brand: { DEFAULT: '#C30F42', light: '#e53e6b', dark: '#9a0c34' }
+            brand: { DEFAULT: '#0B4F8A', light: '#2E7DC2', dark: '#083B68', soft: '#EAF2FA' }
           }
         }
       }
@@ -23,11 +23,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Inter', system-ui, sans-serif; }
-    .gradient-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+    .gradient-hero { background: linear-gradient(135deg, #082a4d 0%, #0B4F8A 55%, #1f77b4 100%); }
     .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
     .bd-link { display: block; padding: 0.5rem 0.75rem; border-radius: 0.5rem; color: #4b5563; transition: background-color .15s, color .15s; }
-    .bd-link:hover { background: #fef2f2; color: #C30F42; }
-    .bd-link.bd-active { background: #fef2f2; color: #C30F42; font-weight: 600; box-shadow: inset 3px 0 0 #C30F42; }
+    .bd-link:hover { background: #EAF2FA; color: #0B4F8A; }
+    .bd-link.bd-active { background: #EAF2FA; color: #0B4F8A; font-weight: 600; box-shadow: inset 3px 0 0 #0B4F8A; }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
@@ -36,12 +36,12 @@
   {% include 'partials/_landing_header.html' with pn_spacer=1 pn_no_theme=1 %}
 
   {% with u=request.resolver_match.url_name %}
-  <!-- Sidebar BukaData (menggantikan navbar kedua di bawah header situs) -->
+  <!-- Sidebar PTSP (menggantikan navbar kedua di bawah header situs) -->
   <div id="bd-backdrop" class="hidden lg:hidden fixed inset-0 bg-black/40 z-40" style="top:60px"></div>
   <aside id="bd-sidebar" class="fixed left-0 bottom-0 w-60 bg-white border-r border-gray-100 z-50 overflow-y-auto -translate-x-full lg:translate-x-0 transition-transform duration-200" style="top:60px">
     <div class="px-4 py-5">
-      <a href="{% url 'layanan_landing' %}" class="inline-block bg-brand text-white font-extrabold text-lg px-3 py-1 rounded-lg">BukaData</a>
-      <p class="text-xs text-gray-400 mt-2 leading-snug">Pelayanan Data &amp; Jasa Stasiun Geofisika Jayapura</p>
+      <a href="{% url 'layanan_landing' %}" class="inline-block bg-brand text-white font-extrabold text-lg tracking-wide px-3 py-1 rounded-lg">PTSP</a>
+      <p class="text-xs text-gray-500 mt-2 leading-snug"><span class="font-semibold text-gray-700">Pelayanan Terpadu Satu Pintu</span><br>Stasiun Geofisika Kelas I Jayapura</p>
     </div>
     <nav class="px-3 pb-6 space-y-1 text-sm font-medium">
       <a href="{% url 'layanan_landing' %}" class="bd-link {% if u == 'layanan_landing' %}bd-active{% endif %}">Beranda</a>
@@ -62,9 +62,9 @@
 
   <div class="lg:pl-60">
   <!-- Tombol menu melayang (layar kecil), supaya tidak ada bar kedua di bawah header -->
-  <button id="menu-toggle" class="lg:hidden fixed left-4 bottom-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 bg-brand text-white text-sm font-semibold rounded-full shadow-lg hover:bg-brand-dark" aria-controls="bd-sidebar" aria-expanded="false" aria-label="Menu BukaData">
+  <button id="menu-toggle" class="lg:hidden fixed left-4 bottom-4 z-50 flex items-center gap-2 pl-3 pr-4 py-2.5 bg-brand text-white text-sm font-semibold rounded-full shadow-lg hover:bg-brand-dark" aria-controls="bd-sidebar" aria-expanded="false" aria-label="Menu PTSP">
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-    Menu BukaData
+    Menu PTSP
   </button>
 
   {% block content %}{% endblock %}
@@ -74,8 +74,8 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
-          <span class="text-white font-extrabold text-lg bg-brand px-3 py-1 rounded-lg inline-block mb-3">BukaData</span>
-          <p class="text-sm text-gray-400 mt-3 leading-relaxed">Platform pelayanan jasa dan data di Stasiun Geofisika Kelas I Jayapura untuk memudahkan pengguna tanpa harus datang langsung ke kantor kami.</p>
+          <span class="text-white font-extrabold text-lg tracking-wide bg-brand px-3 py-1 rounded-lg inline-block mb-3">PTSP</span>
+          <p class="text-sm text-gray-400 mt-3 leading-relaxed">Pelayanan Terpadu Satu Pintu Stasiun Geofisika Kelas I Jayapura: permintaan data dan jasa geofisika secara daring, tanpa harus datang ke kantor kami.</p>
         </div>
         <div>
           <h5 class="text-white font-semibold mb-3">Jenis Layanan</h5>
