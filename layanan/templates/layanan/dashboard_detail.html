@@ -25,7 +25,7 @@
           <div><span class="text-gray-500">No HP</span><p class="text-gray-900">{{ layanan.handphone|default:"—" }}</p></div>
           <div class="col-span-2"><span class="text-gray-500">Alamat</span><p class="text-gray-900">{{ layanan.alamat|default:"—" }}</p></div>
           <div><span class="text-gray-500">Jenis Data</span><p class="font-semibold text-gray-900">{{ layanan.jenis_data }}</p></div>
-          <div><span class="text-gray-500">Surat</span><p class="text-gray-900">{{ layanan.surat|default:"—" }}</p></div>
+          <div><span class="text-gray-500">Surat</span><p class="text-gray-900">{% if layanan.surat %}<a href="{% url 'layanan_dashboard_surat' layanan.pk %}" class="text-blue-600 hover:underline">Unduh surat permohonan</a>{% else %}—{% endif %}</p></div>
         </div>
 
         <hr class="border-gray-100">

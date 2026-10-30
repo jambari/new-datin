@@ -351,6 +351,9 @@ MEDIA_URL = '/media/'
 
 # The absolute path to the folder where media files will be stored
 MEDIA_ROOT = BASE_DIR / 'media'
+# Berkas unggahan publik yang memuat data pribadi (mis. surat permohonan PTSP).
+# Sengaja di luar MEDIA_ROOT: nginx menyajikan /media/ ke umum, folder ini tidak.
+PRIVATE_MEDIA_ROOT = Path(config('PRIVATE_MEDIA_ROOT', default=str(BASE_DIR / 'private_media')))
 
 # Interpreter venv PyGMT terpisah (numpy/pandas berbeda dari venv aplikasi) untuk peta GMT.
 PYGMT_PYTHON = config('PYGMT_PYTHON', default='/home/sysop/venvs/pygmt/bin/python')
@@ -382,6 +385,8 @@ KUALITAS_UDARA_API_TOKEN = config('KUALITAS_UDARA_API_TOKEN', default='')
 TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default='')
 # Grup khusus laporan kesehatan stasiun (opsional; kosong = TELEGRAM_CHAT_ID).
 STATION_QC_TELEGRAM_CHAT_ID = config('STATION_QC_TELEGRAM_CHAT_ID', default='')
+# Grup penerima permohonan PTSP / layanan (opsional; kosong = TELEGRAM_CHAT_ID).
+LAYANAN_TELEGRAM_CHAT_ID = config('LAYANAN_TELEGRAM_CHAT_ID', default='')
 
 # If using Gmail, you need an "App Password"
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

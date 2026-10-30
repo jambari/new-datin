@@ -16,4 +16,5 @@ urlpatterns = [
     # Dashboard CRUD
     path('layanan/dashboard/', views.dashboard_list, name='layanan_dashboard_list'),
     path('layanan/dashboard/<int:pk>/', views.dashboard_detail, name='layanan_dashboard_detail'),
+    path('layanan/dashboard/<int:pk>/surat/', views.dashboard_surat, name='layanan_dashboard_surat'),
 ]
