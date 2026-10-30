@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.core.paginator import Paginator
 from .models import Pengaduan
@@ -27,6 +28,7 @@ def success(request):
     return render(request, 'pengaduan/success.html')
 
 
+@login_required
 def pengaduan_list(request):
     qs = Pengaduan.objects.all()
     paginator = Paginator(qs, 15)

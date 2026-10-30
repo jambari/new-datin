@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from .models import Guest
 
 
@@ -47,6 +48,7 @@ def search(request):
 
 # ── Dashboard CRUD ────────────────────────────────────────────
 
+@login_required
 def dashboard_list(request):
     qs = Guest.objects.all()
     paginator = Paginator(qs, 15)
@@ -56,6 +58,7 @@ def dashboard_list(request):
     })
 
 
+@login_required
 def dashboard_delete(request, pk):
     guest = get_object_or_404(Guest, pk=pk)
     if request.method == 'POST':
