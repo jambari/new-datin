@@ -38,6 +38,8 @@ log = logging.getLogger("station_qc")
 ARCHIVE = "/home/sysop/seiscomp/var/lib/archive"
 SEISMIC_CHANNEL = re.compile(r"^[SBHEC][HNL][ZNE123]$")
 CHANNEL_LOOKBACK_DAYS = 7       # channels seen in this window are "expected"
+LAST_ACTIVE_DAYS = 30           # of a silent station, channels within this of its last data are listed
+BINDING = re.compile(r"^global:(\d\d)?([A-Z]{2})\s*$", re.M)
 NOISE_WINDOW_S = 600
 NOISE_HIGHPASS_HZ = 1.0
 FLATLINE_MIN_S = 10.0
@@ -65,6 +67,63 @@ def expected_channels(archive: str, day: dt.date) -> dict[tuple[str, str], set[t
             net, sta, loc, cha = os.path.basename(f).split(".")[:4]
             if SEISMIC_CHANNEL.match(cha):
                 out.setdefault((net, sta), set()).add((loc, cha))
+    return out
+
+
+def _file_day(path: str) -> dt.date | None:
+    """Date of an SDS day file from the end of its name (...D.2026.303)."""
+    try:
+        year, doy = path.rsplit(".", 2)[-2:]
+        return dt.date(int(year), 1, 1) + dt.timedelta(days=int(doy) - 1)
+    except ValueError:
+        return None
+
+
+def silent_stations(archive: str, key_dir: str, day: dt.date, expected: dict) -> dict:
+    """Every other station SeisComP is bound to, or that the archive has ever held.
+
+    The daily scan only sees channels with recent data, so a station silent for longer would
+    vanish from the report. {(net, sta): [(loc, cha, metrics), ...]} with 0 % availability.
+    Stations with live channels are left out, so a retired channel never turns a healthy one red.
+    """
+    bindings = {}
+    for f in glob.glob(f"{key_dir}/station_*_*"):
+        net, sta = os.path.basename(f).split("_")[1:3]
+        with open(f) as fh:
+            m = BINDING.search(fh.read())
+        bindings[(net, sta)] = (m.group(1) or "", m.group(2)) if m else ("", "SH")
+
+    # Clock faults write into future year directories, so only look up to `day`.
+    files: dict = {}
+    for f in glob.glob(f"{archive}/[0-9][0-9][0-9][0-9]/*/*/*.D/*.D.*"):
+        parts = os.path.basename(f).split(".")
+        d = _file_day(f)
+        if len(parts) < 4 or d is None or d > day or not SEISMIC_CHANNEL.match(parts[3]):
+            continue
+        key = ((parts[0], parts[1]), (parts[2], parts[3]))
+        if d > files.get(key, dt.date.min):
+            files[key] = d
+
+    by_station: dict = {}
+    for sta_key, chan in files:
+        by_station.setdefault(sta_key, {})[chan] = files[(sta_key, chan)]
+
+    out = {}
+    for sta_key in sorted(set(bindings) | set(by_station)):
+        if sta_key in expected:
+            continue
+        chans = by_station.get(sta_key)
+        if chans:
+            newest = max(chans.values())
+            out[sta_key] = [
+                (loc, cha, {"availability_pct": 0.0, "not_in_archive": True,
+                            "last_data_day": last.isoformat(), "days_without_data": (day - last).days})
+                for (loc, cha), last in sorted(chans.items())
+                if (newest - last).days <= LAST_ACTIVE_DAYS]
+        else:
+            loc, band = bindings[sta_key]
+            out[sta_key] = [(loc, f"{band}{c}", {"availability_pct": 0.0, "not_in_archive": True,
+                                                 "never_archived": True}) for c in "ZNE"]
     return out
 
 
@@ -233,6 +292,11 @@ def build_day(archive: str, day: dt.date, workers: int, only: set[str] | None) -
                 m["future_dates"] = sorted(set(future[(net, sta, loc, cha)]))
             stations.setdefault((net, sta), []).append(
                 {"location": loc, "channel": cha, "metrics": m})
+    if not only:
+        key_dir = os.path.normpath(os.path.join(archive, "..", "..", "..", "etc", "key"))
+        for sta_key, chans in silent_stations(archive, key_dir, day, expected).items():
+            stations.setdefault(sta_key, []).extend(
+                {"location": loc, "channel": cha, "metrics": m} for loc, cha, m in chans)
     # complete: the whole archive was scanned, so .189 may treat channels that
     # are missing from this batch as silent (not just not-yet-processed).
     return {"day": day.isoformat(), "complete": not only,

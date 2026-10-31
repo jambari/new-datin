@@ -20,7 +20,7 @@ JENIS_DATA_MAP = {
     2: ("Peta Tingkat Kerawanan Petir", "kerawananpetir.jpg"),
     3: ("Waktu Terbit dan Terbenam Matahari atau Bulan", "terbit.jpg"),
     4: ("Peta Kejadian Petir", "petirharian.jpg"),
-    5: ("Teropong Rukyat (low grade)", "page06.jpg"),
+    5: ("Teropong Rukyat", "page06.jpg"),
     6: ("Digital Portable Short Period Seismograph", "page07.jpg"),
     7: ("Deklinasi dan Inklinasi Magnetometer", "page08.jpg"),
 }

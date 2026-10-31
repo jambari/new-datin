@@ -128,6 +128,8 @@ def evaluate(channels: list[dict], history: dict | None = None) -> list[Finding]
             if last and n_days and n_days > 1:
                 since_id = f"sejak {_fmt_day(last)} ({n_days} hari tanpa data)"
                 since_en = f"since {_fmt_day(last)} ({n_days} days without data)"
+            elif m.get("never_archived"):
+                since_id, since_en = "sejak awal (belum pernah masuk arsip)", "ever (never in the archive)"
             else:
                 since_id, since_en = "sepanjang hari", "for the whole day"
             add("NO_DATA", "red",
@@ -135,7 +137,8 @@ def evaluate(channels: list[dict], history: dict | None = None) -> list[Finding]
                 f"Sensor/digitizer mati atau komunikasi terputus.",
                 f"No data on channel {cha} ({name_en}) {since_en}. "
                 f"Sensor/digitizer down or telemetry lost.",
-                {"availability_pct": avail, "last_data_day": last, "days_without_data": n_days})
+                {"availability_pct": avail, "last_data_day": last, "days_without_data": n_days,
+                 "never_archived": bool(m.get("never_archived"))})
             continue   # nothing else can be judged without data
         if avail is not None and avail < AVAIL_YELLOW_PCT:
             sev = "red" if avail < AVAIL_RED_PCT else "yellow"

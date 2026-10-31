@@ -90,8 +90,8 @@ def ingest_day(day: date, stations: list[dict], complete: bool = False) -> tuple
 
 def _add_last_data_day(net, sta, day, loc, cha, metrics: dict) -> dict:
     """For a channel without data: when did it last have data?"""
-    if (metrics.get("availability_pct") or 0) > 0:
-        return metrics
+    if (metrics.get("availability_pct") or 0) > 0 or metrics.get("last_data_day"):
+        return metrics                  # the worker reports it for long-silent stations
     last = (StationDailyQC.objects
             .filter(network=net, station=sta, location=loc, channel=cha,
                     day__lt=day, metrics__availability_pct__gt=0)

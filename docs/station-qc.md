@@ -49,6 +49,10 @@ is unchanged.
 | `SPIKES` | yellow | today and the previous day both > max(100, 10 × the channel's 14-day median) |
 | `CLIPPING` | yellow | any flat-top run, unless the channel is flatlined (may be a strong nearby earthquake) |
 
+Roster: every station bound in SeisComP (`etc/key/station_*`) or ever present in the archive stays
+listed. The worker reports long-silent stations itself, with the last day found in the archive;
+bound stations never archived say so. A retired channel on a station with live channels is ignored.
+
 Baseline rules need ≥ 5 earlier days; they stay silent until then. Thresholds are
 module constants — tune after a few weeks of data.
 

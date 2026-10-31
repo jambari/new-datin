@@ -1,7 +1,10 @@
 """Tests for the daily station waveform-health feature (station QC)."""
 import datetime
 import os
+import shutil
+import tempfile
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.authtoken.models import Token
@@ -519,3 +522,100 @@ class HandoverRuleTest(TestCase):
         self.assertEqual(names(on[t(15, 30)]), ["PAGI", "PSM", "REG"])    # R sampai 16:00 (bukan 07:30+7,5)
         self.assertEqual(names(on[t(19, 45)]), ["PAGI", "PSM"])           # serah terima sore -> PS (PSM masih jalan)
         self.assertEqual(names(on[t(23)]), ["MALAM2", "PSM"])
+
+
+class SilentRosterWorkerTest(TestCase):
+    """station_qc.py lists every bound or archived station, even when silent for months."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        import importlib.util
+        path = os.path.join(settings.BASE_DIR, "scripts", "station_qc", "station_qc.py")
+        spec = importlib.util.spec_from_file_location("station_qc_worker", path)
+        cls.w = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.w)
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="sds-")
+        self.addCleanup(shutil.rmtree, self.root, True)
+        self.archive = os.path.join(self.root, "var", "lib", "archive")
+        self.keys = os.path.join(self.root, "etc", "key")
+        os.makedirs(self.keys)
+
+    def touch(self, net, sta, cha, day, loc=""):
+        doy = day.timetuple().tm_yday
+        d = os.path.join(self.archive, str(day.year), net, sta, f"{cha}.D")
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, f"{net}.{sta}.{loc}.{cha}.D.{day.year}.{doy:03d}"), "w").close()
+
+    def key(self, net, sta, profile):
+        with open(os.path.join(self.keys, f"station_{net}_{sta}"), "w") as fh:
+            fh.write(f"# Binding references\nglobal:{profile}\nseedlink:x\n")
+
+    def silent(self, expected=None):
+        return self.w.silent_stations(self.archive, self.keys, DAY, expected or {})
+
+    def test_long_silent_station_keeps_its_last_data_day(self):
+        last = DAY - datetime.timedelta(days=200)
+        for c in ("SHZ", "SHN", "SHE"):
+            self.touch("IA", "WWPI", c, last)
+        rows = self.silent()[("IA", "WWPI")]
+        self.assertEqual(sorted(r[1] for r in rows), ["SHE", "SHN", "SHZ"])
+        self.assertEqual(rows[0][2]["last_data_day"], last.isoformat())
+        self.assertEqual(rows[0][2]["days_without_data"], 200)
+
+    def test_bound_station_never_archived_uses_binding_stream(self):
+        self.key("II", "KWJN", "00BH")
+        rows = self.silent()[("II", "KWJN")]
+        self.assertEqual({(r[0], r[1]) for r in rows}, {("00", "BHZ"), ("00", "BHN"), ("00", "BHE")})
+        self.assertTrue(rows[0][2]["never_archived"])
+
+    def test_retired_channel_on_live_station_is_not_listed(self):
+        self.touch("IA", "JAY", "BHZ", DAY - datetime.timedelta(days=300))
+        self.assertNotIn(("IA", "JAY"), self.silent({("IA", "JAY"): {("", "SHZ")}}))
+
+    def test_retired_channel_on_silent_station_is_not_listed(self):
+        self.touch("IA", "OLD", "SHZ", DAY - datetime.timedelta(days=50))
+        self.touch("IA", "OLD", "BHZ", DAY - datetime.timedelta(days=300))
+        self.assertEqual([r[1] for r in self.silent()[("IA", "OLD")]], ["SHZ"])
+
+    def test_future_clock_files_do_not_count_as_data(self):
+        self.touch("IA", "OBMI", "SHZ", DAY - datetime.timedelta(days=100))
+        self.touch("IA", "OBMI", "SHZ", datetime.date(2036, 2, 7))
+        self.assertEqual(self.silent()[("IA", "OBMI")][0][2]["days_without_data"], 100)
+
+
+class SilentRosterIngestTest(TestCase):
+    def setUp(self):
+        user = User.objects.create_user("qcworker", password="x")
+        self.auth = {"HTTP_AUTHORIZATION": f"Token {Token.objects.create(user=user).key}"}
+
+    def post_silent(self, sta, metrics):
+        return self.client.post(URL, {"day": DAY.isoformat(), "complete": True, "stations": [
+            {"network": "IA", "station": sta, "channels": [
+                {"location": "", "channel": c, "metrics": metrics} for c in ("SHZ", "SHN", "SHE")]}]},
+            content_type="application/json", **self.auth)
+
+    def test_worker_date_shown_without_history_on_this_server(self):
+        self.post_silent("WWPI", {"availability_pct": 0.0, "last_data_day": "2026-01-20", "days_without_data": 200})
+        d = StationDiagnosis.objects.get(station="WWPI", channel="SHZ", code="NO_DATA")
+        self.assertIn("sejak 20-01-2026 (200 hari tanpa data)", d.message_id)
+        self.assertEqual(self.client.get("/qc/stations/").status_code, 200)
+
+    def test_never_archived_message(self):
+        self.post_silent("ERPI", {"availability_pct": 0.0, "never_archived": True})
+        d = StationDiagnosis.objects.get(station="ERPI", channel="SHZ", code="NO_DATA")
+        self.assertIn("belum pernah masuk arsip", d.message_id)
+
+    def test_caption_counts_long_silent_stations_and_keeps_recent_ones(self):
+        from . import station_report
+        for i in range(40):
+            self.post_silent(f"DEAD{i}", {"availability_pct": 0.0, "last_data_day": "2026-01-20", "days_without_data": 200})
+        self.post_silent("FRESH", {"availability_pct": 0.0, "last_data_day": "2026-10-01", "days_without_data": 5})
+        cap = station_report.build_caption(station_report.report_data(DAY))
+        self.assertIn("40 stasiun mati lebih dari 30 hari", cap)
+        self.assertIn("IA.FRESH", cap)
+        self.assertNotIn("DEAD1", cap)
+        self.assertLessEqual(len(cap), 1024)
+

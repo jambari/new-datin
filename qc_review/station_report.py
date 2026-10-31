@@ -23,6 +23,8 @@ from . import station_rules
 from .models import StationDailyQC, StationDiagnosis
 from .station_views import COMPONENT_ORDER
 
+LONG_SILENT_DAYS = 30
+
 log = logging.getLogger(__name__)
 
 GRID_DAYS = 7
@@ -209,10 +211,18 @@ def build_caption(data: dict) -> str:
     for f in data["findings"]:
         if f.severity == "red":
             red[f"{f.network}.{f.station}"][f.code].append(f)
+    # Stations down for over a month are the same every day; a count keeps new problems in the
+    # 1024-character caption. The PDF and the page still list each of them.
+    def long_silent(fs_by_code):
+        no_data = fs_by_code.get("NO_DATA") or []
+        return len(fs_by_code) == 1 and no_data and all(
+            f.evidence.get("never_archived") or (f.evidence.get("days_without_data") or 0) > LONG_SILENT_DAYS
+            for f in no_data)
+    silent = [sta for sta in red if long_silent(red[sta])]
     if red:
         lines.append("")
         lines.append("<b>Masalah:</b>")
-        for sta in sorted(red):
+        for sta in sorted(set(red) - set(silent)):
             parts = []
             for code, fs in sorted(red[sta].items()):
                 label = station_rules.CODE_LABELS_ID.get(code, code)
@@ -225,6 +235,8 @@ def build_caption(data: dict) -> str:
                 # Listing all three components adds nothing; name them only when partial.
                 parts.append(f"{label} ({', '.join(chans)})" if 0 < len(chans) < 3 else label)
             lines.append(f"• {esc(sta)}: {esc('; '.join(parts))}")
+    if silent:
+        lines.append(f"• {len(silent)} stasiun mati lebih dari {LONG_SILENT_DAYS} hari (rincian di PDF)")
     site = getattr(settings, "SITE_URL", "").rstrip("/")
     if site:
         lines += ["", f"{esc(site)}/qc/stations/"]
