@@ -1263,10 +1263,11 @@ def fmi_indices_list(request):
             try:
                 fetch_fmi_indices_task.delay(
                     date=requested_date.isoformat() if requested_date else None,
+                    telegram=False,
                 )
                 messages.success(
                     request,
-                    'Pengambilan citra indeks K & A dijadwalkan. '
+                    'Pengambilan citra indeks K & A dijadwalkan (tanpa kirim Telegram). '
                     'Muat ulang halaman ini beberapa saat lagi.',
                 )
             except Exception as exc:  # broker mati, dsb.

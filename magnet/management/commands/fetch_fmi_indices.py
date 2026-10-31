@@ -10,6 +10,10 @@ Sumber citra:
 Dijalankan otomatis oleh Celery beat setiap 16:00 WIT (07:00 UTC), lihat
 CELERY_BEAT_SCHEDULE['fetch-fmi-indices-daily'].
 
+Bila BMKG belum memperbarui citra (ETag / Last-Modified sama dengan citra tanggal
+sebelumnya), tidak dibuat baris tanggal baru, nilai K tidak diurai ulang, dan grup
+Telegram hanya diberi satu peringatan pada hari pertama sumber macet.
+
 Manual:
     python manage.py fetch_fmi_indices
     python manage.py fetch_fmi_indices --date 2026-10-01     # isi data historis
@@ -23,6 +27,7 @@ import hashlib
 import subprocess
 import time
 from datetime import datetime
+from email.utils import parsedate_to_datetime
 
 import requests
 import zoneinfo
@@ -33,6 +38,7 @@ from django.utils import timezone
 
 from magnet.fmi_kindex import update_kindex_from_image
 from magnet.models import FmiIndicesImage
+from theme.telegram import send_telegram_message
 
 _WIT = zoneinfo.ZoneInfo('Asia/Jayapura')
 
@@ -53,8 +59,15 @@ _JENIS_LABEL = {
 }
 
 
+def _last_modified(resp):
+    try:
+        return parsedate_to_datetime(resp.headers.get('Last-Modified') or '')
+    except (TypeError, ValueError):
+        return None
+
+
 def _fetch_png(url, attempts=3):
-    """Ambil citra PNG dengan retry sederhana. Mengembalikan (bytes, etag)."""
+    """Ambil citra PNG dengan retry sederhana. Mengembalikan (bytes, etag, last_modified)."""
     last_error = None
     for attempt in range(1, attempts + 1):
         try:
@@ -67,7 +80,7 @@ def _fetch_png(url, attempts=3):
                         f'{len(content)} byte)'
                     )
                 else:
-                    return content, (resp.headers.get('ETag') or '')[:100]
+                    return content, (resp.headers.get('ETag') or '')[:100], _last_modified(resp)
             else:
                 last_error = f'HTTP {resp.status_code}'
         except requests.RequestException as exc:
@@ -81,6 +94,16 @@ def _fetch_png(url, attempts=3):
 
 def _url_for(jenis):
     return _BASE_URL.format(jenis=jenis)
+
+
+def _same_source(previous, etag, last_modified):
+    """Citra sumber sama dengan baris sebelumnya? Byte-nya bisa beda (sumber kadang
+    menyajikan hasil kompresi ulang), jadi bandingkan ETag / Last-Modified, bukan SHA."""
+    if previous is None:
+        return False
+    if etag and previous.etag:
+        return previous.etag == etag
+    return bool(last_modified and previous.source_modified_at == last_modified)
 
 
 def _store_image(obj, content):
@@ -180,13 +203,27 @@ class Command(BaseCommand):
         self.stdout.write(f'[fmi-indices] tanggal={tanggal} WIT | jenis={",".join(jenis_list)}')
 
         errors = []
+        stale = {}
         for jenis in jenis_list:
             url = _url_for(jenis)
             try:
-                content, etag = _fetch_png(url)
+                content, etag, last_modified = _fetch_png(url)
             except CommandError as exc:
                 self.stderr.write(self.style.ERROR(f'  {jenis}: {exc}'))
                 errors.append(f'{jenis}: {exc}')
+                continue
+
+            previous = (FmiIndicesImage.objects
+                        .filter(jenis=jenis, tanggal__lt=tanggal).order_by('-tanggal').first())
+            if (_same_source(previous, etag, last_modified)
+                    and not FmiIndicesImage.objects.filter(jenis=jenis, tanggal=tanggal).exists()):
+                since = last_modified.astimezone(_WIT) if last_modified else None
+                self.stdout.write(self.style.WARNING(
+                    f'  {jenis}: sumber belum diperbarui (sama dengan citra {previous.tanggal}'
+                    + (f', Last-Modified {since:%d-%m-%Y %H:%M} WIT' if since else '')
+                    + ') — tidak disimpan'
+                ))
+                stale[jenis] = (previous, since)
                 continue
 
             sha = hashlib.sha256(content).hexdigest()
@@ -199,6 +236,7 @@ class Command(BaseCommand):
 
             obj.source_url = url
             obj.etag = etag
+            obj.source_modified_at = last_modified
             obj.sha256 = sha
             obj.size_bytes = len(content)
             _store_image(obj, content)
@@ -240,7 +278,22 @@ class Command(BaseCommand):
                 # Jangan gagalkan seluruh job hanya karena Telegram.
                 self.stderr.write(self.style.WARNING(f'  {jenis}: Telegram gagal — {message[:200]}'))
 
+        if stale and send_telegram:
+            self._warn_stale(stale, tanggal)
+
         if errors:
             raise CommandError('Sebagian pengambilan citra gagal: ' + '; '.join(errors))
 
         self.stdout.write(self.style.SUCCESS('[fmi-indices] selesai'))
+
+    def _warn_stale(self, stale, tanggal):
+        """Satu peringatan saja: pada hari pertama sumber tidak diperbarui."""
+        if not any((tanggal - previous.tanggal).days == 1 for previous, _ in stale.values()):
+            return
+        lines = [f'⚠️ <b>Citra indeks magnetbumi JYP belum diperbarui BMKG</b> — {tanggal:%d %B %Y}']
+        for jenis, (previous, since) in stale.items():
+            lines.append(f'• {_JENIS_LABEL[jenis]}: masih citra {previous.tanggal:%d %B %Y}'
+                         + (f' (diperbarui sumber {since:%d-%m-%Y %H:%M} WIT)' if since else ''))
+        lines.append('Citra tidak dikirim ulang sampai sumber diperbarui.')
+        if send_telegram_message('\n'.join(lines)):
+            self.stdout.write('  peringatan sumber belum diperbarui terkirim ke Telegram')

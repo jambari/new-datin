@@ -307,6 +307,7 @@ class FmiIndicesImage(models.Model):
     image            = models.ImageField(upload_to=fmi_indices_upload_to, verbose_name="Gambar")
     source_url       = models.URLField(max_length=500, blank=True, verbose_name="URL Sumber")
     etag             = models.CharField(max_length=100, blank=True, verbose_name="ETag Sumber")
+    source_modified_at = models.DateTimeField(null=True, blank=True, verbose_name="Last-Modified Sumber")
     sha256           = models.CharField(max_length=64, blank=True, verbose_name="SHA-256")
     size_bytes       = models.PositiveIntegerField(default=0, verbose_name="Ukuran (byte)")
     fetched_at       = models.DateTimeField(auto_now_add=True, verbose_name="Waktu Pengambilan")

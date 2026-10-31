@@ -122,8 +122,12 @@ def fmi_start_date():
 
 
 def image_end_date(image_obj):
-    """Akhir periode citra = tanggal UTC saat diunduh (citra berakhir 03:00 UTC hari itu)."""
-    t = image_obj.updated_at.astimezone(datetime.timezone.utc)
+    """Akhir periode citra = tanggal UTC citra dibuat BMKG (citra berakhir 03:00 UTC hari itu).
+
+    Pakai Last-Modified sumber bila ada; waktu unduh hanya cadangan untuk baris lama.
+    Kalau sumber tidak diperbarui, waktu unduh akan menggeser nilai K ke tanggal yang salah.
+    """
+    t = (image_obj.source_modified_at or image_obj.updated_at).astimezone(datetime.timezone.utc)
     return t.date() if t.time() >= datetime.time(3) else t.date() - datetime.timedelta(days=1)
 
 

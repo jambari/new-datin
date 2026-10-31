@@ -672,3 +672,93 @@ class FmiKIndexUpdateTest(TestCase):
         self.assertTrue(any('dilewati' in w for w in warnings))
         self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 2)).sumber, 'excel')
         self.assertFalse(KIndexDaily.objects.filter(tanggal=datetime.date(2026, 10, 3)).exists())
+
+
+@override_settings(KINDEX_FMI_START='2026-10-03')
+class FmiStaleSourceTest(TestCase):
+    """Sumber BMKG tidak diperbarui: jangan buat tanggal baru, jangan geser nilai K."""
+
+    LAST_MODIFIED = 'Sat, 17 Oct 2026 05:20:24 GMT'
+
+    def setUp(self):
+        self.media_root = tempfile.mkdtemp(prefix='fmi-test-media-')
+        self.addCleanup(shutil.rmtree, self.media_root, True)
+        ctx = override_settings(MEDIA_ROOT=self.media_root)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    def _fetch(self, day, content=None, etag='"e1"', *args):
+        resp = mock.Mock(status_code=200, content=content or _testimage('FMI-K-Indices-JYP-20261017.png'),
+                         headers={'ETag': etag, 'Last-Modified': self.LAST_MODIFIED})
+        out = io.StringIO()
+        with mock.patch(f'{_CMD}.requests.get', return_value=resp), \
+                mock.patch(f'{_CMD}._send_photo', return_value=(True, 'ok')) as photo, \
+                mock.patch(f'{_CMD}.send_telegram_message', return_value=True) as warn, \
+                mock.patch('django.utils.timezone.now',
+                           return_value=datetime.datetime(2026, 10, day, 7, 0, tzinfo=UTC)):
+            call_command('fetch_fmi_indices', '--jenis', 'K', *args, stdout=out)
+        return out.getvalue(), photo, warn
+
+    def test_k_values_follow_last_modified_not_download_day(self):
+        self._fetch(19)
+        img = FmiIndicesImage.objects.get()
+        self.assertEqual(img.source_modified_at, datetime.datetime(2026, 10, 17, 5, 20, 24, tzinfo=UTC))
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 12)).k_values,
+                         [4, 4, 4, 1, 2, 2, 3, 3])
+        self.assertFalse(KIndexDaily.objects.filter(tanggal__gt=datetime.date(2026, 10, 17)).exists())
+
+    def test_unchanged_source_is_not_stored_again_and_warns_once(self):
+        _, photo, _ = self._fetch(17)
+        self.assertEqual(photo.call_count, 1)
+        k_before = list(KIndexDaily.objects.order_by('tanggal').values_list('tanggal', 'k_values'))
+
+        # Byte berbeda (kompresi ulang di sumber) tapi ETag sama → tetap dianggap citra lama.
+        out, photo, warn = self._fetch(18, content=_testimage('FMI-K-Indices-JYP-20261017.png') + b'x')
+        self.assertIn('sumber belum diperbarui', out)
+        self.assertEqual(FmiIndicesImage.objects.count(), 1)
+        photo.assert_not_called()
+        warn.assert_called_once()
+        self.assertIn('17 October 2026', warn.call_args[0][0])
+        self.assertEqual(list(KIndexDaily.objects.order_by('tanggal').values_list('tanggal', 'k_values')), k_before)
+
+        _, photo, warn = self._fetch(19)          # hari kedua macet: tanpa peringatan lagi
+        photo.assert_not_called()
+        warn.assert_not_called()
+
+    def test_new_etag_is_stored(self):
+        self._fetch(17)
+        self._fetch(18, None, '"e2"')
+        self.assertEqual(FmiIndicesImage.objects.count(), 2)
+
+    def test_manual_button_does_not_send_telegram(self):
+        with mock.patch('magnet.tasks.fetch_fmi_indices_task.delay') as delay:
+            self.client.post(reverse('fmi_indices_list'), {'action': 'fetch'})
+        self.assertIs(delay.call_args.kwargs['telegram'], False)
+        with mock.patch('magnet.tasks.call_command') as cmd:
+            from .tasks import fetch_fmi_indices_task
+            fetch_fmi_indices_task(telegram=False)
+        self.assertTrue(cmd.call_args.kwargs['no_telegram'])
+
+    def _stored(self, day, etag):
+        name = 'FMI-K-Indices-JYP-20261017.png'
+        obj = FmiIndicesImage.objects.create(jenis='K', tanggal=datetime.date(2026, 10, day), etag=etag,
+                                             image=SimpleUploadedFile(name, _testimage(name)))
+        FmiIndicesImage.objects.filter(pk=obj.pk).update(
+            updated_at=datetime.datetime(2026, 10, day, 7, 0, tzinfo=UTC))
+
+    def test_rebuild_skips_repeated_etag_and_resets(self):
+        self._stored(17, '"e1"')
+        self._stored(18, '"e1"')                  # duplikat: sumber macet
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 10, 18), sumber='fmi', k_values=[1] * 8)
+
+        out = io.StringIO()
+        call_command('parse_fmi_kindex', '--reset', '--dry-run', stdout=out)
+        self.assertIn('dry-run', out.getvalue())
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 18)).k_values, [1] * 8)
+
+        out = io.StringIO()
+        call_command('parse_fmi_kindex', '--reset', stdout=out)
+        self.assertIn('dilewati', out.getvalue())
+        self.assertFalse(KIndexDaily.objects.filter(tanggal=datetime.date(2026, 10, 18)).exists())
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 12)).k_values,
+                         [4, 4, 4, 1, 2, 2, 3, 3])

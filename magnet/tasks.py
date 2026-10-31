@@ -126,13 +126,14 @@ def fill_external_form(self, selenium_data):
 
 
 @shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 300})
-def fetch_fmi_indices_task(date=None, jenis='all', force=False):
+def fetch_fmi_indices_task(date=None, jenis='all', force=False, telegram=True):
     """Celery wrapper for the fetch_fmi_indices management command.
 
     Dijadwalkan setiap 16:00 WIT (07:00 UTC) — lihat CELERY_BEAT_SCHEDULE.
     `date` (YYYY-MM-DD) untuk mengisi hari yang terlewat, `jenis` = K / A / all.
+    `telegram=False` dipakai tombol "Ambil Sekarang": hanya jadwal 16:00 yang mengirim ke grup.
     """
-    kwargs = {'jenis': jenis, 'force': force}
+    kwargs = {'jenis': jenis, 'force': force, 'no_telegram': not telegram}
     if date:
         kwargs['date'] = date
 

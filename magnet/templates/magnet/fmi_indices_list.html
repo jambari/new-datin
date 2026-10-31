@@ -37,7 +37,8 @@
               </button>
             </div>
             <p style="font-size:11px;color:#9ca3af;margin-top:8px;max-width:260px;">
-              Job dijalankan di background (Celery). Muat ulang halaman setelah beberapa detik.
+              Job dijalankan di background (Celery) dan hanya menyimpan citra; kiriman Telegram
+              tetap dari jadwal 16:00 WIT. Muat ulang halaman setelah beberapa detik.
               {% if not telegram_ready %}
                 <br><span style="color:#b45309;">Telegram belum dikonfigurasi — citra hanya disimpan.</span>
               {% endif %}
