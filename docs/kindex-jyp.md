@@ -43,6 +43,18 @@ yang terganggu loncatan baseline): bias ≈ 0, 99 % selisih ≤ 1, korelasi deng
 - **Peringatan**: `check_lemi_data_task` (tiap 15 menit) mengirim Telegram bila sampel terakhir
   lebih tua dari 40 menit, dan sekali lagi saat pulih.
 
+## Watchdog program LEMI (PC .105)
+
+`scripts/lemi_watchdog.ps1` (salinan di `C:\lemi_watchdog\`) dijalankan task `LEMIWatchdog` tiap menit
+sebagai SYSTEM. Bila sampel terakhir lebih tua dari 5 menit, `lemi018.exe` ditutup lalu dijalankan lagi
+lewat task `LEMIStartProgram` (sesi `bmkgs`, karena program punya jendela). Paling sering sekali per
+10 menit; setelah 3 kali dalam sejam tanpa data baru ia berhenti dan mengabari situs (peringatan
+Telegram lewat `/magnet/api/instrument/status/`), karena penyebabnya bukan program.
+
+- Argumen `-DryRun` pada task = hanya mencatat, tidak menutup apa pun.
+- Perawatan: buat berkas `C:\lemi_watchdog\PAUSE` (kedaluwarsa sendiri setelah 12 jam).
+- Log: `C:\lemi_watchdog\lemi_watchdog.log`.
+
 ## Perintah
 
     python manage.py compute_kindex_jyp --start 2026-10-03 --end 2026-10-31   # isi ulang
