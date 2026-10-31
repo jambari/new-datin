@@ -361,6 +361,7 @@ class KIndexDaily(models.Model):
     SUMBER_EXCEL = 'excel'
     SUMBER_FMI = 'fmi'
     SUMBER_LOKAL = 'lokal'
+    MIN_BLOCKS_FOR_CRITERIA = 6
     SUMBER_CHOICES = [
         (SUMBER_EXCEL, 'Excel pengolahan stasiun'),
         (SUMBER_FMI, 'Citra FMI K-Indices BMKG'),
@@ -369,6 +370,7 @@ class KIndexDaily(models.Model):
 
     tanggal = models.DateField(unique=True, verbose_name="Tanggal (UTC)")
     k_values = models.JSONField(default=list, blank=True, verbose_name="Indeks K per 3 jam (8 nilai)")
+    k_coverage = models.JSONField(default=list, blank=True, verbose_name="Kelengkapan data per blok (%)")
     a_index = models.FloatField(null=True, blank=True, verbose_name="Indeks A (dihitung dari K)")
     a_index_source = models.FloatField(null=True, blank=True, verbose_name="Indeks A di berkas sumber")
     keterangan = models.CharField(max_length=100, blank=True, verbose_name="Keterangan")
@@ -403,6 +405,19 @@ class KIndexDaily(models.Model):
     @property
     def criteria(self):
         return a_index_criteria(self.a_index)
+
+    @property
+    def criteria_label(self):
+        """Kriteria untuk tampilan: hari dengan terlalu sedikit blok tidak diberi vonis."""
+        if self.has_data and len(self.valid_k) < self.MIN_BLOCKS_FOR_CRITERIA:
+            return "Data kurang"
+        return self.criteria
+
+    @property
+    def partial_blocks(self):
+        """Blok yang punya nilai K tapi datanya kurang: K bisa terlalu rendah/tinggi."""
+        return [i for i, (k, c) in enumerate(zip(self.k_values or [], self.k_coverage or []))
+                if k is not None and c < 90]
 
     def save(self, *args, **kwargs):
         valid = self.valid_k

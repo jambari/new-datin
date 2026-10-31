@@ -5,7 +5,7 @@ bergantung pada citra `dataweb.bmkg.go.id` (citra BMKG tetap diambil sebagai pem
 
 ## Alur data
 
-1. **PC LEMI (172.21.63.105)** — task `LEMIRawSync` (tiap jam, :05) menjalankan
+1. **PC LEMI (172.21.63.105)** — task `LEMIRawSync` (tiap 15 menit) menjalankan
    `C:\lemi_raw_sync\lemi_raw_sync.ps1` (salinan `scripts/lemi_raw_sync.ps1`). Skrip menanyakan
    daftar berkas server lalu mengirim berkas `D:\lemi018\YYYY MM DD hh mm ss.txt` 30 hari terakhir
    yang belum ada / lebih kecil di server. Hari yang terlewat otomatis disusul.
@@ -28,6 +28,20 @@ level sesudahnya disamakan. Hari D dihitung dengan data D−1 dan D+1; tanpa D+1
 **L9 = 240 nT** (`KINDEX_JYP_L9`): dicocokkan dengan K citra BMKG 3–24 Okt 2026 (tanpa 10–11 Okt
 yang terganggu loncatan baseline): bias ≈ 0, 99 % selisih ≤ 1, korelasi dengan Kp NOAA 0,68
 (citra BMKG 0,44).
+
+## Data terpotong
+
+- Celah < 15 menit diinterpolasi; blok < 90 menit data dikosongkan; blok 90-161 menit tetap dihitung
+  tapi berarsir di grafik (`k_coverage`). Hari dengan < 6 blok ditampilkan "Data kurang", bukan vonis.
+- Uji pemotongan pada 12 hari lengkap: celah 2 jam 100 % selisih ≤ 1; celah 6 jam 88 %; celah 12 jam
+  81 %, dengan K cenderung terlalu tinggi (rata-rata +0,65). Hari dengan celah panjang kurang andal.
+- Pergeseran level melintasi celah > 150 nT (setelah perubahan harian dikeluarkan) disamakan
+  (`level_across_gaps`). 82 celah nyata Okt 2025 - Okt 2026 semuanya ≤ 100 nT.
+- **Pemulihan dari kartu CF**: LEMI berjalan Flash+PC, jadi saat program macet logger tetap merekam.
+  Salin `L018_*.B81` dari kartu, lalu `python manage.py import_lemi_flash /path/L018_*.B81 --dry-run`
+  dan ulangi tanpa `--dry-run`. Hanya detik yang hilang yang ditulis, ke berkas baru.
+- **Peringatan**: `check_lemi_data_task` (tiap 15 menit) mengirim Telegram bila sampel terakhir
+  lebih tua dari 40 menit, dan sekali lagi saat pulih.
 
 ## Perintah
 

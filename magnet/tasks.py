@@ -179,10 +179,70 @@ def send_kindex_jyp_telegram_task():
     obj = KIndexDaily.objects.get(tanggal=end)
     caption = (f'🧭 <b>Indeks Magnetbumi K &amp; A — Jayapura (JYP)</b>\n'
                f'📅 7 hari s.d. {end:%d-%m-%Y} UTC\n'
-               f'Hari terakhir: A={obj.a_index:.0f} ({obj.criteria})'
-               + (' — sementara' if not obj.is_complete or 'Sementara' in obj.keterangan else '')
+               f'Hari terakhir: A={obj.a_index:.0f} ({obj.criteria_label})'
+               + (f' — {obj.keterangan}' if obj.keterangan else '')
                + '\n<i>Hitung lokal metode FMI dari data LEMI-018 JYP</i>')
     ok_k = send_telegram_photo(render_k_png(end), f'Indeks-K-JYP-{end:%Y%m%d}.png', caption=caption)
     ok_a = send_telegram_photo(render_a_png(end), f'Indeks-A-JYP-{end:%Y%m%d}.png',
                                caption=f'Indeks A harian JYP s.d. {end:%d-%m-%Y}')
     return f'K terkirim={ok_k}, A terkirim={ok_a}'
+
+
+LEMI_DOWN_KEY = 'lemi-data-down-since'
+LEMI_STALE_MINUTES = 40          # kirim tiap 15 menit, jadi 40 menit = setidaknya 2 kali luput
+
+
+def latest_lemi_sample(raw_dir):
+    """Waktu UTC sampel terakhir di berkas mentah terbaru, atau None."""
+    import datetime as _dt
+    from pathlib import Path
+
+    files = sorted(p for p in Path(raw_dir).glob('*.txt') if p.name[:4].isdigit()) if Path(raw_dir).is_dir() else []
+    for path in reversed(files[-5:]):
+        with open(path, 'rb') as fh:
+            fh.seek(0, 2)
+            fh.seek(max(fh.tell() - 400, 0))
+            lines = fh.read().decode('ascii', 'ignore').splitlines()
+        for line in reversed(lines):
+            parts = line.split()
+            try:
+                return _dt.datetime(*(int(v) for v in parts[:6]), tzinfo=_dt.timezone.utc)
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+@shared_task
+def check_lemi_data_task():
+    """Peringatan Telegram bila data LEMI berhenti masuk: program macet, PC mati, atau jaringan.
+
+    Dinilai dari datanya sendiri, jadi "not responding" ikut tertangkap. Sekali saat berhenti
+    dan sekali saat pulih, tidak berulang.
+    """
+    import datetime as _dt
+
+    from django.conf import settings
+    from django.core.cache import cache
+    from theme.telegram import send_telegram_message
+
+    last = latest_lemi_sample(settings.LEMI_RAW_DIR)
+    if last is None:
+        return 'belum ada data'
+    now = _dt.datetime.now(_dt.timezone.utc)
+    late = (now - last).total_seconds() / 60
+    fmt = '%d-%m-%Y %H:%M UTC'
+    down_since = cache.get(LEMI_DOWN_KEY)
+    if late > LEMI_STALE_MINUTES:
+        if not down_since and send_telegram_message(
+                f'⚠️ <b>Data LEMI-018 berhenti masuk</b>\n'
+                f'Sampel terakhir {last.strftime(fmt)} ({late:.0f} menit lalu).\n'
+                f'Periksa program LEMI di PC 172.21.63.105 (not responding / tertutup), PC, dan jaringan.'):
+            cache.set(LEMI_DOWN_KEY, last.isoformat(), None)
+        return f'terlambat {late:.0f} menit'
+    if down_since:
+        if send_telegram_message(
+                f'✅ <b>Data LEMI-018 masuk lagi</b>\n'
+                f'Berhenti sejak {_dt.datetime.fromisoformat(down_since).strftime(fmt)}, '
+                f'sampel terakhir {last.strftime(fmt)}.'):
+            cache.delete(LEMI_DOWN_KEY)
+    return 'ok'

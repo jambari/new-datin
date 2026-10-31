@@ -28,6 +28,11 @@ MIN_SECONDS_PER_MINUTE = 30  # nilai menit butuh >= 30 sampel 1 detik
 STEP_JUMP_NT = 100           # loncatan antar menit di atas ini = buatan (bukan geomagnet)
 STEP_JOIN_MIN = 60
 STEP_REF_MIN = 10
+# Beda level melintasi celah data, setelah perubahan harian dikeluarkan. Dari 82 celah nyata
+# (Okt 2025 - Okt 2026) terbesar 100 nT; di atas ini dianggap sensor bergeser, bukan geomagnet.
+GAP_LEVEL_NT = 150
+GAP_MIN_POINTS = 5
+PARTIAL_COVERAGE = 90        # persen menit: di bawah ini blok/hari ditandai tidak lengkap
 
 JYP_LONGITUDE = 140.7
 
@@ -83,7 +88,9 @@ def remove_steps(a, jump=STEP_JUMP_NT, join=STEP_JOIN_MIN, ref=STEP_REF_MIN):
     valid = np.flatnonzero(~np.isnan(a))
     if len(valid) < 2:
         return a, []
-    big = valid[1:][np.abs(np.diff(a[valid])) > jump]
+    # Hanya data bersambung; beda melintasi celah panjang dinilai di level_across_gaps().
+    steps_between = np.diff(valid)
+    big = valid[1:][(np.abs(np.diff(a[valid])) > jump) & (steps_between <= ref)]
     clusters = []
     for i in big:
         if clusters and i - clusters[-1][1] <= join:
@@ -102,6 +109,52 @@ def remove_steps(a, jump=STEP_JUMP_NT, join=STEP_JOIN_MIN, ref=STEP_REF_MIN):
         a[end + 1:] += shift
         steps.append((start, end, float(shift)))
     return a, steps
+
+
+def _edge_median(a, start, stop):
+    seg = a[max(start, 0):max(stop, 0)]
+    return float(np.nanmedian(seg)) if np.count_nonzero(~np.isnan(seg)) >= GAP_MIN_POINTS else None
+
+
+def level_across_gaps(a, threshold=GAP_LEVEL_NT, ref=STEP_REF_MIN):
+    """Samakan level bila sensor bergeser selama celah data (mis. saat program LEMI mati).
+
+    Beda median sebelum & sesudah celah dikurangi perubahan wajar pada jam yang sama di hari
+    lain dalam array. Selisih di bawah `threshold` dibiarkan: itu variasi geomagnet.
+    Kembalikan (array, daftar (indeks awal celah, indeks akhir celah, geseran nT)).
+    """
+    a = np.asarray(a, float).copy()
+    valid = np.flatnonzero(~np.isnan(a))
+    if len(valid) < 2:
+        return a, []
+    steps = []
+    for k in np.flatnonzero(np.diff(valid) > ref):
+        last, first = int(valid[k]), int(valid[k + 1])
+        before = _edge_median(a, last - ref + 1, last + 1)
+        after = _edge_median(a, first, first + ref)
+        if before is None or after is None:
+            continue
+        expected = []
+        for day in (-2, -1, 1, 2):
+            off = day * MIN_PER_DAY
+            if last - ref + 1 + off < 0 or first + ref + off > len(a):
+                continue
+            b2 = _edge_median(a, last - ref + 1 + off, last + 1 + off)
+            a2 = _edge_median(a, first + off, first + ref + off)
+            if b2 is not None and a2 is not None:
+                expected.append(a2 - b2)
+        change = (after - before) - (float(np.median(expected)) if expected else 0.0)
+        if abs(change) > threshold:
+            a[first:] -= change
+            steps.append((last + 1, first - 1, -change))
+    return a, steps
+
+
+def correct_levels(a):
+    """Loncatan pada data bersambung lalu pergeseran melintasi celah: (array, semua koreksi)."""
+    a, jumps = remove_steps(a)
+    a, gaps = level_across_gaps(a)
+    return a, jumps + gaps
 
 
 def fill_gaps(a, max_gap=MAX_GAP_MIN):
@@ -189,8 +242,8 @@ def k_fmi_day(x3, y3, l9, longitude=JYP_LONGITUDE):
     Kembalikan (k_values, sr_x, sr_y); k_values berisi None untuk blok tanpa data.
     """
     limits = k_limits(l9)
-    x3, _ = remove_steps(x3)
-    y3, _ = remove_steps(y3)
+    x3, _ = correct_levels(x3)
+    y3, _ = correct_levels(y3)
     x3, y3 = fill_gaps(x3), fill_gaps(y3)
     day = slice(MIN_PER_DAY, 2 * MIN_PER_DAY)
     def_len = _default_lengths(longitude)
@@ -228,11 +281,17 @@ def load_three_days(raw_dir, day):
     return minute_means(np.concatenate(ts), np.concatenate(xs), np.concatenate(ys), start, 3 * MIN_PER_DAY)
 
 
-def is_provisional(x3, y3):
-    """Hari tengah masih sementara kalau data hari berikutnya belum ada separuhnya."""
+def next_day_missing(x3, y3):
+    """Data hari sesudah hari tengah belum ada separuhnya."""
     nxt = slice(2 * MIN_PER_DAY, 3 * MIN_PER_DAY)
     have = np.count_nonzero(~np.isnan(x3[nxt]) & ~np.isnan(y3[nxt]))
     return have < MIN_PER_DAY // 2
+
+
+def block_coverage(x3, y3):
+    """Persen menit berisi data per blok 3 jam hari tengah (X dan Y sama-sama ada)."""
+    both = ~np.isnan(x3[MIN_PER_DAY:2 * MIN_PER_DAY]) & ~np.isnan(y3[MIN_PER_DAY:2 * MIN_PER_DAY])
+    return [int(round(100 * np.count_nonzero(both[b * 180:(b + 1) * 180]) / 180)) for b in range(8)]
 
 
 def compute_day(day, raw_dir=None, l9=None):
@@ -242,13 +301,20 @@ def compute_day(day, raw_dir=None, l9=None):
     raw_dir = raw_dir or settings.LEMI_RAW_DIR
     l9 = l9 or settings.KINDEX_JYP_L9
     x3, y3 = load_three_days(raw_dir, day)
-    _, steps_x = remove_steps(x3)
-    _, steps_y = remove_steps(y3)
+    _, steps_x = correct_levels(x3)
+    _, steps_y = correct_levels(y3)
     ks, _, _ = k_fmi_day(x3, y3, l9)
+    coverage = block_coverage(x3, y3)
+    missing_next = next_day_missing(x3, y3)
+    # Hari sesudahnya belum tiba = sementara; sudah lewat tapi kosong tidak akan berubah sendiri.
+    today = datetime.datetime.now(datetime.timezone.utc).date()
+    provisional = missing_next and day + datetime.timedelta(days=1) >= today
     return {
         "tanggal": day,
         "k_values": ks,
-        "provisional": is_provisional(x3, y3),
+        "coverage": coverage,
+        "provisional": provisional,
+        "next_day_absent": missing_next and not provisional,
         "steps": len(steps_x) + len(steps_y),
         "files": [p.name for p in raw_files_for(raw_dir, day)],
     }
@@ -267,12 +333,18 @@ def store_day(day, raw_dir=None, l9=None):
         return result, None
     obj, _ = KIndexDaily.objects.get_or_create(tanggal=day, defaults={"sumber": KIndexDaily.SUMBER_LOKAL})
     obj.k_values = result["k_values"]
+    obj.k_coverage = result["coverage"]
     obj.sumber = KIndexDaily.SUMBER_LOKAL
     notes = []
     if result["provisional"]:
         notes.append("Sementara")
+    percent = sum(result["coverage"]) // 8
+    if percent < PARTIAL_COVERAGE:
+        notes.append(f"Data tidak lengkap ({percent}%)")
+    if result["next_day_absent"]:
+        notes.append("Data hari berikutnya tidak ada")
     if result["steps"]:
-        notes.append(f"{result['steps']} loncatan baseline dikoreksi")
+        notes.append(f"{result['steps']} loncatan dikoreksi")
     obj.keterangan = ", ".join(notes)
     obj.source_file = ", ".join(result["files"])[:255]
     obj.a_index_source = None

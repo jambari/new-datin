@@ -34,6 +34,10 @@ class Command(BaseCommand):
                 flags.append("sementara")
             if result["steps"]:
                 flags.append(f"{result['steps']} loncatan dikoreksi")
+            if min(result["coverage"]) < 90 and result["files"]:
+                flags.append(f"data {sum(result['coverage']) // 8}%")
+            if result["next_day_absent"]:
+                flags.append("hari berikutnya tidak ada")
             if not result["files"]:
                 flags.append("tidak ada data mentah")
             ks = " ".join("-" if k is None else str(k) for k in result["k_values"])

@@ -850,9 +850,9 @@ class KIndexLocalFmiTest(TestCase):
         from .fmi_kindex import update_kindex_from_image
         from .kindex_fmi import store_day
         self._days()
-        _, obj = store_day(datetime.date(2026, 10, 11))  # tanpa data 12 Okt → sementara
+        _, obj = store_day(datetime.date(2026, 10, 11))  # 12 Okt sudah lewat tapi datanya tidak ada
         self.assertEqual(obj.sumber, KIndexDaily.SUMBER_LOKAL)
-        self.assertIn('Sementara', obj.keterangan)
+        self.assertIn('hari berikutnya tidak ada', obj.keterangan)
         before = list(obj.k_values)
 
         name = 'FMI-K-Indices-JYP-20261017.png'
@@ -931,3 +931,164 @@ class LemiRawApiTest(TestCase):
             resp, _ = self._post(b'x', name=bad)
             self.assertEqual(resp.status_code, 400, bad)
         self.assertEqual(os.listdir(self.raw), [])
+
+
+# ── Data terpotong: level melintasi celah, kelengkapan, kartu CF, peringatan ─────────
+
+class KIndexCutDataTest(TestCase):
+    @staticmethod
+    def _quiet_minutes():
+        import numpy as np
+        t = np.arange(4320) * 60
+        return (35780 + 20 * np.sin(2 * np.pi * (t / 86400 - 0.1)),
+                -1820 + 8 * np.cos(2 * np.pi * t / 86400))
+
+    def test_offset_across_outage_gives_no_false_storm(self):
+        import numpy as np
+        from .kindex_fmi import k_fmi_day, level_across_gaps
+        x, y = self._quiet_minutes()
+        base = k_fmi_day(x, y, 240)[0]
+        y2 = y.copy()
+        y2[1440 + 360:1440 + 720] = np.nan
+        y2[1440 + 720:] += 300
+        _, steps = level_across_gaps(y2)
+        self.assertEqual(len(steps), 1)
+        self.assertAlmostEqual(steps[0][2], -300, delta=5)
+        ks = k_fmi_day(x, y2, 240)[0]
+        self.assertEqual(ks[2:4], [None, None])
+        for a, b in zip(base, ks):
+            if b is not None:
+                self.assertLessEqual(abs(a - b), 1)
+
+    def test_natural_change_across_gap_is_left_alone(self):
+        import numpy as np
+        from .kindex_fmi import level_across_gaps
+        x, _ = self._quiet_minutes()
+        x = x.copy()
+        x[1440 + 360:1440 + 720] = np.nan
+        x[1440 + 720:] -= 100                       # terbesar yang tercatat di arsip
+        fixed, steps = level_across_gaps(x)
+        self.assertEqual(steps, [])
+        self.assertAlmostEqual(np.nansum(fixed), np.nansum(x))
+
+    def test_coverage_and_labels(self):
+        import numpy as np
+        from .kindex_fmi import block_coverage
+        x, y = self._quiet_minutes()
+        x = x.copy()
+        x[1440:1440 + 90] = np.nan
+        self.assertEqual(block_coverage(x, y), [50, 100, 100, 100, 100, 100, 100, 100])
+
+        obj = KIndexDaily(tanggal=datetime.date(2026, 10, 28), k_values=[5, None, None, None, 1, 2, 2, 3],
+                          k_coverage=[50, 0, 0, 0, 100, 100, 100, 100], sumber='lokal', a_index=10)
+        self.assertEqual(obj.criteria_label, 'Data kurang')
+        self.assertEqual(obj.criteria, 'Tenang')      # laporan bulanan tetap memakai ini
+        self.assertEqual(obj.partial_blocks, [0])
+        full = KIndexDaily(tanggal=datetime.date(2026, 10, 29), k_values=[1] * 8, a_index=3)
+        self.assertEqual(full.criteria_label, 'Tenang')
+
+    def test_past_day_without_next_day_is_not_provisional_forever(self):
+        from .kindex_fmi import compute_day
+        raw = tempfile.mkdtemp(prefix='lemi-raw-')
+        self.addCleanup(shutil.rmtree, raw, True)
+        _write_lemi_day(raw, datetime.date(2026, 10, 9), _quiet_x, _quiet_y)
+        _write_lemi_day(raw, datetime.date(2026, 10, 10), _quiet_x, _quiet_y)
+        result = compute_day(datetime.date(2026, 10, 10), raw_dir=raw, l9=240.0)
+        self.assertFalse(result['provisional'])
+        self.assertTrue(result['next_day_absent'])
+        with mock.patch('magnet.kindex_fmi.datetime') as dt_mock:
+            dt_mock.date, dt_mock.timedelta, dt_mock.timezone = datetime.date, datetime.timedelta, datetime.timezone
+            dt_mock.datetime.now.return_value = datetime.datetime(2026, 10, 11, 1, tzinfo=UTC)
+            result = compute_day(datetime.date(2026, 10, 10), raw_dir=raw, l9=240.0)
+        self.assertTrue(result['provisional'])
+
+
+class LemiFlashTest(TestCase):
+    @staticmethod
+    def _flash_file(folder, start, sectors):
+        import struct
+        out = bytearray()
+        to_bcd = lambda v: (v // 10) << 4 | (v % 10)
+        for s in range(sectors):
+            t = start + datetime.timedelta(seconds=30 * s)
+            head = b'LEMI018\x81' + bytes(to_bcd(v) for v in (t.year - 2000, t.month, t.day, t.hour, t.minute, t.second))
+            out += head.ljust(32, b'\0')
+            for i in range(30):
+                out += struct.pack('<iiihh', 35780000 + i, -1820000, -14790000, 2950, 2880)
+        path = os.path.join(folder, 'L018_001.B81')
+        with open(path, 'wb') as fh:
+            fh.write(out)
+        return path
+
+    def test_fills_only_missing_seconds_and_is_idempotent(self):
+        from .kindex_fmi import raw_files_for, read_lemi_raw
+        from .lemi_flash import fill_day, read_flash
+        raw = tempfile.mkdtemp(prefix='lemi-raw-')
+        self.addCleanup(shutil.rmtree, raw, True)
+        day = datetime.date(2026, 10, 28)
+        with open(os.path.join(raw, '2026 10 28 00 00 00.txt'), 'w') as fh:
+            for s in range(30):
+                fh.write(f'2026 10 28 00 00 {s:02d}  35000.00  -1000.00 -14000.00  29.00  28.00 P N FL  93\n')
+        records = read_flash(self._flash_file(raw, datetime.datetime(2026, 10, 28), 2))[day]
+        self.assertEqual(len(records), 60)
+        self.assertAlmostEqual(records[31][0], 35780.001)
+        self.assertEqual(fill_day(raw, day, records, dry_run=True), 30)
+        self.assertEqual(fill_day(raw, day, records), 30)
+        self.assertEqual(fill_day(raw, day, records), 0)
+        files = raw_files_for(raw, day)
+        self.assertEqual([p.name for p in files], ['2026 10 28 00 00 00.txt', '2026 10 28 00 00 30.txt'])
+        t, x, y = read_lemi_raw(files[1])
+        self.assertEqual(len(t), 30)
+        self.assertAlmostEqual(x[0], 35780.0)
+        t0, x0, _ = read_lemi_raw(files[0])
+        self.assertEqual(float(x0[0]), 35000.0)       # data PC tidak ditimpa
+
+    def test_skips_sectors_without_valid_clock_or_magic(self):
+        from .lemi_flash import read_flash
+        folder = tempfile.mkdtemp(prefix='lemi-raw-')
+        self.addCleanup(shutil.rmtree, folder, True)
+        path = self._flash_file(folder, datetime.datetime(2000, 1, 1), 1)      # jam belum sinkron
+        self.assertEqual(read_flash(path), {})
+        with open(path, 'wb') as fh:
+            fh.write(b'\xff' * 1024)
+        self.assertEqual(read_flash(path), {})
+
+
+class LemiDataAlertTest(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        self.raw = tempfile.mkdtemp(prefix='lemi-raw-')
+        self.addCleanup(shutil.rmtree, self.raw, True)
+        cache.delete('lemi-data-down-since')
+        self.addCleanup(cache.delete, 'lemi-data-down-since')
+        ctx = override_settings(LEMI_RAW_DIR=self.raw)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    def _sample(self, minutes_ago):
+        t = datetime.datetime.now(UTC) - datetime.timedelta(minutes=minutes_ago)
+        name = f'{t:%Y %m %d %H %M %S}.txt'
+        with open(os.path.join(self.raw, name), 'w') as fh:
+            fh.write(f'{t:%Y %m %d %H %M %S}  35780.00  -1820.00 -14790.00  29.00  28.00 P N FL  93\n')
+
+    def test_alerts_once_when_data_stops_and_once_when_it_returns(self):
+        from .tasks import check_lemi_data_task
+        self._sample(90)
+        with mock.patch('theme.telegram.send_telegram_message', return_value=True) as send:
+            check_lemi_data_task()
+            check_lemi_data_task()
+        self.assertEqual(send.call_count, 1)
+        self.assertIn('berhenti masuk', send.call_args[0][0])
+        self._sample(5)
+        with mock.patch('theme.telegram.send_telegram_message', return_value=True) as send:
+            check_lemi_data_task()
+            check_lemi_data_task()
+        self.assertEqual(send.call_count, 1)
+        self.assertIn('masuk lagi', send.call_args[0][0])
+
+    def test_no_alert_when_data_is_fresh(self):
+        from .tasks import check_lemi_data_task
+        self._sample(5)
+        with mock.patch('theme.telegram.send_telegram_message', return_value=True) as send:
+            check_lemi_data_task()
+        send.assert_not_called()

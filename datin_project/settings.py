@@ -320,6 +320,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'magnet.tasks.compute_kindex_jyp_task',
         'schedule': crontab(minute=20),  # tiap jam: kemarin lusa s.d. hari ini
     },
+    'check-lemi-data': {
+        'task': 'magnet.tasks.check_lemi_data_task',
+        'schedule': crontab(minute='*/15'),
+    },
     'send-kindex-jyp-daily': {
         'task': 'magnet.tasks.send_kindex_jyp_telegram_task',
         'schedule': crontab(minute=0, hour=7),  # 07:00 UTC = 16:00 WIT

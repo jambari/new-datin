@@ -1,7 +1,7 @@
 # =============================================================================
 # LEMI-018 raw data sync → stageof-jayapura.bmkg.go.id (Stasiun Geofisika Jayapura)
 #
-# Runs hourly on the LEMI PC (172.21.63.105). Asks the server which raw files it
+# Runs every 15 minutes on the LEMI PC (172.21.63.105). Asks the server which raw files it
 # already has (/magnet/api/lemi/raw/), then uploads every local file from the last
 # $DAYS days that is missing or larger locally (today's file keeps growing).
 # Missed days are therefore caught up automatically on the next run.
@@ -12,7 +12,7 @@
 # Setup (as Administrator):
 #   1. Copy this file to C:\lemi_raw_sync\lemi_raw_sync.ps1
 #   2. Put the LEMI_MONITOR_TOKEN (same as C:\LEMIMonitor) in C:\lemi_raw_sync\token.txt
-#   3. schtasks /create /tn LEMIRawSync /sc hourly /st 00:05 /ru SYSTEM /rl HIGHEST /f ^
+#   3. schtasks /create /tn LEMIRawSync /sc minute /mo 15 /ru SYSTEM /rl HIGHEST /f ^
 #        /tr "powershell -NoProfile -ExecutionPolicy Bypass -File C:\lemi_raw_sync\lemi_raw_sync.ps1"
 # Manual check without uploading:  powershell -File lemi_raw_sync.ps1 -DryRun
 # =============================================================================

@@ -94,12 +94,13 @@
         <a href="{% url 'kindex_jyp_png' 'a' %}" target="_blank" rel="noopener">
           <img src="{% url 'kindex_jyp_png' 'a' %}?v={{ kindex_stamp }}" alt="Indeks A JYP 7 hari s.d. {{ kindex_day|date:'d F Y' }}" loading="lazy">
         </a>
-        <div class="fmi-card-foot">{% if kindex_row %}A hari terakhir: {{ kindex_row.a_index|floatformat:0 }} ({{ kindex_row.criteria }}){% endif %}</div>
+        <div class="fmi-card-foot">{% if kindex_row %}A hari terakhir: {{ kindex_row.a_index|floatformat:0 }} ({{ kindex_row.criteria_label }}){% endif %}</div>
       </div>
     </div>
     <p class="fmi-note">
       Dihitung otomatis tiap jam oleh Stasiun Geofisika Jayapura dengan metode FMI (Sucksdorff dkk., 1991)
       dari data magnetometer LEMI-018 JYP. Hari terakhir bersifat sementara sampai data hari berikutnya lengkap.
+      Batang berarsir berarti data blok itu kurang dari 90%, batang kosong berarti tidak ada data.
     </p>
     {% if fmi_k or fmi_a %}<h2 class="fmi-section">Pembanding: citra BMKG pusat</h2>{% endif %}
   {% endif %}

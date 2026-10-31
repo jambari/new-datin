@@ -5,7 +5,7 @@ Dipakai halaman publik /magnetbumi/indeks-k-a/ dan kiriman Telegram harian.
 import datetime
 import io
 
-from .models import KIndexDaily, a_index_criteria
+from .models import KIndexDaily
 
 # Warna tingkat K seperti skala citra FMI BMKG.
 K_COLORS = ['#00ff00'] * 4 + ['#ffff00', '#ffcc00', '#ff6600', '#ff0000', '#ff00ff', '#660066']
@@ -54,11 +54,12 @@ def render_k_png(end_day, days=7):
     fig, ax = plt.subplots(figsize=(13, 5.2), dpi=110)
     for d, (day, obj) in enumerate(rows):
         values = (obj.k_values if obj else None) or [None] * 8
+        partial = obj.partial_blocks if obj else []
         for slot, k in enumerate(values[:8]):
             if k is None:
                 continue
             ax.bar(d * 8 + slot + 0.5, max(k, 0.08), width=1.0, color=K_COLORS[int(k)],
-                   edgecolor='#333', linewidth=0.4)
+                   edgecolor='#333', linewidth=0.4, hatch='///' if slot in partial else None)
     for d in range(1, days):
         ax.axvline(d * 8, color='#111', linewidth=1.2)
     ax.set_xlim(0, days * 8)
@@ -77,15 +78,16 @@ def render_k_png(end_day, days=7):
         if obj and obj.has_data:
             if 'Sementara' in (obj.keterangan or ''):
                 note = ' (sementara)'
-            elif not obj.is_complete:
+            elif not obj.is_complete or obj.partial_blocks:
                 note = ' (data tdk lengkap)'
             else:
                 note = ''
-            legend.append(f'{day:%d/%m}: A={obj.a_index:.0f} {obj.criteria}{note}')
+            legend.append(f'{day:%d/%m}: A={obj.a_index:.0f} {obj.criteria_label}{note}')
     if legend:
         ax.text(1.01, 1.0, '\n'.join(legend), transform=ax.transAxes, va='top', fontsize=8.5,
                 family='monospace')
-    ax.text(1.01, 0.0, 'Hitung lokal metode FMI\ndari data LEMI-018 JYP\nStasiun Geofisika Jayapura',
+    ax.text(1.01, 0.0, 'Arsir = data blok < 90%\nKosong = tidak ada data\n\n'
+            'Hitung lokal metode FMI\ndari data LEMI-018 JYP\nStasiun Geofisika Jayapura',
             transform=ax.transAxes, va='bottom', fontsize=7.5, color='#555')
     fig.tight_layout()
     buf = io.BytesIO()
@@ -103,8 +105,8 @@ def render_a_png(end_day, days=7):
     for i, (day, obj) in enumerate(rows):
         if not obj or obj.a_index is None:
             continue
-        crit = a_index_criteria(obj.a_index)
-        ax.bar(i, obj.a_index, width=0.6, color=A_COLORS.get(crit, '#999'), edgecolor='#333', linewidth=0.5)
+        crit = obj.criteria_label
+        ax.bar(i, obj.a_index, width=0.6, color=A_COLORS.get(crit, '#bbb'), edgecolor='#333', linewidth=0.5)
         ax.text(i, obj.a_index + 1, f'{obj.a_index:.0f}\n{crit}', ha='center', va='bottom', fontsize=8.5)
         top = max(top, obj.a_index * 1.3)
     for level in (30, 50, 100):
