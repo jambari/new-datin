@@ -352,15 +352,19 @@ class KIndexDaily(models.Model):
     """Indeks K per 3 jam (UTC) Stasiun Jayapura, satu baris per hari.
 
     Sumber: berkas Excel pengolahan stasiun (grafik_kindeks <tahun>.xlsx) untuk tanggal
-    sebelum KINDEX_FMI_START, dan citra FMI K-Indices BMKG (diurai otomatis oleh
-    fetch_fmi_indices) mulai tanggal itu. k_values berisi 8 nilai; slot tanpa data = None.
+    sebelum KINDEX_FMI_START; mulai tanggal itu hasil hitung sendiri metode FMI dari data
+    mentah LEMI JYP (magnet.kindex_fmi, sumber "lokal"), atau citra FMI K-Indices BMKG
+    (fetch_fmi_indices) untuk hari yang belum punya data mentah. k_values berisi 8 nilai;
+    slot tanpa data = None.
     """
 
     SUMBER_EXCEL = 'excel'
     SUMBER_FMI = 'fmi'
+    SUMBER_LOKAL = 'lokal'
     SUMBER_CHOICES = [
         (SUMBER_EXCEL, 'Excel pengolahan stasiun'),
         (SUMBER_FMI, 'Citra FMI K-Indices BMKG'),
+        (SUMBER_LOKAL, 'Hitung lokal FMI dari data LEMI JYP'),
     ]
 
     tanggal = models.DateField(unique=True, verbose_name="Tanggal (UTC)")

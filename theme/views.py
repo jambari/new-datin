@@ -577,8 +577,17 @@ def _latest_fmi_indices():
 
 
 def public_magnetbumi_indices(request):
-    """Halaman publik khusus citra indeks magnetbumi K & A (JYP)."""
-    return render(request, 'public_magnetbumi_indices.html', _latest_fmi_indices())
+    """Halaman publik indeks magnetbumi K & A (JYP): hitung lokal + citra BMKG pembanding."""
+    from magnet.models import KIndexDaily
+
+    context = _latest_fmi_indices()
+    local = KIndexDaily.objects.filter(sumber=KIndexDaily.SUMBER_LOKAL).order_by('-tanggal').first()
+    context.update({
+        'kindex_day': local.tanggal if local else None,
+        'kindex_row': local,
+        'kindex_stamp': int(local.updated_at.timestamp()) if local else 0,
+    })
+    return render(request, 'public_magnetbumi_indices.html', context)
 
 
 def public_magnetbumi_data(request):

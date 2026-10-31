@@ -140,3 +140,49 @@ def fetch_fmi_indices_task(date=None, jenis='all', force=False, telegram=True):
     print(f"Starting fetch_fmi_indices task... {kwargs}")
     call_command('fetch_fmi_indices', **kwargs)
     print("Finished fetch_fmi_indices task.")
+
+
+@shared_task
+def compute_kindex_jyp_task(start=None, end=None):
+    """Hitung indeks K JYP (metode FMI) dari data mentah LEMI untuk rentang tanggal UTC.
+
+    Tanpa argumen: kemarin lusa s.d. hari ini (hari ini & kemarin masih sementara).
+    """
+    import datetime as _dt
+
+    from .kindex_fmi import store_day
+
+    today = _dt.datetime.now(_dt.timezone.utc).date()
+    start = _dt.date.fromisoformat(start) if start else today - _dt.timedelta(days=2)
+    end = min(_dt.date.fromisoformat(end) if end else today, today)
+    stored = []
+    day = start
+    while day <= end:
+        _, obj = store_day(day)
+        if obj is not None:
+            stored.append(f'{day}: {obj.k_values}')
+        day += _dt.timedelta(days=1)
+    return stored
+
+
+@shared_task
+def send_kindex_jyp_telegram_task():
+    """Kirim grafik indeks K & A JYP 7 hari terakhir (hitung lokal) ke grup Telegram."""
+    from theme.telegram import send_telegram_photo
+    from .kindex_plot import latest_day, render_a_png, render_k_png
+    from .models import KIndexDaily
+
+    compute_kindex_jyp_task()
+    end = latest_day()
+    if end is None:
+        return 'tidak ada data indeks K'
+    obj = KIndexDaily.objects.get(tanggal=end)
+    caption = (f'🧭 <b>Indeks Magnetbumi K &amp; A — Jayapura (JYP)</b>\n'
+               f'📅 7 hari s.d. {end:%d-%m-%Y} UTC\n'
+               f'Hari terakhir: A={obj.a_index:.0f} ({obj.criteria})'
+               + (' — sementara' if not obj.is_complete or 'Sementara' in obj.keterangan else '')
+               + '\n<i>Hitung lokal metode FMI dari data LEMI-018 JYP</i>')
+    ok_k = send_telegram_photo(render_k_png(end), f'Indeks-K-JYP-{end:%Y%m%d}.png', caption=caption)
+    ok_a = send_telegram_photo(render_a_png(end), f'Indeks-A-JYP-{end:%Y%m%d}.png',
+                               caption=f'Indeks A harian JYP s.d. {end:%d-%m-%Y}')
+    return f'K terkirim={ok_k}, A terkirim={ok_a}'

@@ -1386,3 +1386,104 @@ def _kindex_table(request, start_date_str, end_date_str):
         'latest_kindex': latest,
         'fmi_start':     fmi_start_date(),
     })
+
+
+# ── Data mentah LEMI-018 JYP dari PC magnet (untuk hitung indeks K sendiri) ──────────
+
+_LEMI_RAW_NAME = re.compile(r'^\d{4} \d{2} \d{2} \d{2} \d{2} \d{2}\.txt$')
+_LEMI_RAW_MAX_BYTES = 12 * 1024 * 1024        # satu hari 1 detik ~6,6 MB
+
+
+@csrf_exempt
+def lemi_raw_api(request):
+    """API data mentah LEMI untuk PC magnet (Bearer LEMI_MONITOR_TOKEN).
+
+    GET  ?days=N  → {"files": {nama: ukuran}} untuk N hari terakhir (default 30), supaya
+                    pengirim tahu berkas mana yang belum ada / belum lengkap di server.
+    POST file=<berkas "YYYY MM DD hh mm ss.txt"> → disimpan (ditimpa kalau lebih besar,
+                    karena berkas hari berjalan terus bertambah). Hari yang tersentuh dihitung
+                    ulang indeks K-nya di background.
+    """
+    import datetime as _dt
+    from pathlib import Path
+
+    token = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+    expected = getattr(dj_settings, 'LEMI_MONITOR_TOKEN', '')
+    if not expected or token != expected:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    raw_dir = Path(dj_settings.LEMI_RAW_DIR)
+
+    if request.method == 'GET':
+        try:
+            days = max(1, min(int(request.GET.get('days', 30)), 400))
+        except ValueError:
+            days = 30
+        since = _dt.datetime.now(_dt.timezone.utc).date() - _dt.timedelta(days=days)
+        files = {}
+        if raw_dir.is_dir():
+            for p in raw_dir.iterdir():
+                if _LEMI_RAW_NAME.match(p.name) and p.name[:10] >= f'{since:%Y %m %d}':
+                    files[p.name] = p.stat().st_size
+        return JsonResponse({'files': files})
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    upload = request.FILES.get('file')
+    if upload is None:
+        return JsonResponse({'error': 'Missing file'}, status=400)
+    name = os.path.basename(upload.name or '')
+    if not _LEMI_RAW_NAME.match(name):
+        return JsonResponse({'error': f'Nama berkas tidak dikenal: {name!r}'}, status=400)
+    if upload.size > _LEMI_RAW_MAX_BYTES:
+        return JsonResponse({'error': 'Berkas terlalu besar'}, status=400)
+    try:
+        day = _dt.date(int(name[0:4]), int(name[5:7]), int(name[8:10]))
+    except ValueError:
+        return JsonResponse({'error': 'Tanggal pada nama berkas tidak valid'}, status=400)
+
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    target = raw_dir / name
+    old_size = target.stat().st_size if target.exists() else 0
+    if upload.size < old_size:
+        return JsonResponse({'name': name, 'size': old_size, 'stored': False,
+                             'reason': 'server sudah punya versi lebih besar'})
+    tmp = raw_dir / f'.{name}.part'
+    with open(tmp, 'wb') as fh:
+        for chunk in upload.chunks():
+            fh.write(chunk)
+    os.replace(tmp, target)
+
+    if upload.size != old_size:
+        from .tasks import compute_kindex_jyp_task
+        try:
+            compute_kindex_jyp_task.delay(start=(day - _dt.timedelta(days=1)).isoformat(),
+                                          end=(day + _dt.timedelta(days=1)).isoformat())
+        except Exception:                       # broker mati: jadwal per jam tetap menyusul
+            pass
+    return JsonResponse({'name': name, 'size': upload.size, 'stored': True, 'previous_size': old_size})
+
+
+def kindex_jyp_png(request, jenis):
+    """Grafik indeks K / A JYP 7 hari terakhir (PNG, di-cache 10 menit)."""
+    from django.core.cache import cache
+    from .kindex_plot import latest_day, render_a_png, render_k_png
+
+    end = latest_day()
+    if end is None:
+        return HttpResponse(status=404)
+    key = f'kindex-jyp-png:{jenis}:{end}:{_kindex_cache_stamp()}'
+    png = cache.get(key)
+    if png is None:
+        png = render_k_png(end) if jenis == 'k' else render_a_png(end)
+        cache.set(key, png, 600)
+    resp = HttpResponse(png, content_type='image/png')
+    resp['Cache-Control'] = 'public, max-age=600'
+    return resp
+
+
+def _kindex_cache_stamp():
+    from .models import KIndexDaily
+    last = KIndexDaily.objects.order_by('-updated_at').values_list('updated_at', flat=True).first()
+    return last.timestamp() if last else 0

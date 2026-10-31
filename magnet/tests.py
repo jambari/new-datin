@@ -772,3 +772,162 @@ class FmiKIndexGoldK5Test(TestCase):
         self.assertEqual(days[datetime.date(2026, 10, 19)], [4, 4, 1, 1, 1, 1, 2, None])
         self.assertEqual(days[datetime.date(2026, 10, 20)], [None, None, None, 3, 3, 3, 3, 5])
         self.assertEqual(days[datetime.date(2026, 10, 21)], [5, 4, 2, 2, 2, 3, 3, 3])
+
+
+# ── Indeks K hitung lokal (metode FMI) dari data mentah LEMI JYP ─────────────────────
+
+def _write_lemi_day(folder, day, x_func, y_func, step=2):
+    """Tulis berkas mentah LEMI sintetis (sampel tiap `step` detik) untuk satu hari UTC."""
+    import numpy as np
+    t = np.arange(0, 86400, step)
+    x, y = x_func(day, t), y_func(day, t)
+    lines = [f'{day:%Y %m %d} {s // 3600:02d} {s % 3600 // 60:02d} {s % 60:02d}  {a:.2f} {b:.2f} -14790.00  29.5  28.8 P N FL  93'
+             for s, a, b in zip(t, x, y)]
+    path = os.path.join(folder, f'{day:%Y %m %d} 00 00 00.txt')
+    with open(path, 'w') as fh:
+        fh.write('\n'.join(lines) + '\n')
+    return path
+
+
+def _quiet_x(day, t):
+    import numpy as np
+    return 35780 + 20 * np.sin(2 * np.pi * (t / 86400 - 0.1))
+
+
+def _quiet_y(day, t):
+    import numpy as np
+    return -1820 + 8 * np.cos(2 * np.pi * t / 86400)
+
+
+@override_settings(KINDEX_FMI_START='2026-10-03', KINDEX_JYP_L9=240.0)
+class KIndexLocalFmiTest(TestCase):
+    def setUp(self):
+        self.raw = tempfile.mkdtemp(prefix='lemi-raw-')
+        self.addCleanup(shutil.rmtree, self.raw, True)
+        ctx = override_settings(LEMI_RAW_DIR=self.raw)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    def _days(self, disturbed=None, step_day=None):
+        import numpy as np
+
+        def x_func(day, t):
+            x = _quiet_x(day, t)
+            if day == disturbed:                         # badai 12–15 UTC: osilasi 150 nT
+                block = (t >= 12 * 3600) & (t < 15 * 3600)
+                x = x + np.where(block, 75 * np.sin(2 * np.pi * t / 1200), 0)
+            return x
+
+        def y_func(day, t):
+            y = _quiet_y(day, t)
+            if day == step_day:                          # perawatan sensor 09:00: Y turun 3000 nT
+                y = y + np.where(t < 9 * 3600, 3000, 0)
+            elif step_day and day < step_day:
+                y = y + 3000
+            return y
+
+        for d in (9, 10, 11):
+            _write_lemi_day(self.raw, datetime.date(2026, 10, d), x_func, y_func)
+
+    def test_quiet_day_is_low_and_storm_block_is_high(self):
+        from .kindex_fmi import compute_day
+        self._days(disturbed=datetime.date(2026, 10, 10))
+        result = compute_day(datetime.date(2026, 10, 10))
+        ks = result['k_values']
+        self.assertEqual(len(ks), 8)
+        self.assertGreaterEqual(ks[4], 7)                 # 150 nT dengan L9 240 → K7
+        self.assertTrue(all(k <= 2 for i, k in enumerate(ks) if i != 4), ks)
+        self.assertFalse(result['provisional'])
+
+    def test_baseline_step_is_removed(self):
+        from .kindex_fmi import compute_day
+        self._days(step_day=datetime.date(2026, 10, 10))
+        result = compute_day(datetime.date(2026, 10, 10))
+        self.assertEqual(result['steps'], 1)
+        self.assertTrue(all(k is not None and k <= 2 for k in result['k_values']), result['k_values'])
+
+    def test_store_day_marks_last_day_provisional_and_keeps_bmkg_parser_out(self):
+        from .fmi_kindex import update_kindex_from_image
+        from .kindex_fmi import store_day
+        self._days()
+        _, obj = store_day(datetime.date(2026, 10, 11))  # tanpa data 12 Okt → sementara
+        self.assertEqual(obj.sumber, KIndexDaily.SUMBER_LOKAL)
+        self.assertIn('Sementara', obj.keterangan)
+        before = list(obj.k_values)
+
+        name = 'FMI-K-Indices-JYP-20261017.png'
+        media = tempfile.mkdtemp(prefix='fmi-test-media-')
+        self.addCleanup(shutil.rmtree, media, True)
+        with override_settings(MEDIA_ROOT=media):
+            img = FmiIndicesImage.objects.create(jenis='K', tanggal=datetime.date(2026, 10, 17),
+                                                 image=SimpleUploadedFile(name, _testimage(name)))
+            FmiIndicesImage.objects.filter(pk=img.pk).update(
+                updated_at=datetime.datetime(2026, 10, 17, 7, 0, tzinfo=UTC))
+            img.refresh_from_db()
+            update_kindex_from_image(img)                # citra BMKG mencakup 11–17 Okt
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 11)).k_values, before)
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 12)).sumber, 'fmi')
+
+    def test_excel_days_are_not_touched(self):
+        from .kindex_fmi import store_day
+        self._days()
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 10, 2), k_values=[5] * 8)
+        _, obj = store_day(datetime.date(2026, 10, 2))
+        self.assertIsNone(obj)
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 2)).sumber, 'excel')
+
+    def test_command_and_png_and_public_page(self):
+        self._days()
+        out = io.StringIO()
+        call_command('compute_kindex_jyp', '--start', '2026-10-10', '--end', '2026-10-11', stdout=out)
+        self.assertIn('2 hari disimpan', out.getvalue())
+        resp = self.client.get(reverse('kindex_jyp_png', args=['k']))
+        self.assertEqual(resp['Content-Type'], 'image/png')
+        self.assertTrue(resp.content.startswith(b'\x89PNG'))
+        resp = self.client.get(reverse('kindex_jyp_png', args=['a']))
+        self.assertTrue(resp.content.startswith(b'\x89PNG'))
+        page = self.client.get(reverse('public_magnetbumi_indices'))
+        self.assertContains(page, 'Hitung lokal dari data LEMI-018 JYP')
+        self.assertContains(page, reverse('kindex_jyp_png', args=['k']))
+
+
+@override_settings(LEMI_MONITOR_TOKEN='rahasia')
+class LemiRawApiTest(TestCase):
+    def setUp(self):
+        self.raw = tempfile.mkdtemp(prefix='lemi-raw-')
+        self.addCleanup(shutil.rmtree, self.raw, True)
+        ctx = override_settings(LEMI_RAW_DIR=self.raw)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+        self.url = reverse('lemi_raw_api')
+        self.auth = {'HTTP_AUTHORIZATION': 'Bearer rahasia'}
+        today = datetime.datetime.now(UTC).date()
+        self.name = f'{today:%Y %m %d} 00 00 00.txt'
+
+    def _post(self, content, name=None):
+        upload = SimpleUploadedFile(name or self.name, content, content_type='text/plain')
+        with mock.patch('magnet.tasks.compute_kindex_jyp_task.delay') as delay:
+            resp = self.client.post(self.url, {'file': upload}, **self.auth)
+        return resp, delay
+
+    def test_requires_token(self):
+        self.assertEqual(self.client.get(self.url).status_code, 401)
+        self.assertEqual(self.client.get(self.url, HTTP_AUTHORIZATION='Bearer salah').status_code, 401)
+
+    def test_upload_grow_and_manifest(self):
+        resp, delay = self._post(b'baris1\n')
+        self.assertTrue(resp.json()['stored'])
+        delay.assert_called_once()
+        resp, _ = self._post(b'baris1\nbaris2\n')          # berkas hari berjalan bertambah
+        self.assertTrue(resp.json()['stored'])
+        resp, delay = self._post(b'baris1\n')              # versi lebih kecil tidak menimpa
+        self.assertFalse(resp.json()['stored'])
+        delay.assert_not_called()
+        manifest = self.client.get(self.url, **self.auth).json()['files']
+        self.assertEqual(manifest, {self.name: len(b'baris1\nbaris2\n')})
+
+    def test_rejects_bad_names(self):
+        for bad in ('../../etc/passwd', 'data.txt', '2026 10 30 00 00 00.exe'):
+            resp, _ = self._post(b'x', name=bad)
+            self.assertEqual(resp.status_code, 400, bad)
+        self.assertEqual(os.listdir(self.raw), [])

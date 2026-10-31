@@ -155,7 +155,7 @@
                   {% if r.obj.a_index is not None %}{{ r.obj.a_index|floatformat:1 }}{% if r.n_valid < 8 %}<span style="font-weight:400;color:#b45309;font-size:11px;"> ({{ r.n_valid }}/8)</span>{% endif %}{% else %}–{% endif %}
                 </td>
                 <td style="padding:6px;border:1px solid #e5e7eb;">{{ r.obj.criteria|default:"–" }}</td>
-                <td style="padding:6px;border:1px solid #e5e7eb;font-size:12px;color:#6b7280;">{% if r.obj.sumber == 'fmi' %}Citra FMI{% else %}Excel stasiun{% endif %}</td>
+                <td style="padding:6px;border:1px solid #e5e7eb;font-size:12px;color:#6b7280;">{% if r.obj.sumber == 'lokal' %}Hitung lokal JYP{% elif r.obj.sumber == 'fmi' %}Citra FMI BMKG{% else %}Excel stasiun{% endif %}{% if r.obj.keterangan %}<br><span style="font-size:11px;">{{ r.obj.keterangan }}</span>{% endif %}</td>
               </tr>
               {% empty %}
               <tr><td colspan="14" style="padding:40px;color:#9ca3af;font-style:italic;">Belum ada data indeks K pada rentang ini.</td></tr>

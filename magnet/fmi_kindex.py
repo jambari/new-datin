@@ -136,7 +136,7 @@ def update_kindex_from_image(image_obj):
 
     Nilai citra yang lebih baru menimpa nilai lama (slot terakhir sering masih sementara),
     tetapi slot kosong tidak menghapus nilai yang sudah ada. Hari sebelum batas FMI
-    (data Excel) tidak disentuh. Kembalikan daftar tanggal yang diperbarui.
+    (data Excel) dan hari yang sudah dihitung lokal dari data JYP tidak disentuh. Kembalikan daftar tanggal yang diperbarui.
     """
     cutoff = fmi_start_date()
     with image_obj.image.open("rb") as f:
@@ -149,6 +149,8 @@ def update_kindex_from_image(image_obj):
         if day < cutoff:
             continue
         obj, _ = KIndexDaily.objects.get_or_create(tanggal=day, defaults={"sumber": KIndexDaily.SUMBER_FMI})
+        if obj.sumber == KIndexDaily.SUMBER_LOKAL:
+            continue                         # hasil hitung sendiri dari data JYP diutamakan
         if obj.sumber != KIndexDaily.SUMBER_FMI:
             obj.k_values = []
         current = list(obj.k_values or [])

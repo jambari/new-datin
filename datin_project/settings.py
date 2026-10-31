@@ -314,10 +314,21 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=30, hour='4,6'),  # 04:30 & 06:30 UTC = 11:30 & 13:30 WIB
     },
 
-    # INDEKS MAGNETBUMI K & A: ambil citra dari dataweb.bmkg.go.id, simpan, kirim Telegram
+    # INDEKS MAGNETBUMI K & A
+    # Utama: hitung sendiri metode FMI dari data mentah LEMI JYP (dikirim PC magnet tiap jam).
+    'compute-kindex-jyp-hourly': {
+        'task': 'magnet.tasks.compute_kindex_jyp_task',
+        'schedule': crontab(minute=20),  # tiap jam: kemarin lusa s.d. hari ini
+    },
+    'send-kindex-jyp-daily': {
+        'task': 'magnet.tasks.send_kindex_jyp_telegram_task',
+        'schedule': crontab(minute=0, hour=7),  # 07:00 UTC = 16:00 WIT
+    },
+    # Pembanding: citra BMKG pusat (dataweb.bmkg.go.id) tetap disimpan, tidak dikirim ke Telegram.
     'fetch-fmi-indices-daily': {
         'task': 'magnet.tasks.fetch_fmi_indices_task',
         'schedule': crontab(minute=0, hour=7),  # 07:00 UTC = 16:00 WIT
+        'kwargs': {'telegram': False},
     },
 }
 
@@ -371,6 +382,10 @@ TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
 
 # Indeks K: sebelum tanggal ini dari Excel stasiun, mulai tanggal ini dari citra FMI BMKG.
 KINDEX_FMI_START = config('KINDEX_FMI_START', default='2026-10-03')
+# Indeks K hitung sendiri (metode FMI) dari data mentah LEMI-018 JYP yang dikirim PC magnet
+# lewat /magnet/api/lemi/raw/. L9 = batas bawah K9 JYP (nT), dicocokkan dengan hasil BMKG.
+LEMI_RAW_DIR = Path(config('LEMI_RAW_DIR', default=str(PRIVATE_MEDIA_ROOT / 'lemi_raw')))
+KINDEX_JYP_L9 = config('KINDEX_JYP_L9', default=240.0, cast=float)
 
 # Jaringan kantor yang boleh mengisi logbook (CIDR IPv4/IPv6, dipisah koma).
 # IP WiFi kantor (IndiHome) dinamis: bila berganti, tambahkan di .env.production.

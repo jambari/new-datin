@@ -8,6 +8,9 @@
 {% block og_description %}Indeks aktivitas geomagnet K dan A harian Stasiun Jayapura (JYP).{% endblock %}
 
 {% block extra_head %}
+<style>
+  .fmi-section { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 18px 0 10px; }
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -70,6 +73,37 @@
     Stasiun Jayapura (JYP){% if fmi_date %} · {{ fmi_date|date:"d F Y" }} WIT{% endif %}
   </p>
 
+  {% if kindex_day %}
+    <h2 class="fmi-section">Hitung lokal dari data LEMI-018 JYP</h2>
+    <div class="fmi-grid">
+      <div class="fmi-card">
+        <div class="fmi-card-head">
+          <span class="fmi-card-title">K Indices (per 3 jam)</span>
+          <a class="fmi-card-link" href="{% url 'kindex_jyp_png' 'k' %}" target="_blank" rel="noopener">Lihat ukuran penuh ↗</a>
+        </div>
+        <a href="{% url 'kindex_jyp_png' 'k' %}" target="_blank" rel="noopener">
+          <img src="{% url 'kindex_jyp_png' 'k' %}?v={{ kindex_stamp }}" alt="Indeks K JYP 7 hari s.d. {{ kindex_day|date:'d F Y' }}" loading="lazy">
+        </a>
+        <div class="fmi-card-foot">7 hari s.d. {{ kindex_day|date:"d M Y" }} UTC{% if kindex_row and kindex_row.keterangan %} &middot; {{ kindex_row.keterangan }}{% endif %}</div>
+      </div>
+      <div class="fmi-card">
+        <div class="fmi-card-head">
+          <span class="fmi-card-title">A Indices (harian)</span>
+          <a class="fmi-card-link" href="{% url 'kindex_jyp_png' 'a' %}" target="_blank" rel="noopener">Lihat ukuran penuh ↗</a>
+        </div>
+        <a href="{% url 'kindex_jyp_png' 'a' %}" target="_blank" rel="noopener">
+          <img src="{% url 'kindex_jyp_png' 'a' %}?v={{ kindex_stamp }}" alt="Indeks A JYP 7 hari s.d. {{ kindex_day|date:'d F Y' }}" loading="lazy">
+        </a>
+        <div class="fmi-card-foot">{% if kindex_row %}A hari terakhir: {{ kindex_row.a_index|floatformat:0 }} ({{ kindex_row.criteria }}){% endif %}</div>
+      </div>
+    </div>
+    <p class="fmi-note">
+      Dihitung otomatis tiap jam oleh Stasiun Geofisika Jayapura dengan metode FMI (Sucksdorff dkk., 1991)
+      dari data magnetometer LEMI-018 JYP. Hari terakhir bersifat sementara sampai data hari berikutnya lengkap.
+    </p>
+    {% if fmi_k or fmi_a %}<h2 class="fmi-section">Pembanding: citra BMKG pusat</h2>{% endif %}
+  {% endif %}
+
   {% if fmi_k or fmi_a %}
     <div class="fmi-grid">
       <div class="fmi-card">
@@ -116,7 +150,7 @@
       Sumber: <code>dataweb.bmkg.go.id</code>
       {% if fmi_fetched_at %} &middot; pembaruan terakhir {{ fmi_fetched_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT{% endif %}
     </p>
-  {% else %}
+  {% elif not kindex_day %}
     <div class="fmi-empty">Citra indeks K &amp; A belum tersedia.</div>
   {% endif %}
 

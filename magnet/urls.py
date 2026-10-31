@@ -41,4 +41,8 @@ urlpatterns = [
 
     # Indeks magnetbumi K & A (scraping harian dataweb.bmkg.go.id)
     path('fmi-indices/', views.fmi_indices_list, name='fmi_indices_list'),
+
+    # Data mentah LEMI JYP dari PC magnet + grafik indeks K/A hitung sendiri
+    path('api/lemi/raw/', views.lemi_raw_api, name='lemi_raw_api'),
+    path('kindex/jyp/<str:jenis>.png', views.kindex_jyp_png, name='kindex_jyp_png'),
 ]
