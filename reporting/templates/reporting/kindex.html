@@ -66,16 +66,24 @@
 
           <form method="get" class="mb-6 flex flex-wrap items-end gap-4 rounded-xl bg-white p-5 shadow">
             <div>
-              <span class="mb-1 block text-sm font-medium text-gray-700">Dari bulan</span>
-              <div class="flex gap-2">{{ form.start_bulan }}{{ form.start_tahun }}</div>
+              <label for="{{ form.start.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">Dari tanggal</label>
+              <div class="date-field relative flex items-center gap-1">{{ form.start }}
+                <button type="button" class="date-open rounded-lg border border-gray-300 px-2 py-2 text-gray-600 hover:bg-gray-100" aria-label="Pilih tanggal awal dari kalender">📅</button>
+                <input type="date" class="date-native" style="position:absolute;right:0;bottom:0;width:1px;height:1px;padding:0;border:0;opacity:0;pointer-events:none" tabindex="-1" aria-hidden="true">
+              </div>
+              {% for err in form.start.errors %}<p class="mt-1 text-xs text-red-700">{{ err }}</p>{% endfor %}
             </div>
             <div>
-              <span class="mb-1 block text-sm font-medium text-gray-700">Sampai bulan</span>
-              <div class="flex gap-2">{{ form.end_bulan }}{{ form.end_tahun }}</div>
+              <label for="{{ form.end.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">Sampai tanggal</label>
+              <div class="date-field relative flex items-center gap-1">{{ form.end }}
+                <button type="button" class="date-open rounded-lg border border-gray-300 px-2 py-2 text-gray-600 hover:bg-gray-100" aria-label="Pilih tanggal akhir dari kalender">📅</button>
+                <input type="date" class="date-native" style="position:absolute;right:0;bottom:0;width:1px;height:1px;padding:0;border:0;opacity:0;pointer-events:none" tabindex="-1" aria-hidden="true">
+              </div>
+              {% for err in form.end.errors %}<p class="mt-1 text-xs text-red-700">{{ err }}</p>{% endfor %}
             </div>
             <button type="submit" class="rounded-lg bg-gray-800 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-900">Tampilkan</button>
             {% if period %}<button type="button" onclick="window.print()" class="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90" style="background:#059669">Cetak / PDF</button>{% endif %}
-            <p class="w-full text-xs text-gray-500">Periode maksimal 12 bulan.</p>
+            <p class="w-full text-xs text-gray-500">Format dd/mm/yyyy, atau ketik 8 angka (31102026). Periode maksimal 366 hari.</p>
           </form>
 
           {% for err in form.non_field_errors %}
@@ -92,11 +100,11 @@
             <div><b>{{ kdays }}/{{ period.days }}</b><span>hari berdata indeks K ({{ kdays_pct|idn:1 }}%)</span></div>
             <div><b>{{ k_storms|length }}</b><span>hari badai geomagnet (A ≥ 30)</span></div>
             <div><b>{{ abs_total }}</b><span>sesi absolut Bartington ({{ abs_days }} hari)</span></div>
-            <div><b>{{ k_fmi_start|date:"d/m/Y" }}</b><span>mulai data otomatis FMI BMKG</span></div>
+            <div><b>{{ k_fmi_start|date:"d/m/Y" }}</b><span>mulai dihitung otomatis dari data LEMI JYP</span></div>
           </div>
 
           <h2 class="sec">A. Indeks K dan A</h2>
-          <p class="note">Indeks K per 3 jam (UTC). Sebelum {{ k_fmi_start|date:"d/m/Y" }} dari berkas pengolahan stasiun (Excel), mulai tanggal itu diurai otomatis dari citra FMI K-Indices BMKG. Indeks A dihitung dari K dengan konversi standar (0, 3, 7, 15, 27, 48, 80, 140, 240, 400). Kriteria: Tenang (A &lt; 30), Badai Kecil (30–49), Badai Menengah (50–99), Badai Besar (≥ 100).</p>
+          <p class="note">Indeks K per 3 jam (UTC). Sebelum {{ k_fmi_start|date:"d/m/Y" }} dari berkas pengolahan stasiun (Excel), mulai tanggal itu dihitung otomatis oleh stasiun dengan metode FMI dari data mentah LEMI-018 JYP. Indeks A dihitung dari K dengan konversi standar (0, 3, 7, 15, 27, 48, 80, 140, 240, 400). Kriteria: Tenang (A &lt; 30), Badai Kecil (30–49), Badai Menengah (50–99), Badai Besar (≥ 100).</p>
 
           {% include "reporting/_kindex_months.html" with summary_caption="Tabel 1. Ringkasan indeks K dan A per bulan" section_prefix="" %}
 
@@ -133,4 +141,28 @@
     </main>
   </div>
 </div>
+<script>
+  // Teks selalu dd/mm/yyyy; tombol kalender memakai pemilih tanggal bawaan browser.
+  document.querySelectorAll('.date-field').forEach(function (field) {
+    var text = field.querySelector('[data-date-text]');
+    var native = field.querySelector('.date-native');
+    function toIso(v) {
+      var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v);
+      return m ? m[3] + '-' + m[2] + '-' + m[1] : '';
+    }
+    text.addEventListener('input', function () {
+      var d = text.value.replace(/\D/g, '').slice(0, 8);
+      text.value = d.length > 4 ? d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4)
+                 : d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
+    });
+    field.querySelector('.date-open').addEventListener('click', function () {
+      native.value = toIso(text.value);
+      if (native.showPicker) { native.showPicker(); } else { native.focus(); }
+    });
+    native.addEventListener('change', function () {
+      var p = native.value.split('-');
+      if (p.length === 3) { text.value = p[2] + '/' + p[1] + '/' + p[0]; }
+    });
+  });
+</script>
 {% endblock content %}

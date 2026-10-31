@@ -63,7 +63,7 @@
         <p class="text-sm text-gray-500">
           Indeks K tersimpan:
           {% if kindex_count %}{{ kindex_count }} hari, {{ kindex_first|date:"d/m/Y" }} s.d. {{ kindex_last|date:"d/m/Y" }}{% else %}belum ada{% endif %}.
-          Sebelum {{ kindex_fmi_start|date:"d/m/Y" }} dari Excel stasiun; mulai tanggal itu diurai otomatis setiap hari dari citra FMI BMKG.
+          Sebelum {{ kindex_fmi_start|date:"d/m/Y" }} dari Excel stasiun; mulai tanggal itu dihitung otomatis dengan metode FMI dari data mentah LEMI-018 JYP.
         </p>
       </div>
     </main>

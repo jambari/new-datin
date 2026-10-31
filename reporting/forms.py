@@ -18,6 +18,9 @@ INPUT = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
 MAX_MONTHS = 12
 
 
+MAX_DAYS = 366
+
+
 def _years():
     this = datetime.date.today().year
     return [(y, y) for y in range(this, 2004, -1)]
@@ -45,6 +48,28 @@ class PeriodForm(forms.Form):
         n = (end[0] - start[0]) * 12 + end[1] - start[1] + 1
         if n > MAX_MONTHS:
             raise forms.ValidationError(f"Periode laporan maksimal {MAX_MONTHS} bulan.")
+        return data
+
+
+class DateRangeForm(forms.Form):
+    """Rentang tanggal dd/mm/yyyy, maksimal MAX_DAYS hari."""
+    FORMATS = ["%d/%m/%Y", "%d-%m-%Y", "%d%m%Y", "%Y-%m-%d"]
+    _attrs = {"class": INPUT + " w-32", "placeholder": "dd/mm/yyyy", "inputmode": "numeric",
+              "autocomplete": "off", "maxlength": "10", "data-date-text": "",
+              "style": "color:#111827;background:#fff"}
+    start = forms.DateField(input_formats=FORMATS, label="Dari tanggal", widget=forms.TextInput(attrs=_attrs),
+                            error_messages={"invalid": "Tanggal harus berformat dd/mm/yyyy.", "required": "Tanggal wajib diisi."})
+    end = forms.DateField(input_formats=FORMATS, label="Sampai tanggal", widget=forms.TextInput(attrs=_attrs),
+                          error_messages={"invalid": "Tanggal harus berformat dd/mm/yyyy.", "required": "Tanggal wajib diisi."})
+
+    def clean(self):
+        data = super().clean()
+        if self.errors:
+            return data
+        if data["end"] < data["start"]:
+            raise forms.ValidationError("Tanggal akhir tidak boleh sebelum tanggal awal.")
+        if (data["end"] - data["start"]).days + 1 > MAX_DAYS:
+            raise forms.ValidationError(f"Periode maksimal {MAX_DAYS} hari.")
         return data
 
 

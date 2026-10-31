@@ -9,8 +9,8 @@ from magnet.fmi_kindex import fmi_start_date
 from magnet.models import KIndexDaily
 
 from .builders import gempabumi, gempabumi_cepat, hujan, kualitas_udara, magnet_petir, percepatan_tanah, tanda_waktu
-from .common import Period
-from .forms import REPORT_TYPES, PeriodForm, ReportForm
+from .common import DateRangePeriod, Period
+from .forms import REPORT_TYPES, DateRangeForm, ReportForm
 
 UNIT_KERJA = "Stasiun Geofisika Jayapura"
 
@@ -95,15 +95,13 @@ def report(request):
 @login_required
 def kindex(request):
     """Lapbul & Infografis > Magnet: nilai absolut Bartington dan indeks K/A per bulan (seperti Bukti SKP Magnet)."""
-    if request.GET:
-        form = PeriodForm(request.GET)
+    if "start" in request.GET:
+        form = DateRangeForm(request.GET)
     else:
         last = datetime.date.today().replace(day=1) - datetime.timedelta(days=1)
-        form = PeriodForm({"start_bulan": last.month, "start_tahun": last.year,
-                           "end_bulan": last.month, "end_tahun": last.year})
+        form = DateRangeForm({"start": f"{last.replace(day=1):%d/%m/%Y}", "end": f"{last:%d/%m/%Y}"})
     context = {"form": form}
     if form.is_valid():
-        d = form.cleaned_data
-        period = Period(d["start_tahun"], d["start_bulan"], d["end_tahun"], d["end_bulan"])
+        period = DateRangePeriod(form.cleaned_data["start"], form.cleaned_data["end"])
         context.update(period=period, **magnet_petir.kindex_report(period), **magnet_petir.absolute_report(period))
     return render(request, "reporting/kindex.html", context)

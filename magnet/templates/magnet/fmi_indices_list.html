@@ -123,7 +123,7 @@
         <div style="background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:20px;margin-bottom:20px;">
           <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">
             Indeks K per 3 jam (UTC) Stasiun Geofisika Jayapura (JYP) dan indeks A harian (rata-rata amplitudo ekuivalen dari nilai K).
-            Sumber: berkas Excel pengolahan stasiun{% if fmi_start %} sampai {{ fmi_start|date:"d/m/Y" }}, lalu hasil pembacaan otomatis citra FMI K-Indices pada tab Gambar{% endif %}.
+            Sumber: berkas Excel pengolahan stasiun{% if fmi_start %} sampai {{ fmi_start|date:"d/m/Y" }}, lalu hitung otomatis metode FMI dari data mentah LEMI-018 JYP; citra BMKG pada tab Gambar sebagai pembanding{% endif %}.
             {{ total_days }} hari tersimpan{% if latest_kindex %}, terakhir {{ latest_kindex.tanggal|date:"d/m/Y" }}{% endif %}.
           </p>
           <div style="overflow-x:auto;">

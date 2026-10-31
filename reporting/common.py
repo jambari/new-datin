@@ -51,6 +51,26 @@ class Period:
         return f"{BULAN[a.month]} {a.year} – {BULAN[b.month]} {b.year}"
 
 
+class DateRangePeriod(Period):
+    """Rentang tanggal bebas [start, end] (inklusif); bulan di ujung bisa hanya sebagian."""
+
+    def __init__(self, start, end):
+        if end < start:
+            raise ValueError("Tanggal akhir sebelum tanggal awal.")
+        self.start, self.end = start, end
+
+
+def month_in_period(period, year, month):
+    """Bagian bulan yang masuk periode: (awal, akhir, label). Bulan penuh berlabel seperti biasa."""
+    first = datetime.date(year, month, 1)
+    last = datetime.date(year, month, calendar.monthrange(year, month)[1])
+    start, end = max(first, period.start), min(last, period.end)
+    if (start, end) == (first, last):
+        return start, end, f"{BULAN[month]} {year}"
+    days = f"{start.day}" if start == end else f"{start.day}–{end.day}"
+    return start, end, f"{days} {BULAN[month]} {year}"
+
+
 def month_label(year, month):
     return f"{BULAN[month]} {year}"
 

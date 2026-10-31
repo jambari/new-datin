@@ -12,7 +12,7 @@ from lightning.models import DailyStrikeSummary, Strike
 from magnet.fmi_kindex import fmi_start_date
 from magnet.models import KIndexDaily, MagneticObservation, a_index_criteria
 from reporting.charts import NAVY, new_figure, thousands, to_data_uri
-from reporting.common import BULAN, fmt
+from reporting.common import BULAN, fmt, month_in_period
 from reporting.osm import ATTRIBUTION, StaticMap
 
 TITLE = "Tersedianya data Magnetbumi dan Listrik Udara yang berkualitas di Papua"
@@ -168,7 +168,7 @@ def _magnet(period):
     return reduced, dim_raw, mislabel
 
 
-def _magnet_chart(month_label, rows, ndays):
+def _magnet_chart(month_label, rows, ndays, first_day=1):
     fig, axs = new_figure(7.4, 7.2, nrows=4, ncols=2)
     axs = axs.ravel()
     for i, (field, label, digits) in enumerate(COMPONENTS):
@@ -183,8 +183,8 @@ def _magnet_chart(month_label, rows, ndays):
             ax.set_ylim(min(ys) - pad, max(ys) + pad * 1.6)
         else:
             ax.text(0.5, 0.5, "Tidak ada observasi", ha="center", va="center", transform=ax.transAxes, color="#9ca3af")
-        ax.set_xlim(0.5, ndays + 0.5)
-        ax.set_xticks(range(1, ndays + 1, 3))
+        ax.set_xlim(first_day - 0.5, ndays + 0.5)
+        ax.set_xticks(range(first_day, ndays + 1, 3))
         ax.set_title(label, loc="left", fontsize=8.5)
         ax.tick_params(labelsize=7)
         ax.ticklabel_format(axis="y", useOffset=False, style="plain")
@@ -209,10 +209,9 @@ def absolute_report(period):
     months = []
     for y, m in period.months:
         mrows = [o for o in rows if (o.observation_date.year, o.observation_date.month) == (y, m)]
-        _s, e = _month_bounds(y, m)
-        label = f"{BULAN[m]} {y}"
+        s, e, label = month_in_period(period, y, m)
         months.append({"label": label, "rows": mrows,
-                       "chart": _magnet_chart(label, mrows, e.day) if mrows else None})
+                       "chart": _magnet_chart(label, mrows, e.day, s.day) if mrows else None})
     return {"abs_months": months, "abs_total": len(rows),
             "abs_days": len({o.observation_date for o in rows})}
 
@@ -223,8 +222,8 @@ def _kcolor(k):
             else "#dc2626" if k == 7 else "#c026d3" if k == 8 else "#6b21a8")
 
 
-def _kindex_month(y, m):
-    start, end = _month_bounds(y, m)
+def _kindex_month(y, m, period):
+    start, end, label = month_in_period(period, y, m)
     rows = {r.tanggal: r for r in KIndexDaily.objects.filter(tanggal__range=(start, end))}
     days = []
     d = start
@@ -236,7 +235,7 @@ def _kindex_month(y, m):
     for o in with_data:
         crit[o.criteria] = crit.get(o.criteria, 0) + 1
     return {
-        "label": f"{BULAN[m]} {y}", "days": days, "n": len(with_data), "ndays": len(days),
+        "label": label, "days": days, "n": len(with_data), "ndays": len(days),
         "missing": [x["date"].day for x in days if not (x["obj"] and x["obj"].has_data)],
         "partial": [x["date"].day for x in days if x["obj"] and x["obj"].has_data and not x["obj"].is_complete],
         "sources": sorted({o.get_sumber_display() for o in with_data}),
@@ -253,8 +252,8 @@ def _kindex_chart(month):
     days = month["days"]
     nd = len(days)
     fig, (ax, a2) = new_figure(7.4, 4.2, nrows=2, sharex=True, gridspec_kw=dict(height_ratios=[2.2, 1]))
-    for x in days:
-        o, day = x["obj"], x["date"].day
+    for day, x in enumerate(days, 1):      # posisi urut, bukan tanggal: bulan bisa hanya sebagian
+        o = x["obj"]
         if not (o and o.has_data):
             ax.axvspan(day - 1, day, color="#f3f4f6", zorder=0)
             continue
@@ -276,14 +275,14 @@ def _kindex_chart(month):
     a2.set_ylabel("Indeks A")
     a2.set_xlim(0, nd)
     a2.set_xticks([i - 0.5 for i in range(1, nd + 1)])
-    a2.set_xticklabels(range(1, nd + 1), fontsize=6.3)
+    a2.set_xticklabels([x["date"].day for x in days], fontsize=6.3)
     a2.set_xlabel(f"Tanggal ({month['label']}, UTC)")
     return to_data_uri(fig, dpi=150)
 
 
 def kindex_report(period):
     """Bagian indeks K/A: dipakai laporan SKP ini dan halaman Lapbul Magnet."""
-    kmonths = [_kindex_month(y, m) for y, m in period.months]
+    kmonths = [_kindex_month(y, m, period) for y, m in period.months]
     for k in kmonths:
         k["chart"] = _kindex_chart(k) if k["n"] else None
     kdays = sum(k["n"] for k in kmonths)

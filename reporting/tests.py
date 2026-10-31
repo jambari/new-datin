@@ -141,7 +141,7 @@ class ReportingTest(TestCase):
 
     def test_kindex_page(self):
         import_kindex_workbook(io.BytesIO(kindex_workbook()), 2026, "grafik_kindeks 2026.xlsx")
-        r = self.client.get("/reporting/indeks-k/?start_bulan=1&start_tahun=2026&end_bulan=2&end_tahun=2026")
+        r = self.client.get("/reporting/indeks-k/?start=01/01/2026&end=28/02/2026")
         self.assertEqual(r.status_code, 200)
         c = r.context
         self.assertEqual(c["kdays"], 30)
@@ -167,7 +167,7 @@ class ReportingTest(TestCase):
         MagneticObservation.objects.create(observation_date=datetime.date(2026, 1, 25), observer="Juan",
                                            session="Session 1", declination=2.79, inclination=-22.1,
                                            total_intensity=39263.08)
-        r = self.client.get("/reporting/indeks-k/?start_bulan=1&start_tahun=2026&end_bulan=2&end_tahun=2026")
+        r = self.client.get("/reporting/indeks-k/?start=01/01/2026&end=28/02/2026")
         c = r.context
         self.assertEqual(c["abs_total"], 1)
         self.assertEqual([len(a["rows"]) for a in c["abs_months"]], [1, 0])
@@ -184,10 +184,41 @@ class ReportingTest(TestCase):
         self.assertEqual((r.context["period"].start.year, r.context["period"].start.month), (last.year, last.month))
 
     def test_kindex_page_rejects_bad_period(self):
-        r = self.client.get("/reporting/indeks-k/?start_bulan=3&start_tahun=2026&end_bulan=1&end_tahun=2026")
+        r = self.client.get("/reporting/indeks-k/?start=31/03/2026&end=01/01/2026")
         self.assertEqual(r.status_code, 200)
         self.assertNotIn("period", r.context)
-        self.assertContains(r, "Bulan akhir tidak boleh sebelum bulan awal.")
+        self.assertContains(r, "Tanggal akhir tidak boleh sebelum tanggal awal.")
+        r = self.client.get("/reporting/indeks-k/?start=01/01/2025&end=02/01/2026")
+        self.assertContains(r, "Periode maksimal 366 hari.")
+        r = self.client.get("/reporting/indeks-k/?start=31/02/2026&end=abc")
+        self.assertNotIn("period", r.context)
+        self.assertContains(r, "Tanggal harus berformat dd/mm/yyyy.", count=2)
+
+    def test_kindex_page_partial_range(self):
+        import_kindex_workbook(io.BytesIO(kindex_workbook()), 2026, "grafik_kindeks 2026.xlsx")
+        for query in ("start=10/01/2026&end=20/01/2026", "start=10012026&end=20012026", "start=2026-01-10&end=2026-01-20"):
+            r = self.client.get(f"/reporting/indeks-k/?{query}")
+            c = r.context
+            self.assertEqual(c["period"].days, 11, query)
+            self.assertEqual(c["kdays"], 10)              # 20 Januari di berkas contoh: Lost Data
+            self.assertEqual(c["kmonths"][0]["label"], "10–20 Januari 2026")
+            self.assertEqual([x["date"].day for x in c["kmonths"][0]["days"]], list(range(10, 21)))
+            self.assertEqual([o.tanggal.day for o, _crit in c["k_storms"]], [19])
+        self.assertContains(r, "10 Januari 2026 – 20 Januari 2026")
+        self.assertContains(r, "data:image/png;base64,", count=1)
+        r = self.client.get("/reporting/indeks-k/?start=19/01/2026&end=19/01/2026")
+        self.assertEqual(r.context["kmonths"][0]["label"], "19 Januari 2026")
+        self.assertEqual(r.context["kdays"], 1)
+
+    def test_kindex_range_across_months_clips_both_ends(self):
+        r = self.client.get("/reporting/indeks-k/?start=25/01/2026&end=05/02/2026")
+        self.assertEqual([k["label"] for k in r.context["kmonths"]], ["25–31 Januari 2026", "1–5 Februari 2026"])
+        self.assertEqual(r.context["period"].days, 12)
+
+    def test_kindex_page_ignores_old_month_url(self):
+        r = self.client.get("/reporting/indeks-k/?start_bulan=1&start_tahun=2026&end_bulan=2&end_tahun=2026")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("period", r.context)
 
     def test_kindex_page_requires_login(self):
         self.client.logout()
