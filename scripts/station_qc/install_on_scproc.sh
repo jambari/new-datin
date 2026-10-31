@@ -25,15 +25,19 @@ LOG="$HOME/logs/station_qc.log"
 MARK="# station_qc daily (new-datin qc_review)"
 LINE="40 8 * * * set -a; . $ENV_FILE; set +a; nice -n 15 $PY $DEST/station_qc.py --day yesterday --post >> $LOG 2>&1 $MARK"
 
+MEDIA_MARK="# station_media daily (new-datin qc_review)"
+MEDIA_LINE="50 8 * * * set -a; . $ENV_FILE; set +a; flock -n /tmp/station_media.lock nice -n 15 $PY $DEST/station_media.py --day yesterday --post >> $HOME/logs/station_media.log 2>&1 $MEDIA_MARK"
+
 [[ -r "$ENV_FILE" ]] || { echo "cannot read $ENV_FILE" >&2; exit 1; }
 [[ -x "$PY" ]] || { echo "missing $PY" >&2; exit 1; }
 
 mkdir -p "$DEST" "$(dirname "$LOG")"
 install -m 0755 "$SRC/station_qc.py" "$DEST/station_qc.py"
-echo "installed $DEST/station_qc.py"
+install -m 0755 "$SRC/station_media.py" "$DEST/station_media.py"
+echo "installed $DEST/station_qc.py and station_media.py"
 
 # Replace any previous station_qc line (schedule may have changed), keep the rest.
-current="$(crontab -l 2>/dev/null | grep -vF "$MARK" || true)"
-printf '%s\n%s\n' "$current" "$LINE" | sed '/^$/d' | crontab -
+current="$(crontab -l 2>/dev/null | grep -vF "$MARK" | grep -vF "$MEDIA_MARK" || true)"
+printf '%s\n%s\n%s\n' "$current" "$LINE" "$MEDIA_LINE" | sed '/^$/d' | crontab -
 echo "crontab entry:"
-crontab -l | grep -F "$MARK"
+crontab -l | grep -F -e "$MARK" -e "$MEDIA_MARK"

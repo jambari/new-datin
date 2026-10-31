@@ -1,19 +1,22 @@
 """Tests for the daily station waveform-health feature (station QC)."""
 import datetime
+import json
 import os
 import shutil
 import tempfile
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from rest_framework.authtoken.models import Token
 
 from . import station_rules as R
-from .models import StationDailyQC, StationDiagnosis
+from .models import StationDailyQC, StationDiagnosis, StationMedia
 
 DAY = datetime.date(2026, 10, 12)
 URL = "/qc/api/station-daily/"
+MEDIA_URL_API = "/qc/api/station-media/"
 
 
 def good(**over):
@@ -618,4 +621,106 @@ class SilentRosterIngestTest(TestCase):
         self.assertIn("IA.FRESH", cap)
         self.assertNotIn("DEAD1", cap)
         self.assertLessEqual(len(cap), 1024)
+
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 20
+
+
+class StationMediaTest(TestCase):
+    def setUp(self):
+        from django.test import override_settings
+        self.media = tempfile.mkdtemp(prefix="qc-media-")
+        self.addCleanup(shutil.rmtree, self.media, True)
+        ctx = override_settings(MEDIA_ROOT=self.media)
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+        user = User.objects.create_user("qcworker", password="x")
+        self.auth = {"HTTP_AUTHORIZATION": f"Token {Token.objects.create(user=user).key}"}
+        self.client.post(URL, {"day": DAY.isoformat(), "stations": [
+            {"network": "IA", "station": "ARMI", "channels": zne()},
+            {"network": "IA", "station": "JAY", "channels": zne()}]}, content_type="application/json", **self.auth)
+
+    def payload(self, **metrics):
+        return json.dumps({"day": DAY.isoformat(), "network": "IA", "station": "ARMI", "site": "Armi", "latitude": -2.5,
+                           "longitude": 140.7, "images": {"overview": "IA.ARMI_overview.png", "hvsr": "IA.ARMI_hvsr.png"},
+                           "hvsr": {"f0_hz": 1.25, "a0": 3.2, "sesame_reliable": True},
+                           "channels": [{"location": "", "channel": "SHZ", "metrics": metrics,
+                                         "images": {"ppsd": "IA.ARMI..SHZ_ppsd.png"}}]})
+
+    def post_media(self, payload=None, names=("IA.ARMI_overview.png", "IA.ARMI_hvsr.png", "IA.ARMI..SHZ_ppsd.png"), content=PNG):
+        files = [SimpleUploadedFile(n, content, content_type="image/png") for n in names]
+        return self.client.post(MEDIA_URL_API, {"payload": payload or self.payload(), "files": files}, **self.auth)
+
+    def diag(self, code):
+        return StationDiagnosis.objects.filter(station="ARMI", day=DAY, channel="SHZ", code=code).first()
+
+    def test_requires_token(self):
+        self.assertEqual(self.client.post(MEDIA_URL_API, {"payload": self.payload()}).status_code, 401)
+
+    def test_images_and_metrics_are_stored_and_rules_run(self):
+        r = self.post_media(self.payload(psd_above_nhnm_pct=70, psd_below_nlnm_pct=0, dc_pct_full_scale=95, sensor="STS-2", not_allowed="x"))
+        self.assertEqual(r.status_code, 200, r.content)
+        row = StationDailyQC.objects.get(station="ARMI", day=DAY, channel="SHZ")
+        self.assertEqual(row.metrics["sensor"], "STS-2")
+        self.assertNotIn("not_allowed", row.metrics)
+        self.assertEqual(row.metrics["availability_pct"], 100.0)
+        self.assertEqual(self.diag("PSD_HIGH").severity, "yellow")
+        self.assertEqual(self.diag("DC_OFFSET").severity, "red")
+        self.assertEqual(row.status, "red")
+        m = StationMedia.objects.get(station="ARMI", day=DAY)
+        self.assertTrue(os.path.exists(os.path.join(self.media, m.images["overview"])))
+        self.assertEqual(list(m.images["channels"]), [".SHZ"])
+        page = self.client.get("/qc/stations/IA.ARMI/")
+        self.assertContains(page, "f0 1.25 Hz")
+        self.assertContains(page, "SESAME ok")
+        self.assertContains(page, "IA.ARMI..SHZ_ppsd.png")
+        self.assertContains(page, "STS-2")
+
+    def test_psd_low_is_red_only_near_total(self):
+        self.post_media(self.payload(psd_below_nlnm_pct=55))
+        self.assertEqual(self.diag("PSD_LOW").severity, "yellow")
+        self.post_media(self.payload(psd_below_nlnm_pct=100))
+        self.assertEqual(self.diag("PSD_LOW").severity, "red")
+
+    def test_reposting_daily_keeps_media_metrics_and_findings(self):
+        self.post_media(self.payload(psd_above_nhnm_pct=70))
+        self.client.post(URL, {"day": DAY.isoformat(), "stations": [{"network": "IA", "station": "ARMI", "channels": zne()}]},
+                         content_type="application/json", **self.auth)
+        self.assertEqual(StationDailyQC.objects.get(station="ARMI", day=DAY, channel="SHZ").metrics["psd_above_nhnm_pct"], 70)
+        self.assertIsNotNone(self.diag("PSD_HIGH"))
+
+    def test_rejects_bad_files_and_codes(self):
+        self.assertEqual(self.post_media(names=("evil.exe",)).status_code, 400)
+        self.assertEqual(self.post_media(names=("x.png",), content=b"<html>").status_code, 400)
+        bad = json.dumps({"day": DAY.isoformat(), "network": "../..", "station": "ARMI"})
+        self.assertEqual(self.post_media(payload=bad).status_code, 400)
+        self.assertEqual(self.post_media(payload="nope").status_code, 400)
+        self.assertFalse(StationMedia.objects.exists())
+
+    def test_purge_removes_old_files_and_keeps_numbers(self):
+        from . import station_views
+        self.post_media()
+        m = StationMedia.objects.get()
+        path = os.path.join(self.media, m.images["overview"])
+        self.assertEqual(station_views.purge_station_media(DAY + datetime.timedelta(days=90)), 0)
+        self.assertTrue(os.path.exists(path))
+        self.assertEqual(station_views.purge_station_media(DAY + datetime.timedelta(days=91)), 3)
+        self.assertFalse(os.path.exists(path))
+        m.refresh_from_db()
+        self.assertEqual(m.images, {})
+        self.assertEqual(m.hvsr["f0_hz"], 1.25)
+        self.assertEqual(self.client.get("/qc/stations/IA.ARMI/").status_code, 200)
+
+    def test_list_filters_and_day(self):
+        self.post_media(self.payload(dc_pct_full_scale=95))
+        r = self.client.get("/qc/stations/?status=red")
+        self.assertEqual([s["station"] for s in r.context["grid"]], ["ARMI"])
+        self.assertEqual(r.context["counts"], {"red": 1, "green": 1})
+        self.assertEqual(self.client.get("/qc/stations/").context["n_days"], 30)
+        r = self.client.get("/qc/stations/?q=jay")
+        self.assertEqual([s["station"] for s in r.context["grid"]], ["JAY"])
+        self.assertEqual(r.context["issues"], [])
+        r = self.client.get(f"/qc/stations/?day={DAY - datetime.timedelta(days=1)}")
+        self.assertEqual(r.context["latest"], DAY - datetime.timedelta(days=1))
+        self.assertEqual(self.client.get("/qc/stations/?day=2099-01-01").context["latest"], DAY)
 

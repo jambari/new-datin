@@ -24,6 +24,8 @@ urlpatterns = [
     path("api/qc-events/", views.ingest_event, name="ingest_event"),
     path("api/station-daily/", station_views.ingest_station_daily,
          name="ingest_station_daily"),
+    path("api/station-media/", station_views.ingest_station_media,
+         name="ingest_station_media"),
     path("api/event/<str:public_id>/map.json",
          views.event_map_json, name="event_map_json"),
 ]

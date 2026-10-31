@@ -36,6 +36,13 @@ CLOCK_BASELINE_MIN_PCT = 80.0
 CLOCK_TODAY_MAX_PCT = 20.0
 SPIKES_MIN = 100
 SPIKES_FACTOR = 10
+# Spectra and offset, from scripts/station_qc/station_media.py. Trial on 30 Oct 2026, 153 channels:
+# 8 at or above 50 % below NLNM, most of them quiet stations, so only near 100 % is called a fault.
+PSD_ABOVE_NHNM_YELLOW = 50.0
+PSD_BELOW_NLNM_YELLOW = 20.0
+PSD_BELOW_NLNM_RED = 80.0
+DC_YELLOW_PCT = 50.0
+DC_RED_PCT = 90.0
 BASELINE_MIN_DAYS = 5
 
 # Short Indonesian labels for compact places (Telegram caption).
@@ -51,6 +58,10 @@ CODE_LABELS_ID = {
     "AMPLITUDE_CHANGE": "Perubahan amplitudo",
     "SPIKES": "Banyak spike",
     "CLIPPING": "Clipping",
+    "PSD_HIGH": "Noise di atas NHNM",
+    "PSD_LOW": "Noise di bawah NLNM",
+    "DC_OFFSET": "Offset besar",
+    "NO_RESPONSE": "Metadata respons kosong",
 }
 
 COMPONENT_NAMES = {
@@ -140,6 +151,30 @@ def evaluate(channels: list[dict], history: dict | None = None) -> list[Finding]
                 {"availability_pct": avail, "last_data_day": last, "days_without_data": n_days,
                  "never_archived": bool(m.get("never_archived"))})
             continue   # nothing else can be judged without data
+        above, below = m.get("psd_above_nhnm_pct"), m.get("psd_below_nlnm_pct")
+        if above is not None and above >= PSD_ABOVE_NHNM_YELLOW:
+            add("PSD_HIGH", "yellow",
+                f"Noise {cha} di atas model NHNM pada {above:.0f}% pita 0,1-5 detik. Lokasi sangat bising atau ada gangguan.",
+                f"{cha} noise above NHNM in {above:.0f}% of the 0.1-5 s band. Very noisy site or a disturbance.",
+                {"psd_above_nhnm_pct": above})
+        if below is not None and below >= PSD_BELOW_NLNM_YELLOW:
+            faulty = below >= PSD_BELOW_NLNM_RED
+            add("PSD_LOW", "red" if faulty else "yellow",
+                f"Noise {cha} di bawah model NLNM pada {below:.0f}% pita 0,1-5 detik. "
+                + ("Sensor kemungkinan mati atau gain salah." if faulty else "Periksa gain dan metadata respons."),
+                f"{cha} noise below NLNM in {below:.0f}% of the 0.1-5 s band. "
+                + ("Sensor probably dead or wrong gain." if faulty else "Check the gain and response metadata."),
+                {"psd_below_nlnm_pct": below})
+        dc = m.get("dc_pct_full_scale")
+        if dc is not None and dc >= DC_YELLOW_PCT:
+            add("DC_OFFSET", "red" if dc >= DC_RED_PCT else "yellow",
+                f"Offset {cha} sebesar {dc:.0f}% skala penuh digitizer. Massa sensor perlu di-center atau sensor bermasalah.",
+                f"{cha} offset is {dc:.0f}% of digitizer full scale. Re-center the sensor mass, or the sensor is faulty.",
+                {"dc_pct_full_scale": dc})
+        if m.get("ppsd_error") == "no instrument response":
+            add("NO_RESPONSE", "yellow",
+                f"Metadata respons {cha} tidak ditemukan, jadi spektrum tidak bisa dihitung.",
+                f"No response metadata for {cha}, so the spectrum cannot be computed.", {})
         if avail is not None and avail < AVAIL_YELLOW_PCT:
             sev = "red" if avail < AVAIL_RED_PCT else "yellow"
             add("DATA_GAPS", sev,

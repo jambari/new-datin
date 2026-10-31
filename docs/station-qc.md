@@ -66,6 +66,23 @@ module constants — tune after a few weeks of data.
 - Durations in messages: `34s`, `2m 53s`, `1j 12m 32s` (EN `1h 12m 32s`).
 - Log: `~/logs/station_qc.log` on scproc.
 
+## Spectra and images
+
+`scripts/station_qc/station_media.py` runs on scproc at 08:50 WIB (01:50 UTC), after the daily metrics and
+before the 02:30 UTC report. Per station with data: PPSD per channel against NLNM/NHNM, a 24 h overview,
+a noise HVSR and response metadata, sent to `POST /qc/api/station-media/`. Trial: 51 stations in 42 s,
+14 MB per day. Images live in `media/qc_stations/<day>/<NET.STA>/` for `STATION_MEDIA_KEEP_DAYS` (90); the
+numbers stay. The method follows the accelerograph worker on .51, adapted to velocity sensors.
+
+| code | severity | trigger |
+|---|---|---|
+| `PSD_HIGH` | yellow | median PSD above NHNM in >= 50 % of the 0.1-5 s band |
+| `PSD_LOW` | yellow, red >= 80 % | median PSD below NLNM in >= 20 % of the band (quiet site or gain; dead near 100 %) |
+| `DC_OFFSET` | yellow >= 50 %, red >= 90 % | mean offset as a share of 24-bit full scale (mass needs centering, or a fault) |
+| `NO_RESPONSE` | yellow | fdsnws has no response for the channel |
+
+The daily job keeps these metrics when it re-posts a day (`MEDIA_METRICS`).
+
 ## Daily PDF report (Telegram)
 
 Celery beat `send-station-qc-report-daily` at 02:30 UTC (09:30 WIB / 11:30 WIT) runs

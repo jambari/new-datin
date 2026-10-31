@@ -35,7 +35,8 @@
   .c.yellow { background:var(--yellow); }
   .c.red    { background:var(--red); }
   .c.unknown, .c.none { background:var(--grid); }
-  .days-form { font-size:.85rem; }
+  .days-form { font-size:.85rem; display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; }
+  .days-form input { width:8rem; }
 </style>
 {% endblock %}
 
@@ -43,7 +44,7 @@
 <div class="sh-head">
   <h1>Kesehatan Stasiun <span class="sh-sub">· Station Health</span></h1>
   {% if not empty %}
-  <span class="sh-sub">Data hingga / data up to <strong class="mono">{{ latest|date:"Y-m-d" }}</strong> UTC · {{ n_stations }} stasiun / stations</span>
+  <span class="sh-sub">Hari / day <a href="?day={{ prev_day|date:'Y-m-d' }}&days={{ n_days }}">‹</a> <strong class="mono">{{ latest|date:"Y-m-d" }}</strong>{% if next_day %} <a href="?day={{ next_day|date:'Y-m-d' }}&days={{ n_days }}">›</a>{% endif %} UTC · {{ n_stations }} stasiun / stations{% if n_shown != n_stations %} · {{ n_shown }} ditampilkan / shown{% endif %}</span>
   <div class="sh-counts">
     {% if counts.red %}<span class="pill red">{{ counts.red }} merah · red</span>{% endif %}
     {% if counts.yellow %}<span class="pill yellow">{{ counts.yellow }} kuning · yellow</span>{% endif %}
@@ -83,6 +84,16 @@
     <span class="l-red">masalah · problem</span><span class="l-none">tidak ada data QC · no QC data</span>
   </div>
   <form method="get" class="days-form">
+    <input type="hidden" name="day" value="{{ latest|date:'Y-m-d' }}">
+    <label>Status
+      <select name="status" onchange="this.form.submit()">
+        <option value="">Semua · all</option>
+        <option value="red" {% if status_filter == 'red' %}selected{% endif %}>Merah · red</option>
+        <option value="yellow" {% if status_filter == 'yellow' %}selected{% endif %}>Kuning · yellow</option>
+        <option value="green" {% if status_filter == 'green' %}selected{% endif %}>Baik · ok</option>
+      </select>
+    </label>
+    <label>Stasiun / station <input type="search" name="q" value="{{ query }}" placeholder="mis. KMPI"></label>
     <label>Rentang / range
       <select name="days" onchange="this.form.submit()">
         <option value="7"  {% if n_days == 7 %}selected{% endif %}>7 hari</option>

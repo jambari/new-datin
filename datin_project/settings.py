@@ -309,6 +309,10 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=30, hour=2),  # 02:30 UTC = 09:30 WIB / 11:30 WIT
     },
     # Cek ulang: kirim laporan kalau data scproc terlambat masuk (tanpa pesan ganda).
+    'purge-station-media': {
+        'task': 'qc_review.tasks.purge_station_media_task',
+        'schedule': crontab(minute=0, hour=5),
+    },
     'retry-station-qc-report': {
         'task': 'qc_review.tasks.retry_station_qc_report_task',
         'schedule': crontab(minute=30, hour='4,6'),  # 04:30 & 06:30 UTC = 11:30 & 13:30 WIB
@@ -385,6 +389,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
 
 # Indeks K: sebelum tanggal ini dari Excel stasiun, mulai tanggal ini dari citra FMI BMKG.
+STATION_MEDIA_KEEP_DAYS = config('STATION_MEDIA_KEEP_DAYS', default=90, cast=int)
 KINDEX_FMI_START = config('KINDEX_FMI_START', default='2026-10-03')
 # Indeks K hitung sendiri (metode FMI) dari data mentah LEMI-018 JYP yang dikirim PC magnet
 # lewat /magnet/api/lemi/raw/. L9 = batas bawah K9 JYP (nT), dicocokkan dengan hasil BMKG.

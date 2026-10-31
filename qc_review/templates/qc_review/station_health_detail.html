@@ -21,6 +21,11 @@
   .diag { display:grid; grid-template-columns:6.5rem auto 6rem 1fr; gap:.25rem 1rem; padding:.55rem .8rem; border-bottom:1px solid var(--grid); align-items:start; }
   .diag .msg-en { color:var(--muted); font-size:.85rem; }
   .mono { font-family:'JetBrains Mono',monospace; }
+  .figs { display:grid; grid-template-columns:repeat(auto-fill, minmax(420px, 1fr)); gap:1rem; padding:.8rem; }
+  .figs figure { margin:0; display:block; min-width:0; } .figs figure a { display:block; }
+  .figs img { display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:4px; }
+  .figs figcaption { display:block; width:auto; font-size:.8rem; color:var(--muted); margin-bottom:.25rem; }
+  @media (max-width:520px) { .figs { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 
@@ -28,7 +33,9 @@
 <p class="sh-sub"><a href="{% url 'qc_review:station_health' %}">← Kesehatan Stasiun · Station Health</a></p>
 <div class="sd-head">
   <h1>{{ network }}.{{ station }}</h1>
-  {% if not empty %}<span class="sh-sub">Data terakhir / latest day: <strong class="mono">{{ latest|date:"Y-m-d" }}</strong> UTC</span>{% endif %}
+  {% if not empty %}<span class="sh-sub">Hari / day <a href="?day={{ prev_day|date:'Y-m-d' }}">‹</a> <strong class="mono">{{ latest|date:"Y-m-d" }}</strong>{% if next_day %} <a href="?day={{ next_day|date:'Y-m-d' }}">›</a>{% endif %} UTC</span>
+  {% if media.site %}<span class="sh-sub">{{ media.site }}{% if media.latitude is not None %} · {{ media.latitude|floatformat:3 }}, {{ media.longitude|floatformat:3 }}{% endif %}</span>{% endif %}
+  {% if media.hvsr.f0_hz %}<span class="sh-sub mono">f0 {{ media.hvsr.f0_hz|floatformat:2 }} Hz · A0 {{ media.hvsr.a0|floatformat:1 }}{% if media.hvsr.sesame_reliable %} · SESAME ok{% else %} · belum andal / not reliable{% endif %}</span>{% endif %}{% endif %}
 </div>
 
 {% if empty %}
@@ -46,6 +53,11 @@
         <th title="Mean GPS timing quality">Timing %</th><th title="Records with clock-locked flag">GPS lock %</th>
         <th title="Median 10-min RMS after 1 Hz high-pass (counts)">Noise RMS</th>
         <th>Flatline %</th><th>Spike</th><th>Clip</th>
+        <th title="Share of the 0.1-5 s band above Peterson's NHNM">&gt;NHNM %</th>
+        <th title="Share of the 0.1-5 s band below Peterson's NLNM">&lt;NLNM %</th>
+        <th title="Mean offset as a share of digitizer full scale">Offset %</th>
+        <th title="24 h RMS after removing the mean">RMS µm/s</th>
+        <th>Sensor</th>
       </tr>
     </thead>
     <tbody>
@@ -64,8 +76,13 @@
         <td>{{ m.flatline_pct|floatformat:1|default:"–" }}</td>
         <td>{{ m.n_spikes|default_if_none:"–" }}</td>
         <td>{{ m.n_clip_runs|default_if_none:"–" }}</td>
+        <td>{{ m.psd_above_nhnm_pct|floatformat:0|default:"–" }}</td>
+        <td>{{ m.psd_below_nlnm_pct|floatformat:0|default:"–" }}</td>
+        <td>{{ m.dc_pct_full_scale|floatformat:1|default:"–" }}</td>
+        <td>{{ m.rms_um_s|floatformat:3|default:"–" }}</td>
+        <td class="l">{{ m.sensor|default:"–" }}</td>
         {% else %}
-        <td colspan="8" class="l sh-sub">tidak ada data hari ini · no data on the latest day</td>
+        <td colspan="13" class="l sh-sub">tidak ada data hari ini · no data on the latest day</td>
         {% endif %}
         {% endwith %}
       </tr>
@@ -74,6 +91,16 @@
   </table>
   </div>
 </section>
+
+{% if station_images or ppsd_images %}
+<section class="card">
+  <h2>Gambar {{ latest|date:"Y-m-d" }} <span class="sh-sub">· Images, disimpan 90 hari / kept 90 days</span></h2>
+  <div class="figs">
+    {% for label, url in station_images %}<figure><figcaption>{{ label }}</figcaption><a href="{{ url }}" target="_blank" rel="noopener"><img src="{{ url }}" alt="{{ label }}" loading="lazy"></a></figure>{% endfor %}
+    {% for cha, url in ppsd_images %}<figure><figcaption class="mono">PPSD {{ cha }}</figcaption><a href="{{ url }}" target="_blank" rel="noopener"><img src="{{ url }}" alt="PPSD {{ cha }}" loading="lazy"></a></figure>{% endfor %}
+  </div>
+</section>
+{% endif %}
 
 <section class="card">
   <h2>Riwayat temuan (30 hari) <span class="sh-sub">· Findings history (30 days)</span></h2>

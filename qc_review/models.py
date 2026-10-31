@@ -321,6 +321,31 @@ class StationDailyQC(models.Model):
         return self.channel[-1:]
 
 
+class StationMedia(models.Model):
+    """Daily spectra and images of one station, from scripts/station_qc/station_media.py.
+
+    `images` holds paths under MEDIA_ROOT: {"overview": .., "hvsr": .., "channels": {"00.SHZ": {"ppsd": ..}}}.
+    Files are purged after STATION_MEDIA_KEEP_DAYS; the row and the numbers stay.
+    """
+    network = models.CharField(max_length=4)
+    station = models.CharField(max_length=8)
+    day = models.DateField(db_index=True)
+    site = models.CharField(max_length=120, blank=True, default="")
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    elevation = models.FloatField(null=True, blank=True)
+    hvsr = models.JSONField(null=True, blank=True)
+    images = models.JSONField(default=dict, blank=True)
+    received_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["network", "station", "-day"]
+        unique_together = [("network", "station", "day")]
+
+    def __str__(self) -> str:
+        return f"{self.network}.{self.station} {self.day} media"
+
+
 class StationDiagnosis(models.Model):
     """One plain-language finding for a channel (or a whole station) on a day.
 
