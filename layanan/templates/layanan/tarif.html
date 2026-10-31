@@ -1,4 +1,5 @@
 {% extends 'layanan/base.html' %}
+{% load static %}
 
 {% block title %}Tarif Layanan — PTSP{% endblock %}
 
@@ -41,6 +42,11 @@
       <li>Surat permohonan data</li>
     </ol>
     <p class="text-amber-700 text-sm mt-3">Berkas dikompres/zip dan diunggah pada kolom unggah berkas.</p>
+    <a href="{% static 'images/layanan/Surat-Pernyataan-Nol-Rupiah.docx' %}" download
+       class="mt-4 inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
+      Unduh Contoh Surat Pernyataan Tarif Nol Rupiah (.docx)
+    </a>
   </div>
 </section>
 {% endblock %}

@@ -87,6 +87,14 @@ class FormulirPermohonanTest(TestCase):
         self.assertEqual(queue.call_count, 2)
 
 
+class TarifPageTest(TestCase):
+    def test_nol_rupiah_letter_is_linked_and_exists(self):
+        from django.contrib.staticfiles import finders
+        resp = self.client.get(reverse("layanan_tarif"))
+        self.assertContains(resp, "Surat-Pernyataan-Nol-Rupiah.docx")
+        self.assertTrue(finders.find("images/layanan/Surat-Pernyataan-Nol-Rupiah.docx"))
+
+
 class DashboardAccessTest(TestCase):
     def setUp(self):
         self.private = tempfile.mkdtemp()
