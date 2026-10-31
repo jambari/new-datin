@@ -32,8 +32,8 @@ def _color(p):
         return "green"                                # K 0–3
     if r > 230 and g > 230 and b < 60:
         return "yellow"                               # K 4
-    if r > 230 and 80 < g < 200 and b < 60:
-        return "orange"                               # K 5–6
+    if r > 230 and 80 < g < 225 and b < 60:
+        return "orange"                               # K 5 (255,204,0) – 6 (255,102,0)
     if r > 230 and g < 40 and b < 40:
         return "red"                                  # K 7
     if r > 200 and g < 60 and b > 200:

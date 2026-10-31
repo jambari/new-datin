@@ -762,3 +762,13 @@ class FmiStaleSourceTest(TestCase):
         self.assertFalse(KIndexDaily.objects.filter(tanggal=datetime.date(2026, 10, 18)).exists())
         self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 12)).k_values,
                          [4, 4, 4, 1, 2, 2, 3, 3])
+
+
+class FmiKIndexGoldK5Test(TestCase):
+    def test_k5_gold_bars_are_read(self):
+        """K 5 digambar emas (255,204,0); dulu terbaca kosong."""
+        days = _by_day(parse_k_image(io.BytesIO(_testimage('FMI-K-Indices-JYP-20261024.png')),
+                                     datetime.date(2026, 10, 24)))
+        self.assertEqual(days[datetime.date(2026, 10, 19)], [4, 4, 1, 1, 1, 1, 2, None])
+        self.assertEqual(days[datetime.date(2026, 10, 20)], [None, None, None, 3, 3, 3, 3, 5])
+        self.assertEqual(days[datetime.date(2026, 10, 21)], [5, 4, 2, 2, 2, 3, 3, 3])
