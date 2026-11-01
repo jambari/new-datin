@@ -62,6 +62,9 @@ kartu CF Okt 2023 - Mar 2026) dan disimpan dengan `sumber='lokal'`; workbook sta
 pembanding. Korelasi dengan Kp 0,54-0,69 per tahun. Blok K >= 7 saat Kp < 4 (21 blok pada 20 hari) dianggap
 artefak dan dikosongkan, dengan catatan di kolom keterangan. Hari tanpa data tidak punya baris.
 
+Sensor macet (nilai X dan Y tetap) menghasilkan K = 0 palsu dan belum terdeteksi otomatis. Pada riwayat ini blok K = 0
+yang datanya tetap sudah dikosongkan (5 hari penuh dan 29 blok pada 8 hari lain, termasuk Sep 2013 dan Jan 2025).
+
 ## Watchdog program LEMI (PC .105)
 
 `scripts/lemi_watchdog.ps1` (salinan di `C:\lemi_watchdog\`) dijalankan task `LEMIWatchdog` tiap menit
