@@ -899,6 +899,30 @@ class KIndexLocalFmiTest(TestCase):
         self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 10)).k_values, [5] * 8)
         self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 11)).sumber, 'lokal')
 
+    @override_settings(KINDEX_FMI_START='2026-10-20')
+    def test_fill_gap_redoes_incomplete_local_day_only(self):
+        from .kindex_fmi import store_day
+        self._days()
+        day = datetime.date(2026, 10, 10)
+        KIndexDaily.objects.create(tanggal=day, k_values=[1, 1] + [None] * 6, sumber='lokal')
+        _, obj = store_day(day, fill_gap=True)
+        self.assertTrue(obj.is_complete)
+        before = list(obj.k_values)
+        KIndexDaily.objects.filter(tanggal=day).update(k_values=[9] * 8)
+        self.assertIsNone(store_day(day, fill_gap=True)[1])   # lokal lengkap tidak dihitung ulang
+        self.assertEqual(KIndexDaily.objects.get(tanggal=day).k_values, [9] * 8)
+        self.assertEqual(len(before), 8)
+
+    @override_settings(KINDEX_FMI_START='2026-10-20')
+    def test_raw_dir_option_reads_another_folder(self):
+        self._days()
+        empty = tempfile.mkdtemp(prefix='lemi-empty-')
+        self.addCleanup(shutil.rmtree, empty, True)
+        with override_settings(LEMI_RAW_DIR=empty):
+            call_command('compute_kindex_jyp', '--start', '2026-10-11', '--end', '2026-10-11',
+                         '--fill-gaps', '--raw-dir', self.raw, stdout=io.StringIO())
+        self.assertTrue(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 11)).has_data)
+
     def test_empty_excel_row_does_not_erase_filled_day(self):
         day = datetime.date(2026, 4, 2)
         KIndexDaily.objects.create(tanggal=day, k_values=[2] * 8, sumber='lokal')

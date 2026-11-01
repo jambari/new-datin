@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -15,20 +16,22 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("files", nargs="+", help="Berkas .B81")
         parser.add_argument("--dry-run", action="store_true", help="Hanya laporkan yang akan diisi")
+        parser.add_argument("--raw-dir", help="Folder tujuan (default LEMI_RAW_DIR); indeks K tidak dihitung ulang")
 
     def handle(self, *args, **options):
         merged = {}
         for path in options["files"]:
             for day, records in read_flash(path).items():
                 merged.setdefault(day, {}).update(records)
-        settings.LEMI_RAW_DIR.mkdir(parents=True, exist_ok=True)
+        raw_dir = Path(options["raw_dir"] or settings.LEMI_RAW_DIR)
+        raw_dir.mkdir(parents=True, exist_ok=True)
         touched = set()
         for day in sorted(merged):
-            added = fill_day(settings.LEMI_RAW_DIR, day, merged[day], dry_run=options["dry_run"])
+            added = fill_day(raw_dir, day, merged[day], dry_run=options["dry_run"])
             self.stdout.write(f"  {day}: {len(merged[day])} detik di kartu, {added} mengisi celah")
             if added:
                 touched.update(day + datetime.timedelta(days=d) for d in (-1, 0, 1))
-        if options["dry_run"]:
+        if options["dry_run"] or options["raw_dir"]:
             return
         today = datetime.datetime.now(datetime.timezone.utc).date()
         for day in sorted(d for d in touched if fmi_start_date() <= d <= today):
