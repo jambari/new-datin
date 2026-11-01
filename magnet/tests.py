@@ -876,6 +876,45 @@ class KIndexLocalFmiTest(TestCase):
         self.assertIsNone(obj)
         self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 2)).sumber, 'excel')
 
+    @override_settings(KINDEX_FMI_START='2026-10-20')
+    def test_fill_gap_only_fills_days_without_k(self):
+        from .kindex_fmi import store_day
+        self._days()
+        day = datetime.date(2026, 10, 10)
+        KIndexDaily.objects.create(tanggal=day, k_values=[], keterangan='Lost Data')
+        self.assertIsNone(store_day(day)[1])             # tanpa izin tetap tidak disentuh
+        _, obj = store_day(day, fill_gap=True)
+        self.assertEqual(obj.sumber, KIndexDaily.SUMBER_LOKAL)
+        self.assertTrue(obj.has_data)
+        KIndexDaily.objects.filter(tanggal=day).update(k_values=[5] * 8, sumber='excel')
+        self.assertIsNone(store_day(day, fill_gap=True)[1])
+        self.assertEqual(KIndexDaily.objects.get(tanggal=day).k_values, [5] * 8)
+
+    @override_settings(KINDEX_FMI_START='2026-10-20')
+    def test_fill_gaps_command_skips_days_with_k(self):
+        self._days()
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 10, 10), k_values=[5] * 8)
+        call_command('compute_kindex_jyp', '--start', '2026-10-10', '--end', '2026-10-11',
+                     '--fill-gaps', stdout=io.StringIO())
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 10)).k_values, [5] * 8)
+        self.assertEqual(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 11)).sumber, 'lokal')
+
+    def test_empty_excel_row_does_not_erase_filled_day(self):
+        day = datetime.date(2026, 4, 2)
+        KIndexDaily.objects.create(tanggal=day, k_values=[2] * 8, sumber='lokal')
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'April'
+        ws.cell(row=2, column=11, value=2026)
+        for d in range(1, 31):
+            ws.cell(row=4 + d, column=1, value=d)
+            ws.cell(row=4 + d, column=2, value='Lost Data')
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        import_kindex_workbook(buf, 2026)
+        self.assertEqual(KIndexDaily.objects.get(tanggal=day).k_values, [2] * 8)
+
     def test_command_and_png_and_public_page(self):
         self._days()
         out = io.StringIO()

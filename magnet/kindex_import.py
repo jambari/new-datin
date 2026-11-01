@@ -56,6 +56,8 @@ def import_kindex_workbook(fileobj, year, source_name="", months=None):
                 counts["kosong"] += 1
             source_a = row[9] if isinstance(row[9], (int, float)) else None
             obj, _ = KIndexDaily.objects.get_or_create(tanggal=tanggal)
+            if not values and obj.sumber == KIndexDaily.SUMBER_LOKAL and obj.has_data:
+                continue    # celah Excel yang sudah diisi hitung lokal jangan dikosongkan lagi
             obj.k_values = values
             obj.a_index_source = source_a
             obj.keterangan = keterangan

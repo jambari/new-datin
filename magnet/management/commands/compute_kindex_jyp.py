@@ -2,6 +2,7 @@ import datetime
 
 from django.core.management.base import BaseCommand, CommandError
 
+from magnet.models import KIndexDaily
 from magnet.kindex_fmi import compute_day, store_day
 
 
@@ -14,6 +15,8 @@ class Command(BaseCommand):
         parser.add_argument("--end", help="Tanggal UTC akhir YYYY-MM-DD (default: hari ini)")
         parser.add_argument("--l9", type=float, help="Batas bawah K9 (nT); default KINDEX_JYP_L9")
         parser.add_argument("--dry-run", action="store_true", help="Tampilkan hasil tanpa menyimpan")
+        parser.add_argument("--fill-gaps", action="store_true",
+                            help="Hanya hari tanpa nilai K, termasuk sebelum KINDEX_FMI_START")
 
     def handle(self, *args, **options):
         today = datetime.datetime.now(datetime.timezone.utc).date()
@@ -23,11 +26,17 @@ class Command(BaseCommand):
         except ValueError:
             raise CommandError("Format tanggal harus YYYY-MM-DD")
         day, stored = start, 0
+        filled = set()
+        if options["fill_gaps"]:
+            filled = {o.tanggal for o in KIndexDaily.objects.filter(tanggal__range=(start, end)) if o.has_data}
         while day <= min(end, today):
+            if day in filled:
+                day += datetime.timedelta(days=1)
+                continue
             if options["dry_run"]:
                 result, obj = compute_day(day, l9=options["l9"]), None
             else:
-                result, obj = store_day(day, l9=options["l9"])
+                result, obj = store_day(day, l9=options["l9"], fill_gap=options["fill_gaps"])
                 stored += obj is not None
             flags = []
             if result["provisional"]:

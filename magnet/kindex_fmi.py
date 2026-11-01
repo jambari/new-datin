@@ -320,8 +320,11 @@ def compute_day(day, raw_dir=None, l9=None):
     }
 
 
-def store_day(day, raw_dir=None, l9=None):
+def store_day(day, raw_dir=None, l9=None, fill_gap=False):
     """Hitung lalu simpan ke KIndexDaily (sumber lokal). Hari data Excel tidak disentuh.
+
+    fill_gap=True mengizinkan hari sebelum KINDEX_FMI_START, hanya bila hari itu belum punya
+    nilai K (Excel "Lost Data"/"Tidak ada data" atau belum ada barisnya).
 
     Kembalikan (hasil, obj) — obj None kalau hari itu tidak disimpan.
     """
@@ -329,8 +332,12 @@ def store_day(day, raw_dir=None, l9=None):
     from .models import KIndexDaily
 
     result = compute_day(day, raw_dir, l9)
-    if day < fmi_start_date() or not any(k is not None for k in result["k_values"]):
+    if not any(k is not None for k in result["k_values"]):
         return result, None
+    if day < fmi_start_date():
+        existing = KIndexDaily.objects.filter(tanggal=day).first()
+        if not fill_gap or (existing is not None and existing.has_data):
+            return result, None
     obj, _ = KIndexDaily.objects.get_or_create(tanggal=day, defaults={"sumber": KIndexDaily.SUMBER_LOKAL})
     obj.k_values = result["k_values"]
     obj.k_coverage = result["coverage"]
