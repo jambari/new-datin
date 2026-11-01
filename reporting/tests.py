@@ -275,6 +275,34 @@ class ReportingTest(TestCase):
         self.assertContains(r, "nilai &gt; 3 g")
 
 
+class KIndexPartialDayTest(TestCase):
+    """Hari dengan terlalu sedikit blok K tidak ikut vonis dan ringkasan A."""
+
+    def _month(self):
+        from reporting.builders.magnet_petir import _kindex_month
+        span = (datetime.date(2026, 1, 1), datetime.date(2026, 1, 31), "Januari 2026")
+        with mock.patch("reporting.builders.magnet_petir.month_in_period", return_value=span):
+            return _kindex_month(2026, 1, None)
+
+    def test_two_block_day_is_not_rated_but_keeps_k_max(self):
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 1, 19), k_values=[4, 3, 3, 0, 1, 2, 8, 9])
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 1, 21), k_values=[2] * 8)
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 1, 20), sumber="lokal",
+                                   k_values=[9, 8, None, None, None, None, None, None])
+        k = self._month()
+        self.assertEqual(k["amax"].tanggal.day, 19)
+        self.assertEqual(sum(k["criteria"].values()), 2)
+        self.assertEqual(k["kmax"], 9)
+        self.assertEqual(k["n"], 3)
+
+    def test_month_with_only_short_days(self):
+        KIndexDaily.objects.create(tanggal=datetime.date(2026, 1, 20), sumber="lokal",
+                                   k_values=[4, 4, None, None, None, None, None, None])
+        k = self._month()
+        self.assertIsNone(k["amax"])
+        self.assertIsNone(k["amean"])
+
+
 class OfficerIdentityTest(TestCase):
     def test_name_and_nip_come_from_logged_in_pegawai(self):
         from jadwal.models import Pegawai

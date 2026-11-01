@@ -43,6 +43,18 @@ yang terganggu loncatan baseline): bias ≈ 0, 99 % selisih ≤ 1, korelasi deng
 - **Peringatan**: `check_lemi_data_task` (tiap 15 menit) mengirim Telegram bila sampel terakhir
   lebih tua dari 40 menit, dan sekali lagi saat pulih.
 
+## Mengisi hari kosong sebelum `KINDEX_FMI_START`
+
+Hari yang di Excel stasiun tertulis "Lost Data"/"Tidak ada data" bisa diisi hitung lokal; nilai K
+Excel yang ada tidak pernah diganti, dan impor ulang baris Excel kosong tidak menghapus isian ini:
+
+    python manage.py compute_kindex_jyp --start 2026-01-01 --end 2026-10-31 --fill-gaps
+
+Pengisian 1 Nov 2026: kartu CF `D:\Back Up CF Card Lemi-018\2026` di .107 (2 Mei - 1 Nov 2026, 37 hari
+terisi) lalu 26 hari kosong dihitung. Kartu dan berkas PC cocok ±0,004 nT pada 183 hari; K lokal dibanding
+Excel Jan-Sep 2026 (1.688 blok): bias +0,11, 92 % selisih ≤ 1. Salinan kartu di .189: `~/lemi_cf_backup/2026`.
+Masih sebagian karena kartu tidak mencakup Jan-Apr: 20 & 24 Jan, 3 & 4 Feb, 21 Apr 2026.
+
 ## Watchdog program LEMI (PC .105)
 
 `scripts/lemi_watchdog.ps1` (salinan di `C:\lemi_watchdog\`) dijalankan task `LEMIWatchdog` tiap menit

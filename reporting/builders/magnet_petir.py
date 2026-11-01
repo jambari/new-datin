@@ -231,8 +231,11 @@ def _kindex_month(y, m, period):
         days.append({"date": d, "obj": rows.get(d)})
         d += datetime.timedelta(days=1)
     with_data = [x["obj"] for x in days if x["obj"] and x["obj"].has_data]
+    # Hari dengan terlalu sedikit blok tidak diberi vonis, sama seperti tabel web: A dari
+    # dua blok saja tidak sebanding. Nilai K-nya tetap dihitung untuk K maks.
+    rated = [o for o in with_data if o.criteria_label != "Data kurang"]
     crit = {}
-    for o in with_data:
+    for o in rated:
         crit[o.criteria] = crit.get(o.criteria, 0) + 1
     return {
         "label": label, "days": days, "n": len(with_data), "ndays": len(days),
@@ -241,8 +244,8 @@ def _kindex_month(y, m, period):
         "sources": sorted({o.get_sumber_display() for o in with_data}),
         "kmax": max((o.k_max for o in with_data), default=None),
         "kmax_days": [o.tanggal.day for o in with_data if o.k_max == max(p.k_max for p in with_data)] if with_data else [],
-        "amean": st.mean(o.a_index for o in with_data) if with_data else None,
-        "amax": max(with_data, key=lambda o: o.a_index) if with_data else None,
+        "amean": st.mean(o.a_index for o in rated) if rated else None,
+        "amax": max(rated, key=lambda o: o.a_index) if rated else None,
         "criteria": crit,
         "a_diff": [o for o in with_data if o.a_index_source is not None and abs(o.a_index - o.a_index_source) > 0.01],
     }
@@ -286,7 +289,7 @@ def kindex_report(period):
     for k in kmonths:
         k["chart"] = _kindex_chart(k) if k["n"] else None
     kdays = sum(k["n"] for k in kmonths)
-    storms = sorted((o for k in kmonths for o in (x["obj"] for x in k["days"]) if o and o.has_data and o.a_index >= 30),
+    storms = sorted((o for k in kmonths for o in (x["obj"] for x in k["days"]) if o and o.has_data and o.criteria_label != "Data kurang" and o.a_index >= 30),
                     key=lambda o: o.tanggal)
     return {
         "kmonths": kmonths, "kdays": kdays, "kdays_pct": 100 * kdays / period.days,
