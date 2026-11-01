@@ -939,6 +939,36 @@ class KIndexLocalFmiTest(TestCase):
         self.assertEqual(int(t[1] - t[0]), 4)
         self.assertAlmostEqual(float(x[0]), 34550.89)
 
+    def test_public_page_has_both_tabs(self):
+        resp = self.client.get(reverse('public_magnetbumi_indices'))
+        self.assertContains(resp, 'id="tab-terkini"')
+        self.assertContains(resp, 'id="tab-query"')
+        self.assertContains(resp, 'id="k-canvas"')
+        self.assertContains(resp, 'id="a-canvas"')
+        self.assertContains(resp, reverse('kindex_jyp_api'))
+
+    def test_kindex_api_returns_range_with_gaps_and_summary(self):
+        KIndexDaily.objects.create(tanggal=datetime.date(2024, 5, 11), k_values=[7, 6, 9, 8, 8, 6, 6, 5],
+                                   k_coverage=[100, 80, 100, 100, 100, 100, 100, 100], sumber='lokal')
+        KIndexDaily.objects.create(tanggal=datetime.date(2024, 5, 13), sumber='lokal',
+                                   k_values=[9, 9] + [None] * 6, keterangan='Data tidak lengkap (25%)')
+        data = self.client.get(reverse('kindex_jyp_api'), {'start': '2024-05-11', 'end': '2024-05-13'}).json()
+        self.assertEqual([d['tanggal'] for d in data['days']], ['2024-05-11', '2024-05-12', '2024-05-13'])
+        self.assertEqual(data['days'][0]['partial'], [1])
+        self.assertEqual(data['days'][1]['k'], [None] * 8)
+        self.assertEqual(data['days'][2]['kriteria'], 'Data kurang')
+        summary = data['summary']
+        self.assertEqual((summary['hari'], summary['hari_berdata'], summary['k_maks']), (3, 2, 9))
+        self.assertEqual(summary['k_maks_tanggal'], '2024-05-11')
+        self.assertEqual(summary['a_maks_tanggal'], '2024-05-11')   # hari 2 blok tidak dinilai
+        self.assertEqual(summary['hari_badai'], 1)
+
+    def test_kindex_api_rejects_bad_ranges(self):
+        url = reverse('kindex_jyp_api')
+        for params in ({}, {'start': 'x', 'end': '2024-01-01'}, {'start': '2024-13-40', 'end': '2024-01-01'},
+                       {'start': '2024-02-01', 'end': '2024-01-01'}, {'start': '2020-01-01', 'end': '2024-01-01'}):
+            self.assertEqual(self.client.get(url, params).status_code, 400, params)
+
     def test_empty_excel_row_does_not_erase_filled_day(self):
         day = datetime.date(2026, 4, 2)
         KIndexDaily.objects.create(tanggal=day, k_values=[2] * 8, sumber='lokal')

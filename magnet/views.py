@@ -1388,6 +1388,70 @@ def _kindex_table(request, start_date_str, end_date_str):
     })
 
 
+KINDEX_API_MAX_DAYS = 366
+
+
+def kindex_jyp_api(request):
+    """GET ?start=YYYY-MM-DD&end=YYYY-MM-DD: indeks K & A per hari untuk tab query halaman publik.
+
+    Tanggal tanpa baris tetap dikembalikan (k kosong) supaya celah data terlihat di grafik.
+    """
+    from django.http import JsonResponse
+    from .models import KIndexDaily
+
+    def bad(message):
+        return JsonResponse({'error': message}, status=400)
+
+    try:
+        start = parse_date(request.GET.get('start', ''))
+        end = parse_date(request.GET.get('end', ''))
+    except ValueError:
+        return bad('Tanggal tidak valid.')
+    if not start or not end:
+        return bad('Isi tanggal awal dan tanggal akhir.')
+    if end < start:
+        return bad('Tanggal akhir tidak boleh sebelum tanggal awal.')
+    total = (end - start).days + 1
+    if total > KINDEX_API_MAX_DAYS:
+        return bad(f'Periode maksimal {KINDEX_API_MAX_DAYS} hari.')
+
+    rows = {r.tanggal: r for r in KIndexDaily.objects.filter(tanggal__range=(start, end))}
+    days = []
+    for offset in range(total):
+        day = date.fromordinal(start.toordinal() + offset)
+        obj = rows.get(day)
+        ks = list(obj.k_values or []) if obj else []
+        ks += [None] * (8 - len(ks))
+        days.append({
+            'tanggal': day.isoformat(),
+            'k': ks[:8],
+            'partial': obj.partial_blocks if obj else [],
+            'a': round(obj.a_index, 1) if obj and obj.a_index is not None else None,
+            'kriteria': (obj.criteria_label if obj and obj.has_data else ''),
+            'sumber': obj.get_sumber_display() if obj else '',
+            'keterangan': obj.keterangan if obj else '',
+        })
+    with_data = [r for r in rows.values() if r.has_data]
+    kmax = max((r.k_max for r in with_data), default=None)
+    rated = [r for r in with_data if r.criteria_label != 'Data kurang']
+    amax = max(rated, key=lambda r: r.a_index, default=None)
+    return JsonResponse({
+        'start': start.isoformat(),
+        'end': end.isoformat(),
+        'slots': KINDEX_SLOTS,
+        'days': days,
+        'summary': {
+            'hari': total,
+            'hari_berdata': len(with_data),
+            'k_maks': kmax,
+            'k_maks_tanggal': min((r.tanggal for r in with_data if r.k_max == kmax), default=None),
+            'a_maks': round(amax.a_index, 1) if amax else None,
+            'a_maks_tanggal': amax.tanggal if amax else None,
+            'hari_badai': sum(1 for r in rated if r.a_index >= 30),
+        },
+    })
+
+
 # ── Data mentah LEMI-018 JYP dari PC magnet (untuk hitung indeks K sendiri) ──────────
 
 _LEMI_RAW_NAME = re.compile(r'^\d{4} \d{2} \d{2} \d{2} \d{2} \d{2}\.txt$')

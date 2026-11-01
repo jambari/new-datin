@@ -59,8 +59,50 @@
   }
   #site-footer span { font-size: 0.65rem; color: #64748b; letter-spacing: 0.04em; }
 
+  .k-tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--line); margin-bottom: 1.25rem; }
+  .k-tab {
+    background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    padding: 0.6rem 0.95rem; font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--muted); cursor: pointer;
+  }
+  .k-tab:hover { color: var(--ink); }
+  .k-tab[aria-selected="true"] { color: var(--blue); border-bottom-color: var(--blue); }
+  .k-tab:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+  .k-form { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-bottom: 0.5rem; }
+  .k-form label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-bottom: 0.25rem; }
+  .k-form input {
+    width: 8.5rem; padding: 0.5rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 8px;
+    font-size: 0.85rem; background: #fff; color: var(--ink);
+  }
+  .k-btn {
+    padding: 0.52rem 1.1rem; border: 0; border-radius: 8px; background: var(--blue);
+    color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  }
+  .k-btn:disabled { opacity: 0.6; cursor: wait; }
+  .k-hint { font-size: 0.72rem; color: var(--muted); margin-bottom: 1rem; }
+  .k-msg { font-size: 0.82rem; margin: 0.75rem 0; color: var(--muted); }
+  .k-msg.err { color: #b91c1c; }
+  .k-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+  .k-stat { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.85rem; }
+  .k-stat b { display: block; font-size: 1.15rem; color: var(--ink); }
+  .k-stat span { font-size: 0.7rem; color: var(--muted); }
+  .k-panel { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem; margin-bottom: 1rem; }
+  .k-chart { position: relative; height: 320px; }
+  .k-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.85rem; margin-top: 0.6rem; font-size: 0.7rem; color: var(--muted); }
+  .k-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.3rem; vertical-align: -1px; }
+  .k-table-wrap { overflow-x: auto; }
+  .k-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; white-space: nowrap; }
+  .k-table th { background: #f9fafb; color: var(--muted); font-weight: 600; text-align: center; padding: 0.4rem 0.45rem; border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+  .k-table td { text-align: center; padding: 0.35rem 0.45rem; border-bottom: 1px solid #f1f5f9; color: var(--ink); }
+  .k-table td.l, .k-table th.l { text-align: left; }
+  .k-table td.note { white-space: normal; min-width: 12rem; color: var(--muted); }
+  .k-table td.partial { font-style: italic; text-decoration: underline dotted; }
+  .k-table td.empty { color: #cbd5e1; }
+  .k-scroll { max-height: 480px; overflow: auto; }
+
   @media (max-width: 640px) {
     .fmi-grid { grid-template-columns: 1fr; }
+    .k-stats { grid-template-columns: repeat(2, 1fr); }
+    .k-chart { height: 260px; }
   }
 </style>
 {% endblock %}
@@ -73,6 +115,12 @@
     Stasiun Jayapura (JYP){% if fmi_date %} · {{ fmi_date|date:"d F Y" }} WIT{% endif %}
   </p>
 
+  <div class="k-tabs" role="tablist" aria-label="Indeks K dan A">
+    <button class="k-tab" type="button" role="tab" id="tab-terkini" aria-controls="panel-terkini" aria-selected="true">Terkini</button>
+    <button class="k-tab" type="button" role="tab" id="tab-query" aria-controls="panel-query" aria-selected="false" tabindex="-1">Cari Data Indeks K</button>
+  </div>
+
+  <div id="panel-terkini" role="tabpanel" aria-labelledby="tab-terkini">
   {% if kindex_day %}
     <h2 class="fmi-section">Hitung lokal dari data LEMI-018 JYP</h2>
     <div class="fmi-grid">
@@ -154,6 +202,32 @@
   {% elif not kindex_day %}
     <div class="fmi-empty">Citra indeks K &amp; A belum tersedia.</div>
   {% endif %}
+  </div>
+
+  <div id="panel-query" role="tabpanel" aria-labelledby="tab-query" hidden>
+    <form id="k-form" class="k-form" novalidate>
+      <div><label for="k-start">Tanggal awal</label><input id="k-start" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off"></div>
+      <div><label for="k-end">Tanggal akhir</label><input id="k-end" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off"></div>
+      <button id="k-submit" class="k-btn" type="submit">Tampilkan</button>
+    </form>
+    <p class="k-hint">Tanggal dalam UTC, maksimal 366 hari sekali tampil. Data tersedia sejak 2012, kecuali saat instrumen bermasalah.</p>
+    <div id="k-msg" class="k-msg" role="status"></div>
+    <div id="k-result" hidden>
+      <div id="k-stats" class="k-stats"></div>
+      <div class="k-panel">
+        <div class="k-chart"><canvas id="k-canvas" aria-label="Grafik indeks K per 3 jam" role="img"></canvas></div>
+        <div id="k-legend" class="k-legend"></div>
+      </div>
+      <div class="k-panel">
+        <div class="k-chart"><canvas id="a-canvas" aria-label="Grafik indeks A harian" role="img"></canvas></div>
+        <div id="a-legend" class="k-legend"></div>
+      </div>
+      <div class="k-panel">
+        <div class="k-table-wrap k-scroll"><table class="k-table" id="k-table"></table></div>
+      </div>
+      <p class="fmi-note">Angka bergaris titik berarti data blok itu kurang dari 90%, tanda &ndash; berarti tidak ada nilai. Hari dengan kurang dari 6 blok ditandai &quot;Data kurang&quot; dan tidak dihitung sebagai hari badai maupun A maksimum.</p>
+    </div>
+  </div>
 
   <a class="fmi-back" href="{% url 'public_magnetbumi' %}">← Kembali ke data magnetbumi (7 komponen)</a>
 </div>
@@ -161,5 +235,265 @@
 <footer id="site-footer">
   <span>© {% now "Y" %} Stasiun Geofisika Kelas I Jayapura — BMKG</span>
 </footer>
+
+<script>
+(function () {
+  var API = "{% url 'kindex_jyp_api' %}";
+  var CHART_JS = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+  var LEVELS = [['0–3', '#16a34a'], ['4', '#eab308'], ['5', '#f59e0b'], ['6', '#ea580c'], ['7', '#dc2626'], ['8', '#d946ef'], ['9', '#6b21a8']];
+  var A_LEVELS = [['Tenang', '#16a34a'], ['Badai Kecil', '#eab308'], ['Badai Menengah', '#ea580c'], ['Badai Besar', '#dc2626'], ['Data kurang', '#94a3b8']];
+  var A_LINES = [30, 50, 100];
+  function aColor(label) {
+    for (var i = 0; i < A_LEVELS.length; i++) if (A_LEVELS[i][0] === label) return A_LEVELS[i][1];
+    return A_LEVELS[4][1];
+  }
+  function kColor(k) { return k <= 3 ? LEVELS[0][1] : LEVELS[k - 3][1]; }
+
+  var tabs = { terkini: document.getElementById('tab-terkini'), query: document.getElementById('tab-query') };
+  var panels = { terkini: document.getElementById('panel-terkini'), query: document.getElementById('panel-query') };
+  var form = document.getElementById('k-form');
+  var startEl = document.getElementById('k-start');
+  var endEl = document.getElementById('k-end');
+  var msg = document.getElementById('k-msg');
+  var result = document.getElementById('k-result');
+  var submit = document.getElementById('k-submit');
+  var chart = null, chartA = null, chartReady = null, requestId = 0, opened = false;
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function toDmy(iso) { var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function toIso(text) {
+    var m = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(text.trim());
+    if (!m) return null;
+    var d = new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
+    if (d.getUTCFullYear() !== +m[3] || d.getUTCMonth() !== +m[2] - 1 || d.getUTCDate() !== +m[1]) return null;
+    return m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]);
+  }
+  function setMsg(text, isError) { msg.textContent = text; msg.className = 'k-msg' + (isError ? ' err' : ''); }
+  function el(tag, text, cls) { var e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
+
+  function select(name, focus) {
+    Object.keys(tabs).forEach(function (key) {
+      var on = key === name;
+      tabs[key].setAttribute('aria-selected', on ? 'true' : 'false');
+      tabs[key].tabIndex = on ? 0 : -1;
+      panels[key].hidden = !on;
+    });
+    if (focus) tabs[name].focus();
+    try { history.replaceState(null, '', name === 'query' ? '#query' : location.pathname + location.search); } catch (e) {}
+    if (name === 'query' && !opened) { opened = true; load(); }
+    if (name === 'query' && chart) chart.resize();
+    if (name === 'query' && chartA) chartA.resize();
+  }
+  tabs.terkini.addEventListener('click', function () { select('terkini'); });
+  tabs.query.addEventListener('click', function () { select('query'); });
+  document.querySelector('.k-tabs').addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') select('terkini', true);
+    if (e.key === 'ArrowRight') select('query', true);
+  });
+
+  function loadChartLib() {
+    if (chartReady) return chartReady;
+    chartReady = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = CHART_JS; s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    return chartReady;
+  }
+
+  function renderStats(sum, data) {
+    var box = document.getElementById('k-stats');
+    box.textContent = '';
+    [[sum.hari_berdata + ' / ' + sum.hari, 'hari berdata'],
+     [sum.k_maks === null ? '–' : sum.k_maks, sum.k_maks === null ? 'K maksimum' : 'K maksimum (' + toDmy(sum.k_maks_tanggal) + ')'],
+     [sum.a_maks === null ? '–' : sum.a_maks, sum.a_maks === null ? 'A maksimum' : 'A maksimum (' + toDmy(sum.a_maks_tanggal) + ')'],
+     [sum.hari_badai, 'hari badai (A ≥ 30)']].forEach(function (s) {
+      var d = el('div', undefined, 'k-stat'); d.appendChild(el('b', s[0])); d.appendChild(el('span', s[1])); box.appendChild(d);
+    });
+  }
+
+  function renderTable(data) {
+    var t = document.getElementById('k-table');
+    t.textContent = '';
+    var head = t.createTHead().insertRow();
+    head.appendChild(el('th', 'Tanggal', 'l'));
+    data.slots.forEach(function (s) { head.appendChild(el('th', s)); });
+    ['A', 'Kriteria'].forEach(function (h) { head.appendChild(el('th', h)); });
+    head.appendChild(el('th', 'Sumber', 'l'));
+    head.appendChild(el('th', 'Keterangan', 'l'));
+    var body = t.createTBody();
+    data.days.forEach(function (d) {
+      var r = body.insertRow();
+      r.appendChild(el('td', toDmy(d.tanggal), 'l'));
+      d.k.forEach(function (k, i) {
+        var cls = k === null ? 'empty' : (d.partial.indexOf(i) >= 0 ? 'partial' : '');
+        r.appendChild(el('td', k === null ? '–' : k, cls));
+      });
+      r.appendChild(el('td', d.a === null ? '–' : d.a, d.a === null ? 'empty' : ''));
+      r.appendChild(el('td', d.kriteria || '–', d.kriteria ? '' : 'empty'));
+      r.appendChild(el('td', d.sumber || '–', 'l' + (d.sumber ? '' : ' empty')));
+      r.appendChild(el('td', d.keterangan, 'l note'));
+    });
+  }
+
+  function fillLegend(id, levels, prefix) {
+    var box = document.getElementById(id);
+    if (box.childNodes.length) return;
+    levels.forEach(function (l) {
+      var s = el('span'); var i = el('i'); i.style.background = l[1];
+      s.appendChild(i); s.appendChild(document.createTextNode(prefix + l[0])); box.appendChild(s);
+    });
+  }
+  function renderLegend() {
+    fillLegend('k-legend', LEVELS, 'K ');
+    fillLegend('a-legend', A_LEVELS, '');
+  }
+
+  function renderChartA(data) {
+    var labels = data.days.map(function (d) { return toDmy(d.tanggal); });
+    var values = data.days.map(function (d) { return d.a; });
+    var step = Math.max(1, Math.ceil(data.days.length / (window.innerWidth < 640 ? 5 : 10)));
+    var linePlugin = {
+      id: 'aLines',
+      beforeDatasetsDraw: function (c) {
+        var y = c.scales.y, area = c.chartArea, ctx = c.ctx;
+        ctx.save();
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'right';
+        A_LINES.forEach(function (v) {
+          if (v > y.max) return;
+          var py = y.getPixelForValue(v);
+          ctx.strokeStyle = '#94a3b8';
+          ctx.fillStyle = '#64748b';
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath(); ctx.moveTo(area.left, py); ctx.lineTo(area.right, py); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillText('A = ' + v, area.right - 2, py - 3);
+        });
+        ctx.restore();
+      }
+    };
+    var top = Math.max.apply(null, values.map(function (v) { return v === null ? 0 : v; }).concat([60]));
+    if (chartA) chartA.destroy();
+    chartA = new Chart(document.getElementById('a-canvas'), {
+      type: 'bar',
+      plugins: [linePlugin],
+      data: { labels: labels, datasets: [{
+        data: values, minBarLength: 2, maxBarThickness: 28, barPercentage: 0.85, categoryPercentage: 1,
+        backgroundColor: data.days.map(function (d) { return aColor(d.kriteria); })
+      }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            filter: function (item) { return item.raw !== null; },
+            callbacks: {
+              title: function (items) { return items[0].label + ' UTC'; },
+              label: function (item) { return 'A = ' + item.raw + ' (' + data.days[item.dataIndex].kriteria + ')'; },
+              afterLabel: function (item) { return data.days[item.dataIndex].keterangan || ''; }
+            }
+          }
+        },
+        scales: {
+          y: { min: 0, suggestedMax: top, ticks: { font: { size: 11 } }, title: { display: true, text: 'Indeks A', font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+          x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 },
+            callback: function (v, i) { return i % step === 0 ? labels[i].slice(0, 5) + (data.days.length > 300 ? '/' + labels[i].slice(8) : '') : ''; } } }
+        }
+      }
+    });
+  }
+
+  function renderChart(data) {
+    var labels = [], values = [], meta = [];
+    data.days.forEach(function (d) {
+      d.k.forEach(function (k, i) {
+        labels.push(toDmy(d.tanggal));
+        values.push(k);
+        meta.push({ tanggal: toDmy(d.tanggal), slot: data.slots[i], partial: d.partial.indexOf(i) >= 0, ket: d.keterangan });
+      });
+    });
+    var step = Math.max(1, Math.ceil(data.days.length / (window.innerWidth < 640 ? 5 : 10)));
+    var cfg = {
+      type: 'bar',
+      data: { labels: labels, datasets: [{
+        data: values, minBarLength: 2, barPercentage: 1, categoryPercentage: 1,
+        backgroundColor: values.map(function (k, i) {
+          if (k === null) return 'transparent';
+          return meta[i].partial ? kColor(k) + '80' : kColor(k);
+        })
+      }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            filter: function (item) { return item.raw !== null; },
+            callbacks: {
+              title: function (items) { var m = meta[items[0].dataIndex]; return m.tanggal + ', ' + m.slot + ' UTC'; },
+              label: function (item) { return 'K = ' + item.raw + (meta[item.dataIndex].partial ? ' (data kurang dari 90%)' : ''); },
+              afterLabel: function (item) { return meta[item.dataIndex].ket || ''; }
+            }
+          }
+        },
+        scales: {
+          y: { min: 0, max: 9, ticks: { stepSize: 1, font: { size: 11 } }, title: { display: true, text: 'Indeks K', font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+          x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, font: { size: 10 },
+            callback: function (v, i) { return i % (8 * step) === 0 ? labels[i].slice(0, 5) + (data.days.length > 300 ? '/' + labels[i].slice(8) : '') : ''; } } }
+        }
+      }
+    };
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('k-canvas'), cfg);
+  }
+
+  function load() {
+    var start = toIso(startEl.value), end = toIso(endEl.value);
+    if (!start || !end) { setMsg('Isi tanggal dengan format dd/mm/yyyy, misalnya 11/05/2024.', true); return; }
+    var id = ++requestId;
+    submit.disabled = true;
+    setMsg('Memuat data...');
+    fetch(API + '?start=' + start + '&end=' + end, { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (id !== requestId) return;
+        if (!res.ok) throw new Error(res.j.error || 'Data gagal dimuat.');
+        var data = res.j;
+        if (!data.summary.hari_berdata) {
+          result.hidden = true;
+          setMsg('Tidak ada data indeks K pada periode ini.');
+          return;
+        }
+        setMsg('');
+        result.hidden = false;
+        renderStats(data.summary, data);
+        renderTable(data);
+        renderLegend();
+        return loadChartLib().then(function () {
+          if (id === requestId) { renderChart(data); renderChartA(data); }
+        }, function () {
+          setMsg('Grafik tidak dapat dimuat. Periksa koneksi internet; tabel tetap dapat dibaca.', true);
+          chartReady = null;
+        });
+      })
+      .catch(function (err) {
+        if (id !== requestId) return;
+        result.hidden = true;
+        setMsg(err.message === 'Failed to fetch' ? 'Data gagal dimuat. Periksa koneksi lalu coba lagi.' : err.message, true);
+      })
+      .finally(function () { if (id === requestId) submit.disabled = false; });
+  }
+  form.addEventListener('submit', function (e) { e.preventDefault(); load(); });
+
+  var today = new Date();
+  var from = new Date(today.getTime() - 29 * 86400000);
+  function dmy(d) { return pad(d.getUTCDate()) + '/' + pad(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); }
+  startEl.value = dmy(from);
+  endEl.value = dmy(today);
+  if (location.hash === '#query') select('query');
+})();
+</script>
 
 {% endblock %}
