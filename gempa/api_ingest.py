@@ -2,9 +2,12 @@
 import re
 import hmac
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.http import JsonResponse
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -34,10 +37,26 @@ def _authorised(request) -> bool:
         return False
 
 
+def _clicked_at(request):
+    """Parameter opsional ?clicked_at=<ISO 8601 ber-zona>. Bentuk salah -> SeiscompError."""
+    raw = request.GET.get('clicked_at')
+    if not raw:
+        return None
+    try:
+        value = parse_datetime(raw)
+    except ValueError:
+        value = None
+    if value is None or timezone.is_naive(value):
+        raise SeiscompError(f'clicked_at harus ISO 8601 ber-zona: {raw!r}')
+    if value > timezone.now() + timedelta(minutes=5):
+        raise SeiscompError(f'clicked_at di masa depan: {raw!r}')
+    return value
+
+
 @csrf_exempt
 @require_POST
 def ingest_event(request, region):
-    """POST /api/gempa/ingest/<region>/[?stage=qc] — body = isi mailexportfile.txt.
+    """POST /api/gempa/ingest/<region>/[?stage=qc&clicked_at=...] — body = isi mailexportfile.txt.
 
     Ber-token (Authorization: Bearer ...), idempoten lewat event_id, dan
     otomatis membuat peta GMT karena penyimpanan baris baru memicu signal
@@ -61,7 +80,8 @@ def ingest_event(request, region):
         return JsonResponse({'ok': False, 'error': 'body kosong'}, status=400)
 
     try:
-        result = ingest(region, text, stage=request.GET.get('stage', STAGE_SEND))
+        result = ingest(region, text, stage=request.GET.get('stage', STAGE_SEND),
+                        clicked_at=_clicked_at(request))
     except SeiscompError as exc:
         logger.warning('SeisComp ingest %s ditolak: %s', region, exc)
         return JsonResponse({'ok': False, 'error': str(exc)}, status=400)

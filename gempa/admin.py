@@ -40,7 +40,9 @@ def gmt_image(prefix, tanggal, origin):
     try:
         dt = datetime.strptime(f"{tanggal} {str(origin)[:8]}", "%Y-%m-%d %H:%M:%S")
         base = f"{prefix}_{dt.strftime('%Y-%m-%d_%H%M')}"
-        for s in range(60):
+        # Detik yang persis dulu: setelah relokasi, peta lama pada menit yang sama
+        # tidak boleh menutupi peta baru.
+        for s in (dt.second, *range(60)):
             fn = f"{base}{s:02d}UTC.png"
             if os.path.exists(f"{GMT_UPLOADS}/{fn}"):
                 return fn

@@ -109,9 +109,9 @@ def parse_bulletin(text: str) -> dict:
     return data
 
 
-def _on_duty_now(now) -> list:
-    """Pegawai yang berdinas saat ini. Gagal baca jadwal tidak boleh membuang event."""
-    local = now.astimezone(WIT).replace(tzinfo=None)
+def _on_duty_at(when) -> list:
+    """Pegawai yang berdinas pada `when`. Gagal baca jadwal tidak boleh membuang event."""
+    local = when.astimezone(WIT).replace(tzinfo=None)
     try:
         return staff_on_duty_at([local])[local]
     except Exception:                                          # noqa: BLE001
@@ -119,26 +119,31 @@ def _on_duty_now(now) -> list:
         return []
 
 
-def _record_officers(obj, stage: str, created: bool) -> list:
+def _record_officers(obj, stage: str, created: bool, when) -> list:
     """Catat petugas: Send QC selalu yang terbaru, Send This Data hanya kiriman pertama."""
     if not hasattr(obj, 'petugas_qc'):           # hanya katalog Gempa JAY
         return []
     if stage == STAGE_QC:
-        now = timezone.now()
-        staff = _on_duty_now(now)
+        if obj.qc_at and obj.qc_at > when:       # kiriman tertunda, sudah ada QC lebih baru
+            return []
+        staff = _on_duty_at(when)
         obj.petugas_qc.set(staff)
-        obj.qc_at = now
+        obj.qc_at = when
         obj.save(update_fields=['qc_at'])
     elif created:
-        staff = _on_duty_now(timezone.now())
+        staff = _on_duty_at(when)
         obj.petugas_kirim.set(staff)
     else:
         return []
     return [p.nama for p in staff]
 
 
-def ingest(region: str, text: str, stage: str = STAGE_SEND) -> dict:
-    """Simpan satu event dari bulletin mentah. Kembalikan ringkasan hasilnya."""
+def ingest(region: str, text: str, stage: str = STAGE_SEND, clicked_at=None) -> dict:
+    """Simpan satu event dari bulletin mentah. Kembalikan ringkasan hasilnya.
+
+    `clicked_at` (aware) = waktu tombol ditekan; petugas diambil dari jadwal pada
+    waktu itu, bukan waktu server menerima. Baris baru memakainya sebagai created_at.
+    """
     if region not in INGEST_REGIONS:
         raise SeiscompError(f'Region tidak dikenal: {region!r}')
     if stage not in STAGES:
@@ -171,11 +176,15 @@ def ingest(region: str, text: str, stage: str = STAGE_SEND) -> dict:
             obj.created_at = existing.created_at
             obj.save(update_fields=['created_at'])
 
+    if created and clicked_at:
+        obj.created_at = clicked_at
+        obj.save(update_fields=['created_at'])
+
     if hasattr(obj, 'delta'):
         obj.delta = compute_delta(obj.tanggal, obj.origin, obj.created_at)
         obj.save(update_fields=['delta'])
 
-    officers = _record_officers(obj, stage, created)
+    officers = _record_officers(obj, stage, created, clicked_at or timezone.now())
 
     logger.info('SeisComp ingest %s/%s: %s event_id=%s M%s',
                 region, stage, 'INSERT' if created else 'UPDATE', event_id, obj.magnitudo)

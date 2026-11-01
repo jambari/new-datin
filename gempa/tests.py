@@ -1047,7 +1047,7 @@ class SeiscompOfficerTest(TestCase):
 
     def _ingest(self, staff, stage='send', text=BULLETIN):
         from unittest import mock
-        with mock.patch('gempa.seiscomp._on_duty_now', return_value=staff):
+        with mock.patch('gempa.seiscomp._on_duty_at', return_value=staff):
             return ingest('jay', text, stage=stage)
 
     def _names(self, field, pk):
@@ -1100,6 +1100,125 @@ class SeiscompOfficerTest(TestCase):
             ingest('jay', BULLETIN, stage='lain')
 
 
+class SeiscompBackfillTest(TestCase):
+    """Rencana hanya membaca; penerapan memakai event_id dan bisa diulang."""
+    EID = '20261002193447.000000'
+
+    def setUp(self):
+        from jadwal.models import Pegawai
+        self.a = Pegawai.objects.create(nama='A', nip='a')
+        self.b = Pegawai.objects.create(nama='B', nip='b')
+
+    def _item(self, text=BULLETIN, qc=True):
+        from django.utils import timezone
+        base = timezone.now() - datetime.timedelta(hours=1)
+        return {'event_id': self.EID, 'clicks': 2, 'last_text': text,
+                'first_click': (base - datetime.timedelta(hours=5)).isoformat(),
+                'last_click': base.isoformat(),
+                'last_qc': base.isoformat() if qc else None}
+
+    def _roster(self):
+        from unittest import mock
+        def on_duty(when):
+            from django.utils import timezone
+            return [self.a] if when < timezone.now() - datetime.timedelta(hours=3) else [self.b]
+        return mock.patch('gempa.backfill._on_duty_at', on_duty), mock.patch(
+            'gempa.seiscomp._on_duty_at', on_duty)
+
+    def _apply(self, item, row=None):
+        from gempa.backfill import apply_event, plan_event
+        plan = plan_event(item, row)
+        p1, p2 = self._roster()
+        with p1, p2:
+            apply_event(item, plan)
+        return plan
+
+    def _old_row(self, text=BULLETIN):
+        r = ingest('jay', text)
+        old = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
+        Gempa.objects.filter(pk=r['pk']).update(updated_at=old)
+        return Gempa.objects.get(pk=r['pk'])
+
+    def test_plan_writes_nothing(self):
+        from gempa.backfill import INSERT, plan_event
+        plan = plan_event(self._item())
+        self.assertEqual(plan['action'], INSERT)
+        self.assertFalse(Gempa.objects.exists())
+
+    def test_insert_uses_first_click_and_both_officers(self):
+        item = self._item()
+        self._apply(item)
+        g = Gempa.objects.get(event_id=self.EID)
+        self.assertEqual(g.created_at.isoformat(), item['first_click'])
+        self.assertEqual(g.qc_at.isoformat(), item['last_qc'])
+        self.assertEqual(list(g.petugas_kirim.all()), [self.a])
+        self.assertEqual(list(g.petugas_qc.all()), [self.b])
+
+    def test_update_keeps_row_and_created_at(self):
+        row = self._old_row()
+        created = row.created_at
+        plan = self._apply(self._item(BULLETIN.replace('preferred       3.5', 'preferred       4.4')), row)
+        self.assertEqual(plan['action'], 'update')
+        self.assertEqual(Gempa.objects.filter(event_id=self.EID).count(), 1)
+        g = Gempa.objects.get(event_id=self.EID)
+        self.assertEqual(str(g.magnitudo), '4.4')
+        self.assertEqual(g.created_at, created)
+
+    def test_row_changed_after_last_click_keeps_parameters(self):
+        r = ingest('jay', BULLETIN)
+        row = Gempa.objects.get(pk=r['pk'])
+        plan = self._apply(self._item(BULLETIN.replace('preferred       3.5', 'preferred       4.4')), row)
+        self.assertEqual(plan['action'], 'keep_newer')
+        g = Gempa.objects.get(pk=r['pk'])
+        self.assertEqual(str(g.magnitudo), '3.5')
+        self.assertEqual(list(g.petugas_qc.all()), [self.b])
+
+    def test_second_run_is_no_change(self):
+        from gempa.backfill import plan_event
+        item = self._item(BULLETIN.replace('preferred       3.5', 'preferred       4.4'))
+        self._apply(item, self._old_row())
+        Gempa.objects.update(updated_at=datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc))
+        again = plan_event(item, Gempa.objects.get(event_id=self.EID))
+        self.assertEqual(again['action'], 'no_change')
+
+    def test_wrong_bulletin_is_invalid(self):
+        from gempa.backfill import plan_event
+        item = dict(self._item(), event_id='lain')
+        self.assertEqual(plan_event(item)['action'], 'invalid')
+
+    def test_delayed_qc_does_not_replace_newer_qc(self):
+        from django.utils import timezone
+        now = timezone.now()
+        r = ingest('jay', BULLETIN, stage='qc', clicked_at=now)
+        ingest('jay', BULLETIN, stage='qc', clicked_at=now - datetime.timedelta(hours=1))
+        self.assertEqual(Gempa.objects.get(pk=r['pk']).qc_at, now)
+
+
+class GmtImageLookupTest(TestCase):
+    """Peta untuk origin terbaru menang atas peta lama pada menit yang sama."""
+
+    def _lookup(self, files, origin):
+        import tempfile
+        from unittest import mock
+        from gempa import admin as gempa_admin
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in files:
+                open(os.path.join(tmp, name), 'w').close()
+            with mock.patch.object(gempa_admin, 'GMT_UPLOADS', tmp):
+                return gempa_admin.gmt_image('JAY', '2026-10-31', origin)
+
+    def test_exact_second_beats_older_file(self):
+        files = ['JAY_2026-10-31_165047UTC.png', 'JAY_2026-10-31_165048UTC.png']
+        self.assertEqual(self._lookup(files, '16:50:48'), files[1])
+
+    def test_falls_back_to_same_minute(self):
+        files = ['JAY_2026-10-31_165047UTC.png']
+        self.assertEqual(self._lookup(files, '16:50:48'), files[0])
+
+    def test_other_minute_is_not_used(self):
+        self.assertIsNone(self._lookup(['JAY_2026-10-31_165147UTC.png'], '16:50:48'))
+
+
 @override_settings(SEISCOMP_INGEST_TOKEN='tok-rahasia-123')
 class SeiscompIngestApiTest(TestCase):
     """Endpoint POST /api/gempa/ingest/<region>/."""
@@ -1113,6 +1232,16 @@ class SeiscompIngestApiTest(TestCase):
             headers['HTTP_AUTHORIZATION'] = f'Bearer {token}'
         return self.client.post(url or self.URL, data=body,
                                 content_type=content_type, **headers)
+
+    def test_clicked_at_must_have_a_timezone(self):
+        self.assertEqual(self._post(url=self.URL + '?clicked_at=2026-10-02T10:00:00').status_code, 400)
+
+    def test_clicked_at_sets_created_at_on_new_row(self):
+        from urllib.parse import quote
+        resp = self._post(url=self.URL + '?clicked_at=' + quote('2026-10-02T10:00:00+09:00'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Gempa.objects.get(pk=resp.json()['pk']).created_at.isoformat(),
+                         '2026-10-02T01:00:00+00:00')
 
     def test_requires_a_token(self):
         self.assertEqual(self._post(token=None).status_code, 401)
