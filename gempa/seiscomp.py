@@ -19,7 +19,7 @@ sama dari dua jalur) hanya memperbarui baris yang ada.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
 
 from django.apps import apps
@@ -177,7 +177,8 @@ def ingest(region: str, text: str, stage: str = STAGE_SEND, clicked_at=None) -> 
             obj.save(update_fields=['created_at'])
 
     if created and clicked_at:
-        obj.created_at = clicked_at
+        # compute_delta membuang zona tanpa konversi: harus disimpan sebagai UTC.
+        obj.created_at = clicked_at.astimezone(dt_timezone.utc)
         obj.save(update_fields=['created_at'])
 
     if hasattr(obj, 'delta'):

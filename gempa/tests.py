@@ -1233,6 +1233,12 @@ class SeiscompIngestApiTest(TestCase):
         return self.client.post(url or self.URL, data=body,
                                 content_type=content_type, **headers)
 
+    def test_clicked_at_in_wit_gives_correct_delta(self):
+        from urllib.parse import quote
+        # Origin 19:34:47 UTC, klik 04:36:47 WIT esoknya = 19:36:47 UTC.
+        resp = self._post(url=self.URL + '?clicked_at=' + quote('2026-10-03T04:36:47+09:00'))
+        self.assertEqual(resp.json()['delta'], '00:02:00 ONTIME')
+
     def test_clicked_at_must_have_a_timezone(self):
         self.assertEqual(self._post(url=self.URL + '?clicked_at=2026-10-02T10:00:00').status_code, 400)
 
