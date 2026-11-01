@@ -923,6 +923,22 @@ class KIndexLocalFmiTest(TestCase):
                          '--fill-gaps', '--raw-dir', self.raw, stdout=io.StringIO())
         self.assertTrue(KIndexDaily.objects.get(tanggal=datetime.date(2026, 10, 11)).has_data)
 
+    def test_reader_skips_corrupt_lines_only(self):
+        from .kindex_fmi import read_lemi_raw
+        good = b'2012 11 22 15 20 %02d  34550.89    -71.89 -13634.64  29.13  27.29 A N FL  84\r\n'
+        path = os.path.join(self.raw, '2012 11 22 15 20 00.txt')
+        with open(path, 'wb') as fh:
+            fh.write(good % 0)
+            fh.write(b'2012 11 22 15 \xff\xfe 01  34550.89  -71.89 -13634.64 29.13 27.29 A N FL 84\r\n')
+            fh.write(b'2012 13 45 15 20 02  34550.89  -71.89 -13634.64 29.13 27.29 A N FL 84\r\n')
+            fh.write(b'2012 11 22 25 20 03  34550.89  -71.89 -13634.64 29.13 27.29 A N FL 84\r\n')
+            fh.write(b'\x00\xff garbage\r\n')
+            fh.write(good % 4)
+        t, x, y = read_lemi_raw(path)
+        self.assertEqual(len(t), 2)
+        self.assertEqual(int(t[1] - t[0]), 4)
+        self.assertAlmostEqual(float(x[0]), 34550.89)
+
     def test_empty_excel_row_does_not_erase_filled_day(self):
         day = datetime.date(2026, 4, 2)
         KIndexDaily.objects.create(tanggal=day, k_values=[2] * 8, sumber='lokal')

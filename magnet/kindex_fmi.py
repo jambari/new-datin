@@ -39,15 +39,23 @@ JYP_LONGITUDE = 140.7
 
 def read_lemi_raw(path):
     """Baca berkas mentah LEMI-018 (1 detik): kembalikan (detik UTC sejak epoch, X, Y) dalam nT."""
-    data = np.genfromtxt(path, usecols=range(9), dtype=float, invalid_raise=False)
+    # Berkas lama bisa berisi byte rusak atau tanggal mustahil: buang barisnya, bukan seluruh berkas.
+    with open(path, encoding="latin-1") as fh:
+        data = np.genfromtxt(fh, usecols=range(9), dtype=float, invalid_raise=False)
     if data.size == 0:
         return np.empty(0), np.empty(0), np.empty(0)
     data = np.atleast_2d(data)
     data = data[~np.isnan(data).any(axis=1)]
-    years, months, days, hh, mm, ss = (data[:, i].astype(int) for i in range(6))
-    days_since_epoch = (np.array([datetime.date(y, m, d).toordinal() for y, m, d in zip(years, months, days)])
-                        - datetime.date(1970, 1, 1).toordinal())
-    t = days_since_epoch * 86400 + hh * 3600 + mm * 60 + ss
+    ordinals = np.full(len(data), -1)
+    for i, (y, m, d) in enumerate(data[:, :3].astype(int)):
+        try:
+            ordinals[i] = datetime.date(y, m, d).toordinal()
+        except ValueError:
+            pass
+    hh, mm, ss = (data[:, i].astype(int) for i in range(3, 6))
+    good = (ordinals > 0) & (hh >= 0) & (hh < 24) & (mm >= 0) & (mm < 60) & (ss >= 0) & (ss < 60)
+    data, ordinals, hh, mm, ss = data[good], ordinals[good], hh[good], mm[good], ss[good]
+    t = (ordinals - datetime.date(1970, 1, 1).toordinal()) * 86400 + hh * 3600 + mm * 60 + ss
     return t, data[:, 6], data[:, 7]
 
 
