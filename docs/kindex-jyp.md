@@ -53,7 +53,14 @@ Excel yang ada tidak pernah diganti, dan impor ulang baris Excel kosong tidak me
 Pengisian 1 Nov 2026: kartu CF `D:\Back Up CF Card Lemi-018\2026` di .107 (2 Mei - 1 Nov 2026, 37 hari
 terisi) lalu 26 hari kosong dihitung. Kartu dan berkas PC cocok ±0,004 nT pada 183 hari; K lokal dibanding
 Excel Jan-Sep 2026 (1.688 blok): bias +0,11, 92 % selisih ≤ 1. Salinan kartu di .189: `~/lemi_cf_backup/2026`.
-Masih sebagian karena kartu tidak mencakup Jan-Apr: 20 & 24 Jan, 3 & 4 Feb, 21 Apr 2026.
+Kartu Jan 2025 - Mar 2026 (.105, `D:\\BCKUP 20260502`) ditambahkan kemudian; 21 Apr 2026 tidak ada di kartu mana pun.
+
+## Riwayat 2012-2025
+
+Dihitung 1 Nov 2026 dari arsip `~/lemi_archive/raw` di .189 (salinan data mentah .107 dan .105, ditambah
+kartu CF Okt 2023 - Mar 2026) dan disimpan dengan `sumber='lokal'`; workbook stasiun 2020-2025 hanya
+pembanding. Korelasi dengan Kp 0,54-0,69 per tahun. Blok K >= 7 saat Kp < 4 (21 blok pada 20 hari) dianggap
+artefak dan dikosongkan, dengan catatan di kolom keterangan. Hari tanpa data tidak punya baris.
 
 ## Watchdog program LEMI (PC .105)
 
