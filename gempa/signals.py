@@ -49,8 +49,8 @@ def _region_for(sender):
 def _queue_map(sender, instance, created=False, **kwargs):
     """Queue satu task pembuatan peta untuk event yang BARU dibuat.
 
-    Update tidak memicu render (mahal, dan berkasnya biasanya sudah ada).
-    Untuk menyegarkan peta setelah koreksi koordinat, pakai tombol
+    Update lewat save() biasa tidak memicu render. Send QC memanggil redraw_map()
+    sendiri bila parameter peta berubah; koreksi di admin memakai tombol
     "Buat ulang peta GMT" di halaman press/template.
     """
     if not created:
@@ -85,6 +85,27 @@ def _queue_map(sender, instance, created=False, **kwargs):
 
     transaction.on_commit(_enqueue)
     logger.info('GMT dijadwalkan untuk %s pk=%s (region %s)', sender.__name__, pk, region)
+
+
+def redraw_map(instance):
+    """Queue render ulang (force) setelah parameter event berubah, mis. hasil Send QC."""
+    region = _region_for(type(instance))
+    if _suspended or region is None or not getattr(settings, 'GMT_ENABLED', True):
+        return
+
+    from .tasks import generate_gmt_map_task
+
+    pk = instance.pk
+
+    def _enqueue():
+        # Sama seperti event baru: broker mati tidak boleh menggagalkan penyimpanan.
+        try:
+            generate_gmt_map_task.delay(region, pk, force=True)
+        except Exception as exc:              # noqa: BLE001
+            logger.warning('GMT tidak bisa dijadwalkan ulang untuk %s pk=%s: %s',
+                           type(instance).__name__, pk, exc)
+
+    transaction.on_commit(_enqueue)
 
 
 # Satu receiver per model, dengan dispatch_uid agar tidak terdaftar dua kali.

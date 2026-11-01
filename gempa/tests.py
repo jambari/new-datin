@@ -1194,6 +1194,53 @@ class SeiscompBackfillTest(TestCase):
         self.assertEqual(Gempa.objects.get(pk=r['pk']).qc_at, now)
 
 
+class SendQcMapRedrawTest(TestCase):
+    """Send QC menggambar ulang peta hanya bila parameter peta berubah."""
+    MOVED = BULLETIN.replace('-4.8900', '-4.7000')
+
+    def _ingest(self, text, stage='qc'):
+        from unittest import mock
+        with mock.patch('gempa.tasks.generate_gmt_map_task.delay') as delay:
+            with self.captureOnCommitCallbacks(execute=True):
+                result = ingest('jay', text, stage=stage)
+        return result, delay
+
+    def test_relocation_redraws_with_force(self):
+        first, _ = self._ingest(BULLETIN, stage='send')
+        _, delay = self._ingest(self.MOVED)
+        delay.assert_called_once_with('jay', first['pk'], force=True)
+
+    def test_each_map_field_triggers_redraw(self):
+        self._ingest(BULLETIN, stage='send')
+        for old, new in (('19:34:47', '19:34:49'), ('134.0400', '134.5000'),
+                         ('Depth           91', 'Depth           30'),
+                         ('preferred       3.5', 'preferred       4.0')):
+            _, delay = self._ingest(BULLETIN.replace(old, new))
+            self.assertEqual(delay.call_count, 1, old)
+
+    def test_unchanged_qc_does_not_redraw(self):
+        self._ingest(BULLETIN, stage='send')
+        _, delay = self._ingest(BULLETIN)
+        delay.assert_not_called()
+
+    def test_repeat_send_does_not_force_redraw(self):
+        self._ingest(BULLETIN, stage='send')
+        _, delay = self._ingest(self.MOVED, stage='send')
+        delay.assert_not_called()
+
+    def test_qc_that_creates_a_row_renders_once_without_force(self):
+        result, delay = self._ingest(BULLETIN)
+        delay.assert_called_once_with('jay', result['pk'])
+
+    def test_broker_failure_keeps_the_update(self):
+        from unittest import mock
+        first, _ = self._ingest(BULLETIN, stage='send')
+        with mock.patch('gempa.tasks.generate_gmt_map_task.delay', side_effect=OSError('down')):
+            with self.captureOnCommitCallbacks(execute=True):
+                ingest('jay', self.MOVED, stage='qc')
+        self.assertEqual(Gempa.objects.get(pk=first['pk']).lintang, '-4.7000')
+
+
 class GmtImageLookupTest(TestCase):
     """Peta untuk origin terbaru menang atas peta lama pada menit yang sama."""
 

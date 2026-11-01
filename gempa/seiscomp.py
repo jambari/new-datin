@@ -28,6 +28,7 @@ from django.utils import timezone
 from jadwal.duty import staff_on_duty_at
 
 from .models import compute_delta, nearest_city_description
+from .signals import redraw_map
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,9 @@ STAGE_QC = 'qc'
 STAGES = (STAGE_SEND, STAGE_QC)
 
 WIT = ZoneInfo('Asia/Jayapura')
+
+#: Parameter yang tergambar di peta GMT atau menentukan nama berkasnya.
+MAP_FIELDS = ('tanggal', 'origin', 'lintang', 'bujur', 'magnitudo', 'depth')
 
 
 class SeiscompError(Exception):
@@ -168,13 +172,18 @@ def ingest(region: str, text: str, stage: str = STAGE_SEND, clicked_at=None) -> 
         created = True
     else:
         # created_at = waktu sebar pertama; sinkronisasi tidak boleh menimpanya
-        existing = model.objects.filter(event_id=event_id).only('created_at').first()
+        existing = model.objects.filter(event_id=event_id).first()
         obj, created = model.objects.update_or_create(
             event_id=event_id, defaults=fields,
             create_defaults={**fields, **extra})
         if not created and existing is not None and existing.created_at:
             obj.created_at = existing.created_at
             obj.save(update_fields=['created_at'])
+
+    if stage == STAGE_QC and not created and event_id:
+        obj.refresh_from_db()
+        if any(getattr(obj, f) != getattr(existing, f) for f in MAP_FIELDS):
+            redraw_map(obj)
 
     if created and clicked_at:
         # compute_delta membuang zona tanpa konversi: harus disimpan sebagai UTC.
