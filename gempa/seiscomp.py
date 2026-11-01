@@ -5,7 +5,7 @@ ssh menjalankan `insertgempa.php` -> `manage.py ingest_gempa <region>`. Modul in
 melakukan hal yang sama, tapi lewat POST ber-token sehingga tidak perlu SSH key,
 PHP, maupun shell_exec:
 
-    POST /api/gempa/ingest/<region>/
+    POST /api/gempa/ingest/<region>/[?stage=qc]
     Authorization: Bearer <SEISCOMP_INGEST_TOKEN>
     body: isi mentah mailexportfile.txt
 
@@ -20,8 +20,12 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from django.apps import apps
+from django.utils import timezone
+
+from jadwal.duty import staff_on_duty_at
 
 from .models import compute_delta, nearest_city_description
 
@@ -44,6 +48,13 @@ REGION_EXTRA = {
     'jay': {'sumber': 'angkasa', 'petugas': 'umum', 'type': 'M'},
 }
 DEFAULT_EXTRA = {'type': 'M'}
+
+#: Tombol di scesv: exportevent.sh = send, exportevent_qc.sh = qc.
+STAGE_SEND = 'send'
+STAGE_QC = 'qc'
+STAGES = (STAGE_SEND, STAGE_QC)
+
+WIT = ZoneInfo('Asia/Jayapura')
 
 
 class SeiscompError(Exception):
@@ -98,30 +109,64 @@ def parse_bulletin(text: str) -> dict:
     return data
 
 
-def ingest(region: str, text: str) -> dict:
+def _on_duty_now(now) -> list:
+    """Pegawai yang berdinas saat ini. Gagal baca jadwal tidak boleh membuang event."""
+    local = now.astimezone(WIT).replace(tzinfo=None)
+    try:
+        return staff_on_duty_at([local])[local]
+    except Exception:                                          # noqa: BLE001
+        logger.exception('Jadwal dinas gagal dibaca untuk ingest SeisComp')
+        return []
+
+
+def _record_officers(obj, stage: str, created: bool) -> list:
+    """Catat petugas: Send QC selalu yang terbaru, Send This Data hanya kiriman pertama."""
+    if not hasattr(obj, 'petugas_qc'):           # hanya katalog Gempa JAY
+        return []
+    if stage == STAGE_QC:
+        now = timezone.now()
+        staff = _on_duty_now(now)
+        obj.petugas_qc.set(staff)
+        obj.qc_at = now
+        obj.save(update_fields=['qc_at'])
+    elif created:
+        staff = _on_duty_now(timezone.now())
+        obj.petugas_kirim.set(staff)
+    else:
+        return []
+    return [p.nama for p in staff]
+
+
+def ingest(region: str, text: str, stage: str = STAGE_SEND) -> dict:
     """Simpan satu event dari bulletin mentah. Kembalikan ringkasan hasilnya."""
     if region not in INGEST_REGIONS:
         raise SeiscompError(f'Region tidak dikenal: {region!r}')
+    if stage not in STAGES:
+        raise SeiscompError(f'Stage tidak dikenal: {stage!r}')
     model = apps.get_model('gempa', INGEST_REGIONS[region])
 
     data = parse_bulletin(text)
-    missing = [f for f in REQUIRED_FIELDS if not data.get(f)]
+    # Bukan `not data.get(f)`: kedalaman 0 km (fixed depth) adalah nilai sah.
+    missing = [f for f in REQUIRED_FIELDS if data.get(f) in (None, '')]
     if missing:
         raise SeiscompError(f'Data bulletin kurang lengkap: {missing}')
 
     fields = {f: data[f] for f in REQUIRED_FIELDS}
     fields['ket'] = nearest_city_description(data['lintang'], data['bujur'])
-    fields.update(REGION_EXTRA.get(region, DEFAULT_EXTRA))
+    # Hanya untuk baris baru: kirim ulang setelah QC memperbarui parameter
+    # gempa, bukan sumber/petugas/type yang mungkin sudah dikoreksi di admin.
+    extra = REGION_EXTRA.get(region, DEFAULT_EXTRA)
 
     event_id = data.get('event_id')
     if not event_id:
-        obj = model.objects.create(**fields)
+        obj = model.objects.create(**fields, **extra)
         created = True
     else:
         # created_at = waktu sebar pertama; sinkronisasi tidak boleh menimpanya
         existing = model.objects.filter(event_id=event_id).only('created_at').first()
         obj, created = model.objects.update_or_create(
-            event_id=event_id, defaults=fields)
+            event_id=event_id, defaults=fields,
+            create_defaults={**fields, **extra})
         if not created and existing is not None and existing.created_at:
             obj.created_at = existing.created_at
             obj.save(update_fields=['created_at'])
@@ -130,8 +175,10 @@ def ingest(region: str, text: str) -> dict:
         obj.delta = compute_delta(obj.tanggal, obj.origin, obj.created_at)
         obj.save(update_fields=['delta'])
 
-    logger.info('SeisComp ingest %s: %s event_id=%s M%s',
-                region, 'INSERT' if created else 'UPDATE', event_id, obj.magnitudo)
+    officers = _record_officers(obj, stage, created)
+
+    logger.info('SeisComp ingest %s/%s: %s event_id=%s M%s',
+                region, stage, 'INSERT' if created else 'UPDATE', event_id, obj.magnitudo)
 
     return {
         'region': region,
@@ -145,4 +192,6 @@ def ingest(region: str, text: str) -> dict:
         'depth': obj.depth,
         'ket': fields['ket'],
         'delta': getattr(obj, 'delta', None),
+        'stage': stage,
+        'officers': officers,
     }

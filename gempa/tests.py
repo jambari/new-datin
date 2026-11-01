@@ -976,6 +976,51 @@ class SeiscompIngestTest(TestCase):
         ingest('jay', BULLETIN.replace('preferred       3.5', 'preferred       4.2'))
         self.assertEqual(Gempa.objects.get(pk=first['pk']).created_at, before)
 
+    def test_relocation_updates_same_row_by_event_id(self):
+        """Relokasi setelah QC: baris yang sama, parameter baru."""
+        first = ingest('jay', BULLETIN)
+        relocated = (BULLETIN
+                     .replace('Time            19:34:47', 'Time            19:34:50')
+                     .replace('-4.8900', '-4.7000')
+                     .replace('134.0400', '134.2500')
+                     .replace('Depth           91', 'Depth           30'))
+        second = ingest('jay', relocated)
+        self.assertEqual(second['action'], 'updated')
+        self.assertEqual(second['pk'], first['pk'])
+        obj = Gempa.objects.get(pk=first['pk'])
+        self.assertEqual(obj.origin, '19:34:50')
+        self.assertEqual(obj.lintang, '-4.7000')
+        self.assertEqual(str(obj.bujur), '134.25')
+        self.assertEqual(obj.depth, 30)
+
+    def test_resend_keeps_fields_corrected_in_admin(self):
+        first = ingest('jay', BULLETIN)
+        Gempa.objects.filter(pk=first['pk']).update(petugas='jambari', sumber='bmkg')
+        ingest('jay', BULLETIN.replace('preferred       3.5', 'preferred       4.0'))
+        obj = Gempa.objects.get(pk=first['pk'])
+        self.assertEqual((obj.petugas, obj.sumber), ('jambari', 'bmkg'))
+        self.assertEqual(str(obj.magnitudo), '4.0')
+
+    def test_zero_depth_is_accepted(self):
+        """Depth 0 km (fixed depth) sah, bukan 'kurang lengkap'."""
+        result = ingest('jay', BULLETIN.replace('Depth           91', 'Depth           0'))
+        self.assertEqual(result['depth'], 0)
+
+    def test_parses_real_scbulletin_layout(self):
+        data = parse_bulletin(
+            'Event:\n    Public ID              bmg2026visy\n'
+            'Origin:\n    Date                   2026-10-31\n'
+            '    Time                   14:57:14.5  +/-    0.3 s\n'
+            '    Latitude                -3.35 deg  +/-      3 km\n'
+            '    Longitude              135.50 deg  +/-      2 km\n'
+            '    Depth                      30 km   +/-    4 km\n'
+            '    Residual RMS             1.37 s\n'
+            '    M         3.88            7 preferred  \n')
+        self.assertEqual(data['event_id'], 'bmg2026visy')
+        self.assertEqual((data['origin'], data['lintang'], data['bujur'], data['depth']),
+                         ('14:57:14', '-3.35', '135.50', 30))
+        self.assertEqual(data['magnitudo'], 3.9)
+
     def test_region_maps_to_the_right_model(self):
         expected = {'jay': 'Gempa', 'balai': 'Balaigempa', 'nabire': 'Gempanabire',
                     'sorong': 'Gempasorong', 'nganjuk': 'Gempanganjuk'}
@@ -989,6 +1034,70 @@ class SeiscompIngestTest(TestCase):
     def test_unknown_region_is_rejected(self):
         with self.assertRaises(SeiscompError):
             ingest('bandung', BULLETIN)
+
+
+class SeiscompOfficerTest(TestCase):
+    """Petugas kirim pertama dan petugas QC dicatat terpisah dari jadwal dinas."""
+
+    def setUp(self):
+        from jadwal.models import Pegawai
+        self.first = Pegawai.objects.create(nama='Petugas Satu', nip='1')
+        self.next = Pegawai.objects.create(nama='Petugas Dua', nip='2')
+        self.third = Pegawai.objects.create(nama='Petugas Tiga', nip='3')
+
+    def _ingest(self, staff, stage='send', text=BULLETIN):
+        from unittest import mock
+        with mock.patch('gempa.seiscomp._on_duty_now', return_value=staff):
+            return ingest('jay', text, stage=stage)
+
+    def _names(self, field, pk):
+        return set(getattr(Gempa.objects.get(pk=pk), field).values_list('nip', flat=True))
+
+    def test_first_send_records_everyone_on_duty(self):
+        r = self._ingest([self.first, self.third])
+        self.assertEqual(self._names('petugas_kirim', r['pk']), {'1', '3'})
+        self.assertEqual(self._names('petugas_qc', r['pk']), set())
+        self.assertIsNone(Gempa.objects.get(pk=r['pk']).qc_at)
+
+    def test_qc_records_next_shift_and_keeps_first_officer(self):
+        r = self._ingest([self.first])
+        self._ingest([self.next], stage='qc')
+        self.assertEqual(self._names('petugas_kirim', r['pk']), {'1'})
+        self.assertEqual(self._names('petugas_qc', r['pk']), {'2'})
+        self.assertIsNotNone(Gempa.objects.get(pk=r['pk']).qc_at)
+
+    def test_latest_qc_wins(self):
+        r = self._ingest([self.first])
+        self._ingest([self.next], stage='qc')
+        self._ingest([self.third], stage='qc')
+        self.assertEqual(self._names('petugas_qc', r['pk']), {'3'})
+
+    def test_repeat_send_does_not_change_first_officer(self):
+        r = self._ingest([self.first])
+        self._ingest([self.next])
+        self.assertEqual(self._names('petugas_kirim', r['pk']), {'1'})
+        self.assertEqual(self._names('petugas_qc', r['pk']), set())
+
+    def test_qc_without_first_send_leaves_first_officer_empty(self):
+        r = self._ingest([self.next], stage='qc')
+        self.assertEqual(r['action'], 'inserted')
+        self.assertEqual(self._names('petugas_kirim', r['pk']), set())
+        self.assertEqual(self._names('petugas_qc', r['pk']), {'2'})
+
+    def test_roster_failure_still_saves_event(self):
+        from unittest import mock
+        with mock.patch('gempa.seiscomp.staff_on_duty_at', side_effect=RuntimeError('x')):
+            r = ingest('jay', BULLETIN)
+        self.assertEqual(r['officers'], [])
+        self.assertTrue(Gempa.objects.filter(pk=r['pk']).exists())
+
+    def test_other_regions_are_unaffected(self):
+        r = ingest('sorong', BULLETIN, stage='qc')
+        self.assertEqual(r['officers'], [])
+
+    def test_unknown_stage_is_rejected(self):
+        with self.assertRaises(SeiscompError):
+            ingest('jay', BULLETIN, stage='lain')
 
 
 @override_settings(SEISCOMP_INGEST_TOKEN='tok-rahasia-123')

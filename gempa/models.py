@@ -116,6 +116,15 @@ class Gempa(models.Model):
     updated_at = models.DateTimeField(auto_now=True, null=True)
     delta = models.CharField(max_length=191, blank=True, null=True)
 
+    # Dari jadwal dinas saat tombol ditekan di SeisComP (gempa/seiscomp.py).
+    petugas_kirim = models.ManyToManyField(
+        'jadwal.Pegawai', blank=True, related_name='gempa_dikirim',
+        verbose_name='Petugas Send This Data')
+    petugas_qc = models.ManyToManyField(
+        'jadwal.Pegawai', blank=True, related_name='gempa_diqc',
+        verbose_name='Petugas Send QC')
+    qc_at = models.DateTimeField('Waktu Send QC terakhir', null=True, blank=True)
+
     class Meta:
         db_table = 'katalog_gempas'
         managed = True

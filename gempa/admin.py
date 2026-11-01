@@ -434,7 +434,11 @@ class GempaAdmin(GmtMapMixin, TopFilterMixin, ExportMixin, VersionAdmin):
         ('Administrasi', {
             'fields': ('sumber', 'petugas', 'created_at')
         }),
+        ('Petugas SeisComp', {
+            'fields': ('petugas_kirim', 'petugas_qc', 'qc_at')
+        }),
     )
+    filter_horizontal = ('petugas_kirim', 'petugas_qc')
 
     def get_urls(self):
         urls = super().get_urls()

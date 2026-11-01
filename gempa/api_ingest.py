@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .seiscomp import INGEST_REGIONS, SeiscompError, ingest
+from .seiscomp import INGEST_REGIONS, STAGE_SEND, SeiscompError, ingest
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def _authorised(request) -> bool:
 @csrf_exempt
 @require_POST
 def ingest_event(request, region):
-    """POST /api/gempa/ingest/<region>/ — body = isi mailexportfile.txt.
+    """POST /api/gempa/ingest/<region>/[?stage=qc] — body = isi mailexportfile.txt.
 
     Ber-token (Authorization: Bearer ...), idempoten lewat event_id, dan
     otomatis membuat peta GMT karena penyimpanan baris baru memicu signal
@@ -61,7 +61,7 @@ def ingest_event(request, region):
         return JsonResponse({'ok': False, 'error': 'body kosong'}, status=400)
 
     try:
-        result = ingest(region, text)
+        result = ingest(region, text, stage=request.GET.get('stage', STAGE_SEND))
     except SeiscompError as exc:
         logger.warning('SeisComp ingest %s ditolak: %s', region, exc)
         return JsonResponse({'ok': False, 'error': str(exc)}, status=400)
