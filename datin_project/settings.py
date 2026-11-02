@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'monitoring_pm',
     'kualitas_udara.apps.KualitasUdaraConfig',
     'reporting.apps.ReportingConfig',
+    'berita.apps.BeritaConfig',
 ]
 
 SEEDLINK_HOST = '202.90.199.206'   # Accelerometer SeedLink
@@ -440,6 +441,9 @@ WAVESIM_WORKER_TOKEN    = config('WAVESIM_WORKER_TOKEN',    default='')  # SPECF
 # SEO / Analytics
 GA_MEASUREMENT_ID = config('GA_MEASUREMENT_ID', default='')
 SITE_URL          = config('SITE_URL', default='http://36.91.166.189')
+
+# Komentar Facebook pada halaman berita (opsional; untuk moderasi).
+FACEBOOK_APP_ID   = config('FACEBOOK_APP_ID', default='')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

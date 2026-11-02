@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block seo_title %}Hapus Berita · Datin App{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-xl">
+        <div class="rounded-xl bg-white p-6 shadow">
+          <h1 class="text-2xl font-bold text-gray-800">Hapus Berita</h1>
+          <p class="mt-2 text-sm text-gray-600">
+            Berita berikut akan dihapus permanen, termasuk gambar sampulnya:
+          </p>
+          <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
+            <div class="font-semibold text-red-800">{{ berita.title }}</div>
+            <div class="mt-1 text-xs text-red-600">
+              {{ berita.author_name }} &middot;
+              {% if berita.published_at %}{{ berita.published_at|date:"d M Y H:i" }}{% else %}belum terbit{% endif %}
+            </div>
+          </div>
+          <form method="post" class="mt-6 flex items-center gap-3">
+            {% csrf_token %}
+            <button type="submit"
+                    class="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-red-700">
+              Ya, hapus
+            </button>
+            <a href="{% url 'berita:manage' %}" class="text-sm font-semibold text-gray-500 hover:text-gray-800">Batal</a>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

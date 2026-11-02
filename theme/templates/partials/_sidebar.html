@@ -188,6 +188,39 @@
         </ul>
       </li>
 
+      <!-- BERITA -->
+      <li>
+        <button type="button" onclick="document.getElementById('dropdown-berita').classList.toggle('hidden')"
+          class="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 rounded-lg">
+          <span style="display:flex;align-items:center;gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 002 2zM9 8h6M9 12h6M9 16h4" />
+            </svg>
+            Berita
+          </span>
+          <span class="text-gray-400 text-xs">&#9660;</span>
+        </button>
+        <ul id="dropdown-berita" class="hidden border-l border-gray-600 ml-4 pl-2 mt-1 mb-1">
+          <li>
+            <a href="{% url 'berita:list' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Berita Publik
+            </a>
+          </li>
+          {% if request.user.is_authenticated %}
+          <li>
+            <a href="{% url 'berita:manage' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Kelola Berita
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'berita:create' %}" class="block px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white rounded">
+              Tulis Berita
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </li>
+
       <!-- DIREKTORAT GEMPA TSUNAMI -->
       <li>
         <button type="button" onclick="document.getElementById('dropdown-gempa-tsunami').classList.toggle('hidden')"

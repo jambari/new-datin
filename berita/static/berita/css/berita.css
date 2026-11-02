@@ -1,0 +1,173 @@
+/* ── Berita publik ─────────────────────────────────────────────────────── */
+.bn-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 3rem 0 2rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.bn-hero h1 { font-size: 1.75rem; font-weight: 800; color: #f1f5f9; margin: 0 0 0.5rem; }
+.bn-hero p  { color: #94a3b8; font-size: 0.85rem; max-width: 620px; margin: 0 auto; }
+
+.bn-wrap { max-width: 1080px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+
+.bn-search { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+.bn-search input {
+  flex: 1; padding: 0.55rem 0.85rem; border-radius: 8px;
+  border: 1px solid var(--border-color); background: var(--card-bg);
+  color: var(--text-primary); font-size: 0.85rem;
+}
+.bn-search button {
+  padding: 0.55rem 1.1rem; border: none; border-radius: 8px; cursor: pointer;
+  background: #fbbf24; color: #0f172a; font-weight: 700; font-size: 0.82rem;
+}
+
+.bn-grid {
+  display: grid; gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.bn-card {
+  background: var(--card-bg); border: 1px solid var(--border-color);
+  border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.bn-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+.bn-card .bn-thumb {
+  display: block; aspect-ratio: 16 / 9; overflow: hidden;
+  background: rgba(148, 163, 184, 0.12);
+}
+.bn-card .bn-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bn-card .bn-thumb-empty {
+  width: 100%; height: 100%; display: flex; align-items: center;
+  justify-content: center; font-size: 2rem; color: #64748b;
+}
+.bn-card .bn-body { padding: 1rem 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+.bn-card h2 { font-size: 1rem; font-weight: 700; line-height: 1.4; margin: 0; }
+.bn-card h2 a { color: var(--text-primary); text-decoration: none; }
+.bn-card h2 a:hover { color: #b45309; }
+[data-theme="dark"] .bn-card h2 a:hover { color: #fbbf24; }
+.bn-meta { font-size: 0.68rem; color: var(--text-secondary); }
+.bn-excerpt {
+  font-size: 0.78rem; line-height: 1.55; color: var(--text-secondary);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bn-empty { text-align: center; padding: 3rem 0; color: #64748b; }
+
+.bn-pagination { margin-top: 2rem; display: flex; justify-content: center; gap: 0.3rem; }
+.bn-pagination a, .bn-pagination span {
+  padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem;
+  font-weight: 600; text-decoration: none;
+  background: rgba(148, 163, 184, 0.16); color: var(--text-secondary);
+}
+.bn-pagination a:hover { background: rgba(251, 191, 36, 0.18); color: #b45309; }
+.bn-pagination .current { background: #fbbf24; color: #0f172a; }
+
+/* ── Detail ────────────────────────────────────────────────────────────── */
+.bn-detail-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 2.5rem 0 1.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.bn-detail-hero .bn-wrap { padding-top: 0; padding-bottom: 0; }
+.bn-detail-hero .breadcrumb { font-size: 0.72rem; color: #64748b; margin-bottom: 0.6rem; }
+.bn-detail-hero .breadcrumb a { color: #60a5fa; text-decoration: none; }
+.bn-detail-hero .breadcrumb a:hover { text-decoration: underline; }
+.bn-detail-hero h1 {
+  font-size: 1.5rem; font-weight: 800; color: #f1f5f9;
+  line-height: 1.35; margin: 0 0 0.5rem;
+}
+.bn-detail-hero .bn-meta { color: #94a3b8; }
+
+.bn-detail-layout {
+  max-width: 1080px; margin: 0 auto; padding: 2rem 1rem 3rem;
+  display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;
+}
+.bn-detail-main { flex: 1; min-width: 300px; }
+.bn-detail-main .bn-cover {
+  width: 100%; height: auto; border-radius: 10px; margin-bottom: 1.25rem;
+  border: 1px solid var(--border-color);
+}
+.bn-content-card {
+  background: var(--card-bg); border: 1px solid var(--border-color);
+  border-radius: 12px; padding: 1.5rem 2rem;
+}
+.bn-content { font-size: 0.9rem; line-height: 1.85; color: var(--text-primary); }
+.bn-content p { margin: 0 0 1rem; }
+.bn-content h1, .bn-content h2, .bn-content h3, .bn-content h4 {
+  color: var(--text-primary); line-height: 1.35; margin: 1.5rem 0 0.6rem;
+}
+.bn-content h2 { font-size: 1.25rem; }
+.bn-content h3 { font-size: 1.08rem; }
+.bn-content ul, .bn-content ol { margin: 0 0 1rem 1.4rem; padding: 0; }
+.bn-content li { margin-bottom: 0.35rem; }
+.bn-content blockquote {
+  margin: 1rem 0; padding: 0.6rem 1rem; border-left: 4px solid #fbbf24;
+  background: rgba(251, 191, 36, 0.08); color: var(--text-secondary);
+}
+.bn-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5rem 0; }
+.bn-content a { color: #2563eb; }
+[data-theme="dark"] .bn-content a { color: #60a5fa; }
+
+.bn-detail-side { width: 300px; flex-shrink: 0; }
+.bn-detail-side h4 {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: #b45309; margin: 0 0 0.75rem;
+}
+[data-theme="dark"] .bn-detail-side h4 { color: #fbbf24; }
+.bn-side-item {
+  display: flex; gap: 0.6rem; align-items: flex-start;
+  padding: 0.5rem 0; border-bottom: 1px solid var(--border-color);
+}
+.bn-side-item:last-of-type { border-bottom: none; }
+.bn-side-item img { width: 74px; height: 56px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+.bn-side-item .bns-title { font-size: 0.74rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+.bn-side-item .bns-meta { font-size: 0.62rem; color: var(--text-secondary); }
+.bn-side-item a { text-decoration: none; }
+
+/* ── Bagikan ───────────────────────────────────────────────────────────── */
+.bn-share { margin-top: 1.5rem; }
+.bn-share h4 {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-secondary); margin: 0 0 0.6rem;
+}
+.bn-share-btns { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.bn-share-btns a, .bn-share-btns button {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0.4rem 0.75rem; border-radius: 7px; border: none; cursor: pointer;
+  font-size: 0.72rem; font-weight: 700; color: #fff; text-decoration: none;
+  line-height: 1;
+}
+.bn-share-btns .sh-fb { background: #1877f2; }
+.bn-share-btns .sh-x  { background: #0f172a; }
+.bn-share-btns .sh-wa { background: #25d366; }
+.bn-share-btns .sh-tg { background: #229ed9; }
+.bn-share-btns .sh-li { background: #0a66c2; }
+.bn-share-btns .sh-cp { background: #64748b; }
+.bn-share-btns a:hover, .bn-share-btns button:hover { opacity: 0.88; }
+
+/* ── Komentar Facebook ─────────────────────────────────────────────────── */
+.bn-comments { margin-top: 2rem; }
+.bn-comments h4 {
+  font-size: 0.8rem; font-weight: 700; color: var(--text-primary);
+  margin: 0 0 0.75rem;
+}
+.bn-comments .fb-comments { width: 100%; }
+
+@media (max-width: 768px) {
+  .bn-detail-layout { flex-direction: column; }
+  .bn-detail-side { width: 100%; }
+  .bn-content-card { padding: 1.1rem 1.2rem; }
+  .bn-detail-hero h1 { font-size: 1.2rem; }
+}
+
+/* ── Editor & kelola (staff) ───────────────────────────────────────────── */
+.berita-input {
+  width: 100%; padding: 0.5rem 0.7rem; border-radius: 8px;
+  border: 1px solid #d1d5db; background: #fff; color: #111827;
+  font-size: 0.875rem; box-sizing: border-box;
+}
+.berita-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+#quill-editor { min-height: 380px; background: #fff; border-radius: 0 0 8px 8px; }
+#quill-editor .ql-editor { min-height: 380px; font-size: 0.95rem; }
+#quill-editor .ql-editor img { max-width: 100%; }
+.ql-toolbar.ql-snow { border-radius: 8px 8px 0 0; border-color: #d1d5db; background: #f8fafc; }
+.ql-container.ql-snow { border-color: #d1d5db; font-family: inherit; }

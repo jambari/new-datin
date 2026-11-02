@@ -28,12 +28,15 @@ from gempa import views as gempa_views
 from gempa.sites import gempa_admin_site
 from django.conf import settings
 from django.conf.urls.static import static
-from theme.sitemaps import StaticViewSitemap, ShakemapSitemap, GempaMerusakSitemap
+from theme.sitemaps import (
+    StaticViewSitemap, ShakemapSitemap, GempaMerusakSitemap, BeritaSitemap,
+)
 
 sitemaps = {
     'static':   StaticViewSitemap,
     'shakemap': ShakemapSitemap,
     'gempa-merusak': GempaMerusakSitemap,
+    'berita':   BeritaSitemap,
 }
 
 urlpatterns = [
@@ -47,6 +50,7 @@ urlpatterns = [
     path('', include('gempa.urls')),
     path('api/gempa/', include('gempa.api_urls')),
     path('post-login/', gempa_views.post_login_redirect, name='post_login'),
+    path('', include('berita.urls')),
     path('', include('theme.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path("__reload__/", include("django_browser_reload.urls")), 

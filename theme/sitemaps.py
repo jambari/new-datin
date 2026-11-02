@@ -2,6 +2,7 @@ from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 from repository.models import GempaMemusak
 from repository.models import ShakemapEvent
+from berita.models import Berita
 
 
 class StaticViewSitemap(Sitemap):
@@ -55,3 +56,18 @@ class ShakemapSitemap(Sitemap):
 
     def lastmod(self, obj):
         return obj.event_time
+
+
+class BeritaSitemap(Sitemap):
+    priority = 0.7
+    changefreq = 'weekly'
+    protocol = 'https'
+
+    def items(self):
+        return Berita.objects.published().order_by('-published_at')
+
+    def location(self, obj):
+        return obj.get_absolute_url()
+
+    def lastmod(self, obj):
+        return obj.updated_at

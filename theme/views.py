@@ -197,6 +197,7 @@ def landing(request):
     from arsip.models import Album
     from qc_review.models import Event as QCEvent
     from repository.models import FeltEarthquake, ShakemapEvent
+    from berita.models import Berita
     albums = list(_build_album_cover(
         Album.objects.select_related('cover_photo')
         .annotate(foto_count=Count('fotos'))
@@ -229,12 +230,17 @@ def landing(request):
         event_time__lte=timezone.now(),
     ).order_by('-event_time').first()
 
+    latest_berita = list(
+        Berita.objects.published().select_related('author')[:3]
+    )
+
     return render(request, 'landing.html', {
         'albums': albums,
         'events_json': events_json,
         'felt_count': felt_count,
         'latest_felt': latest_felt,
         'latest_shakemap': latest_shakemap,
+        'latest_berita': latest_berita,
     })
 
 

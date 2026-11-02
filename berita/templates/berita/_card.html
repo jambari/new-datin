@@ -1,0 +1,15 @@
+{% load static %}
+<a class="bn-thumb" href="{{ b.get_absolute_url }}">
+  {% if b.cover %}
+    <img src="{{ b.cover.url }}" alt="{{ b.title }}" loading="lazy">
+  {% else %}
+    <span class="bn-thumb-empty">📰</span>
+  {% endif %}
+</a>
+<div class="bn-body">
+  <div class="bn-meta">
+    {{ b.published_at|default:b.created_at|date:"d M Y, H:i" }} WIT &middot; {{ b.author_name }}
+  </div>
+  <h2><a href="{{ b.get_absolute_url }}">{{ b.title }}</a></h2>
+  <p class="bn-excerpt">{{ b.excerpt|default:b.content|striptags|truncatewords:28 }}</p>
+</div>

@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block site_header %}{% include 'partials/_landing_header.html' with pn_spacer=1 %}{% endblock %}
+{% load static %}
+
+{% block seo_title %}{{ berita.title }} · Berita BMKG Jayapura{% endblock %}
+{% block meta_description %}{{ berita.excerpt|default:berita.content|striptags|truncatewords:30 }}{% endblock %}
+{% block meta_keywords %}berita BMKG Jayapura, {{ berita.title }}{% endblock %}
+{% block og_title %}{{ berita.title }}{% endblock %}
+{% block og_description %}{{ berita.excerpt|default:berita.content|striptags|truncatewords:30 }}{% endblock %}
+{% block canonical_url %}{{ share_url }}{% endblock %}
+{% block og_image %}{% if berita.cover %}{{ request.scheme }}://{{ request.get_host }}{{ berita.cover.url }}{% else %}{{ SITE_URL }}{% static 'repository/images/logo-bmkg.png' %}{% endif %}{% endblock %}
+{% block twitter_image %}{% if berita.cover %}{{ request.scheme }}://{{ request.get_host }}{{ berita.cover.url }}{% else %}{{ SITE_URL }}{% static 'repository/images/logo-bmkg.png' %}{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'berita/css/berita.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="bn-detail-hero">
+  <div class="bn-wrap">
+    <div class="breadcrumb">
+      <a href="{% url 'landing' %}">Beranda</a> &raquo;
+      <a href="{% url 'berita:list' %}">Berita</a> &raquo;
+      {{ berita.title|truncatechars:70 }}
+    </div>
+    <h1>{{ berita.title }}</h1>
+    <div class="bn-meta">
+      {{ berita.published_at|default:berita.created_at|date:"l, d F Y H:i" }} WIT
+      &middot; {{ berita.author_name }}
+      &middot; {{ berita.views }} kali dilihat
+    </div>
+    {% if not berita.is_published %}
+      <div style="margin-top:0.6rem;display:inline-block;padding:0.25rem 0.6rem;border-radius:6px;background:#fbbf24;color:#0f172a;font-size:0.7rem;font-weight:800;">
+        PRATINJAU DRAF — belum tampil untuk publik
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="bn-detail-layout">
+  <div class="bn-detail-main">
+    {% if berita.cover %}
+      <img class="bn-cover" src="{{ berita.cover.url }}" alt="{{ berita.title }}">
+    {% endif %}
+
+    <div class="bn-content-card">
+      <div class="bn-content">
+        {{ berita.content|safe }}
+      </div>
+
+      <div class="bn-share">
+        <h4>Bagikan artikel ini</h4>
+        <div class="bn-share-btns">
+          <a class="sh-fb" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}"
+             target="_blank" rel="noopener noreferrer">Facebook</a>
+          <a class="sh-x" href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&amp;text={{ berita.title|urlencode }}"
+             target="_blank" rel="noopener noreferrer">X / Twitter</a>
+          <a class="sh-wa" href="https://wa.me/?text={{ berita.title|urlencode }}%20{{ share_url|urlencode }}"
+             target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          <a class="sh-tg" href="https://t.me/share/url?url={{ share_url|urlencode }}&amp;text={{ berita.title|urlencode }}"
+             target="_blank" rel="noopener noreferrer">Telegram</a>
+          <a class="sh-li" href="https://www.linkedin.com/sharing/share-offsite/?url={{ share_url|urlencode }}"
+             target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <button type="button" class="sh-cp" id="bnCopyLink" data-copy="{{ share_url }}">Salin tautan</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bn-comments">
+      <h4>Komentar</h4>
+      <div id="fb-root"></div>
+      <script async defer crossorigin="anonymous"
+        src="https://connect.facebook.net/id_ID/sdk.js#xfbml=1&amp;version=v19.0{% if facebook_app_id %}&amp;appId={{ facebook_app_id }}{% endif %}"></script>
+      <div class="fb-comments" data-href="{{ share_url }}" data-width="100%"
+           data-numposts="5" data-order="social" data-lazy="true"></div>
+      <noscript>
+        Aktifkan JavaScript untuk melihat dan menulis komentar dengan akun Facebook.
+      </noscript>
+    </div>
+  </div>
+
+  <aside class="bn-detail-side">
+    <h4>Berita Lainnya</h4>
+    {% for l in latest %}
+    <div class="bn-side-item">
+      <a href="{{ l.get_absolute_url }}" style="display:flex;gap:0.6rem;align-items:flex-start;">
+        {% if l.cover %}
+          <img src="{{ l.cover.url }}" alt="{{ l.title }}" loading="lazy">
+        {% else %}
+          <div style="width:74px;height:56px;background:rgba(148,163,184,0.16);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#64748b;flex-shrink:0;">📰</div>
+        {% endif %}
+        <div>
+          <div class="bns-title">{{ l.title }}</div>
+          <div class="bns-meta">{{ l.published_at|date:"d M Y" }}</div>
+        </div>
+      </a>
+    </div>
+    {% empty %}
+      <div class="bn-meta">Belum ada berita lain.</div>
+    {% endfor %}
+    <div style="margin-top:1rem;">
+      <a href="{% url 'berita:list' %}" style="color:var(--nav-hover-fg,#60a5fa);font-size:0.72rem;text-decoration:none;">&larr; Semua Berita</a>
+    </div>
+    {% if request.user.is_authenticated %}
+      <div style="margin-top:0.75rem;">
+        <a href="{% url 'berita:manage' %}" style="color:var(--nav-hover-fg,#60a5fa);font-size:0.72rem;text-decoration:none;">Kelola berita →</a>
+      </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var btn = document.getElementById('bnCopyLink');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var url = btn.getAttribute('data-copy');
+    function done() {
+      btn.textContent = 'Tautan disalin ✓';
+      setTimeout(function () { btn.textContent = 'Salin tautan'; }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () { window.prompt('Salin tautan:', url); });
+    } else {
+      window.prompt('Salin tautan:', url);
+    }
+  });
+})();
+</script>
+{% endblock %}

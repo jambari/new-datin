@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block seo_title %}Kelola Berita · Datin App{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-6xl">
+        <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-800">Kelola Berita</h1>
+            <p class="mt-1 text-sm text-gray-500">
+              {{ published_count }} terbit &middot; {{ draft_count }} draf.
+              Penulis hanya bisa mengubah beritanya sendiri.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'berita:list' %}" target="_blank"
+               class="inline-flex items-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-gray-700">
+              Lihat Publik
+            </a>
+            <a href="{% url 'berita:create' %}"
+               class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700">
+              + Tulis Berita
+            </a>
+          </div>
+        </div>
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="mb-4 rounded-lg border px-4 py-3 text-sm
+                        {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-700{% else %}border-green-200 bg-green-50 text-green-700{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="mb-6 rounded-xl bg-white p-4 shadow">
+          <form method="get" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div class="w-full sm:max-w-xs">
+              <label for="q" class="mb-1 block text-xs font-semibold text-gray-600">Cari</label>
+              <input id="q" type="search" name="q" value="{{ query }}" placeholder="Judul atau ringkasan…"
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none">
+            </div>
+            <div class="w-full sm:max-w-[180px]">
+              <label for="status" class="mb-1 block text-xs font-semibold text-gray-600">Status</label>
+              <select id="status" name="status"
+                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900">
+                <option value="">Semua</option>
+                <option value="published"{% if status == 'published' %} selected{% endif %}>Terbit</option>
+                <option value="draft"{% if status == 'draft' %} selected{% endif %}>Draf</option>
+              </select>
+            </div>
+            <button type="submit" class="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900">
+              Filter
+            </button>
+            {% if query or status %}
+              <a href="{% url 'berita:manage' %}" class="px-2 py-2 text-sm text-red-600 hover:underline">Reset</a>
+            {% endif %}
+          </form>
+        </div>
+
+        <div class="overflow-hidden rounded-xl bg-white shadow">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold text-gray-600">Judul</th>
+                  <th class="px-4 py-3 text-left font-semibold text-gray-600">Penulis</th>
+                  <th class="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
+                  <th class="px-4 py-3 text-left font-semibold text-gray-600">Terbit</th>
+                  <th class="px-4 py-3 text-right font-semibold text-gray-600">Dilihat</th>
+                  <th class="px-4 py-3 text-right font-semibold text-gray-600">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                {% for b in items %}
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3">
+                    <a href="{{ b.get_absolute_url }}" target="_blank" class="font-semibold text-gray-800 hover:text-indigo-600">
+                      {{ b.title }}
+                    </a>
+                    <div class="text-xs text-gray-400">/berita/{{ b.slug }}/</div>
+                  </td>
+                  <td class="px-4 py-3 text-gray-600">{{ b.author_name }}</td>
+                  <td class="px-4 py-3">
+                    {% if b.status == 'published' %}
+                      <span class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">Terbit</span>
+                    {% else %}
+                      <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Draf</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3 text-gray-600">
+                    {% if b.published_at %}{{ b.published_at|date:"d M Y H:i" }}{% else %}—{% endif %}
+                  </td>
+                  <td class="px-4 py-3 text-right text-gray-600">{{ b.views }}</td>
+                  <td class="px-4 py-3 text-right">
+                    {% if b.user_can_edit %}
+                      <a href="{% url 'berita:update' b.slug %}"
+                         class="mr-2 text-xs font-semibold text-indigo-600 hover:underline">Ubah</a>
+                      <a href="{% url 'berita:delete' b.slug %}"
+                         class="text-xs font-semibold text-red-600 hover:underline">Hapus</a>
+                    {% else %}
+                      <span class="text-xs text-gray-400">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="px-4 py-10 text-center text-gray-500">
+                    Belum ada berita. Klik “Tulis Berita” untuk memulai.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="mt-6 flex justify-center gap-1">
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if status %}&amp;status={{ status }}{% endif %}{% if query %}&amp;q={{ query|urlencode }}{% endif %}"
+               class="rounded bg-white px-3 py-1.5 text-sm text-gray-700 shadow hover:bg-gray-50">&laquo;</a>
+          {% endif %}
+          {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+              <span class="rounded bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white">{{ i }}</span>
+            {% elif i > page_obj.number|add:"-3" and i < page_obj.number|add:"3" %}
+              <a href="?page={{ i }}{% if status %}&amp;status={{ status }}{% endif %}{% if query %}&amp;q={{ query|urlencode }}{% endif %}"
+                 class="rounded bg-white px-3 py-1.5 text-sm text-gray-700 shadow hover:bg-gray-50">{{ i }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if status %}&amp;status={{ status }}{% endif %}{% if query %}&amp;q={{ query|urlencode }}{% endif %}"
+               class="rounded bg-white px-3 py-1.5 text-sm text-gray-700 shadow hover:bg-gray-50">&raquo;</a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

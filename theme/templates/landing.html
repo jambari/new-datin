@@ -105,9 +105,10 @@
   .dt-sun-lbl  { font-size: 0.56rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
   .dt-sun-val  { font-size: 0.72rem; font-weight: 700; color: #fbbf24; font-family: 'JetBrains Mono', monospace; }
 
-  /* Shared card style for both left panels */
+  /* Shared card style for left panels */
   #info-panel,
-  #shakemap-panel {
+  #shakemap-panel,
+  #berita-panel {
     background: rgba(10, 20, 40, 0.88);
     backdrop-filter: blur(6px);
     border: 1px solid rgba(255,255,255,0.1);
@@ -120,7 +121,8 @@
     width: 210px;
   }
   #info-panel h4,
-  #shakemap-panel h4 {
+  #shakemap-panel h4,
+  #berita-panel h4 {
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -128,6 +130,31 @@
     color: #fbbf24;
     margin-bottom: 0.5rem;
   }
+  /* Berita panel */
+  #berita-panel .bp-item {
+    display: block;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    text-decoration: none;
+  }
+  #berita-panel .bp-item:last-of-type { border-bottom: none; }
+  #berita-panel .bp-title {
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    line-height: 1.3;
+  }
+  #berita-panel .bp-meta { font-size: 0.55rem; color: #64748b; margin-top: 1px; }
+  #berita-panel .bp-item:hover .bp-title { color: #fbbf24; }
+  #berita-panel .bp-all {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #60a5fa;
+    text-decoration: none;
+  }
+  #berita-panel .bp-all:hover { text-decoration: underline; }
   .stat-row {
     display: flex;
     justify-content: space-between;
@@ -442,6 +469,20 @@
       Data QC 10 hari terakhir
     </div>
   </div>
+
+  {% if latest_berita %}
+  <!-- Berita Panel -->
+  <div id="berita-panel">
+    <h4>Berita Terbaru</h4>
+    {% for b in latest_berita %}
+      <a class="bp-item" href="{{ b.get_absolute_url }}">
+        <div class="bp-title">{{ b.title }}</div>
+        <div class="bp-meta">{{ b.published_at|date:"d M Y" }}</div>
+      </a>
+    {% endfor %}
+    <a class="bp-all" href="{% url 'berita:list' %}">Semua berita &rarr;</a>
+  </div>
+  {% endif %}
 
   <!-- Shakemap Panel -->
   {% if latest_shakemap and latest_shakemap.shakemap_image %}

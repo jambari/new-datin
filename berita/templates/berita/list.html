@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block site_header %}{% include 'partials/_landing_header.html' with pn_spacer=1 %}{% endblock %}
+{% load static %}
+
+{% block seo_title %}Berita · Stasiun Geofisika Kelas I Jayapura{% endblock %}
+{% block meta_description %}Berita, kegiatan, dan informasi terbaru dari Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
+{% block og_title %}Berita · Stasiun Geofisika Kelas I Jayapura{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'berita/css/berita.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="bn-hero">
+  <div class="bn-wrap" style="padding-top:0;padding-bottom:0;">
+    <h1>📰 Berita</h1>
+    <p>Kabar terbaru, kegiatan, dan informasi dari Stasiun Geofisika Kelas I Jayapura BMKG.</p>
+  </div>
+</div>
+
+<div class="bn-wrap">
+  <form class="bn-search" method="get" action="{% url 'berita:list' %}">
+    <input type="search" name="q" value="{{ query }}" placeholder="Cari berita…" aria-label="Cari berita">
+    <button type="submit">Cari</button>
+  </form>
+
+  <div class="bn-grid">
+    {% for b in berita_list %}
+      <article class="bn-card">{% include 'berita/_card.html' with b=b %}</article>
+    {% empty %}
+      <div class="bn-empty" style="grid-column:1/-1;">
+        Belum ada berita yang diterbitkan.
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="bn-pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}">&laquo;</a>
+    {% endif %}
+    {% for i in page_obj.paginator.page_range %}
+      {% if page_obj.number == i %}
+        <span class="current">{{ i }}</span>
+      {% elif i > page_obj.number|add:"-3" and i < page_obj.number|add:"3" %}
+        <a href="?page={{ i }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}">{{ i }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}">&raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

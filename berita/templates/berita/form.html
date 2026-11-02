@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block seo_title %}{% if is_update %}Ubah{% else %}Tulis{% endif %} Berita · Datin App{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'berita/vendor/quill.snow.css' %}">
+<link rel="stylesheet" href="{% static 'berita/css/berita.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+  {% include 'partials/_sidebar.html' %}
+
+  <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+    {% include 'partials/_topbar.html' %}
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">
+      <div class="mx-auto max-w-4xl">
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-800">{% if is_update %}Ubah Berita{% else %}Tulis Berita{% endif %}</h1>
+            <p class="mt-1 text-sm text-gray-500">Editor WYSIWYG — format yang terlihat sama dengan hasil di halaman publik.</p>
+          </div>
+          <a href="{% url 'berita:manage' %}" class="text-sm font-semibold text-gray-600 hover:text-gray-900">&larr; Kembali</a>
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="space-y-5 rounded-xl bg-white p-5 shadow md:p-6">
+          {% csrf_token %}
+
+          <div>
+            <label for="{{ form.title.id_for_label }}" class="mb-1 block text-sm font-semibold text-gray-700">Judul</label>
+            {{ form.title }}
+            {% if form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ form.title.errors|join:" " }}</p>{% endif %}
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="{{ form.slug.id_for_label }}" class="mb-1 block text-sm font-semibold text-gray-700">Slug URL</label>
+              {{ form.slug }}
+              <p class="mt-1 text-xs text-gray-500">Kosongkan untuk dibuat otomatis dari judul.</p>
+              {% if form.slug.errors %}<p class="mt-1 text-xs text-red-600">{{ form.slug.errors|join:" " }}</p>{% endif %}
+            </div>
+            <div>
+              <label for="{{ form.status.id_for_label }}" class="mb-1 block text-sm font-semibold text-gray-700">Status</label>
+              {{ form.status }}
+              <p class="mt-1 text-xs text-gray-500">Pilih “Terbit” agar tampil di halaman publik.</p>
+              {% if form.status.errors %}<p class="mt-1 text-xs text-red-600">{{ form.status.errors|join:" " }}</p>{% endif %}
+            </div>
+          </div>
+
+          <div>
+            <label for="{{ form.excerpt.id_for_label }}" class="mb-1 block text-sm font-semibold text-gray-700">Ringkasan</label>
+            {{ form.excerpt }}
+            <p class="mt-1 text-xs text-gray-500">Tampil di daftar berita dan kartu beranda (opsional).</p>
+            {% if form.excerpt.errors %}<p class="mt-1 text-xs text-red-600">{{ form.excerpt.errors|join:" " }}</p>{% endif %}
+          </div>
+
+          <div>
+            <label for="{{ form.cover.id_for_label }}" class="mb-1 block text-sm font-semibold text-gray-700">Gambar Sampul</label>
+            {{ form.cover }}
+            {% if is_update and berita.cover %}
+              <div class="mt-2">
+                <img src="{{ berita.cover.url }}" alt="Sampul saat ini" style="max-height:140px;border-radius:8px;border:1px solid #e5e7eb;">
+                <p class="mt-1 text-xs text-gray-500">Sampul saat ini. Unggah berkas baru untuk menggantinya.</p>
+              </div>
+            {% endif %}
+            {% if form.cover.errors %}<p class="mt-1 text-xs text-red-600">{{ form.cover.errors|join:" " }}</p>{% endif %}
+          </div>
+
+          <div>
+            <span class="mb-1 block text-sm font-semibold text-gray-700">Isi Berita</span>
+            {{ form.content }}
+            <div id="quill-editor"
+                 data-upload-url="{% url 'berita:upload_image' %}"></div>
+            <p class="mt-1 text-xs text-gray-500">
+              Gunakan tombol gambar pada toolbar untuk menyisipkan gambar (maks. 5 MB).
+            </p>
+            {% if form.content.errors %}<p class="mt-1 text-xs text-red-600">{{ form.content.errors|join:" " }}</p>{% endif %}
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
+            <button type="submit"
+                    class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700">
+              {% if is_update %}Simpan Perubahan{% else %}Simpan Berita{% endif %}
+            </button>
+            <a href="{% url 'berita:manage' %}" class="text-sm font-semibold text-gray-500 hover:text-gray-800">Batal</a>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'berita/vendor/quill.js' %}"></script>
+<script src="{% static 'berita/js/editor.js' %}"></script>
+{% endblock %}
