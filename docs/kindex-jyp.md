@@ -68,14 +68,25 @@ yang datanya tetap sudah dikosongkan (5 hari penuh dan 29 blok pada 8 hari lain,
 ## Watchdog program LEMI (PC .105)
 
 `scripts/lemi_watchdog.ps1` (salinan di `C:\lemi_watchdog\`) dijalankan task `LEMIWatchdog` tiap menit
-sebagai SYSTEM. Bila sampel terakhir lebih tua dari 5 menit, `lemi018.exe` ditutup lalu dijalankan lagi
+sebagai SYSTEM. Waktu LEMI yang diharapkan = jam PC dikurangi selisih LEMI-PC, yang diukur ulang setiap ada sampel baru.
+Bila sampel terakhir lebih tua 5 menit dari waktu itu, `lemi018.exe` ditutup lalu dijalankan lagi
 lewat task `LEMIStartProgram` (sesi `bmkgs`, karena program punya jendela). Paling sering sekali per
 10 menit; setelah 3 kali dalam sejam tanpa data baru ia berhenti dan mengabari situs (peringatan
 Telegram lewat `/magnet/api/instrument/status/`), karena penyebabnya bukan program.
 
+- Selama data segar ia mengirim status `ok` tiap 4 menit, karena situs menampilkan `monitor_offline` setelah
+  5 menit tanpa laporan. Telegram tidak ikut terkirim; situs hanya memberi tahu saat status berubah dari `ok`.
 - Argumen `-DryRun` pada task = hanya mencatat, tidak menutup apa pun.
 - Perawatan: buat berkas `C:\lemi_watchdog\PAUSE` (kedaluwarsa sendiri setelah 12 jam).
-- Log: `C:\lemi_watchdog\lemi_watchdog.log`.
+- Log: `C:\lemi_watchdog\lemi_watchdog.log`. Selisih jam LEMI dan PC di atas 120 detik dicatat tiap jam
+  sebagai `CLOCK WARNING`; peringatan ini tidak memicu restart.
+
+### Jam LEMI tertinggal sejak 1 Nov 2026 01:29 UTC
+
+Data berhenti sekitar 01:29:40 sampai 01:37:56 UTC, lalu cap waktunya menyambung dari 01:29:31, sehingga
+sekitar 8 menit data hilang tanpa terlihat sebagai celah. Sejak itu jam LEMI 505 detik di belakang jam PC,
+dan jam PC sendiri sekitar 34 detik di belakang NTP (diukur 1 Nov 23:12 UTC). Data sejak saat itu sampai jam
+LEMI dibetulkan bercap waktu sekitar 9 menit terlambat. Datanya belum dikoreksi.
 
 ## Perintah
 
