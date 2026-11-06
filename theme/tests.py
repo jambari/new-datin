@@ -1,9 +1,15 @@
+import datetime
 from unittest import mock
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
 from django_otp.oath import totp
 from django_otp.plugins.otp_totp.models import TOTPDevice
+
+from theme.views import bartington_form_open
 
 
 def _code(device):
@@ -94,3 +100,47 @@ class LoginOTPTest(TestCase):
     def test_external_next_is_ignored(self):
         resp = self._login(qs='?next=https://evil.example/', next='https://evil.example/')
         self.assertEqual(resp['Location'], '/post-login/')
+
+
+class BartingtonButtonTest(TestCase):
+    """Tombol formulir Bartington hanya tampil Rabu & Jumat menurut WIT (UTC+9)."""
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user('operator', password='rahasia12345')
+
+    # ── logika hari (tanpa database) ────────────────────────────────────────
+    def test_tampil_pada_rabu_dan_jumat_wit(self):
+        self.assertTrue(bartington_form_open(datetime.datetime(2026, 11, 4, 3, 0, tzinfo=datetime.timezone.utc)))   # Rabu
+        self.assertTrue(bartington_form_open(datetime.datetime(2026, 11, 6, 3, 0, tzinfo=datetime.timezone.utc)))   # Jumat
+
+    def test_tidak_tampil_pada_hari_lain(self):
+        for day in (1, 2, 3, 5, 7, 8):        # Sen, Sel, Kam, Sab, Min, Sen
+            with self.subTest(day=day):
+                self.assertFalse(bartington_form_open(
+                    datetime.datetime(2026, 11, day, 3, 0, tzinfo=datetime.timezone.utc)))
+
+    def test_patokan_hari_memakai_wit_bukan_utc(self):
+        # Kamis 16:00 UTC == Jumat 01:00 WIT → tombol sudah tampil
+        self.assertTrue(bartington_form_open(datetime.datetime(2026, 11, 5, 16, 0, tzinfo=datetime.timezone.utc)))
+        # Rabu 16:00 UTC == Kamis 01:00 WIT → sudah tidak tampil
+        self.assertFalse(bartington_form_open(datetime.datetime(2026, 11, 4, 16, 0, tzinfo=datetime.timezone.utc)))
+        # Selasa 20:00 UTC == Rabu 05:00 WIT → tampil
+        self.assertTrue(bartington_form_open(datetime.datetime(2026, 11, 3, 20, 0, tzinfo=datetime.timezone.utc)))
+
+    # ── pemasangan di template dashboard ────────────────────────────────────
+    @mock.patch('theme.views.bartington_form_open', return_value=True)
+    def test_dashboard_menampilkan_tombol(self, _patched):
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Formulir Bartington')
+        self.assertContains(resp, reverse('observation_bartington'))
+
+    @mock.patch('theme.views.bartington_form_open', return_value=False)
+    def test_dashboard_menyembunyikan_tombol(self, _patched):
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'Formulir Bartington')
+        self.assertNotContains(resp, reverse('observation_bartington'))

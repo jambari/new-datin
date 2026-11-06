@@ -8,6 +8,26 @@ from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 import datetime
 import time
+import zoneinfo
+
+#: Zona acuan operasional (WIT, UTC+9) — dipakai juga oleh tombol Bartington.
+WIT_TZ = zoneinfo.ZoneInfo("Asia/Jayapura")
+
+#: Hari munculnya tombol formulir Bartington (Senin=0 → Rabu=2, Jumat=4).
+BARTINGTON_BUTTON_DAYS = (2, 4)
+
+
+def bartington_form_open(now=None):
+    """True bila tombol "Formulir Bartington" harus tampil di dashboard.
+
+    Jadwal pengamatan absolut Bartington hanya Rabu & Jumat, dan patokannya
+    hari WIT (UTC+9) — bukan zona server (UTC). Dengan begitu tombol sudah
+    muncul sejak 00:00 WIT dan hilang tepat setelah hari berganti.
+    """
+    moment = now or timezone.now()
+    if timezone.is_naive(moment):
+        moment = timezone.make_aware(moment, datetime.timezone.utc)
+    return moment.astimezone(WIT_TZ).weekday() in BARTINGTON_BUTTON_DAYS
 
 
 @never_cache
@@ -158,6 +178,7 @@ def dashboard(request):
         'lapbul_bulan_ini':    lapbul_bulan_ini,
         'buletin_deadline':    buletin_deadline,
         'bulletin_ada':        bulletin_ada,
+        'bartington_form_open': bartington_form_open(now_wit_dt),
     }
     cache.set(_cache_key, context, 120)  # cache for 120 seconds
     return render(request, 'dashboard.html', context)
