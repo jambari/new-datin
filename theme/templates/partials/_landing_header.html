@@ -37,41 +37,36 @@
       <a class="pn-link" href="{% url 'berita:list' %}">Berita</a>
       <div class="pn-drop">
         <button type="button" class="pn-drop-trigger" aria-expanded="false">
-          Gempa
+          Gempabumi
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="pn-drop-menu">
           <a href="{% url 'gempa_public' %}">Daftar Gempa</a>
+          <a href="{% url 'public_siaranpress_list' %}">Siaran Pers</a>
           <a href="{% url 'public_gempa_merusak' %}">Gempa Merusak</a>
+          <hr class="pn-drop-sep">
+          <a href="{% url 'public_shakemap_list' %}">Shakemap</a>
           <a href="{% url 'isoseismal:list' %}">Peta Isoseismal</a>
+          <a href="{% url 'public_spectra_list' %}">Spectra Acceleration</a>
+          <hr class="pn-drop-sep">
           <a href="{% url 'public_skala_mmi' %}">Skala MMI</a>
         </div>
       </div>
-      <a class="pn-link" href="{% url 'public_petir' %}">Petir</a>
       <div class="pn-drop">
         <button type="button" class="pn-drop-trigger" aria-expanded="false">
-          Magnetbumi
+          Geofisika Potensial
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="pn-drop-menu">
-          <a href="{% url 'public_magnetbumi' %}">Absolut Magnetik</a>
-          <a href="{% url 'public_magnetbumi_indices' %}">K dan A Indeks</a>
-        </div>
-      </div>
-      <div class="pn-drop">
-        <button type="button" class="pn-drop-trigger" aria-expanded="false">
-          Shakemap
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="pn-drop-menu">
-          <a href="{% url 'public_shakemap_list' %}">Shakemap</a>
-          <a href="{% url 'public_spectra_list' %}">Spectra Acceleration</a>
-          <a href="{% url 'public_siaranpress_list' %}">Siaran Pers</a>
+          <a href="{% url 'public_petir' %}">Petir</a>
+          <span class="pn-drop-label">Magnetbumi</span>
+          <a class="pn-drop-sub" href="{% url 'public_magnetbumi' %}">Absolut Magnetik</a>
+          <a class="pn-drop-sub" href="{% url 'public_magnetbumi_indices' %}">K dan A Indeks</a>
+          <a href="{% url 'public_ttm' %}">Terbit Terbenam</a>
         </div>
       </div>
       <a class="pn-link" href="https://eskm.bmkg.go.id/login/" target="_blank" rel="noopener">SKM</a>
       <a class="pn-link" href="{% url 'layanan_landing' %}">Pelayanan</a>
-      <a class="pn-link" href="{% url 'public_ttm' %}">TTM</a>
       <a class="pn-link" href="{% url 'our_work' %}">Gallery</a>
       <a class="pn-link" href="{% url 'public_about' %}">About Us</a>
       <a class="pn-link" href="{% url 'public_bulletin_list' %}">Buletin</a>
@@ -198,6 +193,12 @@
     transition: background 0.15s, color 0.15s;
   }
   .pn-drop-menu a:hover, .pn-drop-menu a[aria-current="page"] { background: var(--pn-hover-bg); color: var(--pn-hover-fg); }
+  .pn-drop-sep { margin: 4px 0.75rem; border: 0; border-top: 1px solid var(--pn-border); }
+  .pn-drop-label {
+    display: block; padding: 0.45rem 1rem 0.15rem; font-size: 0.62rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--pn-sub);
+  }
+  .pn-drop-menu a.pn-drop-sub { padding-left: 1.6rem; }
 
   .pn-toggle {
     display: none; flex-shrink: 0; margin: 0; padding: 4px; border: none;
