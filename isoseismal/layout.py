@@ -8,7 +8,9 @@ sumber data, inset Papua).
 Pita intensitas mengikuti kolom tabel skala: I, II–III, IV, V, VI, VII, VIII, IX, X+.
 """
 import io
+import json
 import math
+from functools import lru_cache
 from pathlib import Path
 
 import matplotlib
@@ -42,6 +44,9 @@ SCALE = [
     ("X+", 9.5, 13.0, "#ff0000", "Ekstrem", "Sangat berat", ">139", ">178"),
 ]
 FAULT_COLOR = "#7c2d12"
+# Daratan untuk memotong lapisan MMI (laut tidak diwarnai): kabupaten/kota Indonesia (BIG) + Papua Nugini.
+_JS_DIR = Path(settings.BASE_DIR) / "repository" / "static" / "repository" / "js"
+LAND_SOURCES = (_JS_DIR / "batas_kabupaten_indo.geojson", _JS_DIR / "png.js")
 FELT_MIN = 1.5                                         # di bawah ini (MMI I) tidak diwarnai
 
 
@@ -103,6 +108,41 @@ def _fault_paths():
 
 def _km(lat1, lon1, lat2, lon2):
     return math.hypot((lon2 - lon1) * math.cos(math.radians((lat1 + lat2) / 2)), lat2 - lat1) * 111.2
+
+
+@lru_cache(maxsize=1)
+def _land():
+    """[(cincin luar lon/lat sebagai array, bbox)] poligon daratan dari LAND_SOURCES."""
+    from gempa.faults import _read_js
+
+    out = []
+    for path in LAND_SOURCES:
+        try:
+            data = json.loads(path.read_text()) if path.suffix == ".geojson" else _read_js(path)
+        except (OSError, ValueError):
+            continue
+        for f in data.get("features", []):
+            g = f.get("geometry") or {}
+            polys = [g.get("coordinates")] if g.get("type") == "Polygon" else g.get("coordinates") or []
+            for poly in polys:
+                if not poly or len(poly[0]) < 3:
+                    continue
+                ring = np.asarray(poly[0], dtype=float)[:, :2]
+                out.append((ring, (ring[:, 0].min(), ring[:, 1].min(), ring[:, 0].max(), ring[:, 1].max())))
+    return out
+
+
+def _land_clip(smap, extent):
+    """Path daratan (koordinat piksel peta) yang memotong kotak peta, atau None bila data tidak ada."""
+    lat0, lat1, lon0, lon1 = extent
+    verts, codes = [], []
+    for ring, bb in _land():
+        if bb[2] < lon0 or bb[0] > lon1 or bb[3] < lat0 or bb[1] > lat1:
+            continue
+        x, y = _project_arrays(smap, ring[:, 1], ring[:, 0])
+        verts.extend(zip(x, y))
+        codes.extend([MplPath.MOVETO] + [MplPath.LINETO] * (len(ring) - 2) + [MplPath.CLOSEPOLY])
+    return MplPath(verts, codes) if verts else None
 
 
 def choose_extent(lat, lon, magnitude, mmi, bounds, felt, stations, aspect):
@@ -196,8 +236,13 @@ def _render(obj, mmi, bounds):
         X, Y = _project_arrays(smap, LAT, LON)
         levels = [row[1] for row in SCALE[1:]] + [SCALE[-1][2]]
         colors = [row[3] for row in SCALE[1:]]
-        ax.contourf(X, Y, mmi, levels=levels, colors=colors, alpha=0.55, zorder=2, antialiased=True)
-        ax.contour(X, Y, mmi, levels=levels[:-1], colors="#374151", linewidths=0.7, alpha=0.8, zorder=2.5)
+        filled = ax.contourf(X, Y, mmi, levels=levels, colors=colors, alpha=0.55, zorder=2, antialiased=True)
+        lines = ax.contour(X, Y, mmi, levels=levels[:-1], colors="#374151", linewidths=0.7, alpha=0.8, zorder=2.5)
+        land = _land_clip(smap, (lat0, lat1, lon0, lon1))
+        if land is not None:                           # hanya daratan; laut tidak diwarnai
+            clip = PathPatch(land, transform=ax.transData)
+            filled.set_clip_path(clip)
+            lines.set_clip_path(clip)
 
     def proj_line(coords):
         arr = np.asarray(coords, dtype=float)
@@ -336,15 +381,23 @@ def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
         s.set_linewidth(1.2)
     pw_in, ph_in = pw * W, ph * H
 
+    head = 0.27                                        # tambahan tinggi kepala panel (logo di tengah)
+
     def y(inches_from_top):
+        return 1 - (inches_from_top + head) / ph_in
+
+    def y_abs(inches_from_top):
         return 1 - inches_from_top / ph_in
 
+    # Kepala panel: logo dan nama instansi rata tengah
     if LOGO.exists():
-        size = 0.62
-        lax = fig.add_axes([px0 + 0.06 / W, py0 + ph - (0.08 + size) / H, size / W, size / H])
+        size = 0.52
+        lax = fig.add_axes([px0 + (pw - size / W) / 2, py0 + ph - (0.08 + size) / H, size / W, size / H])
         lax.imshow(Image.open(LOGO)), lax.axis("off")
-    pax.text((0.06 + 0.62 + 0.1) / pw_in, y(0.40), "BADAN METEOROLOGI, KLIMATOLOGI,\nDAN GEOFISIKA\n"
-             "STASIUN GEOFISIKA KELAS I JAYAPURA", fontsize=7.4, fontweight="bold", va="center", linespacing=1.3)
+    pax.text(0.5, y_abs(0.74), "BADAN METEOROLOGI, KLIMATOLOGI, DAN GEOFISIKA", ha="center", va="center",
+             fontsize=6.8, fontweight="bold")
+    pax.text(0.5, y_abs(0.90), "STASIUN GEOFISIKA KELAS I JAYAPURA", ha="center", va="center", fontsize=7.8,
+             fontweight="bold")
 
     # Arah utara + skala
     pax.text(0.13, y(1.02), "U", ha="center", fontsize=10, fontweight="bold")
@@ -378,7 +431,7 @@ def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
         (Line2D([], [], color="#374151", lw=0.7), "Garis isoseismal"),
     ]
     for i, (handle, label) in enumerate(items):
-        yy = y(top + 0.27 + i * 0.205)
+        yy = y(top + 0.25 + i * 0.19)
         ax_h = 0.11
         handle.set_transform(pax.transAxes)
         if handle.get_marker() not in (None, "None", ""):
@@ -389,8 +442,8 @@ def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
         pax.text(0.22, yy, label, fontsize=7.2, va="center")
 
     # MMI per kabupaten/kota
-    top2 = top + 0.27 + len(items) * 0.205 + 0.12
-    rows = [w for w in obj.wilayah if w.get("mmi") is not None and w["mmi"] >= FELT_MIN][:7]
+    top2 = top + 0.25 + len(items) * 0.19 + 0.1
+    rows = [w for w in obj.wilayah if w.get("mmi") is not None and w["mmi"] >= FELT_MIN][:6]
     pax.text(0.05, y(top2), "Perkiraan MMI maksimum per wilayah", fontsize=8, fontweight="bold")
     if rows:
         for i, w in enumerate(rows):
