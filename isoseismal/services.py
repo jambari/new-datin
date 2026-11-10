@@ -1,6 +1,7 @@
 """Simpan hasil ShakeMap dari .50 dan gambar peta isoseismal."""
 import datetime
 import logging
+import re
 import subprocess
 
 import numpy as np
@@ -9,12 +10,14 @@ from django.utils import timezone
 from matplotlib.path import Path as MplPath
 
 from . import remote
-from .felt import collect_felt, felt_events, regions
+from .felt import catalog_lokasi, collect_felt, felt_events, regions
 from .models import IsoseismalMap
 from .shakemap_io import grid_to_npz, load_npz, parse_grid, parse_stations
 
 log = logging.getLogger(__name__)
 WIB = datetime.timezone(datetime.timedelta(hours=7))
+# Lokasi ShakeMap yang lengkap: "48 km Tenggara SARMI-PAPUA". Run lama kadang hanya berisi "JAY".
+_LOKASI_LENGKAP = re.compile(r"^\s*\d+(?:[.,]\d+)?\s*km\s+\S+", re.I)
 
 
 def wib_to_utc(wib_id):
@@ -48,6 +51,8 @@ def store_shakemap(wib_id, grid_path=None, stationlist_path=None):
     for field in ("latitude", "longitude", "magnitude", "depth"):
         if getattr(obj, field) is None:
             raise ValueError(f"{wib_id}: {field} tidak diketahui (grid.xml belum ada)")
+    if not _LOKASI_LENGKAP.match(obj.lokasi or ""):
+        obj.lokasi = catalog_lokasi(obj.event_time, obj.latitude, obj.longitude) or obj.lokasi
     if not obj.slug:
         obj.slug = obj.build_slug()
     obj.data_changed = obj.pk is None or before != _snapshot(obj)

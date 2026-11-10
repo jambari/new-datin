@@ -227,6 +227,19 @@ def gempa_lat(value):
     return -abs(v) if "LS" in text else abs(v) if "LU" in text else v
 
 
+def catalog_lokasi(event_time, lat, lon):
+    """Teks lokasi katalog (kolom `ket`, mis. '48 km Tenggara SARMI-PAPUA') untuk gempa yang sama, atau ''."""
+    from gempa.models import Gempa
+
+    days = {(event_time + d).date() for d in (datetime.timedelta(0), WIT_OFFSET)}
+    for row in Gempa.objects.filter(tanggal__in=days).exclude(ket="").values("tanggal", "origin", "lintang", "ket"):
+        t, la = gempa_time(row["tanggal"], row["origin"]), gempa_lat(row["lintang"])
+        if t and la is not None and abs((t - event_time).total_seconds()) <= MATCH_SECONDS \
+                and abs(la - lat) <= MATCH_DEG:
+            return row["ket"].strip()
+    return ""
+
+
 def felt_events(since, until=None):
     """[(waktu UTC, lintang, bujur)] gempa dirasakan: BMKG gempabumi-dirasakan + katalog terasa=True."""
     from gempa.models import Gempa

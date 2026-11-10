@@ -211,6 +211,18 @@ class GenerateAndPagesTest(MediaMixin, TestCase):
         self.client.force_login(staff)
         self.assertContains(self.client.get(obj.get_absolute_url()), 'PRATINJAU STAF')
 
+    def test_short_shakemap_place_uses_catalogue(self):
+        """Run lama berisi lokasi 'JAY' saja: judul & slug memakai teks lokasi katalog."""
+        from gempa.models import Gempa
+        Gempa.objects.create(tanggal=EVENT_UTC.date(), origin='00:10:33', lintang='-2.32', bujur=140.5,
+                             magnitudo=3.7, depth=10, terasa=True, ket='48 km Tenggara SARMI-PAPUA')
+        folder = Path(self.media) / 'in'
+        folder.mkdir(parents=True)
+        (folder / 'grid.xml').write_text(grid_xml().replace('31 km TimurLaut KAB-JAYAPURA-PAPUA', 'JAY'))
+        obj = store_shakemap(WIB_ID, folder / 'grid.xml', None)
+        self.assertEqual(obj.lokasi, '48 km Tenggara SARMI-PAPUA')
+        self.assertEqual(obj.slug, 'peta-isoseismal-gempabumi-sarmi-22-mei-2026')
+
     def test_event_without_felt_reports_gets_no_map(self):
         grid, _stations = self.write_inputs(Path(self.media) / 'in')
         obj = store_shakemap(WIB_ID, grid, None)
