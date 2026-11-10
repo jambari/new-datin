@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'kualitas_udara.apps.KualitasUdaraConfig',
     'reporting.apps.ReportingConfig',
     'berita.apps.BeritaConfig',
+    'isoseismal.apps.IsoseismalConfig',
 ]
 
 SEEDLINK_HOST = '202.90.199.206'   # Accelerometer SeedLink
@@ -271,6 +272,11 @@ CELERY_BEAT_SCHEDULE = {
     'fetch-bmkg-felt-hourly': {
         'task': 'repository.tasks.fetch_bmkg_felt_task',
         'schedule': crontab(minute=0),  # Hourly: at minute 0 of every hour, UTC
+    },
+    # Peta isoseismal: gambar bila laporan dirasakan (BMKG / katalog) masuk setelah ShakeMap.
+    'scan-isoseismal': {
+        'task': 'isoseismal.tasks.scan_isoseismal_task',
+        'schedule': crontab(minute=10),  # 10 menit setelah fetch-bmkg-felt-hourly
     },
     
     'process-yesterday-nexstorm-db3': {

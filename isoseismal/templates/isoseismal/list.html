@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block site_header %}{% include 'partials/_landing_header.html' with pn_spacer=1 %}{% endblock %}
+{% load static %}
+
+{% block seo_title %}Peta Isoseismal · Stasiun Geofisika Kelas I Jayapura{% endblock %}
+{% block meta_description %}Peta isoseismal gempabumi dirasakan di Tanah Papua dari data akselerograf dan laporan dirasakan, dibuat otomatis oleh Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
+{% block og_title %}Peta Isoseismal · BMKG Jayapura{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'berita/css/berita.css' %}">
+<style>
+  .iso-badge { display:inline-block; min-width:2.4rem; padding:0.1rem 0.45rem; border-radius:6px; border:1px solid rgba(0,0,0,.25);
+               color:#111827; font-weight:800; font-size:0.72rem; text-align:center; margin-right:0.35rem; }
+  .bn-card .bn-thumb img { object-fit: cover; object-position: center 40%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bn-hero">
+  <div class="bn-wrap" style="padding-top:0;padding-bottom:0;">
+    <h1>Peta Isoseismal</h1>
+    <p>Sebaran intensitas guncangan (skala MMI) gempabumi yang dirasakan di Tanah Papua, dari rekaman
+      akselerograf BMKG dan laporan dirasakan. Peta dibuat otomatis setelah gempa terjadi.</p>
+  </div>
+</div>
+
+<div class="bn-wrap">
+  <div class="bn-grid">
+    {% for m in maps %}
+      <article class="bn-card">
+        <a class="bn-thumb" href="{{ m.get_absolute_url }}">
+          <img src="{{ m.image.url }}" alt="{{ m.title }}" loading="lazy">
+        </a>
+        <div class="bn-body">
+          <div class="bn-meta">{{ m.tanggal_panjang }}, {{ m.wit_time|date:"H:i:s" }} WIT</div>
+          <h2><a href="{{ m.get_absolute_url }}">{{ m.title }}</a></h2>
+          <p class="bn-excerpt">
+            M {{ m.magnitude|floatformat:1 }}, kedalaman {{ m.depth|floatformat:0 }} km.
+            {% with f=m.felt.0 %}{% if f %}Dirasakan hingga <b>{{ f.mmi_text }} MMI</b> di {{ f.place }}.{% endif %}{% endwith %}
+          </p>
+        </div>
+      </article>
+    {% empty %}
+      <div class="bn-empty" style="grid-column:1/-1;">Belum ada peta isoseismal.</div>
+    {% endfor %}
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="bn-pagination">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">&laquo;</a>{% endif %}
+    <span class="current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">&raquo;</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

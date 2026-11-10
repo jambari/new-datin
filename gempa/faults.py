@@ -103,6 +103,32 @@ def _lines():
     return props, segs
 
 
+GRID_DEG = 1.0                           # ukuran sel indeks ruas sesar
+
+
+@lru_cache(maxsize=1)
+def _grid():
+    """Indeks sel GRID_DEG derajat → nomor ruas yang kotak pembatasnya menyentuh sel itu."""
+    grid = {}
+    for n, (x1, y1, x2, y2, _) in enumerate(_lines()[1]):
+        for gx in range(math.floor(min(x1, x2) / GRID_DEG), math.floor(max(x1, x2) / GRID_DEG) + 1):
+            for gy in range(math.floor(min(y1, y2) / GRID_DEG), math.floor(max(y1, y2) / GRID_DEG) + 1):
+                grid.setdefault((gx, gy), []).append(n)
+    return grid
+
+
+def _candidates(lat, lon, k):
+    """Ruas yang mungkin berjarak ≤ MAX_KM, urut seperti di berkas (hasil seri tetap sama)."""
+    dlat = MAX_KM / 111.2
+    dlon = dlat / max(k, 0.01)
+    grid, found = _grid(), set()
+    for gx in range(math.floor((lon - dlon) / GRID_DEG), math.floor((lon + dlon) / GRID_DEG) + 1):
+        for gy in range(math.floor((lat - dlat) / GRID_DEG), math.floor((lat + dlat) / GRID_DEG) + 1):
+            found.update(grid.get((gx, gy), ()))
+    segs = _lines()[1]
+    return [segs[n] for n in sorted(found)]
+
+
 @lru_cache(maxsize=1)
 def _zones():
     zones = []
@@ -136,10 +162,10 @@ def sumber_terdekat(lat, lon, depth=None):
         return None
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         return None
-    props, segs = _lines()
+    props = _lines()[0]
     k = math.cos(math.radians(lat))
     best, owner = float("inf"), None
-    for x1, y1, x2, y2, i in segs:
+    for x1, y1, x2, y2, i in _candidates(lat, lon, k):
         ax, ay, dx, dy = (x1 - lon) * k, y1 - lat, (x2 - x1) * k, y2 - y1
         seg2 = dx * dx + dy * dy
         t = 0.0 if seg2 == 0 else min(1.0, max(0.0, -(ax * dx + ay * dy) / seg2))
@@ -163,3 +189,23 @@ def sumber_terdekat(lat, lon, depth=None):
             jarak_km=max(1, round(km)),
         )
     return result
+
+
+def sumber_terdekat_baris(lat, lon, depth=None):
+    """Keterangan sumber gempa terdekat sebagai baris teks polos (popup peta publik),
+    kata-katanya sama dengan petunjuk di template balai; [] bila lokasi tidak valid."""
+    s = sumber_terdekat(lat, lon, depth)
+    if not s:
+        return []
+    if s["ada"]:
+        nama = s["nama"] + (f" (segmen {s['segmen']})" if s["segmen"] else "")
+        tipe = s["tipe"] + (f", Mmaks {float(s['mmax']):.1f}" if s.get("mmax") else "")
+        lines = [f"{nama} · {tipe} · ±{s['jarak_km']} km"]
+    else:
+        lines = [f"Tidak ada sesar aktif PuSGeN dalam {s['max_km']} km"]
+    if s["megathrust"]:
+        lines.append(f"Di atas zona sumber {s['megathrust']}")
+    if s["dalam"]:
+        lines.append(f"Kedalaman ≥ {INTERMEDIATE_KM} km: kemungkinan bersumber dari lempeng menunjam, "
+                     "bukan sesar dangkal.")
+    return lines

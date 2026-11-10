@@ -51,6 +51,7 @@ urlpatterns = [
     path('api/gempa/', include('gempa.api_urls')),
     path('post-login/', gempa_views.post_login_redirect, name='post_login'),
     path('', include('berita.urls')),
+    path('', include('isoseismal.urls')),
     path('', include('theme.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path("__reload__/", include("django_browser_reload.urls")), 

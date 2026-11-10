@@ -1687,6 +1687,15 @@ class SumberTerdekatTest(TestCase):
         self.assertIsNone(sumber_terdekat('', None))
         self.assertEqual(zona_megathrust(-9.0, 110.5), 'Megathrust Jawa Timur')
 
+    def test_popup_lines_match_template_balai_wording(self):
+        from gempa.faults import sumber_terdekat_baris
+        lines = sumber_terdekat_baris('-2.66', 139.50, 49)
+        self.assertTrue(lines[0].startswith('Sesar Mamberamo (segmen Mawe) · sesar geser mengiri, Mmaks 7.5 · ±'))
+        self.assertEqual(lines[1], 'Di atas zona sumber Megathrust Papua')
+        self.assertEqual(sumber_terdekat_baris(-8.5, 138.0), ['Tidak ada sesar aktif PuSGeN dalam 150 km'])
+        self.assertIn('lempeng menunjam', sumber_terdekat_baris(-4.5, 136.9, 120)[-1])
+        self.assertEqual(sumber_terdekat_baris('', None), [])
+
     def test_names(self):
         self.assertEqual(nama_struktur('Sorong Fault'), 'Sesar Sorong')
         self.assertEqual(nama_struktur('Manokwari Thurst'), 'Sesar Naik Manokwari')      # salah ketik di sumber

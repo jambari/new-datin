@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% block site_header %}{% include 'partials/_landing_header.html' with pn_spacer=1 %}{% endblock %}
+{% load static %}
+
+{% block seo_title %}{{ obj.title }} · BMKG Jayapura{% endblock %}
+{% block meta_description %}{{ obj.title }}: M {{ obj.magnitude|floatformat:1 }}, kedalaman {{ obj.depth|floatformat:0 }} km, {{ obj.wit_time|date:"d-m-Y H:i:s" }} WIT. Sebaran intensitas MMI dari akselerograf dan laporan dirasakan.{% endblock %}
+{% block og_title %}{{ obj.title }}{% endblock %}
+{% block canonical_url %}{{ share_url }}{% endblock %}
+{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{{ obj.image.url }}{% endblock %}
+{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{{ obj.image.url }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'berita/css/berita.css' %}">
+<style>
+  .iso-map { display:block; width:100%; height:auto; border-radius:12px; border:1px solid var(--border-color); background:#fff; }
+  .iso-actions { display:flex; gap:0.5rem; flex-wrap:wrap; margin:0.75rem 0 1.25rem; }
+  .iso-actions a { padding:0.45rem 0.9rem; border-radius:8px; font-size:0.8rem; font-weight:700; text-decoration:none;
+                   background:#fbbf24; color:#0f172a; }
+  .iso-actions a.alt { background:transparent; color:var(--text-primary); border:1px solid var(--border-color); }
+  .iso-params { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.6rem; margin:0 0 1.25rem; }
+  .iso-param { background:var(--card-bg); border:1px solid var(--border-color); border-radius:10px; padding:0.6rem 0.75rem; }
+  .iso-param span { display:block; font-size:0.68rem; color:var(--text-secondary, #64748b); text-transform:uppercase; letter-spacing:.04em; }
+  .iso-param b { font-size:0.95rem; }
+  .iso-table-wrap { overflow-x:auto; }
+  .iso-table { width:100%; border-collapse:collapse; font-size:0.82rem; margin:0.25rem 0 1.25rem; }
+  .iso-table th, .iso-table td { padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-color); text-align:left; }
+  .iso-table th { font-size:0.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary, #64748b); }
+  .iso-table td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .iso-badge { display:inline-block; min-width:2.6rem; padding:0.1rem 0.4rem; border-radius:6px; border:1px solid rgba(0,0,0,.25);
+               color:#111827; font-weight:800; font-size:0.72rem; text-align:center; }
+  .iso-note { font-size:0.78rem; color:var(--text-secondary, #64748b); }
+  .iso-staff { margin-top:0.6rem; display:inline-block; padding:0.25rem 0.6rem; border-radius:6px; background:#fbbf24;
+               color:#0f172a; font-size:0.7rem; font-weight:800; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bn-detail-hero">
+  <div class="bn-wrap">
+    <div class="breadcrumb">
+      <a href="{% url 'landing' %}">Beranda</a> &raquo;
+      <a href="{% url 'isoseismal:list' %}">Peta Isoseismal</a> &raquo;
+      {{ obj.wilayah_singkat }}
+    </div>
+    <h1>{{ obj.title }}</h1>
+    <div class="bn-meta">{{ obj.tanggal_panjang }} &middot; Seismologi Teknik</div>
+    {% if not is_public %}
+      <div class="iso-staff">PRATINJAU STAF — {% if obj.is_hidden %}disembunyikan{% else %}belum ada peta/laporan dirasakan{% endif %}</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="bn-detail-layout">
+  <div class="bn-detail-main">
+    {% if obj.image %}
+      <a href="{{ obj.image.url }}" target="_blank" rel="noopener"><img class="iso-map" src="{{ obj.image.url }}" alt="{{ obj.title }}"></a>
+      <div class="iso-actions">
+        <a href="{{ obj.image.url }}" download>Unduh peta (PNG)</a>
+        <a class="alt" href="https://wa.me/?text={{ obj.title|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer">Bagikan ke WhatsApp</a>
+        <a class="alt" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer">Facebook</a>
+      </div>
+    {% endif %}
+
+    <div class="bn-content-card">
+      <div class="bn-content">
+        <p>Gempabumi terjadi pada {{ obj.tanggal_panjang }} pukul {{ obj.wit_time|date:"H:i:s" }} WIT
+          dengan magnitudo <b>M {{ obj.magnitude|floatformat:1 }}</b> pada kedalaman {{ obj.depth|floatformat:0 }} km,
+          berpusat di {{ obj.koordinat }}{% if obj.lokasi %} ({{ obj.lokasi }}){% endif %}.
+          {% if mmi_max %}Intensitas tertinggi yang teramati <b>{{ mmi_max.label }} MMI</b> ({{ mmi_max.desc|lower }}).{% endif %}</p>
+
+        <div class="iso-params">
+          <div class="iso-param"><span>Waktu</span><b>{{ obj.wit_time|date:"d-m-Y H:i:s" }} WIT</b></div>
+          <div class="iso-param"><span>Magnitudo</span><b>M {{ obj.magnitude|floatformat:1 }}</b></div>
+          <div class="iso-param"><span>Kedalaman</span><b>{{ obj.depth|floatformat:0 }} km</b></div>
+          <div class="iso-param"><span>Lokasi</span><b>{{ obj.koordinat }}</b></div>
+          {% if mmi_max %}<div class="iso-param"><span>MMI maks. teramati</span><b><span class="iso-badge" style="background:{{ mmi_max.color }}">{{ mmi_max.label }}</span></b></div>{% endif %}
+        </div>
+
+        {% if felt %}
+        <h3>Laporan dirasakan</h3>
+        <div class="iso-table-wrap"><table class="iso-table">
+          <thead><tr><th>Tempat</th><th>MMI</th><th>Keterangan</th></tr></thead>
+          <tbody>
+          {% for f in felt %}
+            <tr><td>{{ f.place }}{% if f.lat is None %} <span class="iso-note">(lokasi tidak dikenali)</span>{% endif %}</td>
+                <td><span class="iso-badge" style="background:{{ f.band.color }}">{{ f.mmi_text }}</span></td>
+                <td>{{ f.band.desc }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+        {% if obj.felt_text %}<p class="iso-note">Teks laporan: {{ obj.felt_text|linebreaksbr }}</p>{% endif %}
+        {% endif %}
+
+        {% if stations %}
+        <h3>Rekaman akselerograf</h3>
+        <div class="iso-table-wrap"><table class="iso-table">
+          <thead><tr><th>Stasiun</th><th class="num">Jarak (km)</th><th class="num">PGA (%g)</th><th class="num">PGV (cm/s)</th><th>MMI instrumental</th></tr></thead>
+          <tbody>
+          {% for s in stations %}
+            <tr><td>{{ s.code }}</td><td class="num">{{ s.dist_km|floatformat:0 }}</td>
+                <td class="num">{{ s.pga|default_if_none:"–" }}</td><td class="num">{{ s.pgv|default_if_none:"–" }}</td>
+                <td>{% if s.band %}<span class="iso-badge" style="background:{{ s.band.color }}">{{ s.roman }}</span> {{ s.mmi }}{% else %}–{% endif %}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+        {% endif %}
+
+        {% if wilayah %}
+        <h3>Perkiraan intensitas per kabupaten/kota</h3>
+        <div class="iso-table-wrap"><table class="iso-table">
+          <thead><tr><th>Wilayah</th><th>MMI maks. (perkiraan)</th></tr></thead>
+          <tbody>
+          {% for w in wilayah %}
+            <tr><td>{{ w.name }}</td><td><span class="iso-badge" style="background:{{ w.band.color }}">{{ w.band.label }}</span> {{ w.mmi }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+        {% endif %}
+
+        {% if sumber %}
+        <h3>Sumber gempa terdekat</h3>
+        <p>{% for line in sumber %}{{ line }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+        <p class="iso-note">Menurut model sumber gempa PuSGeN 2024; petunjuk saja, bukan penentuan sumber gempa.</p>
+        {% endif %}
+
+        <h3>Tentang peta isoseismal</h3>
+        <p>Peta isoseismal menggambarkan daerah-daerah dengan intensitas guncangan yang sama dalam skala
+          <a href="{% url 'public_skala_mmi' %}">MMI (Modified Mercalli Intensity)</a>. Warna peta adalah perkiraan
+          intensitas dari ShakeMap Stasiun Geofisika Jayapura yang dikoreksi dengan rekaman akselerograf BMKG;
+          titik bulat adalah laporan dirasakan dari masyarakat, BMKG, dan katalog stasiun. Peta dibuat otomatis
+          dan dapat diperbarui bila ada laporan baru.</p>
+      </div>
+    </div>
+  </div>
+
+  <aside class="bn-detail-side">
+    <h4>Peta Isoseismal Lainnya</h4>
+    {% for o in others %}
+      <div class="bn-side-item">
+        <a href="{{ o.get_absolute_url }}"><img src="{{ o.image.url }}" alt="{{ o.title }}" loading="lazy"></a>
+        <div>
+          <div class="bns-title"><a href="{{ o.get_absolute_url }}">{{ o.title }}</a></div>
+          <div class="bns-meta">M {{ o.magnitude|floatformat:1 }} · {{ o.tanggal }}</div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="iso-note">Belum ada peta lain.</p>
+    {% endfor %}
+    <p style="margin-top:0.75rem;"><a href="{% url 'isoseismal:list' %}">Lihat semuanya &raquo;</a></p>
+  </aside>
+</div>
+{% endblock %}
