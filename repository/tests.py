@@ -534,3 +534,66 @@ class FetchBmkgFeltRegionTest(TestCase):
         self.assertTrue(is_papua_event(-2.69, 141.81, "", 5.3))                 # 127 km SE of Jayapura
         self.assertFalse(is_papua_event(-2.90, 141.88, "", 4.9))                # below M5
         self.assertFalse(is_papua_event(-3.57, 143.63, "III Wewak", 5.5))       # too far east (Wewak)
+
+
+# ── PUSH ulang dari .50: .mseed tidak boleh menumpuk salinan ────────────────
+import io as _io  # noqa: E402
+import shutil as _shutil  # noqa: E402
+import tempfile as _tempfile  # noqa: E402
+from pathlib import Path as _Path  # noqa: E402
+
+from django.core.management import call_command as _call  # noqa: E402
+from django.test import override_settings as _override  # noqa: E402
+
+
+class WaveformMseedDedupeTest(TestCase):
+    WIB = '20260522071031'
+
+    def setUp(self):
+        self.media = _Path(_tempfile.mkdtemp(prefix='mseed-media-'))
+        self.addCleanup(_shutil.rmtree, self.media, True)
+        ctx = _override(MEDIA_ROOT=str(self.media))
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+
+    def _push(self, payload):
+        folder = self.media / 'waveforms' / self.WIB
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f'20260522001031_IA_SJPM_HNZ_BP4_0.1_40.mseed').write_bytes(payload)
+        _call('ingest_pushed_event', self.WIB, '--quiet', stdout=_io.StringIO())
+
+    def test_repeat_push_overwrites_one_fixed_file(self):
+        from .models import EventStationWaveform
+        self._push(b'first')
+        self._push(b'second')
+        files = sorted(p.name for p in (self.media / 'event_waveforms' / self.WIB).glob('*.mseed'))
+        self.assertEqual(files, ['SJPM_HNZ.mseed'])
+        obj = EventStationWaveform.objects.get(event_id=self.WIB, station_code='SJPM', component='HNZ')
+        self.assertEqual(obj.mseed.name, f'event_waveforms/{self.WIB}/SJPM_HNZ.mseed')
+        self.assertEqual(obj.mseed.read(), b'second')
+
+    def test_dedupe_command_plans_then_cleans(self):
+        from .models import EventStationWaveform
+        folder = self.media / 'event_waveforms' / self.WIB
+        folder.mkdir(parents=True)
+        (folder / 'SJPM_HNZ.mseed').write_bytes(b'old canonical')
+        (folder / 'SJPM_HNZ_Ab3xYz9.mseed').write_bytes(b'old copy')
+        (folder / 'SJPM_HNZ_Qc4INC6.mseed').write_bytes(b'newest')        # dirujuk baris
+        (folder / 'ARPI_HNE_2UYwWjm.mseed').write_bytes(b'only copy')     # tanpa path tetap: dibiarkan
+        (folder / 'notes.txt').write_text('x')
+        obj = EventStationWaveform.objects.create(event_id=self.WIB, station_code='SJPM', component='HNZ')
+        obj.mseed.name = f'event_waveforms/{self.WIB}/SJPM_HNZ_Qc4INC6.mseed'
+        obj.save()
+
+        out = _io.StringIO()
+        _call('dedupe_waveform_mseed', stdout=out)
+        self.assertIn('1 akan dipindah', out.getvalue())
+        self.assertIn('Salinan ganda: 1 akan dihapus', out.getvalue())
+        self.assertEqual(len(list(folder.glob('*.mseed'))), 4)              # rencana: tidak ada yang berubah
+
+        _call('dedupe_waveform_mseed', '--apply', stdout=_io.StringIO())
+        self.assertEqual(sorted(p.name for p in folder.iterdir()),
+                         ['ARPI_HNE_2UYwWjm.mseed', 'SJPM_HNZ.mseed', 'notes.txt'])
+        obj.refresh_from_db()
+        self.assertEqual(obj.mseed.name, f'event_waveforms/{self.WIB}/SJPM_HNZ.mseed')
+        self.assertEqual(obj.mseed.read(), b'newest')

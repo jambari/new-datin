@@ -19,6 +19,7 @@ Usage:
 import json
 import os
 import re
+import shutil
 from pathlib import Path
 
 from django.conf import settings
@@ -26,7 +27,7 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 
 from repository.models import (
-    EventResponseSpectrum, EventStationWaveform, ShakemapEvent,
+    EventResponseSpectrum, EventStationWaveform, ShakemapEvent, _waveform_mseed_path,
 )
 from repository.shakemap_lookup import find_shakemap_event, wib_id_to_utc
 
@@ -211,10 +212,20 @@ class Command(BaseCommand):
                     component=m.group("comp"),
                     defaults={},
                 )
-                # Copy mseed file into Django storage
-                from django.core.files import File
-                with open(f, "rb") as fh:
-                    obj.mseed.save(f"{m.group('sta')}_{m.group('comp')}.mseed", File(fh), save=True)
+                # Salin ke path tetap event_waveforms/<WIB>/<STA>_<COMP>.mseed dan timpa. Dulu memakai
+                # mseed.save(), yang menambah salinan bersufiks acak (STA_COMP_Ab3xYz9.mseed) tiap PUSH.
+                rel = _waveform_mseed_path(obj, f.name)
+                dest = media / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(f, dest)
+                prior = obj.mseed.name if obj.mseed else None
+                if prior and prior != rel:
+                    try:
+                        (media / prior).unlink(missing_ok=True)
+                    except OSError:
+                        pass
+                obj.mseed.name = rel
+                obj.save(update_fields=["mseed"])
                 if not quiet:
                     self.stdout.write(f"  mseed: {m.group('sta')}/{m.group('comp')}")
         else:
