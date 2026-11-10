@@ -203,3 +203,78 @@ class BeritaUploadTests(TestCase):
         bad = SimpleUploadedFile('x.png', b'bukan gambar', content_type='image/png')
         response = self.client.post(self.url, {'image': bad})
         self.assertEqual(response.status_code, 400)
+
+
+class ImportLaravelArticlesTest(TestCase):
+    """Impor artikel website Laravel lama (.188)."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='berita-import-')
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        ctx = override_settings(MEDIA_ROOT=f'{self.tmp}/media')
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+        self.src = f'{self.tmp}/src'
+        photo = f'{self.src}/var/www/html/datin/public/berita/berita/ogd'
+        import os
+        os.makedirs(photo)
+        buf = io.BytesIO()
+        Image.new('RGB', (8, 8), 'red').save(buf, 'JPEG')
+        for name in ('sampul.jpeg', 'isi.jpeg'):
+            with open(f'{photo}/{name}', 'wb') as fh:
+                fh.write(buf.getvalue())
+        base = '/var/www/html/datin/public/berita/berita/ogd/'
+        self.articles = [
+            {'id': '72', 'category': 'berita', 'title': 'Kegiatan OGD', 'slug': 'kegiatan-ogd', 'author': 'Jambari',
+             'content': '<p>Isi <b>berita</b>.</p><img src="../../berita/berita/ogd/isi.jpeg">'
+                        '<img src="berita/berita/hilang.jpg"><script>alert(1)</script>',
+             'image': 'berita/berita/ogd/sampul.jpeg', 'status': 'PUBLISHED', 'date': '2019-04-18',
+             'created_at': '2019-04-18 21:05:00', 'deleted_at': None,
+             'media': [{'kind': 'cover', 'url': 'berita/berita/ogd/sampul.jpeg', 'found': base + 'sampul.jpeg'},
+                       {'kind': 'content', 'url': '../../berita/berita/ogd/isi.jpeg', 'found': base + 'isi.jpeg'},
+                       {'kind': 'content', 'url': 'berita/berita/hilang.jpg', 'found': None}]},
+            {'id': '80', 'category': 'seismisitas', 'title': 'Review', 'slug': 'review', 'author': 'x', 'content': 'x',
+             'image': None, 'status': 'PUBLISHED', 'date': '2019-09-09', 'created_at': None, 'deleted_at': None,
+             'media': []},
+            {'id': '81', 'category': 'kunjungan', 'title': 'Terhapus', 'slug': 'terhapus', 'author': 'x',
+             'content': 'x', 'image': None, 'status': 'PUBLISHED', 'date': '2019-09-09', 'created_at': None,
+             'deleted_at': '2020-01-01 00:00:00', 'media': []},
+            {'id': '82', 'category': 'kunjungan', 'title': 'Nama Saja', 'slug': 'nama-saja', 'author': '',
+             'content': '<p>Teks</p>', 'image': 'x/1.jpg', 'status': 'PUBLISHED', 'date': '2020-02-02',
+             'created_at': None, 'deleted_at': None,
+             'media': [{'kind': 'cover', 'url': 'x/1.jpg', 'found': base + 'sampul.jpeg', 'candidates': 6}]},
+        ]
+        self.json = f'{self.tmp}/a.json'
+        import json
+        with open(self.json, 'w') as fh:
+            json.dump(self.articles, fh)
+
+    def run_import(self, *extra):
+        from django.core.management import call_command
+        out = io.StringIO()
+        call_command('import_laravel_articles', self.json, '--media-root', self.src, *extra, stdout=out)
+        return out.getvalue()
+
+    def test_dry_run_saves_nothing(self):
+        out = self.run_import('--dry-run')
+        self.assertIn('2 artikel akan diimpor', out)
+        self.assertEqual(Berita.objects.count(), 0)
+
+    def test_import_keeps_slug_date_photos_and_is_idempotent(self):
+        import datetime
+        out = self.run_import()
+        self.assertIn('2 artikel diimpor', out)
+        self.assertIn('1 terhapus/draf', out)
+        b = Berita.objects.get(slug='kegiatan-ogd')
+        self.assertTrue(b.is_published)
+        self.assertEqual(b.published_at, datetime.datetime(2019, 4, 18, 12, 5, tzinfo=datetime.timezone.utc))
+        self.assertTrue(b.cover.name.startswith('berita/covers/'))
+        self.assertEqual(b.content.count('<img'), 1)                 # foto hilang dibuang
+        self.assertIn('/media/berita/content/2019/04/', b.content)
+        self.assertNotIn('script', b.content)
+        self.assertIn('Penulis: Jambari', b.content)
+        self.assertEqual(b.excerpt, 'Isi berita.')
+        self.assertFalse(Berita.objects.filter(slug='review').exists())     # kategori lain tidak diimpor
+        self.assertFalse(Berita.objects.get(slug='nama-saja').cover)         # cocok nama saja: tidak dipakai
+        self.assertIn('0 artikel diimpor; 2 sudah ada', self.run_import())
+        self.assertEqual(self.client.get('/berita/kegiatan-ogd/').status_code, 200)
