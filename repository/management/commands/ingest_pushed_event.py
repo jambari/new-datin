@@ -5,8 +5,6 @@ The .50 ShakeMap manager's "PUSH" button rsyncs:
     .psa5             -> /var/www/html/media/event_response_spectra/<WIB>/*.psa5
     waveform PNGs     -> /var/www/html/media/event_waveforms/<WIB>/<sta>_<comp>.png
     raw .mseed        -> /var/www/html/media/waveforms/<WIB>/*.mseed   (kept for reference)
-    grid.xml          -> /var/www/html/media/shakemaps/<WIB>/grid.xml          (peta isoseismal)
-    stationlist.xml   -> /var/www/html/media/shakemaps/<WIB>/stationlist.xml   (peta isoseismal)
 
 This command picks those files up and links them to DB rows. Idempotent: re-running
 upserts (object.shakemap_image is rewritten; spectrum / waveform rows are
@@ -231,32 +229,6 @@ class Command(BaseCommand):
         else:
             if not quiet:
                 self.stdout.write(f"  no mseed dir at {wf_mseed_dir} — skipping")
-
-        # ---- 5) Peta isoseismal: grid MMI + stasiun dari ShakeMap ----
-        # grid.xml (±7 MB) diringkas ke .npz lalu dihapus; stationlist.xml disimpan apa adanya.
-        sm_dir = media / "shakemaps" / wib
-        grid_xml, station_xml = sm_dir / "grid.xml", sm_dir / "stationlist.xml"
-        summary["isoseismal"] = None
-        if grid_xml.exists() or station_xml.exists():
-            from isoseismal.services import store_shakemap
-            try:
-                iso = store_shakemap(wib, grid_xml if grid_xml.exists() else None,
-                                     station_xml if station_xml.exists() else None)
-            except (ValueError, OSError) as e:
-                summary["errors"].append("isoseismal: %s" % e)
-            else:
-                summary["isoseismal"] = iso.slug
-                if grid_xml.exists():
-                    grid_xml.unlink()
-                try:
-                    from isoseismal.tasks import generate_isoseismal_task
-                    # Grid/stasiun baru (mis. koreksi magnitudo, run composite): gambar ulang peta.
-                    generate_isoseismal_task.delay(wib, force=iso.data_changed)
-                except Exception as e:                  # broker mati: scan per jam tetap menyusul
-                    summary["errors"].append("isoseismal task: %s" % e)
-                if not quiet:
-                    self.stdout.write("  isoseismal: %s (%d stasiun, %d teramati)"
-                                      % (iso.slug, len(iso.stations), len(iso.observed)))
 
         # ---- Final summary (parsed by the .50 push endpoint) ----
         self.stdout.write("INGEST_SUMMARY " + json.dumps(summary))

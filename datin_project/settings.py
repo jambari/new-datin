@@ -96,6 +96,10 @@ SEEDLINK_PORT = 18123
 SEISMIC_SEEDLINK_HOST = config('SEISMIC_SEEDLINK_HOST', default='202.90.198.101')  # Seismic SeedLink
 SEISMIC_SEEDLINK_PORT = config('SEISMIC_SEEDLINK_PORT', default=18000, cast=int)
 
+# Peta isoseismal: run ShakeMap diambil dari .50 lewat terowongan SSH balik (alias di ~/.ssh/config .189).
+ISOSEISMAL_SHAKEMAP_HOST = config('ISOSEISMAL_SHAKEMAP_HOST', default='host50')
+ISOSEISMAL_SHAKEMAP_DIR = config('ISOSEISMAL_SHAKEMAP_DIR', default='/home/sysop/shakemap/data_MMI')
+
 # Add this to the bottom of the file
 INTERNAL_IPS = [
     "127.0.0.1","36.91.166.189"
@@ -273,7 +277,7 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'repository.tasks.fetch_bmkg_felt_task',
         'schedule': crontab(minute=0),  # Hourly: at minute 0 of every hour, UTC
     },
-    # Peta isoseismal: gambar bila laporan dirasakan (BMKG / katalog) masuk setelah ShakeMap.
+    # Peta isoseismal: gempa dirasakan → ambil run ShakeMap dari .50 → gambar (lihat docs/isoseismal.md).
     'scan-isoseismal': {
         'task': 'isoseismal.tasks.scan_isoseismal_task',
         'schedule': crontab(minute=10),  # 10 menit setelah fetch-bmkg-felt-hourly

@@ -1,13 +1,15 @@
 """Simpan hasil ShakeMap dari .50 dan gambar peta isoseismal."""
 import datetime
 import logging
+import subprocess
 
 import numpy as np
 from django.core.files.base import ContentFile
 from django.utils import timezone
 from matplotlib.path import Path as MplPath
 
-from .felt import collect_felt, regions
+from . import remote
+from .felt import collect_felt, felt_events, regions
 from .models import IsoseismalMap
 from .shakemap_io import grid_to_npz, load_npz, parse_grid, parse_stations
 
@@ -132,3 +134,41 @@ def generate(obj, force=False):
     obj.note = ""
     obj.save()
     return f"digambar ({len(obj.felt)} tempat, {len(obj.stations)} stasiun)"
+
+
+def sync_felt(since, until=None):
+    """Buat/perbarui peta untuk gempa dirasakan sejak `since` (UTC).
+
+    Daftar gempa dirasakan dari .189 (BMKG + katalog); run ShakeMap dicari di .50 dan grid.xml /
+    stationlist.xml hanya diunduh bila run itu baru atau berubah. Kembalikan daftar status.
+    """
+    events = felt_events(since, until)
+    if not events:
+        return []
+    try:
+        runs = remote.list_runs()
+    except (OSError, subprocess.SubprocessError) as exc:
+        log.warning("isoseismal: daftar ShakeMap .50 gagal: %s", exc)
+        return [f"gagal mendaftar ShakeMap .50: {exc}"]
+    out, seen = [], set()
+    for t, lat, lon in events:
+        run = remote.best_run(runs, t, lat, lon)
+        if run is None or run.name in seen:
+            continue
+        seen.add(run.name)
+        obj = IsoseismalMap.objects.filter(wib_id=run.wib_id).first()
+        force = False
+        if obj is None or obj.shakemap_dir != run.name or obj.shakemap_mtime != run.mtime:
+            try:
+                with remote.temp_dir() as tmp:
+                    grid, stations = remote.fetch(run, tmp)
+                    obj = store_shakemap(run.wib_id, grid, stations)
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                log.warning("isoseismal %s: unduh/simpan gagal: %s", run.name, exc)
+                out.append(f"{run.wib_id}: gagal ({exc})")
+                continue
+            force = obj.data_changed
+            obj.shakemap_dir, obj.shakemap_mtime = run.name, run.mtime
+            obj.save(update_fields=["shakemap_dir", "shakemap_mtime", "updated_at"])
+        out.append(f"{run.wib_id}: {generate(obj, force=force)}")
+    return out

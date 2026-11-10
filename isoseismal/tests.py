@@ -200,41 +200,108 @@ class GenerateAndPagesTest(MediaMixin, TestCase):
         self.assertFalse(obj.image)
         self.assertEqual(self.client.get(obj.get_absolute_url()).status_code, 404)
 
-    def test_ingest_command_stores_grid_and_queues_render(self):
-        folder = Path(self.media) / 'shakemaps' / WIB_ID
-        self.write_inputs(folder)
-        out = io.StringIO()
-        with mock.patch('isoseismal.tasks.generate_isoseismal_task.delay') as delay:
-            call_command('ingest_pushed_event', WIB_ID, '--quiet', stdout=out)
-        summary = json.loads(out.getvalue().split('INGEST_SUMMARY ', 1)[1])
-        self.assertEqual(summary['isoseismal'], 'peta-isoseismal-gempabumi-kab-jayapura-22-mei-2026')
-        delay.assert_called_once_with(WIB_ID, force=True)
-        self.assertFalse((folder / 'grid.xml').exists())             # diringkas ke .npz
-        self.assertTrue((folder / 'stationlist.xml').exists())
-        obj = IsoseismalMap.objects.get(wib_id=WIB_ID)
-        self.assertEqual(len(obj.stations), 2)
 
-    def test_new_grid_forces_redraw_same_grid_does_not(self):
-        folder = Path(self.media) / 'shakemaps' / WIB_ID
-        with mock.patch('isoseismal.tasks.generate_isoseismal_task.delay') as delay:
-            self.write_inputs(folder)
-            call_command('ingest_pushed_event', WIB_ID, '--quiet', stdout=io.StringIO())
-            self.write_inputs(folder)                                  # PUSH ulang, data sama
-            call_command('ingest_pushed_event', WIB_ID, '--quiet', stdout=io.StringIO())
-            (folder / 'grid.xml').parent.mkdir(parents=True, exist_ok=True)
-            (folder / 'grid.xml').write_text(grid_xml(peak=5.2))       # run baru, grid berubah
-            call_command('ingest_pushed_event', WIB_ID, '--quiet', stdout=io.StringIO())
-        self.assertEqual([c.kwargs['force'] for c in delay.call_args_list], [True, False, True])
 
-    def test_scan_task_draws_when_felt_report_arrives_later(self):
+RUN_NAME = '20260522071031_37_-2320_140500_20260522071031_composite'
+LISTING = (f'/home/sysop/shakemap/data_MMI/{RUN_NAME}/output 1780000000.5\n'
+           '/home/sysop/shakemap/data_MMI/20260522071031_37_-2320_140500_20260522071031/output 1779990000.0\n'
+           '/home/sysop/shakemap/data_MMI/20260601120000_30_-8000_138000_20260601120000/output 1780500000.0\n'
+           '/home/sysop/shakemap/data_MMI/2026010113020_54_-4180_138440_2026010113020/output 1770000000.0\n'
+           'garbage\n')
+
+
+class RemoteTest(TestCase):
+    def test_listing_parsed_and_newest_matching_run_chosen(self):
+        from .remote import best_run, parse_listing
+        runs = parse_listing(LISTING)
+        self.assertEqual(len(runs), 3)                                 # nama folder rusak dilewati
+        self.assertEqual((runs[0].wib_id, runs[0].time, runs[0].lat, runs[0].lon),
+                         ('20260522071031', EVENT_UTC, -2.32, 140.5))
+        run = best_run(runs, EVENT_UTC + datetime.timedelta(seconds=3), -2.30, 140.49)
+        self.assertEqual(run.name, RUN_NAME)                          # composite: grid.xml terbaru
+        self.assertIsNone(best_run(runs, EVENT_UTC + datetime.timedelta(minutes=5), -2.3, 140.5))
+        self.assertIsNone(best_run(runs, EVENT_UTC, -5.0, 140.5))
+
+
+class FeltEventsTest(TestCase):
+    def test_bmkg_and_catalogue_merged_with_wit_rows_converted(self):
+        from gempa.models import Gempa
         from repository.models import FeltEarthquake
-        from .tasks import scan_isoseismal_task
-        grid, _stations = self.write_inputs(Path(self.media) / 'in')
-        obj = store_shakemap(WIB_ID, grid, None)
-        with mock.patch('isoseismal.tasks.SCAN_DAYS', 99999):
-            self.assertEqual(scan_isoseismal_task(days=99999), [])
-            FeltEarthquake.objects.create(event_datetime=EVENT_UTC, latitude=-2.32, longitude=140.5, magnitude=3.7,
-                                          depth_km=10, wilayah='x', dirasakan='III Jayapura')
-            self.assertEqual(len(scan_isoseismal_task(days=99999)), 1)
-        obj.refresh_from_db()
+        from .felt import felt_events
+        FeltEarthquake.objects.create(event_datetime=EVENT_UTC, latitude=-2.32, longitude=140.5, magnitude=3.7,
+                                      depth_km=10, wilayah='x', dirasakan='III Jayapura')
+        Gempa.objects.create(tanggal=datetime.date(2026, 5, 22), origin='09:10:33 WIT', lintang='2.29° LS',
+                             bujur=140.49, magnitudo=3.7, depth=10, terasa=True)         # kejadian sama
+        Gempa.objects.create(tanggal=datetime.date(2026, 5, 20), origin='03:00:00', lintang='-3.10',
+                             bujur=139.0, magnitudo=4.0, depth=10, terasa=True)
+        Gempa.objects.create(tanggal=datetime.date(2026, 5, 21), origin='03:00:00', lintang='-3.10',
+                             bujur=139.0, magnitudo=4.0, depth=10, terasa=False)          # tidak dirasakan
+        events = felt_events(datetime.datetime(2026, 5, 19, tzinfo=datetime.timezone.utc),
+                             datetime.datetime(2026, 5, 23, tzinfo=datetime.timezone.utc))
+        self.assertEqual([(t, lat) for t, lat, _lon in events],
+                         [(datetime.datetime(2026, 5, 20, 3, tzinfo=datetime.timezone.utc), -3.1), (EVENT_UTC, -2.32)])
+
+
+class SyncFeltTest(MediaMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        from repository.models import FeltEarthquake
+        FeltEarthquake.objects.create(event_datetime=EVENT_UTC, latitude=-2.32, longitude=140.5, magnitude=3.7,
+                                      depth_km=10, wilayah='x', dirasakan='III Jayapura, II Sentani')
+        self.listing = LISTING
+        self.peak = 4.6
+        self.fetched = []
+        for target, fake in (('isoseismal.remote._ssh', lambda cmd, timeout=60: self.listing),
+                             ('isoseismal.remote.fetch', self._fetch)):
+            patcher = mock.patch(target, side_effect=fake)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def _fetch(self, run, dest):
+        self.fetched.append(run.name)
+        (Path(dest) / 'grid.xml').write_text(grid_xml(peak=self.peak))
+        (Path(dest) / 'stationlist.xml').write_text(STATIONLIST)
+        return Path(dest) / 'grid.xml', Path(dest) / 'stationlist.xml'
+
+    def since(self):
+        return EVENT_UTC - datetime.timedelta(days=1)
+
+    def test_only_felt_events_are_fetched_and_drawn(self):
+        from .services import sync_felt
+        out = sync_felt(self.since())
+        self.assertEqual(self.fetched, [RUN_NAME])                    # run M3.0 di Laut Arafura tidak diambil
+        self.assertEqual(len(out), 1)
+        self.assertIn('digambar', out[0])
+        obj = IsoseismalMap.objects.get()
+        self.assertEqual((obj.wib_id, obj.shakemap_dir, obj.shakemap_mtime), (WIB_ID, RUN_NAME, 1780000000.5))
         self.assertTrue(obj.image)
+        self.assertEqual([f['place'] for f in obj.felt], ['Kota Jayapura', 'Depapre', 'Sentani'])
+
+    def test_unchanged_run_not_downloaded_again_newer_run_redrawn(self):
+        from .services import sync_felt
+        sync_felt(self.since())
+        drawn = IsoseismalMap.objects.get().generated_at
+        self.assertEqual(sync_felt(self.since()), [f'{WIB_ID}: skip: tidak berubah'])
+        self.assertEqual(len(self.fetched), 1)
+
+        self.listing = LISTING.replace('1780000000.5', '1780009999.0')  # run diulang, grid berubah
+        self.peak = 5.4
+        self.assertIn('digambar', sync_felt(self.since())[0])
+        self.assertEqual(len(self.fetched), 2)
+        self.assertGreater(IsoseismalMap.objects.get().generated_at, drawn)
+
+    def test_scan_task_and_command(self):
+        from .tasks import scan_isoseismal_task
+        with mock.patch('isoseismal.tasks.timezone.now', return_value=EVENT_UTC + datetime.timedelta(days=1)):
+            self.assertEqual(len(scan_isoseismal_task()), 1)
+        out = io.StringIO()
+        call_command('sync_isoseismal', '--since', '2026-05-01', '--until', '2026-05-31', stdout=out)
+        self.assertIn('1 kejadian diproses', out.getvalue())
+
+    def test_ssh_failure_reported_not_raised(self):
+        import subprocess
+        from .services import sync_felt
+        with mock.patch('isoseismal.remote._ssh', side_effect=subprocess.CalledProcessError(255, 'ssh')):
+            out = sync_felt(self.since())
+        self.assertTrue(out[0].startswith('gagal mendaftar ShakeMap .50'))
+        self.assertFalse(IsoseismalMap.objects.exists())

@@ -32,6 +32,9 @@ class IsoseismalMap(models.Model):
     lokasi = models.CharField(max_length=255, blank=True)
 
     grid = models.FileField('grid MMI ShakeMap (.npz)', upload_to='isoseismal/grid/', blank=True)
+    shakemap_dir = models.CharField('run ShakeMap di .50', max_length=120, blank=True,
+                                    help_text='Folder di data_MMI yang dipakai, mis. <WIB>_37_-2320_140500_<WIB>_composite.')
+    shakemap_mtime = models.FloatField('waktu ubah grid.xml di .50', null=True, blank=True)
     stations = models.JSONField('stasiun akselerograf', default=list, blank=True)
     observed = models.JSONField('intensitas teramati ShakeMap', default=list, blank=True)
     felt = models.JSONField('titik dirasakan', default=list, blank=True)

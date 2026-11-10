@@ -202,6 +202,52 @@ MATCH_SECONDS = 90
 MATCH_DEG = 1.0
 
 
+WIT_OFFSET = datetime.timedelta(hours=9)
+
+
+def gempa_time(tanggal, origin):
+    """Waktu UTC baris katalog Gempa. origin biasanya 'HH:MM:SS' UTC; baris lama 'HH:MM:SS WIT' (tanggal WIT)."""
+    text = str(origin or "").strip()
+    try:
+        t = datetime.datetime.strptime(f"{tanggal} {text[:8]}", "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+    if "WIT" in text.upper():
+        t -= WIT_OFFSET
+    return t.replace(tzinfo=datetime.timezone.utc)
+
+
+def gempa_lat(value):
+    """Lintang katalog: '-2.84' atau '2.74° LS' / '0.5° LU'."""
+    text = str(value or "").strip().upper()
+    m = re.search(r"-?\d+(?:\.\d+)?", text)
+    if not m:
+        return None
+    v = float(m.group(0))
+    return -abs(v) if "LS" in text else abs(v) if "LU" in text else v
+
+
+def felt_events(since, until=None):
+    """[(waktu UTC, lintang, bujur)] gempa dirasakan: BMKG gempabumi-dirasakan + katalog terasa=True."""
+    from gempa.models import Gempa
+    from repository.models import FeltEarthquake
+
+    until = until or datetime.datetime.now(datetime.timezone.utc)
+    out = [(f.event_datetime, f.latitude, f.longitude)
+           for f in FeltEarthquake.objects.filter(event_datetime__range=(since, until))]
+    rows = Gempa.objects.filter(terasa=True, tanggal__gte=(since - WIT_OFFSET).date(),
+                                tanggal__lte=(until + WIT_OFFSET).date()).values("tanggal", "origin", "lintang", "bujur")
+    for row in rows:
+        t, lat = gempa_time(row["tanggal"], row["origin"]), gempa_lat(row["lintang"])
+        if t is None or lat is None or row["bujur"] is None or not since <= t <= until:
+            continue
+        lon = float(row["bujur"])
+        # Kejadian yang sama di BMKG dan katalog cukup sekali.
+        if not any(abs((t - o[0]).total_seconds()) <= MATCH_SECONDS and abs(lat - o[1]) <= MATCH_DEG for o in out):
+            out.append((t, lat, lon))
+    return sorted(out)
+
+
 def felt_reports(event_time, lat, lon):
     """[(sumber, teks)] laporan dirasakan untuk kejadian pada event_time (UTC) di (lat, lon)."""
     from gempa.models import Gempa
@@ -213,14 +259,11 @@ def felt_reports(event_time, lat, lon):
         if abs(f.latitude - lat) <= MATCH_DEG and abs(f.longitude - lon) <= MATCH_DEG and f.dirasakan:
             reports.append(("BMKG (gempabumi dirasakan)", f.dirasakan))
     days = {event_time.date(), (event_time - win).date(), (event_time + win).date()}
+    days |= {(event_time + datetime.timedelta(hours=9)).date()}            # baris lama bertanggal WIT
     rows = Gempa.objects.filter(tanggal__in=days, terasa=True).values("tanggal", "origin", "terdampak", "narasi")
     for row in rows:
-        try:
-            t = datetime.datetime.strptime(f"{row['tanggal']} {str(row['origin'])[:8]}", "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            continue
-        t = t.replace(tzinfo=datetime.timezone.utc)
-        if abs((t - event_time).total_seconds()) > MATCH_SECONDS:
+        t = gempa_time(row["tanggal"], row["origin"])
+        if t is None or abs((t - event_time).total_seconds()) > MATCH_SECONDS:
             continue
         for field in ("terdampak", "narasi"):
             text = row.get(field) or ""
