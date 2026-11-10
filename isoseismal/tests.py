@@ -306,6 +306,25 @@ class SyncFeltTest(MediaMixin, TestCase):
         self.assertEqual(len(self.fetched), 2)
         self.assertGreater(IsoseismalMap.objects.get().generated_at, drawn)
 
+    def test_felt_event_without_intensity_text_still_drawn_with_note(self):
+        from repository.models import FeltEarthquake
+        from .services import sync_felt
+        FeltEarthquake.objects.update(dirasakan='')                    # baris placeholder lama
+        global STATIONLIST
+        saved = STATIONLIST
+        STATIONLIST = saved.split('<station code="OBS_5"')[0] + '</stationlist>\n</shakemap-data>\n'
+        try:
+            out = sync_felt(self.since())
+        finally:
+            STATIONLIST = saved
+        self.assertIn('digambar (0 tempat', out[0])
+        obj = IsoseismalMap.objects.get()
+        self.assertEqual(obj.felt, [])
+        self.assertTrue(obj.image)
+        self.assertIn('belum ada laporan intensitas', obj.note)
+        page = self.client.get(obj.get_absolute_url())
+        self.assertContains(page, 'laporan intensitas (skala MMI) per wilayah belum')
+
     def test_scan_task_and_command(self):
         from .tasks import scan_isoseismal_task
         with mock.patch('isoseismal.tasks.timezone.now', return_value=EVENT_UTC + datetime.timedelta(days=1)):

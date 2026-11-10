@@ -76,6 +76,10 @@
           {% if mmi_max %}<div class="iso-param"><span>MMI maks. teramati</span><b><span class="iso-badge" style="background:{{ mmi_max.color }}">{{ mmi_max.label }}</span></b></div>{% endif %}
         </div>
 
+        {% if not felt %}
+        <p class="iso-note">Gempa ini tercatat dirasakan, tetapi laporan intensitas (skala MMI) per wilayah belum
+          tersedia. Peta menampilkan perkiraan intensitas ShakeMap dan rekaman akselerograf.</p>
+        {% endif %}
         {% if felt %}
         <h3>Laporan dirasakan</h3>
         <div class="iso-table-wrap"><table class="iso-table">

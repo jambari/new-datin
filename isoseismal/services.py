@@ -107,12 +107,16 @@ def refresh_felt(obj):
     return changed
 
 
-def generate(obj, force=False):
-    """Gambar ulang peta bila ada laporan dirasakan. Kembalikan teks status singkat."""
+def generate(obj, force=False, felt_event=False):
+    """Gambar (ulang) peta. Kembalikan teks status singkat.
+
+    Peta dibuat bila ada laporan intensitas dirasakan, atau bila gempa ini tercatat dirasakan
+    (felt_event=True, mis. dari daftar BMKG/katalog) walau teks intensitasnya kosong: peta lalu
+    hanya memuat perkiraan ShakeMap dan stasiun, dengan catatan bahwa laporan belum tersedia."""
     from .layout import render_map
 
     changed = refresh_felt(obj)
-    if not obj.felt:
+    if not obj.felt and not felt_event:
         obj.note = "Belum ada laporan dirasakan."
         obj.save(update_fields=["felt", "felt_text", "felt_sources", "note", "updated_at"])
         return "skip: tidak dirasakan"
@@ -131,7 +135,7 @@ def generate(obj, force=False):
         obj.image.delete(save=False)
     obj.image.save(f"{obj.slug}.png", ContentFile(png), save=False)
     obj.generated_at = timezone.now()
-    obj.note = ""
+    obj.note = "" if obj.felt else "Dirasakan, tetapi belum ada laporan intensitas (MMI)."
     obj.save()
     return f"digambar ({len(obj.felt)} tempat, {len(obj.stations)} stasiun)"
 
@@ -170,5 +174,5 @@ def sync_felt(since, until=None):
             force = obj.data_changed
             obj.shakemap_dir, obj.shakemap_mtime = run.name, run.mtime
             obj.save(update_fields=["shakemap_dir", "shakemap_mtime", "updated_at"])
-        out.append(f"{run.wib_id}: {generate(obj, force=force)}")
+        out.append(f"{run.wib_id}: {generate(obj, force=force, felt_event=True)}")
     return out

@@ -42,7 +42,7 @@ class IsoseismalMapAdmin(admin.ModelAdmin):
     @admin.action(description='Gambar ulang peta (cari ulang laporan dirasakan)')
     def gambar_ulang(self, request, queryset):
         for obj in queryset:
-            status = generate(obj, force=True)
+            status = generate(obj, force=True, felt_event=True)
             self.message_user(request, f'{obj.wib_id}: {status}',
                               messages.SUCCESS if not status.startswith('skip') else messages.WARNING)
 

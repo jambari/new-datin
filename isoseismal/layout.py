@@ -318,7 +318,7 @@ def _render(obj, mmi, bounds):
     _place_labels(fig, ax, labels, avoid=[(ex, ey)])
     _panel(fig, obj, smap, (lat0, lat1, lon0, lon1), W, H, mx + mw + 0.2 / W, my, mh + (TITLE_H + 0.12) / H,
            MAP_W)
-    _scale_strip(fig, mx, M / H, mw, STRIP_H / H)
+    _scale_strip(fig, mx, M / H, mw, STRIP_H / H, felt=bool(obj.felt))
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=150, facecolor="white")
@@ -483,7 +483,7 @@ def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
     iax.set_anchor("C")
 
 
-def _scale_strip(fig, x0, y0, w, h):
+def _scale_strip(fig, x0, y0, w, h, felt=True):
     """Tabel skala intensitas (Worden dkk., 2011) seperti MMI.png di template QGIS."""
     ax = fig.add_axes([x0, y0, w, h])
     ax.set_xlim(0, 1), ax.set_ylim(0, 1), ax.axis("off")
@@ -503,5 +503,6 @@ def _scale_strip(fig, x0, y0, w, h):
             ax.add_patch(Rectangle((xx, yy), col_w, rh, fc=row[3] if last else "white", ec="#111", lw=0.7))
             ax.text(xx + col_w / 2, yy + rh / 2, row[idx], fontsize=8.5 if last else 6.6, ha="center", va="center",
                     fontweight="bold" if last else "normal")
-    ax.text(0, 0.02, "Skala berdasarkan Worden dkk. (2011). Warna peta = perkiraan intensitas ShakeMap "
-            "yang dikoreksi data stasiun dan laporan dirasakan.", fontsize=6.5, va="bottom", style="italic")
+    note = ("Warna peta = perkiraan intensitas ShakeMap yang dikoreksi data stasiun dan laporan dirasakan."
+            if felt else "Laporan intensitas dirasakan belum tersedia; warna peta = perkiraan ShakeMap dan data stasiun.")
+    ax.text(0, 0.02, "Skala berdasarkan Worden dkk. (2011). " + note, fontsize=6.5, va="bottom", style="italic")
