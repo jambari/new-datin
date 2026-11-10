@@ -250,7 +250,8 @@ class Command(BaseCommand):
                     grid_xml.unlink()
                 try:
                     from isoseismal.tasks import generate_isoseismal_task
-                    generate_isoseismal_task.delay(wib)
+                    # Grid/stasiun baru (mis. koreksi magnitudo, run composite): gambar ulang peta.
+                    generate_isoseismal_task.delay(wib, force=iso.data_changed)
                 except Exception as e:                  # broker mati: scan per jam tetap menyusul
                     summary["errors"].append("isoseismal task: %s" % e)
                 if not quiet:

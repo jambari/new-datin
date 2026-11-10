@@ -208,11 +208,23 @@ class GenerateAndPagesTest(MediaMixin, TestCase):
             call_command('ingest_pushed_event', WIB_ID, '--quiet', stdout=out)
         summary = json.loads(out.getvalue().split('INGEST_SUMMARY ', 1)[1])
         self.assertEqual(summary['isoseismal'], 'peta-isoseismal-gempabumi-kab-jayapura-22-mei-2026')
-        delay.assert_called_once_with(WIB_ID)
+        delay.assert_called_once_with(WIB_ID, force=True)
         self.assertFalse((folder / 'grid.xml').exists())             # diringkas ke .npz
         self.assertTrue((folder / 'stationlist.xml').exists())
         obj = IsoseismalMap.objects.get(wib_id=WIB_ID)
         self.assertEqual(len(obj.stations), 2)
+
+    def test_new_grid_forces_redraw_same_grid_does_not(self):
+        folder = Path(self.media) / 'shakemaps' / WIB_ID
+        with mock.patch('isoseismal.tasks.generate_isoseismal_task.delay') as delay:
+            self.write_inputs(folder)
+            call_command('ingest_pushed_event', WIB_ID, '--quiet', stdout=io.StringIO())
+            self.write_inputs(folder)                                  # PUSH ulang, data sama
+            call_command('ingest_pushed_event', WIB_ID, '--quiet', stdout=io.StringIO())
+            (folder / 'grid.xml').parent.mkdir(parents=True, exist_ok=True)
+            (folder / 'grid.xml').write_text(grid_xml(peak=5.2))       # run baru, grid berubah
+            call_command('ingest_pushed_event', WIB_ID, '--quiet', stdout=io.StringIO())
+        self.assertEqual([c.kwargs['force'] for c in delay.call_args_list], [True, False, True])
 
     def test_scan_task_draws_when_felt_report_arrives_later(self):
         from repository.models import FeltEarthquake

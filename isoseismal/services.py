@@ -21,8 +21,12 @@ def wib_to_utc(wib_id):
 
 
 def store_shakemap(wib_id, grid_path=None, stationlist_path=None):
-    """Buat/perbarui IsoseismalMap dari grid.xml & stationlist.xml satu kejadian. Kembalikan objeknya."""
+    """Buat/perbarui IsoseismalMap dari grid.xml & stationlist.xml satu kejadian. Kembalikan objeknya.
+
+    obj.data_changed = True bila grid, parameter gempa, atau data stasiun berbeda dari yang tersimpan
+    (peta yang sudah ada perlu digambar ulang)."""
     obj = IsoseismalMap.objects.filter(wib_id=wib_id).first() or IsoseismalMap(wib_id=wib_id)
+    before = _snapshot(obj)
     obj.event_time = wib_to_utc(wib_id)
     if grid_path:
         info, mmi, bounds = parse_grid(grid_path)
@@ -30,9 +34,12 @@ def store_shakemap(wib_id, grid_path=None, stationlist_path=None):
             if info.get(field) is not None:
                 setattr(obj, field, info[field])
         obj.lokasi = info.get("lokasi") or obj.lokasi
-        if obj.grid:
-            obj.grid.delete(save=False)
-        obj.grid.save(f"{wib_id}.npz", ContentFile(grid_to_npz(mmi, bounds)), save=False)
+        data = grid_to_npz(mmi, bounds)
+        if _grid_bytes(obj) != data:
+            if obj.grid:
+                obj.grid.delete(save=False)
+            obj.grid.save(f"{wib_id}.npz", ContentFile(data), save=False)
+            before["grid"] = None                       # grid baru
         obj.wilayah = wilayah_mmi(mmi, bounds)
     if stationlist_path:
         obj.stations, obj.observed = parse_stations(stationlist_path)
@@ -41,8 +48,24 @@ def store_shakemap(wib_id, grid_path=None, stationlist_path=None):
             raise ValueError(f"{wib_id}: {field} tidak diketahui (grid.xml belum ada)")
     if not obj.slug:
         obj.slug = obj.build_slug()
+    obj.data_changed = obj.pk is None or before != _snapshot(obj)
     obj.save()
     return obj
+
+
+def _grid_bytes(obj):
+    if not obj.grid:
+        return None
+    try:
+        with obj.grid.open("rb") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+def _snapshot(obj):
+    return {"grid": obj.grid.name if obj.grid else None, "event": (obj.latitude, obj.longitude, obj.magnitude,
+            obj.depth), "stations": obj.stations, "observed": obj.observed}
 
 
 def wilayah_mmi(mmi, bounds):
