@@ -245,7 +245,6 @@ def landing(request):
         }
         for e in events_qs
     ])
-    felt_count = FeltEarthquake.objects.filter(event_datetime__gte=cutoff).count()
     latest_felt = FeltEarthquake.objects.order_by('-event_datetime').first()
     latest_shakemap = ShakemapEvent.objects.filter(
         magnitude__gt=0,
@@ -260,7 +259,6 @@ def landing(request):
     return render(request, 'landing.html', {
         'albums': albums,
         'events_json': events_json,
-        'felt_count': felt_count,
         'latest_felt': latest_felt,
         'latest_shakemap': latest_shakemap,
         'latest_berita': latest_berita,

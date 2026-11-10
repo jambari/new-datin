@@ -448,30 +448,6 @@
 <!-- ── Left panels stack ────────────────────────────────────────────────── -->
 <div id="left-panels">
 
-  <!-- Stats Panel -->
-  <div id="info-panel">
-    <h4>Gempa 30 Hari Terakhir</h4>
-    <div class="stat-row">
-      <span class="stat-label">Total</span>
-      <span class="stat-val" id="ev-count">—</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Terbesar</span>
-      <span class="stat-val" id="ev-max">—</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Terbaru</span>
-      <span class="stat-val" id="ev-latest">—</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Dirasakan</span>
-      <span class="stat-val">{{ felt_count }}</span>
-    </div>
-    <div style="margin-top:0.5rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.5rem; color:#64748b; font-size:0.6rem;">
-      Data QC 10 hari terakhir
-    </div>
-  </div>
-
   {% if latest_berita %}
   <!-- Berita Panel -->
   <div id="berita-panel">
@@ -679,11 +655,7 @@
   }
 
   // ── Plot markers ──────────────────────────────────────────
-  let maxMag = 0, latestTime = '';
   EVENTS.forEach(function (e, idx) {
-    if (e.mag > maxMag) maxMag = e.mag;
-    if (!latestTime) latestTime = e.time;
-
     const locLabel = e.loc || 'Papua';
     const popupHtml =
       '<div class="popup-mag">M ' + e.mag.toFixed(1) + '</div>' +
@@ -717,11 +689,6 @@
       }).bindPopup(popupHtml).addTo(map);
     }
   });
-
-  // ── Stats panel ───────────────────────────────────────────
-  document.getElementById('ev-count').textContent  = EVENTS.length;
-  document.getElementById('ev-max').textContent    = maxMag ? 'M ' + maxMag.toFixed(1) : '—';
-  document.getElementById('ev-latest').textContent = latestTime ? latestTime.slice(0, 10) : '—';
 
 })();
 </script>
