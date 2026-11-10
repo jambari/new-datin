@@ -1530,24 +1530,25 @@ def lemi_raw_api(request):
 
 
 def kindex_jyp_png(request, jenis):
-    """Grafik indeks K / A JYP 7 hari terakhir (PNG, di-cache 10 menit)."""
-    from django.core.cache import cache
-    from .kindex_plot import latest_day, render_a_png, render_k_png
+    """Grafik indeks K / A JYP 7 hari s.d. kemarin (PNG), berganti sekali sehari.
 
+    Citra disimpan di cache per tanggal akhir; tugas Telegram harian menimpanya,
+    jadi halaman publik sama dengan citra yang dikirim.
+    """
+    from django.core.cache import cache
+    from .kindex_plot import PNG_CACHE_SECONDS, latest_day, png_cache_key, render_a_png, render_k_png
+
+    if jenis not in ('k', 'a'):
+        return HttpResponse(status=404)
     end = latest_day()
     if end is None:
         return HttpResponse(status=404)
-    key = f'kindex-jyp-png:{jenis}:{end}:{_kindex_cache_stamp()}'
+    key = png_cache_key(jenis, end)
     png = cache.get(key)
     if png is None:
         png = render_k_png(end) if jenis == 'k' else render_a_png(end)
-        cache.set(key, png, 600)
+        cache.set(key, png, PNG_CACHE_SECONDS)
     resp = HttpResponse(png, content_type='image/png')
     resp['Cache-Control'] = 'public, max-age=600'
     return resp
 
-
-def _kindex_cache_stamp():
-    from .models import KIndexDaily
-    last = KIndexDaily.objects.order_by('-updated_at').values_list('updated_at', flat=True).first()
-    return last.timestamp() if last else 0

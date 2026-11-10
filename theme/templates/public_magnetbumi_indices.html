@@ -3,7 +3,7 @@
 {% load static %}
 {% load tz %}
 {% block seo_title %}Indeks K & A Magnetbumi Jayapura · BMKG{% endblock %}
-{% block meta_description %}Indeks aktivitas geomagnet K dan A harian Stasiun Geofisika Kelas I Jayapura (JYP) BMKG. Citra indeks diperbarui setiap hari.{% endblock %}
+{% block meta_description %}Indeks aktivitas geomagnet K dan A harian Stasiun Geofisika Kelas I Jayapura (JYP) BMKG, dihitung dari data magnetometer LEMI-018 dan diperbarui setiap hari.{% endblock %}
 {% block og_title %}Indeks K & A Magnetbumi · BMKG Jayapura{% endblock %}
 {% block og_description %}Indeks aktivitas geomagnet K dan A harian Stasiun Jayapura (JYP).{% endblock %}
 
@@ -112,7 +112,7 @@
 <div class="page-wrap">
   <h1 class="page-title">Indeks K &amp; A Magnetbumi</h1>
   <p class="page-sub">
-    Stasiun Jayapura (JYP){% if fmi_date %} · {{ fmi_date|date:"d F Y" }} WIT{% endif %}
+    Stasiun Jayapura (JYP){% if kindex_day %} · s.d. {{ kindex_day|date:"d F Y" }} UTC{% endif %}
   </p>
 
   <div class="k-tabs" role="tablist" aria-label="Indeks K dan A">
@@ -146,60 +146,12 @@
       </div>
     </div>
     <p class="fmi-note">
-      Dihitung otomatis tiap jam oleh Stasiun Geofisika Jayapura dengan metode FMI (Sucksdorff dkk., 1991)
-      dari data magnetometer LEMI-018 JYP. Hari terakhir bersifat sementara sampai data hari berikutnya lengkap.
+      Dihitung oleh Stasiun Geofisika Jayapura dengan metode FMI (Sucksdorff dkk., 1991)
+      dari data magnetometer LEMI-018 JYP. Grafik diperbarui sekali sehari pukul 16:00 WIT
+      sampai hari kemarin (UTC), karena data hari ini masih direkam.
       Batang berarsir berarti data blok itu kurang dari 90%, batang kosong berarti tidak ada data.
     </p>
-    {% if fmi_k or fmi_a %}<h2 class="fmi-section">Pembanding: citra BMKG pusat</h2>{% endif %}
-  {% endif %}
-
-  {% if fmi_k or fmi_a %}
-    <div class="fmi-grid">
-      <div class="fmi-card">
-        <div class="fmi-card-head">
-          <span class="fmi-card-title">K Indices</span>
-          {% if fmi_k %}
-            <a class="fmi-card-link" href="{{ fmi_k.image.url }}" target="_blank" rel="noopener">Lihat ukuran penuh ↗</a>
-          {% endif %}
-        </div>
-        {% if fmi_k %}
-          <a href="{{ fmi_k.image.url }}" target="_blank" rel="noopener">
-            <img src="{{ fmi_k.image.url }}"
-                 alt="Indeks K Magnetbumi Jayapura {{ fmi_date|date:'d F Y' }}"
-                 loading="lazy">
-          </a>
-          <div class="fmi-card-foot">Diambil {{ fmi_k.fetched_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT &middot; {{ fmi_k.size_bytes|filesizeformat }}</div>
-        {% else %}
-          <div class="fmi-card-foot">Citra K belum tersedia.</div>
-        {% endif %}
-      </div>
-
-      <div class="fmi-card">
-        <div class="fmi-card-head">
-          <span class="fmi-card-title">A Indices</span>
-          {% if fmi_a %}
-            <a class="fmi-card-link" href="{{ fmi_a.image.url }}" target="_blank" rel="noopener">Lihat ukuran penuh ↗</a>
-          {% endif %}
-        </div>
-        {% if fmi_a %}
-          <a href="{{ fmi_a.image.url }}" target="_blank" rel="noopener">
-            <img src="{{ fmi_a.image.url }}"
-                 alt="Indeks A Magnetbumi Jayapura {{ fmi_date|date:'d F Y' }}"
-                 loading="lazy">
-          </a>
-          <div class="fmi-card-foot">Diambil {{ fmi_a.fetched_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT &middot; {{ fmi_a.size_bytes|filesizeformat }}</div>
-        {% else %}
-          <div class="fmi-card-foot">Citra A belum tersedia.</div>
-        {% endif %}
-      </div>
-    </div>
-
-    <p class="fmi-note">
-      Indeks aktivitas geomagnet harian, diperbarui otomatis setiap hari pukul 16:00 WIT.
-      Sumber: <code>dataweb.bmkg.go.id</code>
-      {% if fmi_fetched_at %} &middot; pembaruan terakhir {{ fmi_fetched_at|timezone:"Asia/Jayapura"|date:"d M Y H:i" }} WIT{% endif %}
-    </p>
-  {% elif not kindex_day %}
+  {% else %}
     <div class="fmi-empty">Citra indeks K &amp; A belum tersedia.</div>
   {% endif %}
   </div>

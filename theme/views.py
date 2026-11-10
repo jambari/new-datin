@@ -577,44 +577,18 @@ def public_magnetbumi(request):
     return render(request, 'public_magnetbumi.html')
 
 
-def _latest_fmi_indices():
-    """Pasangan citra indeks K & A untuk tanggal terbaru yang tersedia."""
-    from magnet.models import FmiIndicesImage
-
-    fmi_date = (
-        FmiIndicesImage.objects.order_by('-tanggal')
-        .values_list('tanggal', flat=True).first()
-    )
-    fmi_k = fmi_a = fmi_fetched_at = None
-    if fmi_date:
-        for rec in FmiIndicesImage.objects.filter(tanggal=fmi_date):
-            if rec.jenis == FmiIndicesImage.K:
-                fmi_k = rec
-            elif rec.jenis == FmiIndicesImage.A:
-                fmi_a = rec
-        newest = fmi_k or fmi_a
-        fmi_fetched_at = newest.fetched_at if newest else None
-
-    return {
-        'fmi_date':       fmi_date,
-        'fmi_k':          fmi_k,
-        'fmi_a':          fmi_a,
-        'fmi_fetched_at': fmi_fetched_at,
-    }
-
-
 def public_magnetbumi_indices(request):
-    """Halaman publik indeks magnetbumi K & A (JYP): hitung lokal + citra BMKG pembanding."""
+    """Halaman publik indeks magnetbumi K & A (JYP), hitung lokal s.d. kemarin (UTC)."""
+    from magnet.kindex_plot import latest_day
     from magnet.models import KIndexDaily
 
-    context = _latest_fmi_indices()
-    local = KIndexDaily.objects.filter(sumber=KIndexDaily.SUMBER_LOKAL).order_by('-tanggal').first()
-    context.update({
-        'kindex_day': local.tanggal if local else None,
-        'kindex_row': local,
-        'kindex_stamp': int(local.updated_at.timestamp()) if local else 0,
+    day = latest_day()
+    row = KIndexDaily.objects.filter(tanggal=day).first() if day else None
+    return render(request, 'public_magnetbumi_indices.html', {
+        'kindex_day': day,
+        'kindex_row': row,
+        'kindex_stamp': day.strftime('%Y%m%d') if day else '',
     })
-    return render(request, 'public_magnetbumi_indices.html', context)
 
 
 def public_magnetbumi_data(request):

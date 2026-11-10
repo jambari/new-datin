@@ -382,38 +382,20 @@ class FmiIndicesPublicPageTest(TestCase):
 
     # ── halaman khusus indeks K & A ──────────────────────────────────────────
 
-    def test_indices_page_shows_latest_pair(self):
+    def test_indices_page_no_longer_shows_bmkg_pusat_images(self):
+        """Citra BMKG pusat tidak diperbarui lagi, jadi tidak tampil di halaman publik."""
         self._make(FmiIndicesImage.K)
         self._make(FmiIndicesImage.A)
-
         resp = self.client.get(reverse('public_magnetbumi_indices'))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'FMI-K-Indices-JYP-20261003.png')
-        self.assertContains(resp, 'FMI-A-Indices-JYP-20261003.png')
-        self.assertContains(resp, 'K Indices')
-        self.assertContains(resp, 'A Indices')
-
-    def test_indices_page_shows_only_latest_date(self):
-        self._make(FmiIndicesImage.K, tanggal=datetime.date(2026, 10, 3))
-        self._make(FmiIndicesImage.A, tanggal=datetime.date(2026, 10, 3))
-        self._make(FmiIndicesImage.K, tanggal=datetime.date(2026, 10, 2))
-        self._make(FmiIndicesImage.A, tanggal=datetime.date(2026, 10, 2))
-
-        resp = self.client.get(reverse('public_magnetbumi_indices'))
-        self.assertContains(resp, 'FMI-K-Indices-JYP-20261003.png')
-        self.assertNotContains(resp, 'FMI-K-Indices-JYP-20261002.png')
+        self.assertNotContains(resp, 'FMI-K-Indices-JYP-20261003.png')
+        self.assertNotContains(resp, 'Pembanding')
+        self.assertContains(resp, 'Citra indeks K &amp; A belum tersedia')
 
     def test_indices_page_empty_state_without_data(self):
         resp = self.client.get(reverse('public_magnetbumi_indices'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Citra indeks K &amp; A belum tersedia')
-
-    def test_indices_page_partial_pair_does_not_break(self):
-        """Hanya citra K tersimpan — halaman tetap tampil."""
-        self._make(FmiIndicesImage.K)
-        resp = self.client.get(reverse('public_magnetbumi_indices'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Citra A belum tersedia')
 
     def test_indices_page_has_no_magnetbumi_charts(self):
         """Halaman indeks tidak boleh memuat chart 7 komponen."""
@@ -1201,3 +1183,47 @@ class LemiDataAlertTest(TestCase):
         with mock.patch('theme.telegram.send_telegram_message', return_value=True) as send:
             check_lemi_data_task()
         send.assert_not_called()
+
+
+class KIndexPublishedDayTest(TestCase):
+    """Grafik publik & Telegram berakhir di kemarin (UTC) dan berganti sekali sehari pukul 07:00 UTC."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    def test_published_until_switches_at_post_hour(self):
+        from .kindex_plot import published_until
+        utc = datetime.timezone.utc
+        fri = datetime.date(2026, 11, 13)
+        thu, wed = fri - datetime.timedelta(days=1), fri - datetime.timedelta(days=2)
+        self.assertEqual(published_until(datetime.datetime(2026, 11, 13, 6, 59, tzinfo=utc)), wed)
+        self.assertEqual(published_until(datetime.datetime(2026, 11, 13, 7, 0, tzinfo=utc)), thu)
+        self.assertEqual(published_until(datetime.datetime(2026, 11, 13, 23, 59, tzinfo=utc)), thu)
+
+    def test_today_and_unpublished_days_are_not_shown(self):
+        from .kindex_plot import latest_day, published_until
+        until = published_until()
+        for offset in (-1, 0, 1, 2):                     # kemarin lusa .. hari ini (dan esok)
+            KIndexDaily.objects.create(tanggal=until + datetime.timedelta(days=offset),
+                                       k_values=[2] * 8, sumber='lokal')
+        self.assertEqual(latest_day(), until)
+        page = self.client.get(reverse('public_magnetbumi_indices'))
+        self.assertContains(page, f'7 hari s.d. {until:%d} ')
+        self.assertNotContains(page, 'Pembanding')
+
+    def test_telegram_task_ends_yesterday_and_fills_page_cache(self):
+        from django.core.cache import cache
+        from .kindex_plot import png_cache_key
+        from .tasks import send_kindex_jyp_telegram_task
+        today = datetime.datetime.now(datetime.timezone.utc).date()
+        yesterday = today - datetime.timedelta(days=1)
+        for day in (yesterday, today):
+            KIndexDaily.objects.create(tanggal=day, k_values=[3] * 8, sumber='lokal')
+        with mock.patch('magnet.tasks.compute_kindex_jyp_task'), \
+             mock.patch('theme.telegram.send_telegram_photo', return_value=True) as send:
+            send_kindex_jyp_telegram_task()
+        self.assertIn(f'{yesterday:%Y%m%d}', send.call_args_list[0].args[1])
+        self.assertEqual(cache.get(png_cache_key('k', yesterday)), send.call_args_list[0].args[0])
+        self.assertIsNone(cache.get(png_cache_key('k', today)))

@@ -167,23 +167,34 @@ def compute_kindex_jyp_task(start=None, end=None):
 
 @shared_task
 def send_kindex_jyp_telegram_task():
-    """Kirim grafik indeks K & A JYP 7 hari terakhir (hitung lokal) ke grup Telegram."""
+    """Kirim grafik indeks K & A JYP 7 hari s.d. kemarin (hitung lokal) ke grup Telegram.
+
+    Hari ini masih direkam, jadi grafik berakhir di kemarin (UTC). Citra yang sama
+    disimpan ke cache halaman publik /magnetbumi/indeks-k-a/.
+    """
+    import datetime as _dt
+
+    from django.core.cache import cache
     from theme.telegram import send_telegram_photo
-    from .kindex_plot import latest_day, render_a_png, render_k_png
+    from .kindex_plot import PNG_CACHE_SECONDS, latest_day, png_cache_key, render_a_png, render_k_png
     from .models import KIndexDaily
 
     compute_kindex_jyp_task()
-    end = latest_day()
+    yesterday = _dt.datetime.now(_dt.timezone.utc).date() - _dt.timedelta(days=1)
+    end = latest_day(until=yesterday)
     if end is None:
         return 'tidak ada data indeks K'
     obj = KIndexDaily.objects.get(tanggal=end)
+    png_k, png_a = render_k_png(end), render_a_png(end)
+    cache.set(png_cache_key('k', end), png_k, PNG_CACHE_SECONDS)
+    cache.set(png_cache_key('a', end), png_a, PNG_CACHE_SECONDS)
     caption = (f'🧭 <b>Indeks Magnetbumi K &amp; A — Jayapura (JYP)</b>\n'
                f'📅 7 hari s.d. {end:%d-%m-%Y} UTC\n'
                f'Hari terakhir: A={obj.a_index:.0f} ({obj.criteria_label})'
                + (f' — {obj.keterangan}' if obj.keterangan else '')
                + '\n<i>Hitung lokal metode FMI dari data LEMI-018 JYP</i>')
-    ok_k = send_telegram_photo(render_k_png(end), f'Indeks-K-JYP-{end:%Y%m%d}.png', caption=caption)
-    ok_a = send_telegram_photo(render_a_png(end), f'Indeks-A-JYP-{end:%Y%m%d}.png',
+    ok_k = send_telegram_photo(png_k, f'Indeks-K-JYP-{end:%Y%m%d}.png', caption=caption)
+    ok_a = send_telegram_photo(png_a, f'Indeks-A-JYP-{end:%Y%m%d}.png',
                                caption=f'Indeks A harian JYP s.d. {end:%d-%m-%Y}')
     return f'K terkirim={ok_k}, A terkirim={ok_a}'
 

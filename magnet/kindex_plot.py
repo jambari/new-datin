@@ -25,12 +25,34 @@ def _tgl(d):
     return f'{d.day} {BULAN[d.month - 1]} {d.year}'
 
 
-def latest_day():
-    """Tanggal terakhir yang punya nilai K (sumber apa pun)."""
-    for obj in KIndexDaily.objects.order_by('-tanggal')[:10]:
+# Grafik diterbitkan sekali sehari bersama kiriman Telegram (jadwal send-kindex-jyp-daily).
+POST_HOUR_UTC = 7   # 07:00 UTC = 16:00 WIT
+
+
+def published_until(now=None):
+    """Hari UTC terakhir yang ditampilkan: kemarin, berganti tiap pukul 07:00 UTC.
+
+    Hari ini masih dalam perekaman, jadi tidak pernah ikut digambar. Sebelum jam kirim,
+    grafik tetap berakhir di kemarin lusa supaya citra hanya berganti sekali sehari.
+    """
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    return (now - datetime.timedelta(hours=POST_HOUR_UTC)).date() - datetime.timedelta(days=1)
+
+
+def latest_day(until=None):
+    """Tanggal terakhir s.d. `until` (bawaan: published_until()) yang punya nilai K."""
+    until = until or published_until()
+    for obj in KIndexDaily.objects.filter(tanggal__lte=until).order_by('-tanggal')[:10]:
         if obj.has_data:
             return obj.tanggal
     return None
+
+
+def png_cache_key(jenis, end_day):
+    return f'kindex-jyp-png:{jenis}:{end_day}'
+
+
+PNG_CACHE_SECONDS = 26 * 3600
 
 
 def _rows(end_day, days):
