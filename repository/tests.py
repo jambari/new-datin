@@ -535,6 +535,37 @@ class FetchBmkgFeltRegionTest(TestCase):
         self.assertFalse(is_papua_event(-2.90, 141.88, "", 4.9))                # below M5
         self.assertFalse(is_papua_event(-3.57, 143.63, "III Wewak", 5.5))       # too far east (Wewak)
 
+    def test_summary_line(self):
+        """One summary line: counts, newest event in the feed, and the Papua events found."""
+        import io
+        from unittest import mock
+        from django.core.management import call_command
+        feed = {"Infogempa": {"gempa": [
+            {"DateTime": "2026-11-10T08:34:04+00:00", "Coordinates": "-0.19,132.98", "Magnitude": "5.3",
+             "Kedalaman": "10 km", "Wilayah": "69 km barat laut Kebar Manokwari", "Dirasakan": "II - III Manokwari"},
+            {"DateTime": "2026-11-10T01:53:28+00:00", "Coordinates": "-8.02,130.49", "Magnitude": "5.4",
+             "Kedalaman": "20 km", "Wilayah": "Tanimbar", "Dirasakan": "III Saumlaki"},
+        ]}}
+
+        def fake_get(url, *a, **k):
+            r = mock.Mock(status_code=404, content=b"")
+            if url.endswith("gempadirasakan.json"):
+                r.status_code = 200
+                r.json.return_value = feed
+                r.raise_for_status.return_value = None
+            return r
+
+        out = io.StringIO()
+        with mock.patch("repository.management.commands.fetch_bmkg_felt.requests.get", side_effect=fake_get):
+            call_command("fetch_bmkg_felt", stdout=out, stderr=io.StringIO())
+            call_command("fetch_bmkg_felt", stdout=out, stderr=io.StringIO())
+        lines = [l for l in out.getvalue().splitlines() if l.startswith("Done.")]
+        self.assertEqual(len(lines), 2)
+        self.assertIn("Saved: 1 new Papua events | Already existed: 0", lines[0])
+        self.assertIn("feed: 2 events, newest 2026-11-10 08:34 UTC", lines[0])
+        self.assertIn("Papua: M5.3 2026-11-10 08:34 UTC (baru)", lines[0])
+        self.assertIn("Papua: M5.3 2026-11-10 08:34 UTC (sudah ada)", lines[1])
+
 
 # ── PUSH ulang dari .50: .mseed tidak boleh menumpuk salinan ────────────────
 import io as _io  # noqa: E402

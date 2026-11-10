@@ -133,6 +133,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Total events from API: {len(events)}")
 
         saved = skipped = 0
+        papua = []          # "M5.3 08:34 UTC (baru)" per Papua event in the feed, for the summary line
 
         for event in events:
             try:
@@ -250,10 +251,15 @@ class Command(BaseCommand):
                     saved += 1
                 else:
                     skipped += 1
+                papua.append(f"M{magnitude} {event_dt:%Y-%m-%d %H:%M} UTC ({'baru' if shk_created else 'sudah ada'})")
 
             except Exception as e:
                 self.stderr.write(f"  Error processing event: {e} — {event}")
 
+        # One line, so the celery log shows at a glance whether BMKG had published an event yet.
+        newest = max((e.get("DateTime", "") for e in events), default="")
         self.stdout.write(self.style.SUCCESS(
-            f"\nDone. Saved: {saved} new Papua events | Already existed: {skipped}"
+            f"Done. Saved: {saved} new Papua events | Already existed: {skipped} | "
+            f"feed: {len(events)} events, newest {newest[:16].replace('T', ' ') or '-'} UTC | "
+            f"Papua: {'; '.join(papua) or '-'}"
         ))
