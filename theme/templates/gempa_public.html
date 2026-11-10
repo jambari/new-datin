@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block site_header %}{% include 'partials/_landing_header.html' %}{% endblock %}
-{% load static tz %}
+{% load static static_v tz %}
 
 {% block extra_head %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link  rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static_v 'js/pusgen_public.js' %}"></script>
 <style>
   :root {
     --ink:    #111827; --muted: #6b7280; --line:  #e5e7eb;
@@ -328,7 +329,8 @@ function switchTab(name, btn) {
 }
 
 /* ══ MAP ══ */
-var quakeMap = null, activeTile = null, quakeLyr = null, feltLyr = null;
+var quakeMap = null, activeTile = null, quakeLyr = null, feltLyr = null, pusgen = null;
+var DARK_BASEMAPS = { dark: true, satellite: true };
 
 var BASEMAPS = {
   osm:       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap', maxZoom:19, referrerPolicy: 'strict-origin-when-cross-origin' }),
@@ -361,6 +363,14 @@ function initMap() {
   quakeMap = L.map('quake-map').setView([-2.5, 139.0], 6);
   activeTile = BASEMAPS.osm;
   activeTile.addTo(quakeMap);
+
+  // Sesar aktif & palung subduksi PuSGeN 2024 (di bawah marker, bisa dimatikan di kanan atas).
+  pusgen = addPusgenLayers(quakeMap, {
+    faults: "{% static_v 'gjson/indofaults.js' %}",
+    trench: "{% static_v 'gjson/subduksi.js' %}",
+    layer:  "{% static_v 'js/pusgen_layer.js' %}",
+    dark:   false,
+  });
 
   quakeLyr = L.layerGroup().addTo(quakeMap);
   feltLyr  = L.layerGroup().addTo(quakeMap);
@@ -398,6 +408,7 @@ window.changeBasemap = function(key) {
   if (activeTile) quakeMap.removeLayer(activeTile);
   activeTile = BASEMAPS[key] || BASEMAPS.osm;
   activeTile.addTo(quakeMap);
+  if (pusgen) pusgen.setDark(!!DARK_BASEMAPS[key]);
   if (quakeLyr) quakeLyr.bringToFront();
   if (feltLyr)  feltLyr.bringToFront();
 };

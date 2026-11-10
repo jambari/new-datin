@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block site_header %}{% include 'partials/_landing_header.html' %}{% endblock %}
-{% load static %}
+{% load static static_v %}
 
 {% block seo_title %}Stasiun Geofisika Kelas I Jayapura · BMKG Papua{% endblock %}
 {% block meta_description %}Pantau gempa bumi real-time, shakemap, magnetbumi, dan peringatan dini cuaca ekstrem wilayah Papua. Data resmi dari Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
@@ -602,6 +602,7 @@
 {% block extra_scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
+<script src="{% static_v 'js/pusgen_public.js' %}"></script>
 <script>
 (function () {
   console.log('developer : jambari@bmkg.go.id, github: https://github.com/jambari');
@@ -615,9 +616,11 @@
   const TILE_ATTR  = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://www.esri.com/">Esri</a>';
 
   let _landingTile = null;
+  let _pusgen = null;
 
   function applyLandingTheme(dark) {
     if (_landingTile) _landingTile.setUrl(dark ? DARK_TILE : LIGHT_TILE);
+    if (_pusgen) _pusgen.setDark(dark);
   }
   document.addEventListener('pn:themechange', function (e) { applyLandingTheme(e.detail.dark); });
 
@@ -635,6 +638,15 @@
     maxZoom: 19,
     referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(map);
+
+  // Sesar aktif & palung subduksi PuSGeN 2024 (dimuat setelah peta tampil).
+  _pusgen = addPusgenLayers(map, {
+    faults: "{% static_v 'gjson/indofaults.js' %}",
+    trench: "{% static_v 'gjson/subduksi.js' %}",
+    layer:  "{% static_v 'js/pusgen_layer.js' %}",
+    dark:   _isDarkNow,
+    position: 'bottomleft',          // kanan atas tertutup panel prakiraan cuaca
+  });
 
   // ── Helpers ───────────────────────────────────────────────
   function magColor(m) {
