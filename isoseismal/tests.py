@@ -166,7 +166,9 @@ class WilayahNameTest(TestCase):
     def test_location_strings(self):
         cases = {
             '31 km TimurLaut KAB-JAYAPURA-PAPUA': 'Kab. Jayapura',
-            '35 km BaratDaya LANNYJAYA-PAPUAPEGNGN': 'Lannyjaya',
+            '35 km BaratDaya LANNYJAYA-PAPUAPEGNGN': 'Lanny Jaya',
+            '69 km Utara KEBARMANOKWARI-PAPUABRT': 'Kebar Manokwari',
+            '20 km Utara SENTANI-PAPUA': 'Sentani',
             '30 km Tenggara OKSIBIL-PAPUAPGNGN': 'Oksibil',
             '68 km BaratDaya NABIRE-PAPUATENGAH': 'Nabire',
             '64 km Barat Daya KAIMANA-PAPUABRT': 'Kaimana',

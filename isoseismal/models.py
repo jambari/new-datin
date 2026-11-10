@@ -5,6 +5,7 @@ sama dengan ShakemapEvent). Peta hanya digambar bila ada laporan dirasakan.
 """
 import datetime
 import re
+from functools import lru_cache
 
 from django.db import models
 from django.urls import reverse
@@ -18,6 +19,33 @@ BULAN = ["", "januari", "februari", "maret", "april", "mei", "juni", "juli", "ag
 _ARAH = {'utara', 'selatan', 'timur', 'barat', 'laut', 'daya', 'tenggara', 'timurlaut', 'baratlaut',
          'baratdaya', 'tenggara', 'timurtenggara'}
 _PROVINSI = re.compile(r'^(PAPUA|MALUKU)\w*$', re.I)          # PAPUA, PAPUABRT, PAPUAPGNGN, MALUKU, …
+
+
+@lru_cache(maxsize=1)
+def _known_names():
+    """({nama tanpa spasi: nama resmi} kabupaten/kota, sama untuk distrik) dari gazetir Papua."""
+    from .felt import regions
+    kab = {n.replace(' ', ''): n for n, _g, _b in regions('kabupaten')}
+    dis = {n.replace(' ', ''): n for n, _g, _b in regions('kecamatan')}
+    return kab, dis
+
+
+def _unglue(word):
+    """Nama yang ditulis katalog tanpa spasi → nama dengan spasi, mis. 'LANNYJAYA' → 'LANNY JAYA',
+    'KEBARMANOKWARI' → 'KEBAR MANOKWARI' (distrik + kabupaten). Hanya bila kedua bagian nama yang dikenal."""
+    w = word.upper()
+    try:
+        kab, dis = _known_names()
+    except Exception:                       # gazetir tidak terbaca: biarkan apa adanya
+        return word
+    full = kab.get(w) or dis.get(w)
+    if full:
+        return full
+    for short in sorted(kab, key=len, reverse=True):
+        head = w[:-len(short)]
+        if w.endswith(short) and len(head) >= 3 and head in dis:
+            return f'{dis[head]} {kab[short]}'
+    return word
 
 
 class IsoseismalQuerySet(models.QuerySet):
@@ -73,7 +101,7 @@ class IsoseismalMap(models.Model):
     @property
     def wilayah_singkat(self):
         """Nama wilayah dari lokasi ShakeMap, mis. '31 km TimurLaut KAB-JAYAPURA-PAPUA' → 'Kab. Jayapura',
-        '35 km BaratDaya LANNYJAYA-PAPUAPEGNGN' → 'Lannyjaya', '64 km Barat Daya KAIMANA-PAPUABRT' → 'Kaimana'."""
+        '35 km BaratDaya LANNYJAYA-PAPUAPEGNGN' → 'Lanny Jaya', '64 km Barat Daya KAIMANA-PAPUABRT' → 'Kaimana'."""
         words = (self.lokasi or '').replace('-', ' ').split()
         if len(words) >= 2 and words[1].lower() == 'km':
             words = words[2:]
@@ -81,7 +109,7 @@ class IsoseismalMap(models.Model):
             words = words[1:]
         while words and _PROVINSI.match(words[-1]):
             words = words[:-1]
-        text = ' '.join(words).title().replace('Kab ', 'Kab. ')
+        text = ' '.join(_unglue(w) for w in words).title().replace('Kab ', 'Kab. ')
         return text or 'Papua'
 
     @property
