@@ -111,6 +111,8 @@
     .chart-card.full { grid-column: 1; }
     #quake-map { height: 380px; }
   }
+  .popup-src { margin-top: 6px; padding-top: 5px; border-top: 1px solid #e5e7eb; max-width: 240px; font-size: 11px; color: #374151; line-height: 1.4; }
+  .popup-src b { display: block; color: #111827; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
 </style>
 {% endblock %}
 
@@ -343,6 +345,18 @@ function magColor(m) {
   return '#16a34a';
 }
 
+// Keterangan sumber gempa terdekat (model PuSGeN 2024), sama dengan template balai.
+function esc(t) {
+  return String(t).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function sumberHtml(lines) {
+  if (!lines || !lines.length) return '';
+  return '<div class="popup-src" title="Sesar aktif terdekat dari episenter dan zona megathrust menurut model sumber gempa PuSGeN 2024. Petunjuk saja, bukan penentuan sumber gempa.">' +
+    '<b>Sumber Gempa Terdekat</b>' + lines.map(esc).join('<br>') + '</div>';
+}
+
 function initMap() {
   quakeMap = L.map('quake-map').setView([-2.5, 139.0], 6);
   activeTile = BASEMAPS.osm;
@@ -358,6 +372,7 @@ function initMap() {
       radius: r, color: c, fillColor: c, fillOpacity: 0.6, weight: 1,
     }).bindPopup(
       '<b>M ' + e.mag + '</b><br>' + e.loc + '<br>' + e.depth + ' km<br><small>' + e.time + '</small>' +
+      sumberHtml(e.sumber) +
       '<br><a href="/gempa/' + e.id + '/" style="color:#1d4ed8;font-size:11px;">Detail →</a>'
     ).addTo(quakeLyr);
   });
@@ -372,7 +387,8 @@ function initMap() {
     }).bindPopup(
       '<b>★ Dirasakan — M ' + f.mag + '</b><br>' + f.wilayah +
       (f.dirasakan ? '<br><i>' + f.dirasakan + '</i>' : '') +
-      '<br>' + f.depth + ' km<br><small>' + f.time + '</small>'
+      '<br>' + f.depth + ' km<br><small>' + f.time + '</small>' +
+      sumberHtml(f.sumber)
     ).addTo(feltLyr);
   });
 }

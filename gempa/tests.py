@@ -1696,6 +1696,18 @@ class SumberTerdekatTest(TestCase):
         self.assertIn('lempeng menunjam', sumber_terdekat_baris(-4.5, 136.9, 120)[-1])
         self.assertEqual(sumber_terdekat_baris('', None), [])
 
+    def test_public_maps_carry_nearest_source_in_popup_data(self):
+        import json as _json
+        from django.utils import timezone as _tz
+        from qc_review.models import Event as QCEvent
+        QCEvent.objects.create(public_id='bmg2026popup', origin_time=_tz.now() - datetime.timedelta(hours=1),
+                               latitude=-2.66, longitude=139.50, depth_km=49, magnitude=4.2, region='Papua')
+        for url in ('/', '/gempa/'):
+            resp = self.client.get(url)
+            events = _json.loads(resp.context['events_json'])
+            self.assertTrue(events[0]['sumber'][0].startswith('Sesar Mamberamo'), url)
+            self.assertContains(resp, 'Sumber Gempa Terdekat')
+
     def test_names(self):
         self.assertEqual(nama_struktur('Sorong Fault'), 'Sesar Sorong')
         self.assertEqual(nama_struktur('Manokwari Thurst'), 'Sesar Naik Manokwari')      # salah ketik di sumber

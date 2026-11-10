@@ -431,6 +431,8 @@
   .popup-mag { font-size: 1.2rem; font-weight: 800; color: #fbbf24; }
   .popup-loc { font-weight: 600; color: #f1f5f9; margin-bottom: 2px; }
   .popup-meta { color: #94a3b8; font-size: 0.65rem; }
+  .popup-src { margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.12); max-width: 240px; font-size: 0.65rem; color: #cbd5e1; }
+  .popup-src b { display: block; color: #f1f5f9; font-size: 0.62rem; letter-spacing: 0.04em; text-transform: uppercase; }
 
   @media (max-width: 768px) {
     #info-panel { max-width: calc(100vw - 20px); }
@@ -652,6 +654,18 @@
     return 6;
   }
 
+  // Keterangan sumber gempa terdekat (model PuSGeN 2024), sama dengan template balai.
+  function esc(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function sumberHtml(lines) {
+    if (!lines || !lines.length) return '';
+    return '<div class="popup-src" title="Sesar aktif terdekat dari episenter dan zona megathrust menurut model sumber gempa PuSGeN 2024. Petunjuk saja, bukan penentuan sumber gempa.">' +
+      '<b>Sumber Gempa Terdekat</b>' + lines.map(esc).join('<br>') + '</div>';
+  }
+
   // ── Plot markers ──────────────────────────────────────────
   let maxMag = 0, latestTime = '';
   EVENTS.forEach(function (e, idx) {
@@ -665,7 +679,8 @@
       '<div class="popup-meta">' +
         'Kedalaman: ' + e.depth + ' km<br>' +
         e.time +
-      '</div>';
+      '</div>' +
+      sumberHtml(e.sumber);
 
     if (idx === 0) {
       // Latest event — animated star marker

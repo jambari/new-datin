@@ -215,6 +215,7 @@ def _parse_bmkg_dt(dt_str):
 
 def landing(request):
     import json
+    from gempa.faults import sumber_terdekat_baris
     from arsip.models import Album
     from qc_review.models import Event as QCEvent
     from repository.models import FeltEarthquake, ShakemapEvent
@@ -240,6 +241,7 @@ def landing(request):
             'depth': round(e['depth_km'], 1),
             'loc':   e['region'] or '',
             'time':  e['origin_time'].strftime('%Y-%m-%d %H:%M UTC'),
+            'sumber': sumber_terdekat_baris(e['latitude'], e['longitude'], e['depth_km']),
         }
         for e in events_qs
     ])
@@ -492,6 +494,7 @@ def public_skala_mmi(request):
 
 def gempa_public(request):
     import json
+    from gempa.faults import sumber_terdekat_baris
     from qc_review.models import Event as QCEvent
     from repository.models import FeltEarthquake
     from django.core.paginator import Paginator
@@ -532,6 +535,7 @@ def gempa_public(request):
             'depth': round(e['depth_km'], 1),
             'loc':   e['region'] or '',
             'time':  e['origin_time'].strftime('%Y-%m-%d %H:%M UTC'),
+            'sumber': sumber_terdekat_baris(e['latitude'], e['longitude'], e['depth_km']),
         }
         for e in all_events
     ])
@@ -549,6 +553,7 @@ def gempa_public(request):
             'wilayah':   f['wilayah'],
             'dirasakan': f['dirasakan'] or '',
             'time':      f['event_datetime'].strftime('%Y-%m-%d %H:%M UTC'),
+            'sumber':    sumber_terdekat_baris(f['latitude'], f['longitude'], f['depth_km']),
         }
         for f in felt_qs
     ])
