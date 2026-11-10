@@ -466,7 +466,9 @@ def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
     # Inset Papua
     inset_h = 1.35
     iax = fig.add_axes([px0 + 0.07 / W, py0 + 0.07 / H, pw - 0.14 / W, inset_h / H])
-    ismap = StaticMap(-9.3, 0.6, 130.0, 142.0, zoom=5)
+    # Tanah Papua, diperlebar bila kotak peta melewati batasnya (mis. gempa di Papua Nugini).
+    ismap = StaticMap(min(-9.3, lat0 - 0.5), max(0.6, lat1 + 0.5), min(130.0, lon0 - 0.5), max(142.0, lon1 + 0.5),
+                      zoom=5)
     iax.imshow(ismap.image, extent=(0, ismap.width, ismap.height, 0))
     rx0, ry0 = ismap.project(lat1, lon0)
     rx1, ry1 = ismap.project(lat0, lon1)

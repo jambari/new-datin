@@ -4,6 +4,7 @@ Satu baris per hasil ShakeMap yang dikirim dari .50 (kunci = stempel waktu WIB 1
 sama dengan ShakemapEvent). Peta hanya digambar bila ada laporan dirasakan.
 """
 import datetime
+import re
 
 from django.db import models
 from django.urls import reverse
@@ -12,6 +13,11 @@ from django.utils.text import slugify
 HARI = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 BULAN = ["", "januari", "februari", "maret", "april", "mei", "juni", "juli", "agustus", "september",
          "oktober", "november", "desember"]
+
+
+_ARAH = {'utara', 'selatan', 'timur', 'barat', 'laut', 'daya', 'tenggara', 'timurlaut', 'baratlaut',
+         'baratdaya', 'tenggara', 'timurtenggara'}
+_PROVINSI = re.compile(r'^(PAPUA|MALUKU)\w*$', re.I)          # PAPUA, PAPUABRT, PAPUAPGNGN, MALUKU, …
 
 
 class IsoseismalQuerySet(models.QuerySet):
@@ -66,17 +72,16 @@ class IsoseismalMap(models.Model):
 
     @property
     def wilayah_singkat(self):
-        """Nama wilayah dari lokasi ShakeMap, mis. '31 km TimurLaut KAB-JAYAPURA-PAPUA' → 'Kab. Jayapura'."""
-        text = (self.lokasi or '').strip()
-        parts = text.split()
-        if len(parts) >= 3 and parts[1].lower() == 'km':
-            text = ' '.join(parts[3:])
-        text = text.replace('-', ' ').strip()
-        for suffix in (' PAPUAPEGNGN', ' PAPUABRT', ' PAPUABRTDY', ' PAPUATGH', ' PAPUASLTN', ' PAPUA'):
-            if text.upper().endswith(suffix):
-                text = text[: -len(suffix)]
-                break
-        text = text.title().replace('Kab ', 'Kab. ')
+        """Nama wilayah dari lokasi ShakeMap, mis. '31 km TimurLaut KAB-JAYAPURA-PAPUA' → 'Kab. Jayapura',
+        '35 km BaratDaya LANNYJAYA-PAPUAPEGNGN' → 'Lannyjaya', '64 km Barat Daya KAIMANA-PAPUABRT' → 'Kaimana'."""
+        words = (self.lokasi or '').replace('-', ' ').split()
+        if len(words) >= 2 and words[1].lower() == 'km':
+            words = words[2:]
+        while words and words[0].lower() in _ARAH:
+            words = words[1:]
+        while words and _PROVINSI.match(words[-1]):
+            words = words[:-1]
+        text = ' '.join(words).title().replace('Kab ', 'Kab. ')
         return text or 'Papua'
 
     @property

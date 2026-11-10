@@ -162,6 +162,22 @@ class FeltMatchTest(TestCase):
                                    'Katalog Stasiun Geofisika Jayapura'])
 
 
+class WilayahNameTest(TestCase):
+    def test_location_strings(self):
+        cases = {
+            '31 km TimurLaut KAB-JAYAPURA-PAPUA': 'Kab. Jayapura',
+            '35 km BaratDaya LANNYJAYA-PAPUAPEGNGN': 'Lannyjaya',
+            '30 km Tenggara OKSIBIL-PAPUAPGNGN': 'Oksibil',
+            '68 km BaratDaya NABIRE-PAPUATENGAH': 'Nabire',
+            '64 km Barat Daya KAIMANA-PAPUABRT': 'Kaimana',
+            '12 km Barat Laut KOTA-SORONG-PAPUABRTDY': 'Kota Sorong',
+            '101 km TimurLaut KEP.ARU-MALUKU': 'Kep.Aru',
+            '': 'Papua',
+        }
+        for lokasi, expected in cases.items():
+            self.assertEqual(IsoseismalMap(lokasi=lokasi).wilayah_singkat, expected, lokasi)
+
+
 class GenerateAndPagesTest(MediaMixin, TestCase):
     def test_store_generate_and_public_pages(self):
         grid, stations = self.write_inputs(Path(self.media) / 'in')
