@@ -403,4 +403,5 @@ class TektonikTest(TestCase):
         # gempa yang terjadi setelah tanggal kejadian tidak disebut
         self.assertNotIn('2015', ringkasan_tektonik(-2.63, 138.53, 48, datetime.date(2010, 1, 1))[2])
         self.assertEqual(ringkasan_tektonik(-6.2, 106.8, 10), [])    # di luar Papua
+        self.assertIn('Pegunungan Tengah', ringkasan_tektonik(-5.45, 141.9, 120)[0])   # Oksibil 2026, sisi PNG
         self.assertEqual(ringkasan_tektonik('x', 1, 1), [])

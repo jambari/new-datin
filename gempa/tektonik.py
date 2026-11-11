@@ -143,7 +143,7 @@ def ringkasan_tektonik(lat, lon, depth, event_date=None):
         lat, lon, depth = float(lat), float(lon), float(depth or 0)
     except (TypeError, ValueError):
         return []
-    if not (-11.0 <= lat <= 2.0 and 129.0 <= lon <= 141.5):
+    if not (-11.0 <= lat <= 2.0 and 129.0 <= lon <= 143.0):     # sampai PNG dekat perbatasan
         return []
     key = zona(lat, lon)
     text = next((t for k, _test, t in ZONA if k == key), '')
