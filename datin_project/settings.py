@@ -107,6 +107,7 @@ INTERNAL_IPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'theme.middleware.CanonicalHostMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -450,7 +451,9 @@ WAVESIM_WORKER_TOKEN    = config('WAVESIM_WORKER_TOKEN',    default='')  # SPECF
 
 # SEO / Analytics
 GA_MEASUREMENT_ID = config('GA_MEASUREMENT_ID', default='')
-SITE_URL          = config('SITE_URL', default='http://36.91.166.189')
+SITE_URL          = config('SITE_URL', default='https://stageof-jayapura.bmkg.go.id')
+# Host lain (alamat IP) yang melayani situs yang sama: halaman di sana di-301 ke SITE_URL.
+CANONICAL_ALIAS_HOSTS = config('CANONICAL_ALIAS_HOSTS', default='36.91.166.189', cast=Csv())
 
 # Komentar Facebook pada halaman berita (opsional; untuk moderasi).
 FACEBOOK_APP_ID   = config('FACEBOOK_APP_ID', default='')

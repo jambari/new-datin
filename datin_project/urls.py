@@ -28,21 +28,29 @@ from gempa import views as gempa_views
 from gempa.sites import gempa_admin_site
 from django.conf import settings
 from django.conf.urls.static import static
+from theme import seo_views
 from theme.sitemaps import (
     StaticViewSitemap, ShakemapSitemap, GempaMerusakSitemap, BeritaSitemap,
+    IsoseismalSitemap, SiaranPressSitemap, BulletinSitemap,
 )
 
 sitemaps = {
     'static':   StaticViewSitemap,
+    'isoseismal': IsoseismalSitemap,
+    'berita':   BeritaSitemap,
+    'siaran-pers': SiaranPressSitemap,
     'shakemap': ShakemapSitemap,
     'gempa-merusak': GempaMerusakSitemap,
-    'berita':   BeritaSitemap,
+    'buletin':  BulletinSitemap,
 }
 
 urlpatterns = [
     path('robots.txt', TemplateView.as_view(
         template_name='robots.txt', content_type='text/plain'
     )),
+    path('favicon.ico', seo_views.static_redirect('theme/favicon/favicon.ico')),
+    path('apple-touch-icon.png', seo_views.static_redirect('theme/favicon/apple-touch-icon.png')),
+    path('site.webmanifest', seo_views.webmanifest, name='webmanifest'),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('admin/', admin.site.urls),
     # Admin katalog gempa: site terpisah, login biasa (tanpa OTP).

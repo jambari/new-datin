@@ -9,10 +9,11 @@
     <!-- ── SEO: Title & Description ────────────────────────── -->
     <title>{% block seo_title %}Stasiun Geofisika Kelas I Jayapura · BMKG{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}Stasiun Geofisika Kelas I Jayapura BMKG — informasi gempa bumi, shakemap, magnetbumi, petir, dan peringatan dini untuk wilayah Papua.{% endblock %}">
-    <meta name="keywords"    content="{% block meta_keywords %}gempa bumi Papua, BMKG Jayapura, shakemap, magnetbumi, petir, peringatan dini, geofisika{% endblock %}">
+    <meta name="keywords"    content="{% block meta_keywords %}Stasiun Geofisika Jayapura, Stasiun Geofisika Kelas I Jayapura, BMKG Jayapura, BMKG Papua, gempa bumi Papua, gempa Jayapura, peta isoseismal, shakemap, magnetbumi, petir, geofisika{% endblock %}">
     <meta name="author"      content="Stasiun Geofisika Kelas I Jayapura BMKG">
     <meta name="robots"      content="{% block meta_robots %}index, follow{% endblock %}">
     <link rel="canonical"    href="{% block canonical_url %}{{ SITE_URL }}{{ request.path }}{% endblock %}">
+    {% include 'partials/_favicon.html' %}
 
     <!-- ── Open Graph ─────────────────────────────────────── -->
     <meta property="og:type"        content="website">
@@ -34,8 +35,10 @@
     {
       "@context": "https://schema.org",
       "@type": "GovernmentOrganization",
+      "@id": "{{ SITE_URL }}/#organization",
       "name": "Stasiun Geofisika Kelas I Jayapura",
-      "alternateName": "BMKG Jayapura",
+      "alternateName": ["Stasiun Geofisika Jayapura", "BMKG Jayapura", "Stageof Jayapura"],
+      "email": "stageof.jayapura@bmkg.go.id",
       "url": "{{ SITE_URL }}",
       "logo": "{{ SITE_URL }}{% static 'repository/images/logo-bmkg.png' %}",
       "description": "Unit Pelaksana Teknis BMKG yang melaksanakan pengamatan gempabumi, magnetbumi, listrik udara di wilayah Papua.",
@@ -48,10 +51,24 @@
       "parentOrganization": {
         "@type": "GovernmentOrganization",
         "name": "Badan Meteorologi Klimatologi dan Geofisika",
-        "alternateName": "BMKG"
+        "alternateName": "BMKG",
+        "url": "https://www.bmkg.go.id"
       }
     }
     </script>
+    {% if request.path == '/' %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Stasiun Geofisika Kelas I Jayapura",
+      "alternateName": ["Stasiun Geofisika Jayapura", "BMKG Jayapura"],
+      "url": "{{ SITE_URL }}/",
+      "inLanguage": "id-ID",
+      "publisher": {"@id": "{{ SITE_URL }}/#organization"}
+    }
+    </script>
+    {% endif %}
 
     <!-- ── Google Analytics ───────────────────────────────── -->
     {% if GA_MEASUREMENT_ID %}

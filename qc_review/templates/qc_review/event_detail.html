@@ -2,6 +2,11 @@
 {% load tz %}
 {% block site_header %}{% if is_public %}{% include 'partials/_landing_header.html' %}{% endif %}{% endblock %}
 
+{% block seo_title %}Gempabumi M {{ event.magnitude|floatformat:1 }} {{ event.region|default:event.public_id }} · Stasiun Geofisika Jayapura BMKG{% endblock %}
+{% block meta_description %}Gempabumi M {{ event.magnitude|floatformat:1 }} {{ event.region }}, {{ event.origin_time|date:"j F Y H:i:s" }} UTC, kedalaman {{ event.depth_km|floatformat:0 }} km. Parameter gempa dan data stasiun dari Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
+{% block og_title %}Gempabumi M {{ event.magnitude|floatformat:1 }} {{ event.region|default:event.public_id }}{% endblock %}
+{% block meta_robots %}{% if is_public %}index, follow{% else %}noindex, nofollow{% endif %}{% endblock %}
+
 {% block qc_extra_head %}
 {% if is_public %}
 <style>

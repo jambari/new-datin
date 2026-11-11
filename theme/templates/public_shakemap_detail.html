@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block site_header %}{% include 'partials/_landing_header.html' %}{% endblock %}
+{% block seo_title %}Shakemap Gempabumi M {{ object.magnitude|floatformat:1 }} {{ object.wilayah|truncatechars:70 }} · BMKG Jayapura{% endblock %}
+{% block meta_description %}Shakemap gempabumi M {{ object.magnitude|floatformat:1 }} {{ object.wilayah }}, {{ object.event_datetime|date:"j F Y H:i:s" }} UTC, kedalaman {{ object.depth_km|floatformat:0 }} km{% if object.dirasakan %}. Dirasakan: {{ object.dirasakan|truncatechars:90 }}{% endif %}.{% endblock %}
+{% block og_title %}Shakemap Gempabumi M {{ object.magnitude|floatformat:1 }} {{ object.wilayah|truncatechars:70 }}{% endblock %}
+{% block og_image %}{% if shk_event and shk_event.shakemap_image %}{{ SITE_URL }}{{ shk_event.shakemap_image.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 {% load static %}
 
 {% block extra_head %}

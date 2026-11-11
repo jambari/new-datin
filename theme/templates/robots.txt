@@ -1,17 +1,8 @@
 User-agent: *
 Allow: /
-Allow: /landing/
-Allow: /gempa/
-Allow: /gempa-merusak/
-Allow: /shakemap/
-Allow: /petir/
-Allow: /magnetbumi/
-Allow: /tentang/
-Allow: /glosarium/
-Allow: /kegiatan/
-Allow: /ttm/
 
 Disallow: /admin/
+Disallow: /gempa-admin/
 Disallow: /dashboard/
 Disallow: /accounts/
 Disallow: /api/
@@ -21,5 +12,7 @@ Disallow: /maintenance/
 Disallow: /perjadin/
 Disallow: /wrsng/
 Disallow: /qc/
+Disallow: /berita/tulis/
+Disallow: /berita/kelola/
 
 Sitemap: {{ SITE_URL }}/sitemap.xml

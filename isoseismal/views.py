@@ -6,6 +6,8 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.text import slugify
 
+from theme.seo_views import absolute_url
+
 from .felt import roman
 from .layout import SCALE, band
 from .models import IsoseismalMap
@@ -77,7 +79,7 @@ def isoseismal_detail(request, slug, scenario=False):
         'is_public': is_public,
         **_content(obj),
         'others': _public(scenario).exclude(pk=obj.pk)[:3],
-        'share_url': request.build_absolute_uri(obj.get_absolute_url()),
+        'share_url': absolute_url(request, obj.get_absolute_url()),
     })
 
 
@@ -85,7 +87,7 @@ def isoseismal_pdf(request, slug, scenario=False):
     from .pdf import build_pdf
 
     obj, _is_public = _get_visible(request, slug, scenario)
-    pdf = build_pdf(obj, _content(obj), request.build_absolute_uri(obj.get_absolute_url()))
+    pdf = build_pdf(obj, _content(obj), absolute_url(request, obj.get_absolute_url()))
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{obj.slug}.pdf"'
     return response

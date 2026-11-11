@@ -13,6 +13,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from theme.seo_views import absolute_url
+
 from .forms import BeritaForm
 from .models import Berita
 
@@ -58,7 +60,7 @@ def berita_detail(request, slug):
     return render(request, 'berita/detail.html', {
         'berita': berita,
         'latest': latest,
-        'share_url': request.build_absolute_uri(berita.get_absolute_url()),
+        'share_url': absolute_url(request, berita.get_absolute_url()),
         'facebook_app_id': getattr(settings, 'FACEBOOK_APP_ID', ''),
     })
 

@@ -144,3 +144,59 @@ class BartingtonButtonTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertNotContains(resp, 'Formulir Bartington')
         self.assertNotContains(resp, reverse('observation_bartington'))
+
+
+@mock.patch('django.conf.settings.SECURE_SSL_REDIRECT', False)
+class SeoTest(TestCase):
+    """Alamat IP di-301 ke domain resmi; favicon, manifest, robots, dan sitemap tersedia."""
+    from django.test import override_settings as _ovr
+    SITE = 'https://stageof-jayapura.bmkg.go.id'
+
+    def _get(self, path, host, method='get', **kw):
+        return getattr(self.client, method)(path, HTTP_HOST=host, **kw)
+
+    @_ovr(SITE_URL=SITE, ALLOWED_HOSTS=['36.91.166.189', 'stageof-jayapura.bmkg.go.id', 'testserver'])
+    def test_ip_host_redirects_pages_to_domain(self):
+        r = self._get('/tentang/?a=1', '36.91.166.189')
+        self.assertEqual(r.status_code, 301)
+        self.assertEqual(r['Location'], self.SITE + '/tentang/?a=1')
+        self.assertEqual(self._get('/tentang/', 'stageof-jayapura.bmkg.go.id').status_code, 200)
+
+    @_ovr(SITE_URL=SITE, ALLOWED_HOSTS=['36.91.166.189', 'testserver'])
+    def test_ip_host_keeps_api_and_posts(self):
+        r = self._get('/api/gempa/create/', '36.91.166.189', method='post')
+        self.assertNotEqual(r.status_code, 301)
+        self.assertEqual(r['X-Robots-Tag'], 'noindex, nofollow')
+        r = self._get('/magnet/api/lemi/raw/', '36.91.166.189')
+        self.assertNotEqual(r.status_code, 301)
+
+    @_ovr(SITE_URL=SITE)
+    def test_canonical_and_favicon_on_pages(self):
+        html = self.client.get('/tentang/').content.decode()
+        self.assertIn(f'<link rel="canonical"    href="{self.SITE}/tentang/">', html)
+        self.assertIn('theme/favicon/favicon.ico', html)
+        self.assertIn('Stasiun Geofisika Jayapura', html)
+        mmi = self.client.get('/skala-mmi/').content.decode()
+        self.assertIn('theme/favicon/favicon-48.png', mmi)
+
+    def test_root_files(self):
+        r = self.client.get('/favicon.ico')
+        self.assertEqual(r.status_code, 301)
+        self.assertIn('theme/favicon/favicon', r['Location'])
+        m = self.client.get('/site.webmanifest').json()
+        self.assertEqual(m['short_name'], 'BMKG Jayapura')
+        self.assertEqual(len(m['icons']), 3)
+        robots = self.client.get('/robots.txt').content.decode()
+        self.assertIn('Sitemap: ', robots)
+
+    @_ovr(SITE_URL=SITE)
+    def test_sitemap(self):
+        from repository.models import FeltEarthquake
+        fe = FeltEarthquake.objects.create(event_datetime=timezone.now(), latitude=-2.5, longitude=140.7,
+                                           magnitude=5.1, depth_km=10, wilayah='Jayapura')
+        r = self.client.get('/sitemap.xml')
+        self.assertEqual(r.status_code, 200)
+        body = r.content.decode()
+        for path in ('/peta-isoseismal/', '/peta-isoseismal-skenario/', '/berita/', f'/shakemap/{fe.pk}/'):
+            self.assertIn(path + '</loc>', body)
+        self.assertEqual(self.client.get(f'/shakemap/{fe.pk}/').status_code, 200)
