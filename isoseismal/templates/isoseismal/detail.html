@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block seo_title %}{{ obj.title }} · BMKG Jayapura{% endblock %}
-{% block meta_description %}{{ obj.title }}: M {{ obj.magnitude|floatformat:1 }}, kedalaman {{ obj.depth|floatformat:0 }} km, {{ obj.wit_time|date:"d-m-Y H:i:s" }} WIT. Sebaran intensitas MMI dari akselerograf dan laporan dirasakan.{% endblock %}
+{% block meta_description %}{{ obj.title }}: M {{ obj.magnitude|floatformat:1 }}, kedalaman {{ obj.depth|floatformat:0 }} km, {{ obj.waktu }} WIT. Sebaran intensitas MMI dari akselerograf dan laporan dirasakan.{% endblock %}
 {% block og_title %}{{ obj.title }}{% endblock %}
 {% block canonical_url %}{{ share_url }}{% endblock %}
 {% block og_image %}{{ request.scheme }}://{{ request.get_host }}{{ obj.image.url }}{% endblock %}
@@ -56,6 +56,7 @@
       <a href="{{ obj.image.url }}" target="_blank" rel="noopener"><img class="iso-map" src="{{ obj.image.url }}" alt="{{ obj.title }}"></a>
       <div class="iso-actions">
         <a href="{{ obj.image.url }}" download>Unduh peta (PNG)</a>
+        <a href="{% url 'isoseismal:pdf' obj.slug %}">Unduh PDF</a>
         <a class="alt" href="https://wa.me/?text={{ obj.title|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer">Bagikan ke WhatsApp</a>
         <a class="alt" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer">Facebook</a>
       </div>
@@ -63,13 +64,13 @@
 
     <div class="bn-content-card">
       <div class="bn-content">
-        <p>Gempabumi terjadi pada {{ obj.tanggal_panjang }} pukul {{ obj.wit_time|date:"H:i:s" }} WIT
+        <p>Gempabumi terjadi pada {{ obj.tanggal_panjang }} pukul {{ obj.jam }} WIT
           dengan magnitudo <b>M {{ obj.magnitude|floatformat:1 }}</b> pada kedalaman {{ obj.depth|floatformat:0 }} km,
           berpusat di {{ obj.koordinat }}{% if obj.lokasi %} ({{ obj.lokasi }}){% endif %}.
           {% if mmi_max %}Intensitas tertinggi yang teramati <b>{{ mmi_max.label }} MMI</b> ({{ mmi_max.desc|lower }}).{% endif %}</p>
 
         <div class="iso-params">
-          <div class="iso-param"><span>Waktu</span><b>{{ obj.wit_time|date:"d-m-Y H:i:s" }} WIT</b></div>
+          <div class="iso-param"><span>Waktu</span><b>{{ obj.waktu }} WIT</b></div>
           <div class="iso-param"><span>Magnitudo</span><b>M {{ obj.magnitude|floatformat:1 }}</b></div>
           <div class="iso-param"><span>Kedalaman</span><b>{{ obj.depth|floatformat:0 }} km</b></div>
           <div class="iso-param"><span>Lokasi</span><b>{{ obj.koordinat }}</b></div>
@@ -119,6 +120,12 @@
           {% endfor %}
           </tbody>
         </table></div>
+        {% endif %}
+
+        {% if tektonik %}
+        <h3>Tatanan tektonik</h3>
+        {% for para in tektonik %}<p>{{ para }}</p>{% endfor %}
+        <p class="iso-note">{{ tektonik_sumber }}</p>
         {% endif %}
 
         {% if sumber %}

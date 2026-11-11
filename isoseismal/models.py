@@ -128,6 +128,16 @@ class IsoseismalMap(models.Model):
         return f'{t.day} {BULAN[t.month].title()} {t.year}'
 
     @property
+    def jam(self):
+        """Mis. '12:26:49' (WIT). Jangan pakai filter |date di template: Django mengubahnya ke TIME_ZONE (UTC)."""
+        return self.wit_time.strftime('%H:%M:%S')
+
+    @property
+    def waktu(self):
+        """Mis. '29-10-2026 12:26:49' (WIT)."""
+        return self.wit_time.strftime('%d-%m-%Y %H:%M:%S')
+
+    @property
     def koordinat(self):
         ns = 'LU' if self.latitude >= 0 else 'LS'
         return f'{abs(self.latitude):.2f} {ns} – {abs(self.longitude):.2f} BT'

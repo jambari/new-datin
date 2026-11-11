@@ -11,6 +11,7 @@
 <style>
   .iso-badge { display:inline-block; min-width:2.4rem; padding:0.1rem 0.45rem; border-radius:6px; border:1px solid rgba(0,0,0,.25);
                color:#111827; font-weight:800; font-size:0.72rem; text-align:center; margin-right:0.35rem; }
+  .iso-found { font-size:0.82rem; color:var(--text-secondary, #64748b); margin:-0.75rem 0 1rem; }
   .bn-card .bn-thumb img { object-fit: cover; object-position: center 40%; }
 </style>
 {% endblock %}
@@ -25,6 +26,12 @@
 </div>
 
 <div class="bn-wrap">
+  <form class="bn-search" method="get" action="{% url 'isoseismal:list' %}">
+    <input type="search" name="q" value="{{ query }}" placeholder="Cari nama tempat atau kota, mis. Sarmi, Manokwari…" aria-label="Cari peta isoseismal">
+    <button type="submit">Cari</button>
+  </form>
+  {% if query %}<p class="iso-found">{{ page_obj.paginator.count }} peta untuk “{{ query }}” · <a href="{% url 'isoseismal:list' %}">tampilkan semua</a></p>{% endif %}
+
   <div class="bn-grid">
     {% for m in maps %}
       <article class="bn-card">
@@ -32,7 +39,7 @@
           <img src="{{ m.image.url }}" alt="{{ m.title }}" loading="lazy">
         </a>
         <div class="bn-body">
-          <div class="bn-meta">{{ m.tanggal_panjang }}, {{ m.wit_time|date:"H:i:s" }} WIT</div>
+          <div class="bn-meta">{{ m.tanggal_panjang }}, {{ m.jam }} WIT</div>
           <h2><a href="{{ m.get_absolute_url }}">{{ m.title }}</a></h2>
           <p class="bn-excerpt">
             M {{ m.magnitude|floatformat:1 }}, kedalaman {{ m.depth|floatformat:0 }} km.
@@ -41,15 +48,15 @@
         </div>
       </article>
     {% empty %}
-      <div class="bn-empty" style="grid-column:1/-1;">Belum ada peta isoseismal.</div>
+      <div class="bn-empty" style="grid-column:1/-1;">{% if query %}Tidak ada peta isoseismal untuk “{{ query }}”.{% else %}Belum ada peta isoseismal.{% endif %}</div>
     {% endfor %}
   </div>
 
   {% if page_obj.has_other_pages %}
   <div class="bn-pagination">
-    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">&laquo;</a>{% endif %}
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}">&laquo;</a>{% endif %}
     <span class="current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">&raquo;</a>{% endif %}
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}">&raquo;</a>{% endif %}
   </div>
   {% endif %}
 </div>

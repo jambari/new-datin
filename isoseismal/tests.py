@@ -197,15 +197,33 @@ class GenerateAndPagesTest(MediaMixin, TestCase):
 
         page = self.client.get('/peta-isoseismal/')
         self.assertContains(page, obj.title)
+        self.assertContains(page, '09:10:31 WIT')                 # 00:10:31 UTC, bukan jam UTC
         detail = self.client.get(obj.get_absolute_url())
         self.assertContains(detail, 'Depapre')
         self.assertContains(detail, 'SJPM')
         self.assertContains(detail, '2.32 LS – 140.50 BT')
+        self.assertContains(detail, 'pukul 09:10:31 WIT')
+        self.assertContains(detail, '22-05-2026 09:10:31 WIT')
         self.assertContains(detail, 'Sumber gempa terdekat')
+        self.assertContains(detail, 'Tatanan tektonik')
+        self.assertContains(detail, 'Palung New Guinea')            # -2.32, 140.50: pesisir utara
+
+        self.assertContains(detail, f'/peta-isoseismal/{obj.slug}/pdf/')
+        pdf = self.client.get(f'/peta-isoseismal/{obj.slug}/pdf/')
+        self.assertEqual(pdf['Content-Type'], 'application/pdf')
+        self.assertIn(f'{obj.slug}.pdf', pdf['Content-Disposition'])
+        self.assertTrue(pdf.content.startswith(b'%PDF'))
+
+        for q, found in (('jayapura', True), ('Kab. Jayapura', True), ('Depapre', True),   # lokasi, wilayah, titik dirasakan
+                         ('kab jayapura', True), ('Manokwari', False)):
+            page = self.client.get('/peta-isoseismal/', {'q': q})
+            (self.assertContains if found else self.assertNotContains)(page, obj.title, msg_prefix=q)
+        self.assertContains(self.client.get('/peta-isoseismal/', {'q': 'Manokwari'}), 'Tidak ada peta isoseismal')
 
         obj.is_hidden = True
         obj.save()
         self.assertEqual(self.client.get(obj.get_absolute_url()).status_code, 404)
+        self.assertEqual(self.client.get(f'/peta-isoseismal/{obj.slug}/pdf/').status_code, 404)
         self.assertNotContains(self.client.get('/peta-isoseismal/'), obj.title)
         staff = User.objects.create_user('iso_staff', password='pw12345!', is_staff=True)
         self.client.force_login(staff)
@@ -354,3 +372,35 @@ class SyncFeltTest(MediaMixin, TestCase):
             out = sync_felt(self.since())
         self.assertTrue(out[0].startswith('gagal mendaftar ShakeMap .50'))
         self.assertFalse(IsoseismalMap.objects.exists())
+
+
+class TektonikTest(TestCase):
+    """Ringkasan tatanan tektonik (gempa/tektonik.py) untuk lokasi gempa M7+ di laporan USGS."""
+
+    def test_zones_follow_usgs_summaries(self):
+        from gempa.tektonik import zona
+        cases = {(-1.76, 134.30): 'kepala_burung',         # Ransiki 2002: di dalam lempeng mikro Kepala Burung
+                 (-3.62, 135.54): 'kepala_burung_maoke',   # Nabire 2004: batas Kepala Burung–Maoke
+                 (-2.17, 136.55): 'kepala_burung_maoke',   # Yapen 2010
+                 (-0.41, 132.89): 'palung_utara',          # Manokwari 2009: Palung New Guinea
+                 (-2.63, 138.53): 'palung_utara',          # barat Abepura 2015
+                 (-4.92, 133.78): 'aru',                   # pesisir selatan 2010: Laut Banda–Australia
+                 (-3.51, 138.48): 'pegunungan',            # Mamberamo 2013
+                 (-8.50, 140.40): 'australia'}             # Merauke
+        for (lat, lon), key in cases.items():
+            self.assertEqual(zona(lat, lon), key, (lat, lon))
+
+    def test_paragraphs(self):
+        import datetime
+        from gempa.tektonik import ringkasan_tektonik
+        paras = ringkasan_tektonik(-0.19, 132.98, 10, datetime.date(2026, 11, 10))
+        self.assertIn('110 mm/tahun', paras[0])
+        self.assertIn('gempa dangkal', paras[1])
+        self.assertIn('M 7.7 Manokwari 3 Januari 2009 (±30 km di selatan)', paras[2])
+        deep = ringkasan_tektonik(-3.51, 138.48, 90, datetime.date(2026, 11, 10))
+        self.assertIn('gempa menengah', deep[1])
+        self.assertIn('M 7.0 Mamberamo 6 April 2013 (di dekat episenter)', deep[2])
+        # gempa yang terjadi setelah tanggal kejadian tidak disebut
+        self.assertNotIn('2015', ringkasan_tektonik(-2.63, 138.53, 48, datetime.date(2010, 1, 1))[2])
+        self.assertEqual(ringkasan_tektonik(-6.2, 106.8, 10), [])    # di luar Papua
+        self.assertEqual(ringkasan_tektonik('x', 1, 1), [])
