@@ -45,7 +45,7 @@ ZONA = [
      'relatif terhadap Australia.'),
     ('pegunungan', lambda la, lo: la >= -5.5 and lo >= 136.0,
      'Episenter berada di sabuk tumbukan busur–benua Papua bagian tengah. Konvergensi Australia–Pasifik '
-     'sekitar 110 mm/tahun ke arah timur laut diserap oleh pemendekan kerak selebar 250–350 km yang '
+     'sekitar 110 mm/tahun ke arah timur laut diakomodasi oleh pemendekan kerak selebar 250–350 km yang '
      'mengangkat Pegunungan Tengah 2–8 mm/tahun.'),
     ('australia', lambda la, lo: la < -5.5,
      'Episenter berada di bagian lempeng Australia di selatan sabuk tumbukan Papua, jauh dari batas '
