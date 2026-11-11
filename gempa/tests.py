@@ -1695,6 +1695,9 @@ class SumberTerdekatTest(TestCase):
         self.assertEqual(sumber_terdekat_baris(-8.5, 138.0), ['Tidak ada sesar aktif PuSGeN dalam 150 km'])
         self.assertIn('lempeng menunjam', sumber_terdekat_baris(-4.5, 136.9, 120)[-1])
         self.assertEqual(sumber_terdekat_baris('', None), [])
+        # episenter (skenario) tepat di jalur sesar: bukan "±1 km"
+        self.assertEqual(sumber_terdekat_baris(-4.814, 140.640, 10)[0],
+                         'Sesar Yumakot · sesar geser mengiri, Mmaks 7.4 · di jalur sesar')
 
     def test_public_maps_carry_nearest_source_in_popup_data(self):
         import json as _json

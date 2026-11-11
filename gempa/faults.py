@@ -17,6 +17,7 @@ BASE = Path(__file__).resolve().parent
 FAULTS = BASE / "static" / "gjson" / "indofaults.js"
 MEGATHRUST = BASE / "data" / "pusgen2024_megathrust.json"
 MAX_KM = 150                             # lebih jauh dari ini: tidak ada sesar yang ditampilkan
+ON_FAULT_KM = 2                          # sedekat ini: ditulis "di jalur sesar", bukan "±1 km"
 INTERMEDIATE_KM = 60                     # kedalaman ≥ ini: kemungkinan bukan sesar kerak dangkal
 TIPE = {"geser": "sesar geser", "naik": "sesar naik", "turun": "sesar turun"}
 # akhiran nama (Inggris) -> pola nama Indonesia, dicek berurutan
@@ -187,6 +188,7 @@ def sumber_terdekat(lat, lon, depth=None):
             tipe=tipe_sesar(p),
             mmax=p.get("mmax"),
             jarak_km=max(1, round(km)),
+            jarak_teks="di jalur sesar" if km <= ON_FAULT_KM else f"±{max(1, round(km))} km",
         )
     return result
 
@@ -200,7 +202,7 @@ def sumber_terdekat_baris(lat, lon, depth=None):
     if s["ada"]:
         nama = s["nama"] + (f" (segmen {s['segmen']})" if s["segmen"] else "")
         tipe = s["tipe"] + (f", Mmaks {float(s['mmax']):.1f}" if s.get("mmax") else "")
-        lines = [f"{nama} · {tipe} · ±{s['jarak_km']} km"]
+        lines = [f"{nama} · {tipe} · {s['jarak_teks']}"]
     else:
         lines = [f"Tidak ada sesar aktif PuSGeN dalam {s['max_km']} km"]
     if s["megathrust"]:

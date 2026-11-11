@@ -325,6 +325,7 @@ def _render(obj, mmi, bounds):
     _panel(fig, obj, smap, (lat0, lat1, lon0, lon1), W, H, mx + mw + 0.2 / W, my, mh + (TITLE_H + 0.12) / H,
            MAP_W)
     _scale_strip(fig, mx, M / H, mw, STRIP_H / H, felt=bool(obj.felt), scenario=obj.is_scenario)
+    _sumber_box(fig, obj, mx + mw + 0.2 / W, M / H, 0.988 - (mx + mw + 0.2 / W) - 0.008, STRIP_H / H, W)
     if obj.is_scenario:                                 # tanda air: peta hipotetis, bukan kejadian nyata
         fig.text(mx + mw / 2, my + mh / 2, "SKENARIO", fontsize=96, fontweight="bold", color="#dc2626", alpha=0.16,
                  rotation=28, ha="center", va="center", zorder=100)
@@ -379,6 +380,33 @@ def _tick_step(span):
         if span / step <= 7:
             return step
     return 2.0
+
+
+def _sumber_lines(obj, max_chars):
+    """Baris 'sumber gempa terdekat' (sama dengan halaman web), dibungkus selebar panel."""
+    import textwrap
+    from gempa.faults import sumber_terdekat_baris
+
+    out = []
+    for line in sumber_terdekat_baris(obj.latitude, obj.longitude, obj.depth):
+        wrapped = textwrap.wrap(line, max_chars) or [line]
+        out += ["• " + wrapped[0]] + ["  " + w for w in wrapped[1:]]
+    return out
+
+
+def _sumber_box(fig, obj, x0, y0, w, h, W):
+    """Kotak 'Sumber gempa terdekat' (PuSGeN 2024) di bawah panel legenda, sejajar tabel skala."""
+    lines = _sumber_lines(obj, max_chars=int(w * W * 15))
+    if not lines:
+        return
+    ax = fig.add_axes([x0, y0, w, h])
+    ax.set_xlim(0, 1), ax.set_ylim(0, 1), ax.set_xticks([]), ax.set_yticks([])
+    for sp in ax.spines.values():
+        sp.set_linewidth(1.2)
+    ax.text(0.04, 0.90, "Sumber Gempa Terdekat", fontsize=8, fontweight="bold", va="top")
+    ax.text(0.04, 0.72, "\n".join(lines[:7]), fontsize=6.6, va="top", linespacing=1.4)
+    ax.text(0.04, 0.05, "Model sumber gempa PuSGeN 2024; petunjuk, bukan penentuan sumber.", fontsize=5.6,
+            va="bottom", style="italic", color="#4b5563")
 
 
 def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
