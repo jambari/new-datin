@@ -19,7 +19,7 @@ RIWAYAT_MAKS = 3
 SUMBER = ('Ringkasan tatanan tektonik mengacu pada Hayes dkk. (2017), USGS Open-File Report 2016-1192; '
           'petunjuk umum, bukan penentuan mekanisme gempa.')
 
-UMUM = ('Papua berada di zona tektonik yang kompleks: gerak banyak lempeng mikro menampung konvergensi besar '
+UMUM = ('Papua berada di zona tektonik yang kompleks: gerak banyak lempeng mikro mengakomodasi konvergensi besar '
         'antara lempeng Australia, Pasifik, Laut Filipina, dan Sunda, sehingga semua jenis sesar '
         '(naik, geser, dan turun) dapat terjadi.')
 
@@ -33,12 +33,12 @@ ZONA = [
      'Australia di pesisir utara Papua. Lempeng Pasifik bergerak ke barat daya relatif terhadap Australia '
      'dengan kecepatan sekitar 110 mm/tahun dan menunjam perlahan ke selatan di Palung New Guinea.'),
     ('kepala_burung', lambda la, lo: la > -2.8 and 131.0 <= lo < 134.5,
-     'Episenter berada di lempeng mikro Kepala Burung, salah satu blok kecil yang menampung gerak relatif '
+     'Episenter berada di lempeng mikro Kepala Burung, salah satu blok kecil yang mengakomodasi gerak relatif '
      'lempeng Pasifik, Laut Filipina, Australia, dan Sunda. Di sekitarnya, lempeng Pasifik bergerak ke barat '
      'daya relatif terhadap Australia sekitar 113 mm/tahun; di selatan, blok ini dibatasi Palung Seram.'),
     ('kepala_burung_maoke', lambda la, lo: -4.3 <= la <= -1.0 and 132.5 <= lo < 137.0,
      'Episenter berada di dekat batas lempeng mikro Kepala Burung dan Maoke, batas berarah timur laut yang '
-     'menampung gerak geser mengiri sekitar 80 mm/tahun.'),
+     'mengakomodasi gerak geser mengiri sekitar 80 mm/tahun.'),
     ('aru', lambda la, lo: la < -4.3 and lo < 136.0,
      'Episenter berada di dekat batas lempeng mikro Laut Banda dan lempeng Australia, batas berarah utara–'
      'timur laut yang bersifat memisah: lempeng mikro Laut Banda bergerak ke barat sekitar 15 mm/tahun '
