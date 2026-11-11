@@ -25,12 +25,13 @@ def wib_to_utc(wib_id):
     return t.replace(tzinfo=WIB).astimezone(datetime.timezone.utc)
 
 
-def store_shakemap(wib_id, grid_path=None, stationlist_path=None):
+def store_shakemap(wib_id, grid_path=None, stationlist_path=None, scenario=False):
     """Buat/perbarui IsoseismalMap dari grid.xml & stationlist.xml satu kejadian. Kembalikan objeknya.
 
     obj.data_changed = True bila grid, parameter gempa, atau data stasiun berbeda dari yang tersimpan
-    (peta yang sudah ada perlu digambar ulang)."""
-    obj = IsoseismalMap.objects.filter(wib_id=wib_id).first() or IsoseismalMap(wib_id=wib_id)
+    (peta yang sudah ada perlu digambar ulang). scenario=True: peta skenario (terpisah dari gempa nyata)."""
+    obj = (IsoseismalMap.objects.filter(wib_id=wib_id, is_scenario=scenario).first()
+           or IsoseismalMap(wib_id=wib_id, is_scenario=scenario, is_hidden=scenario))
     before = _snapshot(obj)
     obj.event_time = wib_to_utc(wib_id)
     if grid_path:
@@ -51,13 +52,32 @@ def store_shakemap(wib_id, grid_path=None, stationlist_path=None):
     for field in ("latitude", "longitude", "magnitude", "depth"):
         if getattr(obj, field) is None:
             raise ValueError(f"{wib_id}: {field} tidak diketahui (grid.xml belum ada)")
-    if not _LOKASI_LENGKAP.match(obj.lokasi or ""):
+    if not scenario and not _LOKASI_LENGKAP.match(obj.lokasi or ""):
         obj.lokasi = catalog_lokasi(obj.event_time, obj.latitude, obj.longitude) or obj.lokasi
     if not obj.slug:
         obj.slug = obj.build_slug()
     obj.data_changed = obj.pk is None or before != _snapshot(obj)
     obj.save()
     return obj
+
+
+def store_scenario(run_name, name=""):
+    """Ambil run ShakeMap skenario dari .50 (folder data_MMI `run_name`), simpan, dan gambar.
+
+    Peta skenario baru dibuat tersembunyi; staf menerbitkannya di admin. Kembalikan (obj, status)."""
+    m = re.match(r"^(\d{14})", run_name or "")
+    if not m:
+        raise ValueError(f"nama run skenario tidak valid: {run_name!r}")
+    with remote.temp_dir() as tmp:
+        grid, _stations = remote.fetch_dir(run_name, tmp)
+        obj = store_shakemap(m.group(1), grid, None, scenario=True)
+    name = (name or "").strip()[:200]
+    if name and name != obj.skenario_nama:
+        obj.skenario_nama = name
+        obj.slug = obj.build_slug()                     # judul & slug memakai nama skenario
+    obj.shakemap_dir = run_name
+    obj.save()
+    return obj, generate(obj, force=True)
 
 
 def _grid_bytes(obj):
@@ -120,8 +140,8 @@ def generate(obj, force=False, felt_event=False):
     hanya memuat perkiraan ShakeMap dan stasiun, dengan catatan bahwa laporan belum tersedia."""
     from .layout import render_map
 
-    changed = refresh_felt(obj)
-    if not obj.felt and not felt_event:
+    changed = False if obj.is_scenario else refresh_felt(obj)       # skenario: tidak ada laporan dirasakan
+    if not obj.felt and not felt_event and not obj.is_scenario:
         obj.note = "Belum ada laporan dirasakan."
         obj.save(update_fields=["felt", "felt_text", "felt_sources", "note", "updated_at"])
         return "skip: tidak dirasakan"
@@ -140,8 +160,10 @@ def generate(obj, force=False, felt_event=False):
         obj.image.delete(save=False)
     obj.image.save(f"{obj.slug}.png", ContentFile(png), save=False)
     obj.generated_at = timezone.now()
-    obj.note = "" if obj.felt else "Dirasakan, tetapi belum ada laporan intensitas (MMI)."
+    obj.note = "" if obj.felt or obj.is_scenario else "Dirasakan, tetapi belum ada laporan intensitas (MMI)."
     obj.save()
+    if obj.is_scenario:
+        return "digambar (skenario)"
     return f"digambar ({len(obj.felt)} tempat, {len(obj.stations)} stasiun)"
 
 
@@ -165,7 +187,7 @@ def sync_felt(since, until=None):
         if run is None or run.name in seen:
             continue
         seen.add(run.name)
-        obj = IsoseismalMap.objects.filter(wib_id=run.wib_id).first()
+        obj = IsoseismalMap.objects.filter(wib_id=run.wib_id, is_scenario=False).first()
         force = False
         if obj is None or obj.shakemap_dir != run.name or obj.shakemap_mtime != run.mtime:
             try:

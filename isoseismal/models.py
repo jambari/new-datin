@@ -49,14 +49,29 @@ def _unglue(word):
 
 
 class IsoseismalQuerySet(models.QuerySet):
-    def public(self):
-        """Peta yang sudah tergambar, ada laporan dirasakan, dan tidak disembunyikan staf."""
+    def events(self):
+        """Peta gempa nyata (bukan skenario)."""
+        return self.filter(is_scenario=False)
+
+    def _visible(self):
         return self.filter(is_hidden=False).exclude(image="").exclude(image__isnull=True)
+
+    def public(self):
+        """Peta gempa nyata yang sudah tergambar dan tidak disembunyikan staf."""
+        return self._visible().filter(is_scenario=False)
+
+    def public_scenarios(self):
+        """Peta skenario yang sudah diterbitkan staf (skenario dibuat tersembunyi)."""
+        return self._visible().filter(is_scenario=True)
 
 
 class IsoseismalMap(models.Model):
-    wib_id = models.CharField('ID ShakeMap (WIB)', max_length=14, unique=True,
+    wib_id = models.CharField('ID ShakeMap (WIB)', max_length=14,
                               help_text='Stempel waktu WIB 14 digit, sama dengan ShakemapEvent.')
+    is_scenario = models.BooleanField('skenario', default=False, db_index=True,
+                                      help_text='Peta dari ShakeMap skenario (hipotetis, model GMPE) di .50.')
+    skenario_nama = models.CharField('nama skenario', max_length=200, blank=True,
+                                     help_text='Mis. "Sesar Mamberamo Segmen Mawe" (isian Place di form Scenario .50).')
     slug = models.SlugField(max_length=160, unique=True)
     event_time = models.DateTimeField('waktu gempa (UTC)', db_index=True)
     latitude = models.FloatField('lintang')
@@ -87,6 +102,7 @@ class IsoseismalMap(models.Model):
 
     class Meta:
         ordering = ['-event_time']
+        constraints = [models.UniqueConstraint(fields=['wib_id', 'is_scenario'], name='isoseismal_unique_run')]
         verbose_name = 'Peta Isoseismal'
         verbose_name_plural = 'Peta Isoseismal'
 
@@ -113,7 +129,13 @@ class IsoseismalMap(models.Model):
         return text or 'Papua'
 
     @property
+    def nama_skenario(self):
+        return (self.skenario_nama or self.lokasi or 'Papua').strip()
+
+    @property
     def title(self):
+        if self.is_scenario:
+            return f'Peta Isoseismal Skenario Gempabumi M {self.magnitude:.1f} {self.nama_skenario}'
         return f'Peta Isoseismal Gempabumi {self.wilayah_singkat}, {self.tanggal}'
 
     @property
@@ -149,7 +171,10 @@ class IsoseismalMap(models.Model):
 
     def build_slug(self):
         t = self.wit_time
-        base = slugify(f'peta isoseismal gempabumi {self.wilayah_singkat} {t.day} {BULAN[t.month]} {t.year}')[:140]
+        if self.is_scenario:
+            base = slugify(f'skenario m{self.magnitude:.1f} {self.nama_skenario}'.replace('.', ''))[:140]
+        else:
+            base = slugify(f'peta isoseismal gempabumi {self.wilayah_singkat} {t.day} {BULAN[t.month]} {t.year}')[:140]
         slug, n = base, 2
         while IsoseismalMap.objects.filter(slug=slug).exclude(pk=self.pk).exists():
             slug = f'{base}-{n}'
@@ -157,4 +182,7 @@ class IsoseismalMap(models.Model):
         return slug
 
     def get_absolute_url(self):
-        return reverse('isoseismal:detail', args=[self.slug])
+        return reverse('isoseismal:scenario_detail' if self.is_scenario else 'isoseismal:detail', args=[self.slug])
+
+    def get_pdf_url(self):
+        return reverse('isoseismal:scenario_pdf' if self.is_scenario else 'isoseismal:pdf', args=[self.slug])

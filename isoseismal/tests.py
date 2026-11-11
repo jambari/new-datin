@@ -405,3 +405,66 @@ class TektonikTest(TestCase):
         self.assertEqual(ringkasan_tektonik(-6.2, 106.8, 10), [])    # di luar Papua
         self.assertIn('Pegunungan Tengah', ringkasan_tektonik(-5.45, 141.9, 120)[0])   # Oksibil 2026, sisi PNG
         self.assertEqual(ringkasan_tektonik('x', 1, 1), [])
+
+
+SCN_RUN = '2026052207103120260522071031'                   # folder data_MMI run skenario di .50: <WIB><WIB>
+
+
+class ScenarioTest(MediaMixin, TestCase):
+    """Peta isoseismal skenario: dibuat dari tombol ISOSEISMAL .50, tersembunyi sampai staf menerbitkannya."""
+
+    def make(self, name='Sesar Naik Papua Utara'):
+        def fake_fetch(run_name, dest):
+            self.assertEqual(run_name, SCN_RUN)
+            Path(dest).mkdir(parents=True, exist_ok=True)
+            (Path(dest) / 'grid.xml').write_text(grid_xml())
+            return Path(dest) / 'grid.xml', None
+        out = io.StringIO()
+        with mock.patch('isoseismal.remote.fetch_dir', side_effect=fake_fetch):
+            call_command('isoseismal_scenario', SCN_RUN, '--name', name, stdout=out)
+        result = json.loads(out.getvalue().strip().splitlines()[-1].split(' ', 1)[1])
+        return IsoseismalMap.objects.get(wib_id=WIB_ID, is_scenario=True), result
+
+    def test_scenario_map_hidden_until_published(self):
+        real = store_shakemap(WIB_ID, *self.write_inputs(Path(self.media) / 'in'))     # gempa nyata, ID sama
+        generate(real)
+        obj, result = self.make()
+        self.assertTrue(result['ok'] and result['hidden'])
+        self.assertEqual(result['status'], 'digambar (skenario)')
+        self.assertEqual(obj.title, 'Peta Isoseismal Skenario Gempabumi M 3.7 Sesar Naik Papua Utara')
+        self.assertEqual(obj.slug, 'skenario-m37-sesar-naik-papua-utara')
+        self.assertEqual(obj.get_absolute_url(), f'/peta-isoseismal-skenario/{obj.slug}/')
+        self.assertTrue(result['url'].endswith(obj.get_absolute_url()))
+        self.assertEqual(obj.felt, [])                        # skenario: tidak mencari laporan dirasakan
+        self.assertTrue(obj.image.read(8).startswith(b'\x89PNG'))
+        self.assertEqual(IsoseismalMap.objects.count(), 2)    # gempa nyata tetap terpisah
+
+        self.assertEqual(self.client.get(obj.get_absolute_url()).status_code, 404)
+        self.assertNotContains(self.client.get('/peta-isoseismal-skenario/'), obj.title)
+        self.assertEqual(self.client.get(f'/peta-isoseismal-skenario/{real.slug}/').status_code, 404)
+
+        obj.is_hidden = False
+        obj.save()
+        listing = self.client.get('/peta-isoseismal-skenario/')
+        self.assertContains(listing, obj.title)
+        self.assertContains(listing, 'SKENARIO')
+        self.assertNotContains(self.client.get('/peta-isoseismal/'), obj.title)    # bukan di daftar gempa nyata
+        detail = self.client.get(obj.get_absolute_url())
+        self.assertContains(detail, 'Skenario, bukan kejadian nyata')
+        self.assertContains(detail, 'Tatanan tektonik')
+        self.assertContains(detail, 'Mmaks')
+        self.assertNotContains(detail, 'WIT')                 # waktu skenario rekaan: tidak ditampilkan
+        pdf = self.client.get(f'{obj.get_absolute_url()}pdf/')
+        self.assertTrue(pdf.content.startswith(b'%PDF'))
+        self.assertContains(self.client.get('/peta-isoseismal-skenario/', {'q': 'papua utara'}), obj.title)
+
+    def test_rerun_keeps_one_map_and_updates_name(self):
+        first, _ = self.make()
+        second, _ = self.make('Sesar Mamberamo Segmen Mawe')
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(second.slug, 'skenario-m37-sesar-mamberamo-segmen-mawe')
+
+    def test_bad_run_name_rejected(self):
+        from . import remote
+        with self.assertRaises(ValueError):
+            remote.fetch_dir('x; rm -rf /', '/tmp')

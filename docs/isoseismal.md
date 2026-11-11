@@ -50,3 +50,20 @@ tambahkan ke `ALIASES` di `felt.py` bila sering muncul.
 python manage.py sync_isoseismal --since 2026-01-01
 python manage.py sync_isoseismal --since 2026-05-01 --until 2026-05-31
 ```
+
+## Peta isoseismal skenario
+
+Halaman publik `/peta-isoseismal-skenario/` (menu Gempabumi → Peta Isoseismal Skenario), terpisah dari
+peta gempa nyata (`IsoseismalMap.is_scenario`; ID WIB unik per jenis).
+
+1. Di .50 jalankan skenario dari form **▷ Scenario** (Place = nama skenario, mis. "Sesar Mamberamo Segmen Mawe";
+   magnitudo biasanya Mmaks sesar PuSGeN 2024).
+2. Di `/generated/` .50, baris skenario punya tombol **ISOSEISMAL**. Tombol itu menjalankan lewat ssh:
+   `manage.py isoseismal_scenario <run data_MMI> --name "<Place>"` di .189.
+3. .189 mengambil `grid.xml` run itu (`ssh host50`, folder `data_MMI/<WIB><WIB>`), menggambar peta dengan
+   judul merah, tanda air **SKENARIO**, tanpa stasiun/laporan dirasakan, lalu mengembalikan tautan.
+4. Peta baru **tersembunyi**. Staf memeriksa lalu menerbitkannya di admin (hapus centang "sembunyikan dari
+   publik"). Menjalankan tombol lagi memperbarui peta yang sama (nama skenario ikut diperbarui).
+
+Halaman skenario tidak menampilkan waktu (waktu skenario rekaan), tetapi menampilkan tatanan tektonik dan
+sumber gempa terdekat beserta Mmaks-nya. PDF memakai tanda "SKENARIO – BUKAN KEJADIAN NYATA" di tiap halaman.

@@ -26,10 +26,15 @@ def search(qs, q):
               .filter(cond | Q(_felt__icontains=q) | Q(_wilayah__icontains=q)))
 
 
-def isoseismal_list(request):
+def _public(scenario):
+    return IsoseismalMap.objects.public_scenarios() if scenario else IsoseismalMap.objects.public()
+
+
+def isoseismal_list(request, scenario=False):
     q = request.GET.get('q', '').strip()
-    page = Paginator(search(IsoseismalMap.objects.public(), q), PER_PAGE).get_page(request.GET.get('page', 1))
-    return render(request, 'isoseismal/list.html', {'page_obj': page, 'maps': page.object_list, 'query': q})
+    page = Paginator(search(_public(scenario), q), PER_PAGE).get_page(request.GET.get('page', 1))
+    return render(request, 'isoseismal/list.html',
+                  {'page_obj': page, 'maps': page.object_list, 'query': q, 'scenario': scenario})
 
 
 def _band(mmi):
@@ -39,9 +44,9 @@ def _band(mmi):
     return {'label': row[0], 'color': row[3], 'desc': row[4]}
 
 
-def _get_visible(request, slug):
-    obj = get_object_or_404(IsoseismalMap, slug=slug)
-    is_public = IsoseismalMap.objects.public().filter(pk=obj.pk).exists()
+def _get_visible(request, slug, scenario):
+    obj = get_object_or_404(IsoseismalMap, slug=slug, is_scenario=scenario)
+    is_public = _public(scenario).filter(pk=obj.pk).exists()
     if not is_public and not (request.user.is_authenticated and request.user.is_staff):
         raise Http404('Peta isoseismal tidak ditemukan.')
     return obj, is_public
@@ -58,26 +63,28 @@ def _content(obj):
         'wilayah': [dict(w, band=_band(w['mmi'])) for w in obj.wilayah if w['mmi'] >= 1.5],
         'mmi_max': _band(obj.mmi_max),
         'sumber': sumber_terdekat_baris(obj.latitude, obj.longitude, obj.depth),
-        'tektonik': ringkasan_tektonik(obj.latitude, obj.longitude, obj.depth, obj.wit_time.date()),
+        # skenario: waktu rekaan, jadi semua gempa terdahulu boleh disebut
+        'tektonik': ringkasan_tektonik(obj.latitude, obj.longitude, obj.depth,
+                                       None if obj.is_scenario else obj.wit_time.date()),
         'tektonik_sumber': TEKTONIK_SUMBER,
     }
 
 
-def isoseismal_detail(request, slug):
-    obj, is_public = _get_visible(request, slug)
+def isoseismal_detail(request, slug, scenario=False):
+    obj, is_public = _get_visible(request, slug, scenario)
     return render(request, 'isoseismal/detail.html', {
         'obj': obj,
         'is_public': is_public,
         **_content(obj),
-        'others': IsoseismalMap.objects.public().exclude(pk=obj.pk)[:3],
+        'others': _public(scenario).exclude(pk=obj.pk)[:3],
         'share_url': request.build_absolute_uri(obj.get_absolute_url()),
     })
 
 
-def isoseismal_pdf(request, slug):
+def isoseismal_pdf(request, slug, scenario=False):
     from .pdf import build_pdf
 
-    obj, _is_public = _get_visible(request, slug)
+    obj, _is_public = _get_visible(request, slug, scenario)
     pdf = build_pdf(obj, _content(obj), request.build_absolute_uri(obj.get_absolute_url()))
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{obj.slug}.pdf"'

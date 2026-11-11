@@ -2,15 +2,17 @@
 {% block site_header %}{% include 'partials/_landing_header.html' with pn_spacer=1 %}{% endblock %}
 {% load static %}
 
-{% block seo_title %}Peta Isoseismal · Stasiun Geofisika Kelas I Jayapura{% endblock %}
-{% block meta_description %}Peta isoseismal gempabumi dirasakan di Tanah Papua dari data akselerograf dan laporan dirasakan, dibuat otomatis oleh Stasiun Geofisika Kelas I Jayapura BMKG.{% endblock %}
-{% block og_title %}Peta Isoseismal · BMKG Jayapura{% endblock %}
+{% block seo_title %}Peta Isoseismal{% if scenario %} Skenario{% endif %} · Stasiun Geofisika Kelas I Jayapura{% endblock %}
+{% block meta_description %}{% if scenario %}Peta isoseismal skenario (hipotetis) gempabumi di Tanah Papua dari ShakeMap model GMPE untuk sesar dan sumber gempa, Stasiun Geofisika Kelas I Jayapura BMKG.{% else %}Peta isoseismal gempabumi dirasakan di Tanah Papua dari data akselerograf dan laporan dirasakan, dibuat otomatis oleh Stasiun Geofisika Kelas I Jayapura BMKG.{% endif %}{% endblock %}
+{% block og_title %}Peta Isoseismal{% if scenario %} Skenario{% endif %} · BMKG Jayapura{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'berita/css/berita.css' %}">
 <style>
   .iso-badge { display:inline-block; min-width:2.4rem; padding:0.1rem 0.45rem; border-radius:6px; border:1px solid rgba(0,0,0,.25);
                color:#111827; font-weight:800; font-size:0.72rem; text-align:center; margin-right:0.35rem; }
+  .iso-scn { display:inline-block; padding:0 0.4rem; border-radius:4px; background:#dc2626; color:#fff; font-weight:800;
+             font-size:0.66rem; letter-spacing:.05em; margin-right:0.25rem; }
   .iso-found { font-size:0.82rem; color:var(--text-secondary, #64748b); margin:-0.75rem 0 1rem; }
   .bn-card .bn-thumb img { object-fit: cover; object-position: center 40%; }
 </style>
@@ -19,18 +21,25 @@
 {% block content %}
 <div class="bn-hero">
   <div class="bn-wrap" style="padding-top:0;padding-bottom:0;">
+    {% if scenario %}
+    <h1>Peta Isoseismal Skenario</h1>
+    <p>Perkiraan sebaran intensitas guncangan (skala MMI) untuk gempabumi <b>hipotetis</b> di Tanah Papua,
+      dihitung ShakeMap dengan model GMPE, umumnya untuk magnitudo maksimum sesar atau sumber gempa.
+      Bukan kejadian nyata dan bukan prakiraan; dipakai untuk mitigasi dan perencanaan.</p>
+    {% else %}
     <h1>Peta Isoseismal</h1>
     <p>Sebaran intensitas guncangan (skala MMI) gempabumi yang dirasakan di Tanah Papua, dari rekaman
       akselerograf BMKG dan laporan dirasakan. Peta dibuat otomatis setelah gempa terjadi.</p>
+    {% endif %}
   </div>
 </div>
 
 <div class="bn-wrap">
-  <form class="bn-search" method="get" action="{% url 'isoseismal:list' %}">
+  <form class="bn-search" method="get" action="{% if scenario %}{% url 'isoseismal:scenario_list' %}{% else %}{% url 'isoseismal:list' %}{% endif %}">
     <input type="search" name="q" value="{{ query }}" placeholder="Cari nama tempat atau kota, mis. Sarmi, Manokwari…" aria-label="Cari peta isoseismal">
     <button type="submit">Cari</button>
   </form>
-  {% if query %}<p class="iso-found">{{ page_obj.paginator.count }} peta untuk “{{ query }}” · <a href="{% url 'isoseismal:list' %}">tampilkan semua</a></p>{% endif %}
+  {% if query %}<p class="iso-found">{{ page_obj.paginator.count }} peta untuk “{{ query }}” · <a href="{% if scenario %}{% url 'isoseismal:scenario_list' %}{% else %}{% url 'isoseismal:list' %}{% endif %}">tampilkan semua</a></p>{% endif %}
 
   <div class="bn-grid">
     {% for m in maps %}
@@ -39,16 +48,17 @@
           <img src="{{ m.image.url }}" alt="{{ m.title }}" loading="lazy">
         </a>
         <div class="bn-body">
-          <div class="bn-meta">{{ m.tanggal_panjang }}, {{ m.jam }} WIT</div>
+          <div class="bn-meta">{% if m.is_scenario %}<span class="iso-scn">SKENARIO</span> dibuat {{ m.generated_at|date:"j M Y" }}{% else %}{{ m.tanggal_panjang }}, {{ m.jam }} WIT{% endif %}</div>
           <h2><a href="{{ m.get_absolute_url }}">{{ m.title }}</a></h2>
           <p class="bn-excerpt">
             M {{ m.magnitude|floatformat:1 }}, kedalaman {{ m.depth|floatformat:0 }} km.
-            {% with f=m.felt.0 %}{% if f %}Dirasakan hingga <b>{{ f.mmi_text }} MMI</b> di {{ f.place }}.{% endif %}{% endwith %}
+            {% if m.is_scenario %}{% with w=m.wilayah.0 %}{% if w %}Perkiraan MMI tertinggi <b>{{ w.mmi }}</b> di {{ w.name }}.{% endif %}{% endwith %}
+            {% else %}{% with f=m.felt.0 %}{% if f %}Dirasakan hingga <b>{{ f.mmi_text }} MMI</b> di {{ f.place }}.{% endif %}{% endwith %}{% endif %}
           </p>
         </div>
       </article>
     {% empty %}
-      <div class="bn-empty" style="grid-column:1/-1;">{% if query %}Tidak ada peta isoseismal untuk “{{ query }}”.{% else %}Belum ada peta isoseismal.{% endif %}</div>
+      <div class="bn-empty" style="grid-column:1/-1;">{% if query %}Tidak ada peta isoseismal{% if scenario %} skenario{% endif %} untuk “{{ query }}”.{% else %}Belum ada peta isoseismal{% if scenario %} skenario{% endif %}.{% endif %}</div>
     {% endfor %}
   </div>
 

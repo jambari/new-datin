@@ -7,14 +7,14 @@ from .services import generate
 
 @admin.register(IsoseismalMap)
 class IsoseismalMapAdmin(admin.ModelAdmin):
-    list_display = ('wib_id', 'event_time', 'magnitude', 'lokasi', 'jumlah_dirasakan', 'jumlah_stasiun',
-                    'ada_peta', 'is_hidden', 'generated_at')
-    list_filter = ('is_hidden',)
-    search_fields = ('wib_id', 'lokasi', 'felt_text')
-    readonly_fields = ('wib_id', 'slug', 'event_time', 'latitude', 'longitude', 'magnitude', 'depth', 'lokasi',
+    list_display = ('wib_id', 'is_scenario', 'event_time', 'magnitude', 'lokasi', 'skenario_nama', 'jumlah_dirasakan',
+                    'jumlah_stasiun', 'ada_peta', 'is_hidden', 'generated_at')
+    list_filter = ('is_scenario', 'is_hidden')
+    search_fields = ('wib_id', 'lokasi', 'skenario_nama', 'felt_text')
+    readonly_fields = ('wib_id', 'is_scenario', 'skenario_nama', 'shakemap_dir', 'slug', 'event_time', 'latitude', 'longitude', 'magnitude', 'depth', 'lokasi',
                        'grid', 'stations', 'observed', 'felt', 'felt_text', 'felt_sources', 'wilayah',
                        'pratinjau', 'generated_at', 'note', 'created_at', 'updated_at')
-    fields = ('is_hidden', 'pratinjau', 'wib_id', 'slug', 'event_time', 'magnitude', 'depth', 'latitude',
+    fields = ('is_hidden', 'pratinjau', 'is_scenario', 'skenario_nama', 'shakemap_dir', 'wib_id', 'slug', 'event_time', 'magnitude', 'depth', 'latitude',
               'longitude', 'lokasi', 'felt_text', 'felt_sources', 'felt', 'stations', 'observed', 'wilayah',
               'grid', 'generated_at', 'note', 'created_at', 'updated_at')
     actions = ('gambar_ulang', 'sembunyikan', 'tampilkan')

@@ -215,11 +215,17 @@ def _render(obj, mmi, bounds):
     for s in tax.spines.values():
         s.set_linewidth(1.2)
     t = obj.wit_time
-    tax.text(0.5, 0.70, "PETA ISOSEISMAL GEMPABUMI " + obj.wilayah_singkat.upper(), ha="center", va="center",
-             fontsize=14, fontweight="bold")
-    tax.text(0.5, 0.30, f"{obj.tanggal}  {t:%H:%M:%S} WIT  ·  M {obj.magnitude:.1f}  ·  Kedalaman "
-             f"{obj.depth:.0f} km  ·  {abs(obj.latitude):.2f} {'LU' if obj.latitude >= 0 else 'LS'} – "
-             f"{abs(obj.longitude):.2f} BT", ha="center", va="center", fontsize=10.5)
+    params = (f"M {obj.magnitude:.1f}  ·  Kedalaman {obj.depth:.0f} km  ·  {abs(obj.latitude):.2f} "
+              f"{'LU' if obj.latitude >= 0 else 'LS'} – {abs(obj.longitude):.2f} BT")
+    if obj.is_scenario:
+        tax.text(0.5, 0.70, "PETA ISOSEISMAL SKENARIO GEMPABUMI", ha="center", va="center", fontsize=14,
+                 fontweight="bold", color="#b91c1c")
+        tax.text(0.5, 0.30, f"{obj.nama_skenario}  ·  {params}", ha="center", va="center", fontsize=10.5)
+    else:
+        tax.text(0.5, 0.70, "PETA ISOSEISMAL GEMPABUMI " + obj.wilayah_singkat.upper(), ha="center", va="center",
+                 fontsize=14, fontweight="bold")
+        tax.text(0.5, 0.30, f"{obj.tanggal}  {t:%H:%M:%S} WIT  ·  {params}", ha="center", va="center",
+                 fontsize=10.5)
 
     # Peta utama
     ax = fig.add_axes([mx, my, mw, mh])
@@ -318,7 +324,10 @@ def _render(obj, mmi, bounds):
     _place_labels(fig, ax, labels, avoid=[(ex, ey)])
     _panel(fig, obj, smap, (lat0, lat1, lon0, lon1), W, H, mx + mw + 0.2 / W, my, mh + (TITLE_H + 0.12) / H,
            MAP_W)
-    _scale_strip(fig, mx, M / H, mw, STRIP_H / H, felt=bool(obj.felt))
+    _scale_strip(fig, mx, M / H, mw, STRIP_H / H, felt=bool(obj.felt), scenario=obj.is_scenario)
+    if obj.is_scenario:                                 # tanda air: peta hipotetis, bukan kejadian nyata
+        fig.text(mx + mw / 2, my + mh / 2, "SKENARIO", fontsize=96, fontweight="bold", color="#dc2626", alpha=0.16,
+                 rotation=28, ha="center", va="center", zorder=100)
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=150, facecolor="white")
@@ -422,9 +431,15 @@ def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
     top = 1.75
     pax.text(0.05, y(top), "Legenda", fontsize=9.5, fontweight="bold")
     items = [
-        (Line2D([], [], marker="*", ls="", ms=13, mfc="#dc2626", mec="#111"), "Pusat gempa"),
-        (Line2D([], [], marker="^", ls="", ms=8, mfc="#a0e6ff", mec="#111"), "Stasiun akselerograf (warna = MMI)"),
-        (Line2D([], [], marker="o", ls="", ms=7.5, mfc="#bfccff", mec="#111"), "Laporan dirasakan (MMI)"),
+        (Line2D([], [], marker="*", ls="", ms=13, mfc="#dc2626", mec="#111"),
+         "Pusat gempa skenario" if obj.is_scenario else "Pusat gempa"),
+    ]
+    if not obj.is_scenario:
+        items += [
+            (Line2D([], [], marker="^", ls="", ms=8, mfc="#a0e6ff", mec="#111"), "Stasiun akselerograf (warna = MMI)"),
+            (Line2D([], [], marker="o", ls="", ms=7.5, mfc="#bfccff", mec="#111"), "Laporan dirasakan (MMI)"),
+        ]
+    items += [
         (Line2D([], [], color=FAULT_COLOR, lw=0.9), "Sesar aktif"),
         (Line2D([], [], color=FAULT_COLOR, lw=1.8), "Palung subduksi"),
         (Line2D([], [], color="#6b7280", lw=0.6), "Batas kabupaten/kota"),
@@ -457,7 +472,8 @@ def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
         pax.text(0.05, y(top2 + 0.24), "–", fontsize=7.2, va="center")
         top3 = top2 + 0.42
 
-    sources = ["Grid MMI: ShakeMap BMKG Jayapura", "Stasiun akselerograf BMKG"]
+    sources = (["Grid MMI: ShakeMap skenario (GMPE) BMKG Jayapura"] if obj.is_scenario
+               else ["Grid MMI: ShakeMap BMKG Jayapura", "Stasiun akselerograf BMKG"])
     sources += obj.felt_sources or []
     sources += ["Batas wilayah: BIG", "Sesar & palung: PuSGeN 2024"]
     pax.text(0.05, y(top3 + 0.05), "Sumber Data:\n" + "\n".join(f"• {s}" for s in dict.fromkeys(sources)),
@@ -483,7 +499,7 @@ def _panel(fig, obj, smap, extent, W, H, px0, py0, ph, map_w_in):
     iax.set_anchor("C")
 
 
-def _scale_strip(fig, x0, y0, w, h, felt=True):
+def _scale_strip(fig, x0, y0, w, h, felt=True, scenario=False):
     """Tabel skala intensitas (Worden dkk., 2011) seperti MMI.png di template QGIS."""
     ax = fig.add_axes([x0, y0, w, h])
     ax.set_xlim(0, 1), ax.set_ylim(0, 1), ax.axis("off")
@@ -503,6 +519,11 @@ def _scale_strip(fig, x0, y0, w, h, felt=True):
             ax.add_patch(Rectangle((xx, yy), col_w, rh, fc=row[3] if last else "white", ec="#111", lw=0.7))
             ax.text(xx + col_w / 2, yy + rh / 2, row[idx], fontsize=8.5 if last else 6.6, ha="center", va="center",
                     fontweight="bold" if last else "normal")
-    note = ("Warna peta = perkiraan intensitas ShakeMap yang dikoreksi data stasiun dan laporan dirasakan."
-            if felt else "Laporan intensitas dirasakan belum tersedia; warna peta = perkiraan ShakeMap dan data stasiun.")
+    if scenario:
+        note = ("SKENARIO (hipotetis): warna peta = perkiraan intensitas ShakeMap dari model GMPE tanpa data "
+                "stasiun; bukan kejadian nyata dan bukan prakiraan.")
+    elif felt:
+        note = "Warna peta = perkiraan intensitas ShakeMap yang dikoreksi data stasiun dan laporan dirasakan."
+    else:
+        note = "Laporan intensitas dirasakan belum tersedia; warna peta = perkiraan ShakeMap dan data stasiun."
     ax.text(0, 0.02, "Skala berdasarkan Worden dkk. (2011). " + note, fontsize=6.5, va="bottom", style="italic")

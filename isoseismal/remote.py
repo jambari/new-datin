@@ -80,16 +80,26 @@ def best_run(runs, event_time, lat, lon):
     return max(cands, key=lambda r: r.mtime) if cands else None
 
 
+_SAFE_NAME = re.compile(r"^[0-9A-Za-z_]{14,80}$")
+
+
 def fetch(run, dest):
     """Unduh grid.xml & stationlist.xml run itu ke folder dest; kembalikan (grid, stationlist|None)."""
+    return fetch_dir(run.name, dest)
+
+
+def fetch_dir(name, dest):
+    """Seperti fetch(), dengan nama folder data_MMI langsung (mis. run skenario '<WIB><WIB>')."""
+    if not _SAFE_NAME.match(name or ""):
+        raise ValueError(f"nama run tidak valid: {name!r}")
     dest = Path(dest)
-    src = f"{_host()}:{_root()}/{run.name}/output/"
+    src = f"{_host()}:{_root()}/{name}/output/"
     subprocess.run(["rsync", "-az", "-e", "ssh -o BatchMode=yes -o ConnectTimeout=15",
                     "--include=grid.xml", "--include=stationlist.xml", "--exclude=*", src, str(dest) + "/"],
                    capture_output=True, text=True, timeout=300, check=True)
     grid, stations = dest / "grid.xml", dest / "stationlist.xml"
     if not grid.exists():
-        raise FileNotFoundError(f"{run.name}: grid.xml tidak terunduh")
+        raise FileNotFoundError(f"{name}: grid.xml tidak terunduh")
     return grid, stations if stations.exists() else None
 
 

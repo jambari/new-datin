@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block seo_title %}{{ obj.title }} · BMKG Jayapura{% endblock %}
-{% block meta_description %}{{ obj.title }}: M {{ obj.magnitude|floatformat:1 }}, kedalaman {{ obj.depth|floatformat:0 }} km, {{ obj.waktu }} WIT. Sebaran intensitas MMI dari akselerograf dan laporan dirasakan.{% endblock %}
+{% block meta_description %}{% if obj.is_scenario %}{{ obj.title }}: skenario (hipotetis) M {{ obj.magnitude|floatformat:1 }}, kedalaman {{ obj.depth|floatformat:0 }} km. Perkiraan sebaran intensitas MMI dari ShakeMap model GMPE.{% else %}{{ obj.title }}: M {{ obj.magnitude|floatformat:1 }}, kedalaman {{ obj.depth|floatformat:0 }} km, {{ obj.waktu }} WIT. Sebaran intensitas MMI dari akselerograf dan laporan dirasakan.{% endif %}{% endblock %}
 {% block og_title %}{{ obj.title }}{% endblock %}
 {% block canonical_url %}{{ share_url }}{% endblock %}
 {% block og_image %}{{ request.scheme }}://{{ request.get_host }}{{ obj.image.url }}{% endblock %}
@@ -29,6 +29,10 @@
   .iso-badge { display:inline-block; min-width:2.6rem; padding:0.1rem 0.4rem; border-radius:6px; border:1px solid rgba(0,0,0,.25);
                color:#111827; font-weight:800; font-size:0.72rem; text-align:center; }
   .iso-note { font-size:0.78rem; color:var(--text-secondary, #64748b); }
+  .iso-scn { display:inline-block; padding:0 0.4rem; border-radius:4px; background:#dc2626; color:#fff; font-weight:800;
+             font-size:0.7rem; letter-spacing:.05em; margin-right:0.3rem; }
+  .iso-scn-box { border:1px solid #fca5a5; background:rgba(220,38,38,.08); border-radius:10px; padding:0.7rem 0.9rem;
+                 margin:0 0 1rem; font-size:0.85rem; }
   .iso-staff { margin-top:0.6rem; display:inline-block; padding:0.25rem 0.6rem; border-radius:6px; background:#fbbf24;
                color:#0f172a; font-size:0.7rem; font-weight:800; }
 </style>
@@ -39,13 +43,18 @@
   <div class="bn-wrap">
     <div class="breadcrumb">
       <a href="{% url 'landing' %}">Beranda</a> &raquo;
-      <a href="{% url 'isoseismal:list' %}">Peta Isoseismal</a> &raquo;
-      {{ obj.wilayah_singkat }}
+      {% if obj.is_scenario %}<a href="{% url 'isoseismal:scenario_list' %}">Peta Isoseismal Skenario</a> &raquo;
+      {{ obj.nama_skenario }}{% else %}<a href="{% url 'isoseismal:list' %}">Peta Isoseismal</a> &raquo;
+      {{ obj.wilayah_singkat }}{% endif %}
     </div>
     <h1>{{ obj.title }}</h1>
+    {% if obj.is_scenario %}
+    <div class="bn-meta"><span class="iso-scn">SKENARIO</span> Dibuat {{ obj.generated_at|date:"j F Y" }} &middot; Seismologi Teknik</div>
+    {% else %}
     <div class="bn-meta">{{ obj.tanggal_panjang }} &middot; Seismologi Teknik</div>
+    {% endif %}
     {% if not is_public %}
-      <div class="iso-staff">PRATINJAU STAF — {% if obj.is_hidden %}disembunyikan{% else %}belum ada peta/laporan dirasakan{% endif %}</div>
+      <div class="iso-staff">PRATINJAU STAF — {% if obj.is_hidden %}disembunyikan{% if obj.is_scenario %}; terbitkan di admin (hapus centang "sembunyikan dari publik"){% endif %}{% else %}belum ada peta/laporan dirasakan{% endif %}</div>
     {% endif %}
   </div>
 </div>
@@ -56,7 +65,7 @@
       <a href="{{ obj.image.url }}" target="_blank" rel="noopener"><img class="iso-map" src="{{ obj.image.url }}" alt="{{ obj.title }}"></a>
       <div class="iso-actions">
         <a href="{{ obj.image.url }}" download>Unduh peta (PNG)</a>
-        <a href="{% url 'isoseismal:pdf' obj.slug %}">Unduh PDF</a>
+        <a href="{{ obj.get_pdf_url }}">Unduh PDF</a>
         <a class="alt" href="https://wa.me/?text={{ obj.title|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer">Bagikan ke WhatsApp</a>
         <a class="alt" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer">Facebook</a>
       </div>
@@ -64,6 +73,23 @@
 
     <div class="bn-content-card">
       <div class="bn-content">
+        {% if obj.is_scenario %}
+        <div class="iso-scn-box"><b>Skenario, bukan kejadian nyata.</b> Peta ini menggambarkan perkiraan guncangan
+          bila terjadi gempabumi hipotetis dengan parameter di bawah. Intensitas dihitung ShakeMap dengan model
+          GMPE (hubungan magnitudo–jarak–intensitas) tanpa data stasiun, sehingga guncangan sebenarnya bisa berbeda.
+          Peta ini bukan prakiraan gempa; gunakan untuk mitigasi dan perencanaan.</div>
+        <p>Skenario <b>{{ obj.nama_skenario }}</b>: gempabumi bermagnitudo <b>M {{ obj.magnitude|floatformat:1 }}</b>
+          pada kedalaman {{ obj.depth|floatformat:0 }} km, berpusat di {{ obj.koordinat }}.
+          {% with w=wilayah.0 %}{% if w %}Perkiraan intensitas tertinggi di daratan <b>{{ w.band.label }} MMI</b>
+          ({{ w.band.desc|lower }}) di {{ w.name }}.{% endif %}{% endwith %}</p>
+
+        <div class="iso-params">
+          <div class="iso-param"><span>Magnitudo</span><b>M {{ obj.magnitude|floatformat:1 }}</b></div>
+          <div class="iso-param"><span>Kedalaman</span><b>{{ obj.depth|floatformat:0 }} km</b></div>
+          <div class="iso-param"><span>Lokasi</span><b>{{ obj.koordinat }}</b></div>
+          {% with w=wilayah.0 %}{% if w %}<div class="iso-param"><span>MMI maks. (perkiraan)</span><b><span class="iso-badge" style="background:{{ w.band.color }}">{{ w.band.label }}</span></b></div>{% endif %}{% endwith %}
+        </div>
+        {% else %}
         <p>Gempabumi terjadi pada {{ obj.tanggal_panjang }} pukul {{ obj.jam }} WIT
           dengan magnitudo <b>M {{ obj.magnitude|floatformat:1 }}</b> pada kedalaman {{ obj.depth|floatformat:0 }} km,
           berpusat di {{ obj.koordinat }}{% if obj.lokasi %} ({{ obj.lokasi }}){% endif %}.
@@ -80,6 +106,7 @@
         {% if not felt %}
         <p class="iso-note">Gempa ini tercatat dirasakan, tetapi laporan intensitas (skala MMI) per wilayah belum
           tersedia. Peta menampilkan perkiraan intensitas ShakeMap dan rekaman akselerograf.</p>
+        {% endif %}
         {% endif %}
         {% if felt %}
         <h3>Laporan dirasakan</h3>
@@ -131,33 +158,42 @@
         {% if sumber %}
         <h3>Sumber gempa terdekat</h3>
         <p>{% for line in sumber %}{{ line }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
-        <p class="iso-note">Menurut model sumber gempa PuSGeN 2024; petunjuk saja, bukan penentuan sumber gempa.</p>
+        <p class="iso-note">Menurut model sumber gempa PuSGeN 2024; petunjuk saja, bukan penentuan sumber gempa.{% if obj.is_scenario %}
+          Mmaks adalah magnitudo maksimum yang dapat dihasilkan sumber gempa itu; magnitudo skenario umumnya
+          mengacu pada nilai ini.{% endif %}</p>
         {% endif %}
 
-        <h3>Tentang peta isoseismal</h3>
+        <h3>Tentang peta isoseismal{% if obj.is_scenario %} skenario{% endif %}</h3>
+        {% if obj.is_scenario %}
+        <p>Peta isoseismal skenario menggambarkan perkiraan daerah-daerah dengan intensitas guncangan yang sama dalam
+          skala <a href="{% url 'public_skala_mmi' %}">MMI (Modified Mercalli Intensity)</a> untuk gempabumi hipotetis.
+          Warna peta adalah perkiraan intensitas dari ShakeMap Stasiun Geofisika Jayapura dengan model GMPE, tanpa
+          rekaman stasiun dan laporan dirasakan. Peta skenario dipakai untuk mitigasi, perencanaan, dan edukasi.</p>
+        {% else %}
         <p>Peta isoseismal menggambarkan daerah-daerah dengan intensitas guncangan yang sama dalam skala
           <a href="{% url 'public_skala_mmi' %}">MMI (Modified Mercalli Intensity)</a>. Warna peta adalah perkiraan
           intensitas dari ShakeMap Stasiun Geofisika Jayapura yang dikoreksi dengan rekaman akselerograf BMKG;
           titik bulat adalah laporan dirasakan dari masyarakat, BMKG, dan katalog stasiun. Peta dibuat otomatis
           dan dapat diperbarui bila ada laporan baru.</p>
+        {% endif %}
       </div>
     </div>
   </div>
 
   <aside class="bn-detail-side">
-    <h4>Peta Isoseismal Lainnya</h4>
+    <h4>Peta Isoseismal {% if obj.is_scenario %}Skenario {% endif %}Lainnya</h4>
     {% for o in others %}
       <div class="bn-side-item">
         <a href="{{ o.get_absolute_url }}"><img src="{{ o.image.url }}" alt="{{ o.title }}" loading="lazy"></a>
         <div>
           <div class="bns-title"><a href="{{ o.get_absolute_url }}">{{ o.title }}</a></div>
-          <div class="bns-meta">M {{ o.magnitude|floatformat:1 }} · {{ o.tanggal }}</div>
+          <div class="bns-meta">M {{ o.magnitude|floatformat:1 }} · {% if o.is_scenario %}skenario{% else %}{{ o.tanggal }}{% endif %}</div>
         </div>
       </div>
     {% empty %}
       <p class="iso-note">Belum ada peta lain.</p>
     {% endfor %}
-    <p style="margin-top:0.75rem;"><a href="{% url 'isoseismal:list' %}">Lihat semuanya &raquo;</a></p>
+    <p style="margin-top:0.75rem;"><a href="{% if obj.is_scenario %}{% url 'isoseismal:scenario_list' %}{% else %}{% url 'isoseismal:list' %}{% endif %}">Lihat semuanya &raquo;</a></p>
   </aside>
 </div>
 {% endblock %}
