@@ -9,6 +9,7 @@ urlpatterns = [
     path('', views.landing, name='landing'),
     path('gempa/', views.gempa_public, name='gempa_public'),
     path('gempa/<str:public_id>/', views.public_gempa_detail, name='public_gempa_detail'),
+    path('gempa-publik/<str:public_id>/', views.public_gempa_peta, name='public_gempa_peta'),
     path('gempa-merusak/', views.public_gempa_merusak, name='public_gempa_merusak'),
     path('gempa-merusak/<int:pk>/', views.public_gempa_merusak_detail, name='public_gempa_merusak_detail'),
     path('skala-mmi/', views.public_skala_mmi, name='public_skala_mmi'),

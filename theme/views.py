@@ -378,6 +378,58 @@ def public_shakemap_spectrum(request, pk):
     return render(request, 'public_shakemap_spectrum.html', _resolve_shakemap_context(pk))
 
 
+def _katalog_gempa_for(event):
+    """Gempa JAY (katalog admin) untuk satu QC Event: lewat event_id SeisComP,
+    kalau tidak ada, event pada tanggal dan menit UTC yang sama."""
+    from gempa.models import Gempa
+    match = Gempa.objects.filter(event_id=event.public_id).first()
+    if match is None:
+        t = event.origin_time.astimezone(datetime.timezone.utc)
+        match = (Gempa.objects
+                 .filter(tanggal=t.date(), origin__startswith=t.strftime('%H:%M'))
+                 .first())
+    return match
+
+
+def public_gempa_peta(request, public_id):
+    """Halaman gempa-publik: peta template-balai untuk event dari /gempa/,
+    dengan tombol menuju detail QC event (/gempa/<public_id>/)."""
+    from django.shortcuts import get_object_or_404
+    from django.urls import reverse
+    from gempa.admin import (eq_datetime_context, eq_timezones, format_lat,
+                             format_lon, gmt_image)
+    from gempa import gmt
+    from gempa.faults import sumber_terdekat
+    from gempa.sites import gempa_admin_site
+    from qc_review.models import Event as QCEvent
+
+    event = get_object_or_404(QCEvent, public_id=public_id)
+    t = event.origin_time.astimezone(datetime.timezone.utc)
+    tanggal, origin = t.date(), t.strftime('%H:%M:%S')
+    katalog = _katalog_gempa_for(event)
+
+    epic_map = gmt_image('JAY', tanggal, origin)
+    ctx = eq_datetime_context(tanggal, origin)
+    ctx.update({
+        'event': event,
+        'katalog': katalog,
+        'lat': format_lat(event.latitude),
+        'lon': format_lon(event.longitude),
+        'mag': round(event.magnitude, 1) if event.magnitude is not None else None,
+        'depth': round(event.depth_km),
+        'ket': (katalog.ket if katalog and katalog.ket else event.region) or '-',
+        'epic_map': epic_map,
+        'tz_data': eq_timezones(tanggal, origin),
+        'sumber_terdekat': sumber_terdekat(event.latitude, event.longitude, event.depth_km),
+    })
+    # "Buat ulang peta GMT" menjalankan buat_peta.sh di server: hanya untuk
+    # petugas yang boleh masuk admin gempa, dan hanya bila event ada di katalog.
+    if katalog is not None and gempa_admin_site.has_permission(request):
+        ctx['buat_peta_url'] = reverse('gempa_admin:gempa-buat-peta', args=[katalog.pk])
+        ctx['gmt_map_exists'] = gmt.map_exists('jay', tanggal, origin)
+    return render(request, 'public_gempa_peta.html', ctx)
+
+
 def public_gempa_detail(request, public_id):
     import json as _json
     from qc_review.models import Event as QCEvent, QCRun

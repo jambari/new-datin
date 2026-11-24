@@ -85,57 +85,7 @@
 <script src="{% static 'gjson/batasinapng.js' %}"></script>
 <script src="{% static_v 'gjson/indofaults.js' %}"></script>
 <script src="{% static_v 'js/pusgen_layer.js' %}"></script>
-<script>
-var mymap = L.map('map-baru').setView([{{ event.lintang }}, {{ event.bujur|unlocalize }}], 7);
-var layer = L.esri.basemapLayer('Imagery').addTo(mymap);
-var layerLabels;
-function setBasemap(basemap){
-  if(layer){mymap.removeLayer(layer);}
-  layer=L.esri.basemapLayer(basemap);mymap.addLayer(layer);
-  if(layerLabels){mymap.removeLayer(layerLabels);}
-  if(['ShadedRelief','Oceans','Gray','DarkGray','Terrain'].includes(basemap)){layerLabels=L.esri.basemapLayer(basemap+'Labels');mymap.addLayer(layerLabels);}
-  else if(basemap.includes('Imagery')){layerLabels=L.esri.basemapLayer('ImageryLabels');mymap.addLayer(layerLabels);}
-}
-var eqIcon=L.icon({iconUrl:'{% static "images/earthquake.png" %}',iconSize:[40,40]});
-L.marker([{{ event.lintang }}, {{ event.bujur|unlocalize }}],{icon:eqIcon}).addTo(mymap);
-/* Patahan/sesar dan palung subduksi memakai warna yang sama;
-   garis palung dibuat lebih tebal agar tetap terbaca. */
-var warnaPatahan='#ffff00';
-var faultStyle={"color":warnaPatahan,"weight":1,"opacity":0.5,"fillColor":"transparent"};
-var pngStyle={fillColor:'#0AA53E',weight:1,opacity:1,color:'#0AA53E',fillOpacity:1};
-L.geoJSON(png,{style:pngStyle}).addTo(mymap);
-var batasStyle={fillColor:'#D31B1B',weight:2,opacity:1,color:'#D31B1B',fillOpacity:1};
-L.geoJSON(batasInapng,{style:batasStyle}).addTo(mymap);
-L.pusgenLayer(indoFaults,{style:faultStyle}).addTo(mymap);
-if(typeof subDuksi!=='undefined')L.pusgenLayer(subDuksi,{style:{color:warnaPatahan,weight:1.6,opacity:0.65}}).addTo(mymap);
-var pulsingIcon=L.icon.pulse({iconSize:[30,30],color:'red'});
-var whiteIcon=L.divIcon({className:'white-icon',html:'<div class="white-icon"></div>',iconSize:[100,100]});
-L.marker([{{ event.lintang }}, {{ event.bujur|unlocalize }}],{icon:pulsingIcon}).addTo(mymap);
-L.marker([{{ event.lintang }}, {{ event.bujur|unlocalize }}],{icon:whiteIcon}).addTo(mymap);
-function kota(name){return L.divIcon({className:'kota',html:'<div class="map-label"><div class="map-label-content">'+name+'</div></div>'});}
-L.marker([-2.56,140.7],{icon:kota('Jayapura')}).addTo(mymap);
-L.marker([-2.58,140.350],{icon:kota('Sentani')}).addTo(mymap);
-L.marker([-1.183,136.09],{icon:kota('Biak')}).addTo(mymap);
-L.marker([-6.083,140.316],{icon:kota('Tanah Merah')}).addTo(mymap);
-L.marker([-4.066,138.966],{icon:kota('Wamena')}).addTo(mymap);
-L.marker([-3.026,140.515],{icon:kota('Arso')}).addTo(mymap);
-L.marker([-1.88,136.24],{icon:kota('Serui')}).addTo(mymap);
-L.marker([-8.466,140.383],{icon:kota('Merauke')}).addTo(mymap);
-L.marker([-4.542,136.888],{icon:kota('Timika')}).addTo(mymap);
-L.marker([-3.363,135.503],{icon:kota('Nabire')}).addTo(mymap);
-L.marker([-3.833,136.35],{icon:kota('Enarotali')}).addTo(mymap);
-L.marker([-4.98,140.56],{icon:kota('Oksibil')}).addTo(mymap);
-L.marker([-1.877,138.753],{icon:kota('Sarmi')}).addTo(mymap);
-L.marker([-2.26,136.37],{icon:kota('Waren')}).addTo(mymap);
-L.marker([-4.69,139.35],{icon:kota('Sumohai')}).addTo(mymap);
-L.marker([-2.92,132.298],{icon:kota('Fak Fak')}).addTo(mymap);
-L.marker([-3.67,133.77],{icon:kota('Kaimana')}).addTo(mymap);
-L.marker([-0.86,134.07],{icon:kota('Manokwari')}).addTo(mymap);
-L.marker([-2.12,133.54],{icon:kota('Bintuni')}).addTo(mymap);
-L.marker([-0.87,131.25],{icon:kota('Sorong')}).addTo(mymap);
-L.marker([-0.395,130.803],{icon:kota('Waisai')}).addTo(mymap);
-L.marker([-1.45,132.01],{icon:kota('Teminabuan')}).addTo(mymap);
-</script>
+{% include 'gempa/_peta_balai_map.html' with map_lat=event.lintang map_lon=event.bujur %}
 
 <script>
 // -- Timezone selector --

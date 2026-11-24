@@ -64,6 +64,19 @@ def eq_datetime_context(tanggal, origin_str):
         'jam_utc': dt_utc.strftime("%H:%M:%S"),
     }
 
+def eq_timezones(tanggal, origin_str):
+    """Tanggal/jam event dalam WIB, WITA, WIT untuk pemilih Zona Waktu di halaman peta."""
+    dt_utc = datetime.strptime(f"{tanggal} {str(origin_str)[:8]}", "%Y-%m-%d %H:%M:%S")
+    tz_data = {}
+    for name, hours in [('WIB', 7), ('WITA', 8), ('WIT', 9)]:
+        dt = dt_utc + timedelta(hours=hours)
+        tz_data[name] = {
+            'date': f"{dt.day:02d}-{BULAN_SINGKAT[dt.month]}-{str(dt.year)[-2:]}",
+            'time': dt.strftime("%H:%M:%S"),
+            'susulan': (dt + timedelta(minutes=30)).strftime("%H:%M"),
+        }
+    return tz_data
+
 def format_lat(lintang):
     try:
         v = float(lintang)
@@ -485,23 +498,10 @@ class GempaAdmin(GmtMapMixin, TopFilterMixin, ExportMixin, VersionAdmin):
         from django.shortcuts import render
         obj = Gempa.objects.get(pk=pk)
         ctx = eq_datetime_context(obj.tanggal, obj.origin)
-        
-        import json
-        # Compute all timezone times for client-side switching
-        origin_clean = str(obj.origin)[:8]
-        dt_utc = datetime.strptime(f"{obj.tanggal} {origin_clean}", "%Y-%m-%d %H:%M:%S")
-        tz_data = {}
-        for name, hours in [('WIB', 7), ('WITA', 8), ('WIT', 9)]:
-            dt = dt_utc + timedelta(hours=hours)
-            tz_data[name] = {
-                'date': f"{dt.day:02d}-{BULAN_SINGKAT[dt.month]}-{str(dt.year)[-2:]}",
-                'time': dt.strftime("%H:%M:%S"),
-                'susulan': (dt + timedelta(minutes=30)).strftime("%H:%M"),
-            }
         ctx.update({'event': obj, 'lat': format_lat(obj.lintang),
                     'lon': format_lon(obj.bujur), 'mag': round(float(obj.magnitudo), 1),
                     'epic_map': gmt_image('JAY', obj.tanggal, obj.origin),
-                    'tz_data': tz_data,
+                    'tz_data': eq_timezones(obj.tanggal, obj.origin),
                     'default_tz': 'WIT',
                     **self.buat_peta_context(obj)})
         tpl = 'gempa/angkasatemplatebalai_gfz.html' if request.GET.get('gfz') else 'gempa/angkasatemplatebalai.html'
