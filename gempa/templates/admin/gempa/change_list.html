@@ -36,6 +36,14 @@ document.addEventListener("DOMContentLoaded", function() {
   #changelist { border: none !important; }
   #changelist .results { overflow-x: auto; }
   #result_list { width: 100%; min-width: 600px; }
+  /* Desktop: sel tidak dibungkus, jadi tombol Aksi (Peta/Commits/Edit/Hapus) tetap
+     satu baris dan tabel melebar; kalau lebih lebar dari layar, .results di atas
+     yang digeser ke samping, bukan kolomnya yang dipersempit sampai bertumpuk.
+     Di bawah 768px (tampilan ponsel admin Django) perilaku lama tetap. */
+  @media (min-width: 768px) {
+    #result_list th,
+    #result_list td { white-space: nowrap; }
+  }
 
   .gempa-filter-bar {
     color-scheme: light;
