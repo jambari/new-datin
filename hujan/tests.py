@@ -2,6 +2,7 @@ import datetime
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
+from jadwal.models import Pegawai
 from .models import Hujan
 
 
@@ -58,15 +59,17 @@ class HujanViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_edit_hujan_post_updates_record(self):
+        # Petugas dipilih dari pegawai aktif, kategori memakai nilai pilihan form (huruf kecil).
+        Pegawai.objects.create(nama='Jambari', nip='198001012000011001', pangkat='-', jabatan='-')
         h = make_hujan(tanggal=datetime.date(2024, 5, 1))
         resp = self.client.post(reverse('edit_hujan', args=[h.id]), {
             'tanggal': '2024-05-01',
             'hilman': 20.0,
             'obs': 20.0,
-            'kategori': 'Lebat',
+            'kategori': 'sedang',
             'petugas': 'Jambari',
         })
-        self.assertIn(resp.status_code, [200, 302])
+        self.assertEqual(resp.status_code, 302)
         h.refresh_from_db()
         self.assertEqual(float(h.hilman), 20.0)
 

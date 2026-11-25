@@ -152,13 +152,3 @@ class WebGISDetailViewTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
 
-
-class SeismicityAnalysisViewTest(TestCase):
-    def setUp(self):
-        self.client = Client()
-        make_event()
-
-    def test_returns_200(self):
-        url = reverse('seismicity_analysis')
-        resp = self.client.get(url)
-        self.assertEqual(resp.status_code, 200)

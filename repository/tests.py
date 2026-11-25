@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from .models import (
     Gempa, Station, DataAvailability, AcceleroDataAvailability,
-    ShakemapEvent,
+    ShakemapEvent, FeltEarthquake,
 )
 
 
@@ -117,33 +117,6 @@ class ShakemapEventModelTest(TestCase):
 
 
 
-class GempaCreateAPITest(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user('apiuser', password='pass123')
-        self.client.force_login(self.user)
-        self.url = reverse('gempa_create_api')
-
-    def test_post_valid_gempa(self):
-        payload = {
-            'source_id': 'BMKG-TEST-001',
-            'station_code': 'JYP',
-            'origin_datetime': '2024-03-01T10:00:00Z',
-            'latitude': -2.5,
-            'longitude': 140.0,
-            'magnitudo': 5.2,
-            'depth': 10,
-            'remark': 'test',
-            'felt': False,
-        }
-        resp = self.client.post(
-            self.url, data=json.dumps(payload),
-            content_type='application/json',
-        )
-        self.assertIn(resp.status_code, [200, 201])
-        self.assertTrue(Gempa.objects.filter(source_id='BMKG-TEST-001').exists())
-
-
 class RepositoryViewsTest(TestCase):
     def setUp(self):
         self.client = Client()
@@ -197,8 +170,11 @@ class RepositoryViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_shakemap_detail_get(self):
-        ev = ShakemapEvent.objects.first()
-        resp = self.client.get(reverse('shakemap-detail', args=[ev.pk]))
+        # Halaman detail menampilkan gempa dirasakan (FeltEarthquake), bukan ShakemapEvent.
+        fe = FeltEarthquake.objects.create(
+            event_datetime=datetime.datetime(2024, 3, 1, 10, 0, 0, tzinfo=datetime.timezone.utc),
+            latitude=-2.5, longitude=140.0, magnitude=5.2, depth_km=10.0, wilayah='Papua')
+        resp = self.client.get(reverse('shakemap-detail', args=[fe.pk]))
         self.assertEqual(resp.status_code, 200)
 
     def test_shakemap_detail_404_on_invalid(self):

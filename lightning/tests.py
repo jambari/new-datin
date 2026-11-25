@@ -123,9 +123,16 @@ class LightningViewsTest(TestCase):
         )
         self.assertIn(resp.status_code, [200, 201])
 
-    def test_delete_all_strikes_post(self):
+    def test_delete_all_strikes_requires_staff(self):
         resp = self.client.post(reverse('lightning:strike_delete_all'))
-        self.assertIn(resp.status_code, [200, 302])
+        self.assertEqual(resp.status_code, 302)                 # ke halaman login
+        self.assertEqual(Strike.objects.count(), 1)
+
+    def test_delete_all_strikes_post(self):
+        self.user.is_staff = True
+        self.user.save()
+        resp = self.client.post(reverse('lightning:strike_delete_all'))
+        self.assertEqual(resp.status_code, 302)
         self.assertEqual(Strike.objects.count(), 0)
 
     def test_unauthenticated_redirects(self):
