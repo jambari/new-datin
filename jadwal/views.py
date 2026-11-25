@@ -424,6 +424,36 @@ def create_backup(month, year, user, note="Backup Otomatis"):
     RiwayatJadwal.objects.filter(id__in=list(lama)).delete()
 
 
+def _apply_snapshot(backup):
+    """Ganti seluruh jadwal bulan backup dengan isi snapshot-nya."""
+    month, year = backup.bulan, backup.tahun
+    pegawai_ids = set(Pegawai.objects.values_list('id', flat=True))
+    user_ids = set(User.objects.values_list('id', flat=True))
+    pola_by_kode = {p.kode: p for p in PolaDinas.objects.all()}
+    _, num_days = calendar.monthrange(year, month)
+
+    JadwalHarian.objects.filter(tanggal__year=year, tanggal__month=month).delete()
+    rows = []
+    for item in backup.data_snapshot:
+        pola = pola_by_kode.get(item.get('pola_kode')) if item.get('pola_kode') else None
+        day = item.get('day')
+        # Lewati pegawai/pola yang sudah dihapus dari data master
+        if item.get('pegawai_id') not in pegawai_ids or not isinstance(day, int) or not 1 <= day <= num_days:
+            continue
+        if item.get('pola_kode') and pola is None:
+            continue
+        rows.append(JadwalHarian(
+            pegawai_id=item['pegawai_id'],
+            tanggal=date(year, month, day),
+            pola=pola,
+            # Riwayat lama belum menyimpan status persetujuan: anggap sudah disetujui.
+            is_approved=item.get('is_approved', True),
+            edited_by_id=item.get('edited_by_id') if item.get('edited_by_id') in user_ids else None,
+            keterangan_lain=item.get('keterangan_lain'),
+        ))
+    JadwalHarian.objects.bulk_create(rows)
+
+
 @require_POST
 @login_required
 def restore_jadwal(request, backup_id):
@@ -431,39 +461,35 @@ def restore_jadwal(request, backup_id):
     if not _boleh_kelola(request.user):
         return HttpResponseForbidden("Hanya koordinator yang bisa restore jadwal.")
     backup = get_object_or_404(RiwayatJadwal, id=backup_id)
-    month = backup.bulan
-    year = backup.tahun
-
-    pegawai_ids = set(Pegawai.objects.values_list('id', flat=True))
-    user_ids = set(User.objects.values_list('id', flat=True))
-    pola_by_kode = {p.kode: p for p in PolaDinas.objects.all()}
-    _, num_days = calendar.monthrange(year, month)
-
     with transaction.atomic():
-        create_backup(month, year, request.user,
+        create_backup(backup.bulan, backup.tahun, request.user,
                       note=f"Sebelum restore ke {timezone.localtime(backup.created_at):%d %b %H:%M}")
-        JadwalHarian.objects.filter(tanggal__year=year, tanggal__month=month).delete()
-        rows = []
-        for item in backup.data_snapshot:
-            pola = pola_by_kode.get(item.get('pola_kode')) if item.get('pola_kode') else None
-            day = item.get('day')
-            # Lewati pegawai/pola yang sudah dihapus dari data master
-            if item.get('pegawai_id') not in pegawai_ids or not isinstance(day, int) or not 1 <= day <= num_days:
-                continue
-            if item.get('pola_kode') and pola is None:
-                continue
-            rows.append(JadwalHarian(
-                pegawai_id=item['pegawai_id'],
-                tanggal=date(year, month, day),
-                pola=pola,
-                # Riwayat lama belum menyimpan status persetujuan: anggap sudah disetujui.
-                is_approved=item.get('is_approved', True),
-                edited_by_id=item.get('edited_by_id') if item.get('edited_by_id') in user_ids else None,
-                keterangan_lain=item.get('keterangan_lain'),
-            ))
-        JadwalHarian.objects.bulk_create(rows)
+        _apply_snapshot(backup)
+    return redirect(f'/jadwal/?month={backup.bulan}&year={backup.tahun}')
 
+
+@require_POST
+@login_required
+def undo_jadwal(request):
+    """Tombol Undo di atas tabel: batalkan perubahan terakhir bulan ini (satu langkah tiap klik).
+
+    Riwayat terbaru dipakai lalu dihapus, jadi klik berikutnya mundur satu langkah lagi.
+    """
+    if not _boleh_kelola(request.user):
+        return HttpResponseForbidden("Hanya koordinator yang bisa undo jadwal.")
+    try:
+        month, year = int(request.POST.get('month')), int(request.POST.get('year'))
+        date(year, month, 1)
+    except (TypeError, ValueError):
+        return HttpResponseForbidden("Bulan tidak valid.")
+    with transaction.atomic():
+        backup = (RiwayatJadwal.objects.select_for_update()
+                  .filter(bulan=month, tahun=year).order_by('-created_at', '-id').first())
+        if backup is not None:
+            _apply_snapshot(backup)
+            backup.delete()
     return redirect(f'/jadwal/?month={month}&year={year}')
+
 
 @login_required
 def approve_all_jadwal(request):

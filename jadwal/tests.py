@@ -232,3 +232,56 @@ class JadwalUndoTest(TestCase):
         self.client.post(reverse('restore_jadwal', args=[old.id]))
         j = JadwalHarian.objects.get(pegawai=self.pegawai)
         self.assertEqual((j.tanggal.day, j.pola, j.is_approved), (7, self.malam, True))
+
+    def test_undo_button_steps_back_one_change_per_click(self):
+        page = self.client.get(reverse('jadwal_dinas'), {'month': 11, 'year': 2026})
+        self.assertContains(page, 'Belum ada perubahan untuk dibatalkan')
+        self._ubah('M')
+        self._ubah('', tgl='2026-11-05')                  # hapus sel
+        self._ubah('P', tgl='2026-11-06')
+        page = self.client.get(reverse('jadwal_dinas'), {'month': 11, 'year': 2026})
+        self.assertContains(page, 'Batalkan: Sebelum ubah Jambari tgl 6')
+
+        undo = lambda: self.client.post(reverse('undo_jadwal'), {'month': 11, 'year': 2026})
+        kode = lambda d: getattr(JadwalHarian.objects.filter(
+            tanggal=datetime.date(2026, 11, d)).select_related('pola').first(), 'pola', None)
+        self.assertRedirects(undo(), '/jadwal/?month=11&year=2026', fetch_redirect_response=False)
+        self.assertIsNone(kode(6))                        # tgl 6 kembali kosong
+        self.assertIsNone(kode(5))
+        undo()
+        self.assertEqual(kode(5), self.malam)             # hapus dibatalkan
+        undo()
+        self.assertEqual(kode(5), self.pagi)              # kembali ke awal
+        self.assertFalse(RiwayatJadwal.objects.exists())
+        undo()                                            # tidak ada lagi: tidak berubah
+        self.assertEqual(kode(5), self.pagi)
+
+    def test_undo_reverts_a_restore_and_needs_koordinator(self):
+        self._ubah('M')
+        self.client.post(reverse('restore_jadwal', args=[RiwayatJadwal.objects.get().id]))
+        self.client.post(reverse('undo_jadwal'), {'month': 11, 'year': 2026})
+        self.assertEqual(JadwalHarian.objects.get(pegawai=self.pegawai).pola, self.malam)
+        self.client.force_login(make_user('operator'))
+        self.assertEqual(self.client.post(reverse('undo_jadwal'), {'month': 11, 'year': 2026}).status_code, 403)
+        self.assertEqual(self.client.get(reverse('undo_jadwal')).status_code, 405)
+
+
+class PolaStMtTest(TestCase):
+    """Tombol ST/MT: Surat Tugas siang hari + tetap dinas MT malam."""
+
+    def test_st_mt_counts_as_night_shift(self):
+        from jadwal.duty import duty_entries_at
+        pola = PolaDinas.objects.get(kode='ST/MT')              # dibuat migrasi 0010
+        self.assertEqual((pola.jam_mulai, pola.jam_selesai, pola.durasi, pola.is_libur),
+                         (datetime.time(19, 30), datetime.time(8, 0), 12.5, False))
+        user = make_user('koor')
+        self.client.force_login(user)
+        pegawai = make_pegawai(make_user('officer'))
+        resp = self.client.post(reverse('api_update_jadwal'), content_type='application/json',
+                                data=json.dumps({'pegawai_id': pegawai.id, 'tanggal': '2026-11-10',
+                                                 'kode_pola': 'ST/MT'})).json()
+        self.assertEqual((resp['status'], resp['pola'], resp['new_total_jam']), ('saved', 'ST/MT', 12))
+        malam = datetime.datetime(2026, 11, 10, 23, 0)
+        self.assertEqual([e[0].pegawai for e in duty_entries_at([malam])[malam]], [pegawai])
+        page = self.client.get(reverse('jadwal_dinas'), {'month': 11, 'year': 2026})
+        self.assertContains(page, "selectPola('ST/MT')")

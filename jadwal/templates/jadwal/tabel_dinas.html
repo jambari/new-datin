@@ -93,6 +93,19 @@
             
             <div style="display: flex; gap: 10px;">
                 {% if request.user|has_group:"koordinator" %}
+                {% with last=history_list.0 %}
+                <form method="post" action="{% url 'undo_jadwal' %}" style="margin:0;"
+                      onsubmit="return confirm('Batalkan perubahan terakhir?\n\n{{ last.keterangan|escapejs }}');">
+                    {% csrf_token %}
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <input type="hidden" name="year" value="{{ year }}">
+                    <button type="submit" {% if not last %}disabled{% endif %}
+                            title="{% if last %}Batalkan: {{ last.keterangan }} ({{ last.created_at|date:'d M H:i' }}){% else %}Belum ada perubahan untuk dibatalkan{% endif %}"
+                            style="padding: 8px 18px; font-weight:bold; background:{% if last %}#f39c12{% else %}#bdc3c7{% endif %}; color:white; border:none; border-radius:8px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); cursor:{% if last %}pointer{% else %}not-allowed{% endif %};">
+                        ↶ UNDO
+                    </button>
+                </form>
+                {% endwith %}
                 <a href="{% url 'approve_all_jadwal' %}?month={{ month }}&year={{ year }}" 
                    onclick="return confirm('Setujui semua jadwal pending?')"
                    style="padding: 8px 18px; text-decoration:none; font-weight:bold; background:#27ae60; color:white; border-radius:8px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">
@@ -146,7 +159,7 @@
         </table>
 
         <div class="footer-ket">
-            KETERANGAN : PS=07.30-20.00 | MT=19.30-08.00 | PSM=24 Jam | R=Reguler
+            KETERANGAN : PS=07.30-20.00 | MT=19.30-08.00 | PSM=24 Jam | R=Reguler | ST/MT=Surat Tugas siang + MT malam
         </div>
 
         <div id="polaModal">
@@ -164,6 +177,7 @@
                 <button onclick="selectPola('R')">Reguler</button>
                 <button onclick="selectPola('WFA')" style="background:#d1ecf1;">WFA</button>
                 <button onclick="selectPola('ST')" style="background:#feca57;">ST</button>
+                <button onclick="selectPola('ST/MT')" style="background:#D8CC96;" title="Surat Tugas siang hari, tetap dinas MT malam (19.30-08.00)">ST/MT</button>
                 <button onclick="selectPola('L')">Libur</button>
                 <button onclick="selectPola('C')" style="background:#ffcccc;">Cuti</button>
                 <button onclick="selectPola('TB')" style="background:#1dd1a1; color: white;">TB</button>
