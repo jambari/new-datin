@@ -8,7 +8,9 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from .models import Pegawai, JadwalHarian, PolaDinas, RiwayatJadwal, Lapbul
 import random
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
+from django.utils import timezone
+from django.contrib.auth.models import User
 from django.views.decorators.http import require_POST
 from django.db import transaction
 import json
@@ -113,9 +115,9 @@ def tabel_jadwal(request):
         laporan.append(row)
 
     history_list = RiwayatJadwal.objects.filter(
-        bulan=selected_month, 
+        bulan=selected_month,
         tahun=selected_year
-    )[:5]
+    ).select_related('user')[:RIWAYAT_TAMPIL]
 
     context = {
         'month': selected_month,
@@ -329,6 +331,14 @@ def update_jadwal_api(request):
 
             pegawai = Pegawai.objects.get(id=pegawai_id)
             tgl = datetime.strptime(tanggal_str, "%Y-%m-%d").date()
+
+            # Simpan keadaan bulan ini sebelum diubah, supaya bisa di-undo dari kotak Riwayat.
+            lama = JadwalHarian.objects.filter(pegawai=pegawai, tanggal=tgl).select_related('pola').first()
+            kode_lama = lama.pola.kode if lama and lama.pola else ''
+            if kode_lama != (kode_pola or ''):
+                create_backup(tgl.month, tgl.year, request.user,
+                              note=f"Sebelum ubah {pegawai.nama} tgl {tgl.day}: "
+                                   f"{kode_lama or '-'} → {kode_pola or '-'}")
             
             # Cek apakah user adalah koordinator
             is_koordinator = request.user.groups.filter(name='koordinator').exists()
@@ -380,58 +390,79 @@ def update_jadwal_api(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
-def create_backup(month, year, user, note="Backup Otomatis"):
-    # 1. Ambil semua jadwal bulan itu
-    jadwal_objs = JadwalHarian.objects.filter(
-        tanggal__year=year, 
-        tanggal__month=month
-    ).select_related('pola', 'pegawai')
-    
-    # 2. Konversi ke List of Dictionaries (JSON Friendly)
-    data_list = []
-    for j in jadwal_objs:
-        if j.pola:
-            data_list.append({
-                'pegawai_id': j.pegawai.id,
-                'day': j.tanggal.day,
-                'pola_kode': j.pola.kode
-            })
-            
-    # 3. Simpan jika ada datanya
-    if data_list:
-        RiwayatJadwal.objects.create(
-            bulan=month,
-            tahun=year,
-            user=user,
-            keterangan=note,
-            data_snapshot=data_list
-        )
+RIWAYAT_TAMPIL = 10     # entri riwayat yang ditampilkan per bulan
+RIWAYAT_SIMPAN = 50     # entri riwayat yang disimpan per bulan (yang lebih lama dihapus)
 
-@staff_member_required
+
+def _boleh_kelola(user):
+    """Koordinator (atau staff/superuser) boleh generate & restore, sama dengan kotak di halaman."""
+    return user.is_authenticated and (
+        user.is_staff or user.is_superuser or user.groups.filter(name='koordinator').exists())
+
+
+def create_backup(month, year, user, note="Backup Otomatis"):
+    """Simpan seluruh jadwal satu bulan ke RiwayatJadwal (juga bila bulan itu masih kosong)."""
+    data_list = [
+        {
+            'pegawai_id': j.pegawai_id,
+            'day': j.tanggal.day,
+            'pola_kode': j.pola.kode if j.pola else None,
+            'is_approved': j.is_approved,
+            'edited_by_id': j.edited_by_id,
+            'keterangan_lain': j.keterangan_lain,
+        }
+        for j in JadwalHarian.objects.filter(tanggal__year=year, tanggal__month=month).select_related('pola')
+    ]
+    RiwayatJadwal.objects.create(
+        bulan=month,
+        tahun=year,
+        user=user if getattr(user, 'is_authenticated', False) else None,
+        keterangan=note[:150],
+        data_snapshot=data_list,
+    )
+    lama = RiwayatJadwal.objects.filter(bulan=month, tahun=year).values_list('id', flat=True)[RIWAYAT_SIMPAN:]
+    RiwayatJadwal.objects.filter(id__in=list(lama)).delete()
+
+
+@require_POST
+@login_required
 def restore_jadwal(request, backup_id):
+    """Kembalikan jadwal satu bulan ke isi riwayat. Keadaan sekarang disimpan dulu, jadi restore bisa di-undo."""
+    if not _boleh_kelola(request.user):
+        return HttpResponseForbidden("Hanya koordinator yang bisa restore jadwal.")
     backup = get_object_or_404(RiwayatJadwal, id=backup_id)
     month = backup.bulan
     year = backup.tahun
-    
+
+    pegawai_ids = set(Pegawai.objects.values_list('id', flat=True))
+    user_ids = set(User.objects.values_list('id', flat=True))
+    pola_by_kode = {p.kode: p for p in PolaDinas.objects.all()}
+    _, num_days = calendar.monthrange(year, month)
+
     with transaction.atomic():
-        # 1. Hapus jadwal saat ini (bersihkan)
+        create_backup(month, year, request.user,
+                      note=f"Sebelum restore ke {timezone.localtime(backup.created_at):%d %b %H:%M}")
         JadwalHarian.objects.filter(tanggal__year=year, tanggal__month=month).delete()
-        
-        # 2. Loop data JSON dan create ulang
+        rows = []
         for item in backup.data_snapshot:
-            try:
-                pegawai = Pegawai.objects.get(id=item['pegawai_id'])
-                pola = PolaDinas.objects.get(kode=item['pola_kode'])
-                tgl = date(year, month, item['day'])
-                
-                JadwalHarian.objects.create(
-                    pegawai=pegawai,
-                    tanggal=tgl,
-                    pola=pola
-                )
-            except Exception:
-                continue # Skip jika pegawai/pola sdh dihapus master datanya
-                
+            pola = pola_by_kode.get(item.get('pola_kode')) if item.get('pola_kode') else None
+            day = item.get('day')
+            # Lewati pegawai/pola yang sudah dihapus dari data master
+            if item.get('pegawai_id') not in pegawai_ids or not isinstance(day, int) or not 1 <= day <= num_days:
+                continue
+            if item.get('pola_kode') and pola is None:
+                continue
+            rows.append(JadwalHarian(
+                pegawai_id=item['pegawai_id'],
+                tanggal=date(year, month, day),
+                pola=pola,
+                # Riwayat lama belum menyimpan status persetujuan: anggap sudah disetujui.
+                is_approved=item.get('is_approved', True),
+                edited_by_id=item.get('edited_by_id') if item.get('edited_by_id') in user_ids else None,
+                keterangan_lain=item.get('keterangan_lain'),
+            ))
+        JadwalHarian.objects.bulk_create(rows)
+
     return redirect(f'/jadwal/?month={month}&year={year}')
 
 @login_required

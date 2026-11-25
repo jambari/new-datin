@@ -51,11 +51,16 @@
 
     <div class="riwayat-box" style="flex: 1; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
         <h4 style="margin-top: 0;">🕒 Riwayat / Undo</h4>
-        <div style="max-height: 200px; overflow-y: auto;">
+        <p style="font-size: 11px; color: #666; margin: 0 0 8px;">Setiap perubahan disimpan dulu. RESTORE mengembalikan jadwal bulan ini ke keadaan <em>sebelum</em> perubahan itu (restore sendiri juga bisa di-undo).</p>
+        <div style="max-height: 260px; overflow-y: auto;">
             {% for h in history_list %}
-            <div style="font-size: 11px; padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                <span><strong>{{ h.created_at|date:"d M H:i" }}</strong><br><small>{{ h.keterangan }}</small></span>
-                <a href="{% url 'restore_jadwal' h.id %}" onclick="return confirm('Restore?')" style="background: #ffc107; padding: 4px 8px; text-decoration: none; color: #000; border-radius: 4px; font-weight: bold;">RESTORE</a>
+            <div style="font-size: 11px; padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <span><strong>{{ h.created_at|date:"d M H:i" }}</strong>{% if h.user %} · {{ h.user.username }}{% endif %}<br><small>{{ h.keterangan }}</small></span>
+                <form method="post" action="{% url 'restore_jadwal' h.id %}" style="margin: 0;"
+                      onsubmit="return confirm('Kembalikan jadwal ke keadaan sebelum perubahan ini?');">
+                    {% csrf_token %}
+                    <button type="submit" style="background: #ffc107; padding: 4px 8px; border: none; color: #000; border-radius: 4px; font-weight: bold; cursor: pointer;">RESTORE</button>
+                </form>
             </div>
             {% empty %}
             <p style="color: #999; font-size: 11px;">Belum ada riwayat.</p>
