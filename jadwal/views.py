@@ -165,7 +165,7 @@ def generate_auto_schedule(request):
             ).delete()
 
             # ===================================================
-            # TAHAP 1: TERAPKAN EXCEPTIONS (LN/CB/TB/ST/C)
+            # TAHAP 1: TERAPKAN EXCEPTIONS (LN/CB/TB/ST/C/ST-MT)
             # ===================================================
             for exc in exceptions_list:
                 try:
@@ -209,12 +209,12 @@ def generate_auto_schedule(request):
                  return JsonResponse({'status': 'error', 'message': 'Tidak ada pegawai shift.'})
 
             # A. SETUP TRACKER JAM KERJA (Saldo Awal)
-            # Hitung jam kerja yang SUDAH didapat dari tgl 1 s.d start_day-1
+            # Jam kerja yang SUDAH ada: tgl 1 s.d start_day-1, plus Status Khusus Tahap 1
+            # (ST/MT = 12,5 jam dinas malam; LN/CB/TB/ST/C = 0 jam).
             jam_tracker = {p.id: 0.0 for p in pegawai_shift}
-            
+
             existing = JadwalHarian.objects.filter(
-                tanggal__year=year, tanggal__month=month,
-                tanggal__day__lt=start_day, pegawai__is_reguler=False
+                tanggal__year=year, tanggal__month=month, pegawai__is_reguler=False
             ).select_related('pola')
             
             for j in existing:
@@ -268,8 +268,9 @@ def generate_auto_schedule(request):
                 JadwalHarian.objects.create(pegawai=p1, tanggal=current_date, pola=pola_main)
                 jam_tracker[p1.id] += pola_main.durasi
                 
-                # Petugas 2 (Jika PS-MT)
-                if pola_type == 'PS-MT' and len(candidates) > 1:
+                # Petugas 2 (Jika PS-MT). Pegawai ST/MT hari itu sudah mengisi dinas malam.
+                malam_terisi = JadwalHarian.objects.filter(tanggal=current_date, pola__kode='ST/MT').exists()
+                if pola_type == 'PS-MT' and len(candidates) > 1 and not malam_terisi:
                     p2_data = candidates[1]
                     p2 = p2_data['pegawai']
                     JadwalHarian.objects.create(pegawai=p2, tanggal=current_date, pola=pola_sec)

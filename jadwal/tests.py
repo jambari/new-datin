@@ -285,3 +285,29 @@ class PolaStMtTest(TestCase):
         self.assertEqual([e[0].pegawai for e in duty_entries_at([malam])[malam]], [pegawai])
         page = self.client.get(reverse('jadwal_dinas'), {'month': 11, 'year': 2026})
         self.assertContains(page, "selectPola('ST/MT')")
+
+    def test_generator_status_khusus_st_mt(self):
+        admin = User.objects.create_user('admin', password='x', is_staff=True, is_superuser=True)
+        self.client.force_login(admin)
+        make_pola(kode='PS', nama='Pagi Siang', jam_mulai=datetime.time(7, 30),
+                  jam_selesai=datetime.time(20, 0), durasi=12.5)
+        make_pola(kode='MT', nama='Malam', jam_mulai=datetime.time(19, 30),
+                  jam_selesai=datetime.time(8, 0), durasi=12.5)
+        make_pola(kode='PSM', nama='24 jam', jam_mulai=datetime.time(7, 30),
+                  jam_selesai=datetime.time(8, 0), durasi=24.5)
+        staf = [make_pegawai(make_user(f'u{i}'), nama=f'Pegawai {i}', nip=f'19900101202001{i:04d}')
+                for i in range(6)]
+        page = self.client.get(reverse('jadwal_dinas'), {'month': 11, 'year': 2026})
+        self.assertContains(page, '<option value="ST/MT">ST/MT</option>')
+
+        resp = self.client.post(reverse('api_generate_jadwal'), {
+            'month': 11, 'year': 2026, 'pola_type': 'PS-MT', 'start_day': 1,
+            'exceptions_data': json.dumps([{'id': staf[0].id, 'kode': 'ST/MT', 'start': 10, 'end': 10}]),
+        }).json()
+        self.assertEqual(resp['status'], 'success', resp)
+        hari10 = JadwalHarian.objects.filter(tanggal=datetime.date(2026, 11, 10)).select_related('pola')
+        kode = sorted(j.pola.kode for j in hari10)
+        self.assertEqual(kode, ['PS', 'ST/MT'])                  # tidak ada MT kedua malam itu
+        self.assertEqual(hari10.get(pola__kode='ST/MT').pegawai, staf[0])
+        self.assertFalse(JadwalHarian.objects.filter(pegawai=staf[0],
+                                                     tanggal=datetime.date(2026, 11, 11)).exists())
