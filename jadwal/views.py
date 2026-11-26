@@ -378,6 +378,9 @@ def update_jadwal_api(request):
             total_jam_baru = sum(j.pola.durasi for j in jadwal_sebulan if j.pola and j.pola.durasi)
             uang_makan_baru = int(total_jam_baru / 7.5)
 
+            if kode_lama != (kode_pola or ''):
+                _kabarkan_perubahan(request.user, pegawai, tgl, kode_lama, kode_pola or '')
+
             return JsonResponse({
                 'status': status_res,
                 'pola': kode_res,
@@ -391,6 +394,46 @@ def update_jadwal_api(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
+
+
+NAMA_BULAN_ID = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli',
+                 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+
+
+def _nama_pengubah(user):
+    """Nama yang tampil di Telegram: nama pegawai bila akun terhubung, lalu nama lengkap, lalu username."""
+    pegawai = Pegawai.objects.filter(user=user).only('nama').first()
+    if pegawai:
+        return pegawai.nama
+    return user.get_full_name() or user.username
+
+
+def pesan_perubahan_jadwal(pengubah, nama_pegawai, tgl, kode_lama, kode_baru):
+    """Mis. 'jambari mengubah pola dinas Anas tanggal 28 November dari MT ke PS'."""
+    from theme.telegram import esc
+    awal = f"{esc(pengubah)} {{}} pola dinas {esc(nama_pegawai)} tanggal {tgl.day} {NAMA_BULAN_ID[tgl.month]}"
+    if not kode_lama:
+        return awal.format('mengisi') + f" dengan {esc(kode_baru)}"
+    if not kode_baru:
+        return awal.format('menghapus') + f" (sebelumnya {esc(kode_lama)})"
+    return awal.format('mengubah') + f" dari {esc(kode_lama)} ke {esc(kode_baru)}"
+
+
+def _kabarkan_perubahan(user, pegawai, tgl, kode_lama, kode_baru):
+    """Antre kabar Telegram lewat Celery setelah commit; gagal kirim tidak menggagalkan simpan."""
+    import logging
+    from .tasks import notify_jadwal_change_task
+    text = pesan_perubahan_jadwal(_nama_pengubah(user), pegawai.nama, tgl, kode_lama, kode_baru)
+
+    def kirim():
+        try:
+            notify_jadwal_change_task.delay(text)
+        except Exception as exc:          # broker mati: cukup dicatat
+            logging.getLogger(__name__).warning('Kabar jadwal tidak terantre: %s', exc)
+
+    transaction.on_commit(kirim)
+
+
 RIWAYAT_TAMPIL = 10     # entri riwayat yang ditampilkan per bulan
 RIWAYAT_SIMPAN = 50     # entri riwayat yang disimpan per bulan (yang lebih lama dihapus)
 

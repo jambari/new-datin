@@ -311,3 +311,40 @@ class PolaStMtTest(TestCase):
         self.assertEqual(hari10.get(pola__kode='ST/MT').pegawai, staf[0])
         self.assertFalse(JadwalHarian.objects.filter(pegawai=staf[0],
                                                      tanggal=datetime.date(2026, 11, 11)).exists())
+
+
+class JadwalTelegramTest(TestCase):
+    """Ubah pola lewat tombol pola dinas mengabarkan grup Telegram (hanya bila benar-benar berubah)."""
+
+    def setUp(self):
+        self.editor = make_user('jambari')
+        self.client.force_login(self.editor)
+        make_pola(kode='MT', nama='Malam')
+        make_pola(kode='PS', nama='Pagi Siang')
+        self.anas = make_pegawai(make_user('anas'), nama='Anas', nip='199')
+        JadwalHarian.objects.create(pegawai=self.anas, tanggal=datetime.date(2026, 11, 28),
+                                    pola=PolaDinas.objects.get(kode='MT'), is_approved=True)
+
+    def _ubah(self, kode):
+        from unittest import mock
+        with mock.patch('jadwal.tasks.notify_jadwal_change_task.delay') as delay, \
+                self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('api_update_jadwal'), content_type='application/json',
+                             data=json.dumps({'pegawai_id': self.anas.id, 'tanggal': '2026-11-28',
+                                              'kode_pola': kode}))
+        return delay
+
+    def test_change_sends_message_with_editor_name(self):
+        delay = self._ubah('PS')
+        delay.assert_called_once_with('jambari mengubah pola dinas Anas tanggal 28 November dari MT ke PS')
+
+    def test_editor_linked_pegawai_name_is_used(self):
+        make_pegawai(self.editor, nama='Jambari S.', nip='200')
+        self.assertIn('Jambari S. mengubah', self._ubah('PS').call_args[0][0])
+
+    def test_same_code_sends_nothing(self):
+        self._ubah('MT').assert_not_called()
+
+    def test_delete_message(self):
+        self.assertEqual(self._ubah('').call_args[0][0],
+                         'jambari menghapus pola dinas Anas tanggal 28 November (sebelumnya MT)')

@@ -425,6 +425,8 @@ TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default='')
 STATION_QC_TELEGRAM_CHAT_ID = config('STATION_QC_TELEGRAM_CHAT_ID', default='')
 # Grup penerima permohonan PTSP / layanan (opsional; kosong = TELEGRAM_CHAT_ID).
 LAYANAN_TELEGRAM_CHAT_ID = config('LAYANAN_TELEGRAM_CHAT_ID', default='')
+# Grup penerima kabar perubahan jadwal dinas (opsional; kosong = TELEGRAM_CHAT_ID).
+JADWAL_TELEGRAM_CHAT_ID = config('JADWAL_TELEGRAM_CHAT_ID', default='')
 
 # If using Gmail, you need an "App Password"
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
